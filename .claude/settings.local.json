@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(.claude)",
+      "Bash(.env \")",
+      "Bash(pnpm list:*)",
+      "Bash(tree:*)",
+      "Bash(cmd //c \"tree /F /A D:\\\\Code\\\\React\\\\KnowledgeAgent\")",
+      "Bash(cmd //c \"dir /B D:\\\\Code\\\\React\\\\KnowledgeAgent\")",
+      "Bash(more:*)",
+      "Bash(pnpm -F @knowledge-agent/server build:*)"
+    ]
+  }
+}
