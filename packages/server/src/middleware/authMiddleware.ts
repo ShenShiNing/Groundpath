@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ApiResponse } from '@knowledge-agent/shared';
+import { refreshRequestSchema } from '@knowledge-agent/shared/schemas';
 import { AuthError } from '../utils/errors';
 import { extractBearerToken, verifyAccessToken, verifyRefreshToken } from '../utils/jwtUtils';
 import { refreshTokenRepository } from '../repositories/refreshTokenRepository';
@@ -68,11 +69,11 @@ export async function authenticateRefreshToken(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { refreshToken } = req.body as { refreshToken?: string };
-
-    if (!refreshToken) {
+    const result = refreshRequestSchema.safeParse(req.body);
+    if (!result.success) {
       throw new AuthError(AUTH_ERROR_CODES.MISSING_TOKEN, 'Refresh token required');
     }
+    const { refreshToken } = result.data;
 
     // Verify JWT signature
     const payload = verifyRefreshToken(refreshToken);

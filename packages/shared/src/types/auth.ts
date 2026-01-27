@@ -1,4 +1,5 @@
 import { AUTH_ERROR_CODES } from '../constants';
+import type { DeviceInfo } from '../schemas/auth';
 
 // ==================== Token Response ====================
 
@@ -32,25 +33,8 @@ export interface AuthResponse {
 
 // ==================== Request Types ====================
 
-/** Login request body */
-export interface LoginRequest {
-  email: string;
-  password: string;
-  deviceInfo?: DeviceInfo;
-}
-
-/** Refresh token request body */
-export interface RefreshRequest {
-  refreshToken: string;
-}
-
-/** Device information for session tracking */
-export interface DeviceInfo {
-  userAgent?: string;
-  deviceType?: string;
-  os?: string;
-  browser?: string;
-}
+// Re-export types from schemas (inferred from Zod schemas)
+export type { LoginRequest, RefreshRequest, DeviceInfo } from '../schemas/auth';
 
 // ==================== Session Types ====================
 

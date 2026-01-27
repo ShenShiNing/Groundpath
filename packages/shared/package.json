@@ -9,7 +9,8 @@
     ".": "./src/index.ts",
     "./types": "./src/types/index.ts",
     "./utils": "./src/utils/index.ts",
-    "./constants": "./src/constants/index.ts"
+    "./constants": "./src/constants/index.ts",
+    "./schemas": "./src/schemas/index.ts"
   },
   "scripts": {
     "build": "tsc",

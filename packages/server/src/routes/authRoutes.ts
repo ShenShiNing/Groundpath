@@ -6,16 +6,23 @@ import {
   refreshRateLimiter,
   generalRateLimiter,
 } from '../middleware/rateLimitMiddleware';
+import { validateBody } from '../middleware/validationMiddleware';
+import { loginRequestSchema, refreshRequestSchema } from '@knowledge-agent/shared/schemas';
 
 const router = express.Router();
 
 // ==================== Public Routes ====================
 
 // Login with email/password
-router.post('/login', loginRateLimiter, authController.login);
+router.post('/login', loginRateLimiter, validateBody(loginRequestSchema), authController.login);
 
 // Refresh access token
-router.post('/refresh', refreshRateLimiter, authController.refresh);
+router.post(
+  '/refresh',
+  refreshRateLimiter,
+  validateBody(refreshRequestSchema),
+  authController.refresh
+);
 
 // ==================== Protected Routes (Refresh Token Auth) ====================
 

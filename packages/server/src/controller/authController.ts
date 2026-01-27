@@ -63,19 +63,6 @@ export const authController = {
     try {
       const loginRequest = req.body as LoginRequest;
 
-      // Basic validation
-      if (!loginRequest.email || !loginRequest.password) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Email and password are required',
-          },
-        };
-        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
-        return;
-      }
-
       const ipAddress = getClientIp(req);
       const userAgent = req.headers['user-agent'] ?? null;
 
@@ -98,18 +85,6 @@ export const authController = {
   async refresh(req: Request, res: Response): Promise<void> {
     try {
       const { refreshToken } = req.body as RefreshRequest;
-
-      if (!refreshToken) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Refresh token is required',
-          },
-        };
-        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
-        return;
-      }
 
       const ipAddress = getClientIp(req);
       const userAgent = req.headers['user-agent'] ?? null;
