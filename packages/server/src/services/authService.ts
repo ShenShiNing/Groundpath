@@ -13,6 +13,7 @@ import { verifyRefreshToken } from '../utils/jwtUtils';
 import { userRepository } from '../repositories/userRepository';
 import { loginLogRepository } from '../repositories/loginLogRepository';
 import { tokenService } from './tokenService';
+import { checkAccountRateLimit, resetAccountRateLimit } from '../middleware/rateLimitMiddleware';
 
 /**
  * Authentication service for handling login/logout operations
@@ -27,6 +28,17 @@ export const authService = {
     userAgent: string | null
   ): Promise<AuthResponse> {
     const { email, password, deviceInfo } = credentials;
+
+    // Check account-level rate limit before any database operations
+    const rateCheck = checkAccountRateLimit(email);
+    if (!rateCheck.allowed) {
+      const minutes = Math.ceil((rateCheck.retryAfter ?? 0) / 60);
+      throw new AuthError(
+        AUTH_ERROR_CODES.RATE_LIMITED,
+        `Too many failed login attempts. Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`,
+        429
+      );
+    }
 
     // Find user by email
     const user = await userRepository.findByEmail(email);
@@ -82,6 +94,9 @@ export const authService = {
 
     // Record successful login
     await loginLogRepository.recordSuccess(user.id, email, 'password', ipAddress, userAgent);
+
+    // Reset account rate limit on successful login
+    resetAccountRateLimit(email);
 
     // Update last login info
     await userRepository.updateLastLogin(user.id, ipAddress);

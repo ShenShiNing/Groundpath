@@ -1,16 +1,21 @@
 import express from 'express';
 import { authController } from '../controller/authController';
 import { authenticate, authenticateRefreshToken } from '../middleware/authMiddleware';
+import {
+  loginRateLimiter,
+  refreshRateLimiter,
+  generalRateLimiter,
+} from '../middleware/rateLimitMiddleware';
 
 const router = express.Router();
 
 // ==================== Public Routes ====================
 
 // Login with email/password
-router.post('/login', authController.login);
+router.post('/login', loginRateLimiter, authController.login);
 
 // Refresh access token
-router.post('/refresh', authController.refresh);
+router.post('/refresh', refreshRateLimiter, authController.refresh);
 
 // ==================== Protected Routes (Refresh Token Auth) ====================
 
@@ -23,12 +28,12 @@ router.post('/logout', authenticateRefreshToken, authController.logout);
 router.post('/logout-all', authenticate, authController.logoutAll);
 
 // Get current user info
-router.get('/me', authenticate, authController.me);
+router.get('/me', generalRateLimiter, authenticate, authController.me);
 
 // Get active sessions
-router.get('/sessions', authenticate, authController.sessions);
+router.get('/sessions', generalRateLimiter, authenticate, authController.sessions);
 
 // Revoke a specific session
-router.delete('/sessions/:id', authenticate, authController.revokeSession);
+router.delete('/sessions/:id', generalRateLimiter, authenticate, authController.revokeSession);
 
 export default router;
