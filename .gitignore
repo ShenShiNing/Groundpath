@@ -73,6 +73,9 @@ Desktop.ini
 *.tmp
 *.temp
 
+# Claude Code
+.claude/
+
 # TanStack Router
 routeTree.gen.ts
 **/routeTree.gen.ts
