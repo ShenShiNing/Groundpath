@@ -1,7 +1,9 @@
 import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type {
   LoginRequest,
+  RegisterRequest,
   AuthResponse,
   DeviceInfo,
   UserPublicInfo,
@@ -12,6 +14,7 @@ import { AuthError } from '../utils/errors';
 import { verifyRefreshToken } from '../utils/jwtUtils';
 import { userRepository } from '../repositories/userRepository';
 import { loginLogRepository } from '../repositories/loginLogRepository';
+import { refreshTokenRepository } from '../repositories/refreshTokenRepository';
 import { tokenService } from './tokenService';
 import { checkAccountRateLimit, resetAccountRateLimit } from '../middleware/rateLimitMiddleware';
 
@@ -19,6 +22,102 @@ import { checkAccountRateLimit, resetAccountRateLimit } from '../middleware/rate
  * Authentication service for handling login/logout operations
  */
 export const authService = {
+  /**
+   * Register a new user
+   */
+  async register(
+    data: RegisterRequest,
+    ipAddress: string | null,
+    userAgent: string | null
+  ): Promise<AuthResponse> {
+    const { username, email, password, deviceInfo } = data;
+
+    // Check if email already exists
+    const emailExists = await userRepository.existsByEmail(email);
+    if (emailExists) {
+      throw new AuthError(
+        AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
+        'An account with this email already exists',
+        400
+      );
+    }
+
+    // Check if username already exists
+    const usernameExists = await userRepository.existsByUsername(username);
+    if (usernameExists) {
+      throw new AuthError(
+        AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
+        'This username is already taken',
+        400
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create user
+    const userId = uuidv4();
+    const user = await userRepository.create({
+      id: userId,
+      username,
+      email,
+      password: hashedPassword,
+      status: 'active',
+    });
+
+    // Record successful registration in login logs
+    await loginLogRepository.recordSuccess(user.id, email, 'password', ipAddress, userAgent);
+
+    // Update last login info
+    await userRepository.updateLastLogin(user.id, ipAddress);
+
+    // Generate tokens
+    const accessPayload: AccessTokenPayload = {
+      sub: user.id,
+      email: user.email,
+      username: user.username,
+      status: user.status,
+      emailVerified: user.emailVerified,
+    };
+
+    const tokens = await tokenService.generateTokenPair(
+      accessPayload,
+      ipAddress,
+      deviceInfo ?? parseDeviceInfo(userAgent)
+    );
+
+    return {
+      user: toUserPublicInfo(user),
+      tokens,
+    };
+  },
+
+  /**
+   * Change user password
+   */
+  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+    // Find user
+    const user = await userRepository.findById(userId);
+    if (!user || !user.password) {
+      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+    }
+
+    // Verify old password
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
+    if (!isValidPassword) {
+      throw new AuthError(AUTH_ERROR_CODES.INVALID_PASSWORD, 'Current password is incorrect', 400);
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await userRepository.updatePassword(userId, hashedPassword);
+
+    // Revoke all refresh tokens for security (force re-login on all devices)
+    await refreshTokenRepository.revokeAllForUser(userId);
+  },
+
   /**
    * Authenticate user with email and password
    */

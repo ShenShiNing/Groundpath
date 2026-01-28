@@ -4,7 +4,7 @@ export default defineProject({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['tests/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist'],
   },
 });

@@ -8,10 +8,10 @@ import {
   verifyRefreshToken,
   calculateExpirationDate,
   extractBearerToken,
-} from './jwtUtils';
-import { AUTH_CONFIG } from '../config/authConfig';
-import type { AccessTokenPayload, RefreshTokenPayload } from '../types/authTypes';
-import { AuthError } from './errors';
+} from '../../src/utils/jwtUtils';
+import { AUTH_CONFIG } from '../../src/config/authConfig';
+import type { AccessTokenPayload, RefreshTokenPayload } from '../../src/types/authTypes';
+import { AuthError } from '../../src/utils/errors';
 
 describe('jwtUtils', () => {
   // ==================== Access Token Tests ====================

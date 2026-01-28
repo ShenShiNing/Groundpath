@@ -155,6 +155,16 @@ export const loginRateLimiter = createRateLimiter({
 });
 
 /**
+ * Register rate limiter - strict to prevent batch registration
+ * 3 requests per minute per IP
+ */
+export const registerRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 3,
+  message: 'Too many registration attempts, please try again later',
+});
+
+/**
  * Refresh token rate limiter
  * 10 requests per 5 minutes per IP
  */

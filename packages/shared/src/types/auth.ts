@@ -34,7 +34,13 @@ export interface AuthResponse {
 // ==================== Request Types ====================
 
 // Re-export types from schemas (inferred from Zod schemas)
-export type { LoginRequest, RefreshRequest, DeviceInfo } from '../schemas/auth';
+export type {
+  LoginRequest,
+  RefreshRequest,
+  DeviceInfo,
+  RegisterRequest,
+  ChangePasswordRequest,
+} from '../schemas/auth';
 
 // ==================== Session Types ====================
 

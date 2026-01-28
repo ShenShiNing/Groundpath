@@ -9,6 +9,14 @@ export const deviceInfoSchema = z.object({
   browser: z.string().optional(),
 });
 
+// ==================== Password Rules ====================
+
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+  .regex(/[0-9]/, 'Password must contain at least one number');
+
 // ==================== Request Schemas ====================
 
 export const loginRequestSchema = z.object({
@@ -21,8 +29,38 @@ export const refreshRequestSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+export const registerRequestSchema = z
+  .object({
+    username: z
+      .string()
+      .min(3, 'Username must be at least 3 characters')
+      .max(50, 'Username must be at most 50 characters')
+      .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
+    email: z.email('Invalid email format'),
+    password: passwordSchema,
+    confirmPassword: z.string(),
+    deviceInfo: deviceInfoSchema.optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
+export const changePasswordRequestSchema = z
+  .object({
+    oldPassword: z.string().min(1, 'Current password is required'),
+    newPassword: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
 // ==================== Inferred Types ====================
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
 export type DeviceInfo = z.infer<typeof deviceInfoSchema>;
+export type RegisterRequest = z.infer<typeof registerRequestSchema>;
+export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;

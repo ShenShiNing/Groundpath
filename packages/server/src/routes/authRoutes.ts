@@ -3,15 +3,29 @@ import { authController } from '../controller/authController';
 import { authenticate, authenticateRefreshToken } from '../middleware/authMiddleware';
 import {
   loginRateLimiter,
+  registerRateLimiter,
   refreshRateLimiter,
   generalRateLimiter,
 } from '../middleware/rateLimitMiddleware';
 import { validateBody } from '../middleware/validationMiddleware';
-import { loginRequestSchema, refreshRequestSchema } from '@knowledge-agent/shared/schemas';
+import {
+  loginRequestSchema,
+  refreshRequestSchema,
+  registerRequestSchema,
+  changePasswordRequestSchema,
+} from '@knowledge-agent/shared/schemas';
 
 const router = express.Router();
 
 // ==================== Public Routes ====================
+
+// Register new user
+router.post(
+  '/register',
+  registerRateLimiter,
+  validateBody(registerRequestSchema),
+  authController.register
+);
 
 // Login with email/password
 router.post('/login', loginRateLimiter, validateBody(loginRequestSchema), authController.login);
@@ -30,6 +44,15 @@ router.post(
 router.post('/logout', authenticateRefreshToken, authController.logout);
 
 // ==================== Protected Routes (Access Token Auth) ====================
+
+// Change password
+router.put(
+  '/password',
+  generalRateLimiter,
+  authenticate,
+  validateBody(changePasswordRequestSchema),
+  authController.changePassword
+);
 
 // Logout all devices
 router.post('/logout-all', authenticate, authController.logoutAll);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isNullish, safeJsonParse, sleep } from './index';
+import { isNullish, safeJsonParse, sleep } from '../../src/utils/index';
 
 describe('isNullish', () => {
   it('should return true for null', () => {

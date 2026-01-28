@@ -4,6 +4,8 @@ import type {
   ApiResponse,
   LoginRequest,
   RefreshRequest,
+  RegisterRequest,
+  ChangePasswordRequest,
   AuthResponse,
   SessionInfo,
   UserPublicInfo,
@@ -55,6 +57,62 @@ function handleError(error: unknown, res: Response): void {
  * Auth controller handlers
  */
 export const authController = {
+  /**
+   * POST /api/auth/register
+   * Register a new user
+   */
+  async register(req: Request, res: Response): Promise<void> {
+    try {
+      const registerRequest = req.body as RegisterRequest;
+
+      const ipAddress = getClientIp(req);
+      const userAgent = req.headers['user-agent'] ?? null;
+
+      const result = await authService.register(registerRequest, ipAddress, userAgent);
+
+      const response: ApiResponse<AuthResponse> = {
+        success: true,
+        data: result,
+      };
+      res.status(HTTP_STATUS.CREATED).json(response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  },
+
+  /**
+   * PUT /api/auth/password
+   * Change user password
+   */
+  async changePassword(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        const response: ApiResponse = {
+          success: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'User not authenticated',
+          },
+        };
+        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
+        return;
+      }
+
+      const { oldPassword, newPassword } = req.body as ChangePasswordRequest;
+
+      await authService.changePassword(userId, oldPassword, newPassword);
+
+      const response: ApiResponse<{ message: string }> = {
+        success: true,
+        data: { message: 'Password changed successfully' },
+      };
+      res.status(HTTP_STATUS.OK).json(response);
+    } catch (error) {
+      handleError(error, res);
+    }
+  },
+
   /**
    * POST /api/auth/login
    * Login with email and password
