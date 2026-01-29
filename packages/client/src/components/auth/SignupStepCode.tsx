@@ -93,35 +93,24 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
         {error && <div className="text-sm text-destructive text-center">{error}</div>}
       </div>
 
-      <div className="space-y-3">
-        <Button
-          type="button"
-          className="w-full"
-          onClick={handleVerify}
-          disabled={code.length !== 6 || isVerifying}
-        >
-          {isVerifying ? 'Verifying...' : 'Verify Code'}
+      <div className="flex items-center justify-between">
+        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+          Back
         </Button>
 
-        <div className="flex items-center justify-between">
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            Back
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleResend}
-            disabled={resendCooldown > 0 || isResending}
-          >
-            {isResending
-              ? 'Sending...'
-              : resendCooldown > 0
-                ? `Resend in ${resendCooldown}s`
-                : 'Resend code'}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleResend}
+          disabled={resendCooldown > 0 || isResending}
+        >
+          {isResending
+            ? 'Sending...'
+            : resendCooldown > 0
+              ? `Resend in ${resendCooldown}s`
+              : 'Resend code'}
+        </Button>
       </div>
     </div>
   );
