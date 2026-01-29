@@ -1,4 +1,6 @@
-import type { AuthErrorCode } from '@knowledge-agent/shared/types';
+import type { Response } from 'express';
+import { HTTP_STATUS } from '@knowledge-agent/shared';
+import type { ApiResponse, AuthErrorCode } from '@knowledge-agent/shared/types';
 
 /**
  * Custom error class for authentication errors
@@ -38,4 +40,47 @@ export class AuthError extends Error {
  */
 export function isAuthError(error: unknown): error is AuthError {
   return error instanceof AuthError;
+}
+
+/**
+ * Send a standardized error response
+ */
+export function sendErrorResponse(
+  res: Response,
+  statusCode: number,
+  code: string,
+  message: string
+): void {
+  const response: ApiResponse = {
+    success: false,
+    error: { code, message },
+  };
+  res.status(statusCode).json(response);
+}
+
+/**
+ * Handle errors and send appropriate response.
+ * Shared between controller and middleware.
+ */
+export function handleError(error: unknown, res: Response, context: string): void {
+  if (isAuthError(error)) {
+    const response: ApiResponse = {
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      },
+    };
+    res.status(error.statusCode).json(response);
+    return;
+  }
+
+  console.error(`${context} error:`, error);
+  sendErrorResponse(
+    res,
+    HTTP_STATUS.INTERNAL_ERROR,
+    'INTERNAL_ERROR',
+    'An unexpected error occurred'
+  );
 }

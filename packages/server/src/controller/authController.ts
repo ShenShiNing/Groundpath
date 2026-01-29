@@ -11,7 +11,7 @@ import type {
   UserPublicInfo,
 } from '@knowledge-agent/shared';
 import { authService } from '../services/authService';
-import { isAuthError } from '../utils/errors';
+import { handleError, sendErrorResponse } from '../utils/errors';
 
 /**
  * Get client IP address from request
@@ -26,31 +26,16 @@ function getClientIp(req: Request): string | null {
 }
 
 /**
- * Handle errors and send appropriate response
+ * Extract authenticated user ID from request, or send 401 response.
+ * Returns the user ID if authenticated, or null if the response was already sent.
  */
-function handleError(error: unknown, res: Response): void {
-  if (isAuthError(error)) {
-    const response: ApiResponse = {
-      success: false,
-      error: {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-      },
-    };
-    res.status(error.statusCode).json(response);
-    return;
+function requireUserId(req: Request, res: Response): string | null {
+  const userId = req.user?.sub;
+  if (!userId) {
+    sendErrorResponse(res, HTTP_STATUS.UNAUTHORIZED, 'UNAUTHORIZED', 'User not authenticated');
+    return null;
   }
-
-  console.error('Auth controller error:', error);
-  const response: ApiResponse = {
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
-    },
-  };
-  res.status(HTTP_STATUS.INTERNAL_ERROR).json(response);
+  return userId;
 }
 
 /**
@@ -76,7 +61,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.CREATED).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -86,18 +71,8 @@ export const authController = {
    */
   async changePassword(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.sub;
-      if (!userId) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'User not authenticated',
-          },
-        };
-        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
-        return;
-      }
+      const userId = requireUserId(req, res);
+      if (!userId) return;
 
       const { oldPassword, newPassword } = req.body as ChangePasswordRequest;
 
@@ -109,7 +84,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -132,7 +107,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -155,7 +130,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -167,14 +142,7 @@ export const authController = {
     try {
       const tokenJti = req.refreshContext?.jti;
       if (!tokenJti) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Token ID not found',
-          },
-        };
-        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        sendErrorResponse(res, HTTP_STATUS.BAD_REQUEST, 'VALIDATION_ERROR', 'Token ID not found');
         return;
       }
 
@@ -186,7 +154,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -196,18 +164,8 @@ export const authController = {
    */
   async logoutAll(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.sub;
-      if (!userId) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'User not authenticated',
-          },
-        };
-        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
-        return;
-      }
+      const userId = requireUserId(req, res);
+      if (!userId) return;
 
       const revokedCount = await authService.logoutAll(userId);
 
@@ -220,7 +178,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -230,18 +188,8 @@ export const authController = {
    */
   async me(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.sub;
-      if (!userId) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'User not authenticated',
-          },
-        };
-        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
-        return;
-      }
+      const userId = requireUserId(req, res);
+      if (!userId) return;
 
       const user = await authService.getCurrentUser(userId);
 
@@ -251,7 +199,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -261,19 +209,8 @@ export const authController = {
    */
   async sessions(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.sub;
-
-      if (!userId) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'User not authenticated',
-          },
-        };
-        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
-        return;
-      }
+      const userId = requireUserId(req, res);
+      if (!userId) return;
 
       const sessions = await authService.getSessions(userId);
 
@@ -283,7 +220,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 
@@ -293,31 +230,19 @@ export const authController = {
    */
   async revokeSession(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.sub;
+      const userId = requireUserId(req, res);
+      if (!userId) return;
+
       const sessionIdParam = req.params.id;
       const sessionId = Array.isArray(sessionIdParam) ? sessionIdParam[0] : sessionIdParam;
 
-      if (!userId) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'UNAUTHORIZED',
-            message: 'User not authenticated',
-          },
-        };
-        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
-        return;
-      }
-
       if (!sessionId) {
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: 'Session ID is required',
-          },
-        };
-        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        sendErrorResponse(
+          res,
+          HTTP_STATUS.BAD_REQUEST,
+          'VALIDATION_ERROR',
+          'Session ID is required'
+        );
         return;
       }
 
@@ -329,7 +254,7 @@ export const authController = {
       };
       res.status(HTTP_STATUS.OK).json(response);
     } catch (error) {
-      handleError(error, res);
+      handleError(error, res, 'Auth controller');
     }
   },
 };

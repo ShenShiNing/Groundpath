@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { ModeToggle } from './components/mode-toggle';
+import { ModeToggle } from './components/theme/mode-toggle';
 import { Button } from './components/ui/button';
 
 const App = () => {

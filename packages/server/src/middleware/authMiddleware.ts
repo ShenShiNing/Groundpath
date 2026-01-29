@@ -1,8 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
-import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { ApiResponse } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { refreshRequestSchema } from '@knowledge-agent/shared/schemas';
-import { AuthError } from '../utils/errors';
+import { AuthError, handleError } from '../utils/errors';
 import { extractBearerToken, verifyAccessToken, verifyRefreshToken } from '../utils/jwtUtils';
 import { refreshTokenRepository } from '../repositories/refreshTokenRepository';
 
@@ -30,7 +29,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     req.user = payload;
     next();
   } catch (error) {
-    handleAuthError(error, res);
+    handleError(error, res, 'Auth middleware');
   }
 }
 
@@ -91,35 +90,6 @@ export async function authenticateRefreshToken(
     };
     next();
   } catch (error) {
-    handleAuthError(error, res);
+    handleError(error, res, 'Auth middleware');
   }
-}
-
-/**
- * Handle authentication errors and send appropriate response
- */
-function handleAuthError(error: unknown, res: Response): void {
-  if (error instanceof AuthError) {
-    const response: ApiResponse = {
-      success: false,
-      error: {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-      },
-    };
-    res.status(error.statusCode).json(response);
-    return;
-  }
-
-  // Unexpected error
-  console.error('Auth middleware error:', error);
-  const response: ApiResponse = {
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
-    },
-  };
-  res.status(HTTP_STATUS.INTERNAL_ERROR).json(response);
 }

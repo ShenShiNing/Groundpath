@@ -9,9 +9,17 @@ export const deviceInfoSchema = z.object({
   browser: z.string().optional(),
 });
 
-// ==================== Password Rules ====================
+// ==================== Field Schemas (for client-side validation) ====================
 
-const passwordSchema = z
+export const usernameSchema = z
+  .string()
+  .min(3, 'Username must be at least 3 characters')
+  .max(50, 'Username must be at most 50 characters')
+  .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores');
+
+export const emailSchema = z.email('Invalid email format');
+
+export const passwordSchema = z
   .string()
   .min(8, 'Password must be at least 8 characters')
   .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
@@ -20,7 +28,7 @@ const passwordSchema = z
 // ==================== Request Schemas ====================
 
 export const loginRequestSchema = z.object({
-  email: z.email('Invalid email format'),
+  email: emailSchema,
   password: z.string().min(1, 'Password is required'),
   deviceInfo: deviceInfoSchema.optional(),
 });
@@ -31,12 +39,8 @@ export const refreshRequestSchema = z.object({
 
 export const registerRequestSchema = z
   .object({
-    username: z
-      .string()
-      .min(3, 'Username must be at least 3 characters')
-      .max(50, 'Username must be at most 50 characters')
-      .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
-    email: z.email('Invalid email format'),
+    username: usernameSchema,
+    email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
     deviceInfo: deviceInfoSchema.optional(),

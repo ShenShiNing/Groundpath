@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
 import type {
   LoginRequest,
   RegisterRequest,
   AuthResponse,
-  DeviceInfo,
   UserPublicInfo,
 } from '@knowledge-agent/shared/types';
 import type { AccessTokenPayload } from '../types/authTypes';
@@ -142,43 +142,54 @@ export const authService = {
     // Find user by email
     const user = await userRepository.findByEmail(email);
 
-    if (!user || !user.password) {
-      // Record failed attempt
+    /** Record a login failure and throw the corresponding error */
+    const failLogin = async (
+      reason: string,
+      errorCode: (typeof AUTH_ERROR_CODES)[keyof typeof AUTH_ERROR_CODES],
+      errorMessage: string,
+      statusCode?: number,
+      userId?: string
+    ): Promise<never> => {
       await loginLogRepository.recordFailure(
         email,
         'password',
-        'Invalid credentials',
+        reason,
         ipAddress,
-        userAgent
+        userAgent,
+        userId
       );
-      throw new AuthError(AUTH_ERROR_CODES.INVALID_CREDENTIALS, 'Invalid email or password');
+      throw new AuthError(errorCode, errorMessage, statusCode);
+    };
+
+    if (!user || !user.password) {
+      return failLogin(
+        'Invalid credentials',
+        AUTH_ERROR_CODES.INVALID_CREDENTIALS,
+        'Invalid email or password'
+      );
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      await loginLogRepository.recordFailure(
-        email,
-        'password',
+      return failLogin(
         'Invalid password',
-        ipAddress,
-        userAgent,
+        AUTH_ERROR_CODES.INVALID_CREDENTIALS,
+        'Invalid email or password',
+        undefined,
         user.id
       );
-      throw new AuthError(AUTH_ERROR_CODES.INVALID_CREDENTIALS, 'Invalid email or password');
     }
 
     // Check user status
     if (user.status === 'banned') {
-      await loginLogRepository.recordFailure(
-        email,
-        'password',
+      return failLogin(
         'Account banned',
-        ipAddress,
-        userAgent,
+        AUTH_ERROR_CODES.USER_BANNED,
+        'Your account has been banned',
+        403,
         user.id
       );
-      throw new AuthError(AUTH_ERROR_CODES.USER_BANNED, 'Your account has been banned', 403);
     }
 
     // Optional: Check email verification
@@ -293,50 +304,3 @@ export const authService = {
     await tokenService.revokeToken(sessionId);
   },
 };
-
-/**
- * Parse device info from user agent string
- * Basic implementation - can be enhanced with a proper UA parser library
- */
-function parseDeviceInfo(userAgent: string | null): DeviceInfo | null {
-  if (!userAgent) return null;
-
-  const deviceInfo: DeviceInfo = {
-    userAgent,
-  };
-
-  // Basic device type detection
-  if (/mobile/i.test(userAgent)) {
-    deviceInfo.deviceType = 'mobile';
-  } else if (/tablet/i.test(userAgent)) {
-    deviceInfo.deviceType = 'tablet';
-  } else {
-    deviceInfo.deviceType = 'desktop';
-  }
-
-  // Basic OS detection
-  if (/windows/i.test(userAgent)) {
-    deviceInfo.os = 'Windows';
-  } else if (/macintosh|mac os/i.test(userAgent)) {
-    deviceInfo.os = 'macOS';
-  } else if (/linux/i.test(userAgent)) {
-    deviceInfo.os = 'Linux';
-  } else if (/android/i.test(userAgent)) {
-    deviceInfo.os = 'Android';
-  } else if (/iphone|ipad/i.test(userAgent)) {
-    deviceInfo.os = 'iOS';
-  }
-
-  // Basic browser detection
-  if (/chrome/i.test(userAgent) && !/edg/i.test(userAgent)) {
-    deviceInfo.browser = 'Chrome';
-  } else if (/firefox/i.test(userAgent)) {
-    deviceInfo.browser = 'Firefox';
-  } else if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent)) {
-    deviceInfo.browser = 'Safari';
-  } else if (/edg/i.test(userAgent)) {
-    deviceInfo.browser = 'Edge';
-  }
-
-  return deviceInfo;
-}
