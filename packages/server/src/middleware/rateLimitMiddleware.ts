@@ -172,6 +172,36 @@ export const generalRateLimiter = createRateLimiter({
   message: 'Too many requests, please try again later',
 });
 
+/**
+ * Email send rate limiter - strict to prevent spam
+ * 2 requests per minute per IP
+ */
+export const emailSendRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 2,
+  message: 'Too many email requests, please try again later',
+});
+
+/**
+ * Email verify rate limiter - to prevent brute force code guessing
+ * 10 requests per 5 minutes per IP
+ */
+export const emailVerifyRateLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  maxRequests: 10,
+  message: 'Too many verification attempts, please try again later',
+});
+
+/**
+ * Password reset rate limiter
+ * 3 requests per minute per IP
+ */
+export const passwordResetRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 3,
+  message: 'Too many password reset attempts, please try again later',
+});
+
 // ============================================================================
 // Account-Level Rate Limiter (for login attempts by email)
 // ============================================================================

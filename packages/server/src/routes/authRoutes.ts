@@ -6,6 +6,7 @@ import {
   registerRateLimiter,
   refreshRateLimiter,
   generalRateLimiter,
+  passwordResetRateLimiter,
 } from '../middleware/rateLimitMiddleware';
 import { validateBody } from '../middleware/validationMiddleware';
 import {
@@ -13,6 +14,8 @@ import {
   refreshRequestSchema,
   registerRequestSchema,
   changePasswordRequestSchema,
+  registerWithCodeRequestSchema,
+  resetPasswordRequestSchema,
 } from '@knowledge-agent/shared/schemas';
 
 const router = express.Router();
@@ -27,6 +30,14 @@ router.post(
   authController.register
 );
 
+// Register with verified email (code-based flow)
+router.post(
+  '/register-with-code',
+  registerRateLimiter,
+  validateBody(registerWithCodeRequestSchema),
+  authController.registerWithCode
+);
+
 // Login with email/password
 router.post('/login', loginRateLimiter, validateBody(loginRequestSchema), authController.login);
 
@@ -36,6 +47,14 @@ router.post(
   refreshRateLimiter,
   validateBody(refreshRequestSchema),
   authController.refresh
+);
+
+// Reset password with verified email
+router.post(
+  '/reset-password',
+  passwordResetRateLimiter,
+  validateBody(resetPasswordRequestSchema),
+  authController.resetPassword
 );
 
 // ==================== Protected Routes (Refresh Token Auth) ====================

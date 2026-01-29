@@ -1,4 +1,4 @@
-import { AUTH_ERROR_CODES } from '../constants';
+import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '../constants';
 import type { DeviceInfo } from '../schemas/auth';
 
 // ==================== Token Response ====================
@@ -57,3 +57,5 @@ export interface SessionInfo {
 // ==================== Error Types ====================
 
 export type AuthErrorCode = (typeof AUTH_ERROR_CODES)[keyof typeof AUTH_ERROR_CODES];
+export type EmailErrorCode = (typeof EMAIL_ERROR_CODES)[keyof typeof EMAIL_ERROR_CODES];
+export type AppErrorCode = AuthErrorCode | EmailErrorCode;

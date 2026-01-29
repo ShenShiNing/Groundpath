@@ -3,5 +3,12 @@ import { indexRoute } from './index.route';
 import { aboutRoute } from './about.route';
 import { loginRoute } from './auth/login.route';
 import { signupRoute } from './auth/signup.route';
+import { forgotPasswordRoute } from './auth/forgot-password.route';
 
-export const routeTree = rootRoute.addChildren([indexRoute, aboutRoute, loginRoute, signupRoute]);
+export const routeTree = rootRoute.addChildren([
+  indexRoute,
+  aboutRoute,
+  loginRoute,
+  signupRoute,
+  forgotPasswordRoute,
+]);

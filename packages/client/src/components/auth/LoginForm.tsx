@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRouter } from '@tanstack/react-router';
+import { useRouter, Link } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { Mail, Lock } from 'lucide-react';
 import type { AxiosError } from 'axios';
@@ -114,6 +114,16 @@ export function LoginForm() {
               />
             )}
           </form.Field>
+
+          {/* Forgot Password Link */}
+          <div className="flex justify-end">
+            <Link
+              to="/auth/forgot-password"
+              className="text-sm text-muted-foreground hover:text-primary"
+            >
+              Forgot password?
+            </Link>
+          </div>
 
           {/* Error Message */}
           {error && <div className="text-sm text-destructive">{error}</div>}

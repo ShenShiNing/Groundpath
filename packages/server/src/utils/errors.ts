@@ -1,17 +1,17 @@
 import type { Response } from 'express';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
-import type { ApiResponse, AuthErrorCode } from '@knowledge-agent/shared/types';
+import type { ApiResponse, AppErrorCode } from '@knowledge-agent/shared/types';
 
 /**
  * Custom error class for authentication errors
  */
 export class AuthError extends Error {
-  public readonly code: AuthErrorCode;
+  public readonly code: AppErrorCode;
   public readonly statusCode: number;
   public readonly details?: Record<string, unknown>;
 
   constructor(
-    code: AuthErrorCode,
+    code: AppErrorCode,
     message: string,
     statusCode: number = 401,
     details?: Record<string, unknown>

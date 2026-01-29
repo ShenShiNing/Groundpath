@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import express from 'express';
 import authRoutes from './authRoutes';
+import emailRoutes from './emailRoutes';
 
 const router = express.Router();
 
@@ -11,5 +12,8 @@ router.get('/api/hello', (req: Request, res: Response) => {
 
 // Auth routes
 router.use('/api/auth', authRoutes);
+
+// Email verification routes (under /api/auth/email)
+router.use('/api/auth/email', emailRoutes);
 
 export default router;

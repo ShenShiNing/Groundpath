@@ -8,6 +8,8 @@ import type {
   AuthResponse,
   UserPublicInfo,
   DeviceInfo,
+  RegisterWithCodeRequest,
+  ResetPasswordRequest,
 } from '@knowledge-agent/shared/types';
 import type { User } from '../db/schema/user/users';
 import type { AccessTokenPayload } from '../types/authTypes';
@@ -18,6 +20,7 @@ import { userRepository } from '../repositories/userRepository';
 import { loginLogRepository } from '../repositories/loginLogRepository';
 import { refreshTokenRepository } from '../repositories/refreshTokenRepository';
 import { tokenService } from './tokenService';
+import { emailVerificationService } from './emailVerificationService';
 import { checkAccountRateLimit, resetAccountRateLimit } from '../middleware/rateLimitMiddleware';
 
 /**
@@ -292,5 +295,120 @@ export const authService = {
     }
 
     await tokenService.revokeToken(sessionId);
+  },
+
+  /**
+   * Register a new user with a verified email (code-based flow)
+   */
+  async registerWithCode(
+    data: RegisterWithCodeRequest,
+    ipAddress: string | null,
+    userAgent: string | null
+  ): Promise<AuthResponse> {
+    const { email, username, password, verificationToken, deviceInfo } = data;
+
+    // Verify the verification token
+    const { email: verifiedEmail } = emailVerificationService.verifyToken(
+      verificationToken,
+      'register'
+    );
+
+    // Ensure the email matches
+    if (verifiedEmail !== email.toLowerCase().trim()) {
+      throw new AuthError(
+        AUTH_ERROR_CODES.TOKEN_INVALID,
+        'Verification token does not match the provided email',
+        400
+      );
+    }
+
+    // Check if email already exists
+    const emailExists = await userRepository.existsByEmail(email);
+    if (emailExists) {
+      throw new AuthError(
+        AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
+        'An account with this email already exists',
+        400
+      );
+    }
+
+    // Check if username already exists
+    const usernameExists = await userRepository.existsByUsername(username);
+    if (usernameExists) {
+      throw new AuthError(
+        AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
+        'This username is already taken',
+        400
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Create user with email verified
+    const userId = uuidv4();
+    const user = await userRepository.create({
+      id: userId,
+      username,
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
+      status: 'active',
+      emailVerified: true,
+    });
+
+    // Record successful registration
+    await loginLogRepository.recordSuccess(user.id, email, 'password', ipAddress, userAgent);
+
+    // Update last login info
+    await userRepository.updateLastLogin(user.id, ipAddress);
+
+    return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
+  },
+
+  /**
+   * Reset user password with verified email
+   */
+  async resetPassword(
+    data: ResetPasswordRequest
+  ): Promise<{ message: string; sessionsRevoked?: number }> {
+    const { email, newPassword, verificationToken, logoutAllDevices } = data;
+
+    // Verify the verification token
+    const { email: verifiedEmail } = emailVerificationService.verifyToken(
+      verificationToken,
+      'reset_password'
+    );
+
+    // Ensure the email matches
+    if (verifiedEmail !== email.toLowerCase().trim()) {
+      throw new AuthError(
+        AUTH_ERROR_CODES.TOKEN_INVALID,
+        'Verification token does not match the provided email',
+        400
+      );
+    }
+
+    // Find user
+    const user = await userRepository.findByEmail(email);
+    if (!user) {
+      throw new AuthError(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    // Update password
+    await userRepository.updatePassword(user.id, hashedPassword);
+
+    // Optionally revoke all sessions
+    let sessionsRevoked: number | undefined;
+    if (logoutAllDevices !== false) {
+      sessionsRevoked = await refreshTokenRepository.revokeAllForUser(user.id);
+    }
+
+    return {
+      message: 'Password reset successfully',
+      sessionsRevoked,
+    };
   },
 };

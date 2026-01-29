@@ -19,3 +19,7 @@ export const addHours = (hours: number) => sql`DATE_ADD(NOW(), INTERVAL ${hours}
 
 /** 从现在起若干天后的时间 */
 export const addDays = (days: number) => sql`DATE_ADD(NOW(), INTERVAL ${days} DAY)`;
+
+/** 从现在起若干秒前的时间 */
+export const subtractSeconds = (seconds: number) =>
+  sql`DATE_SUB(NOW(), INTERVAL ${seconds} SECOND)`;

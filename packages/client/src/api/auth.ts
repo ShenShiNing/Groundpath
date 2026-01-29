@@ -4,6 +4,9 @@ import type {
   LoginRequest,
   RegisterRequest,
   ChangePasswordRequest,
+  RegisterWithCodeRequest,
+  ResetPasswordRequest,
+  ResetPasswordResponse,
 } from '@knowledge-agent/shared/types';
 import { apiClient, unwrapResponse } from './client';
 import { getDeviceInfo } from '@/lib/device';
@@ -18,12 +21,33 @@ export const authApi = {
     return unwrapResponse(response.data);
   },
 
-  /** 注册 */
+  /** 注册 (legacy, without email verification) */
   async register(data: Omit<RegisterRequest, 'deviceInfo'>): Promise<AuthResponse> {
     const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/auth/register', {
       ...data,
       deviceInfo: getDeviceInfo(),
     });
+    return unwrapResponse(response.data);
+  },
+
+  /** 注册 (with verified email) */
+  async registerWithCode(data: Omit<RegisterWithCodeRequest, 'deviceInfo'>): Promise<AuthResponse> {
+    const response = await apiClient.post<ApiResponse<AuthResponse>>(
+      '/api/auth/register-with-code',
+      {
+        ...data,
+        deviceInfo: getDeviceInfo(),
+      }
+    );
+    return unwrapResponse(response.data);
+  },
+
+  /** 重置密码 */
+  async resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
+    const response = await apiClient.post<ApiResponse<ResetPasswordResponse>>(
+      '/api/auth/reset-password',
+      data
+    );
     return unwrapResponse(response.data);
   },
 

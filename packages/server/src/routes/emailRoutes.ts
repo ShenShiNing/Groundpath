@@ -1,0 +1,28 @@
+import express from 'express';
+import { emailController } from '../controller/emailController';
+import { emailSendRateLimiter, emailVerifyRateLimiter } from '../middleware/rateLimitMiddleware';
+import { validateBody } from '../middleware/validationMiddleware';
+import {
+  sendVerificationCodeRequestSchema,
+  verifyCodeRequestSchema,
+} from '@knowledge-agent/shared/schemas';
+
+const router = express.Router();
+
+// Send verification code
+router.post(
+  '/send-code',
+  emailSendRateLimiter,
+  validateBody(sendVerificationCodeRequestSchema),
+  emailController.sendCode
+);
+
+// Verify code
+router.post(
+  '/verify-code',
+  emailVerifyRateLimiter,
+  validateBody(verifyCodeRequestSchema),
+  emailController.verifyCode
+);
+
+export default router;

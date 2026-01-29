@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { UserPublicInfo, TokenPair, RegisterRequest } from '@knowledge-agent/shared/types';
+import type {
+  UserPublicInfo,
+  TokenPair,
+  RegisterRequest,
+  RegisterWithCodeRequest,
+} from '@knowledge-agent/shared/types';
 import { authApi, setTokenAccessors } from '@/api';
 
 interface AuthState {
@@ -16,6 +21,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (data: Omit<RegisterRequest, 'deviceInfo'>) => Promise<void>;
+  registerWithCode: (data: Omit<RegisterWithCodeRequest, 'deviceInfo'>) => Promise<void>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
   setTokens: (tokens: TokenPair) => void;
@@ -114,6 +120,25 @@ export const useAuthStore = create<AuthState>()(
 
           try {
             const response = await authApi.register(data);
+            set({
+              user: response.user,
+              accessToken: response.tokens.accessToken,
+              refreshToken: response.tokens.refreshToken,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } catch (error) {
+            set({ isLoading: false });
+            throw error;
+          }
+        },
+
+        // 注册 (with verified email)
+        registerWithCode: async (data: Omit<RegisterWithCodeRequest, 'deviceInfo'>) => {
+          set({ isLoading: true });
+
+          try {
+            const response = await authApi.registerWithCode(data);
             set({
               user: response.user,
               accessToken: response.tokens.accessToken,

@@ -5,6 +5,8 @@ import type {
   RefreshRequest,
   RegisterRequest,
   ChangePasswordRequest,
+  RegisterWithCodeRequest,
+  ResetPasswordRequest,
 } from '@knowledge-agent/shared';
 import { authService } from '../services/authService';
 import { handleError, sendErrorResponse, sendSuccessResponse } from '../utils/errors';
@@ -193,6 +195,39 @@ export const authController = {
 
       await authService.revokeSession(userId, sessionId);
       sendSuccessResponse(res, { message: 'Session revoked successfully' });
+    } catch (error) {
+      handleError(error, res, 'Auth controller');
+    }
+  },
+
+  /**
+   * POST /api/auth/register-with-code
+   * Register a new user with verified email
+   */
+  async registerWithCode(req: Request, res: Response): Promise<void> {
+    try {
+      const registerRequest = req.body as RegisterWithCodeRequest;
+
+      const ipAddress = getClientIp(req);
+      const userAgent = req.headers['user-agent'] ?? null;
+
+      const result = await authService.registerWithCode(registerRequest, ipAddress, userAgent);
+      sendSuccessResponse(res, result, HTTP_STATUS.CREATED);
+    } catch (error) {
+      handleError(error, res, 'Auth controller');
+    }
+  },
+
+  /**
+   * POST /api/auth/reset-password
+   * Reset password with verified email
+   */
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const resetRequest = req.body as ResetPasswordRequest;
+
+      const result = await authService.resetPassword(resetRequest);
+      sendSuccessResponse(res, result);
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
