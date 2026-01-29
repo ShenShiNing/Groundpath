@@ -37,6 +37,7 @@ export const tokenService = {
 
     // Store refresh token in database
     await refreshTokenRepository.create(
+      tokenId,
       user.sub,
       refreshTokenString,
       expiresAt,

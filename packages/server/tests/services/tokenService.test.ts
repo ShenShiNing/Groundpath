@@ -131,7 +131,7 @@ describe('tokenService', () => {
     });
 
     // 场景 4：refresh token 持久化到数据库
-    // 确保调用 repository.create 并传入正确的参数（userId、token 字符串、过期时间、IP、设备信息）
+    // 确保调用 repository.create 并传入正确的参数（tokenId、userId、token 字符串、过期时间、IP、设备信息）
     it('should store refresh token in database', async () => {
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
 
@@ -139,6 +139,7 @@ describe('tokenService', () => {
 
       const calledWith = vi.mocked(refreshTokenRepository.create).mock.calls[0];
       const expected = [
+        'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
         new Date('2024-01-22T10:00:00Z'),
@@ -152,6 +153,7 @@ describe('tokenService', () => {
       );
 
       expect(refreshTokenRepository.create).toHaveBeenCalledWith(
+        'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
         new Date('2024-01-22T10:00:00Z'),
@@ -167,10 +169,11 @@ describe('tokenService', () => {
 
       await tokenService.generateTokenPair(validUser, null, deviceInfo);
 
-      const calledIp = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[3];
+      const calledIp = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[4];
       logTestInfo({ ip: null }, { storedIp: null }, { storedIp: calledIp });
 
       expect(refreshTokenRepository.create).toHaveBeenCalledWith(
+        'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
         expect.any(Date),
@@ -186,7 +189,7 @@ describe('tokenService', () => {
 
       await tokenService.generateTokenPair(validUser, ipAddress, null);
 
-      const calledDeviceInfo = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[4];
+      const calledDeviceInfo = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[5];
       logTestInfo(
         { deviceInfo: null },
         { storedDeviceInfo: null },
@@ -194,6 +197,7 @@ describe('tokenService', () => {
       );
 
       expect(refreshTokenRepository.create).toHaveBeenCalledWith(
+        'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
         expect.any(Date),

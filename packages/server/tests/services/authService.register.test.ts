@@ -285,7 +285,7 @@ describe('authService > register', () => {
     expect(deviceInfo).toMatchObject({
       os: 'Windows',
       browser: 'Chrome',
-      deviceType: 'desktop',
+      deviceType: 'Desktop',
     });
   });
 });

@@ -1,5 +1,4 @@
 import { eq, and, gt } from 'drizzle-orm';
-import { v4 as uuidv4 } from 'uuid';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { db } from '../db';
 import {
@@ -16,13 +15,14 @@ export const refreshTokenRepository = {
    * Create a new refresh token record
    */
   async create(
+    tokenId: string,
     userId: string,
     token: string,
     expiresAt: Date,
     ipAddress: string | null,
     deviceInfo: DeviceInfo | null
   ): Promise<RefreshToken> {
-    const id = uuidv4();
+    const id = tokenId;
     const newToken: NewRefreshToken = {
       id,
       userId,

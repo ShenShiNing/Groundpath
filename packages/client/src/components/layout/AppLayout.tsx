@@ -443,13 +443,15 @@ function Footer({ variant }: { variant: 'full' | 'simple' | 'none' }) {
 
 export function AppLayout({ children, showFooter = 'full' }: AppLayoutProps) {
   const router = useRouter();
-  const { accessToken, refreshToken, clearAuth } = useAuthStore();
+  const { accessToken, clearAuth } = useAuthStore();
   const isAuthenticated = !!accessToken;
 
   const handleLogout = async () => {
+    // 直接从 store 获取最新的 refreshToken，避免闭包捕获旧值
+    const currentRefreshToken = useAuthStore.getState().refreshToken;
     try {
-      if (refreshToken) {
-        await authApi.logout(refreshToken);
+      if (currentRefreshToken) {
+        await authApi.logout(currentRefreshToken);
       }
     } finally {
       clearAuth();

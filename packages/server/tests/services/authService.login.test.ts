@@ -235,7 +235,8 @@ describe('authService > login', () => {
       'password',
       'Invalid credentials',
       ipAddress,
-      userAgent
+      userAgent,
+      undefined
     );
   });
 
@@ -386,7 +387,7 @@ describe('authService > login', () => {
     await authService.login(validCredentials, ipAddress, userAgent);
 
     const calledDeviceInfo = vi.mocked(tokenService.generateTokenPair).mock.calls[0]?.[2];
-    const expected = { deviceType: 'desktop', os: 'Windows', browser: 'Chrome' };
+    const expected = { deviceType: 'Desktop', os: 'Windows', browser: 'Chrome' };
     logTestInfo({ userAgent }, expected, {
       deviceType: calledDeviceInfo?.deviceType,
       os: calledDeviceInfo?.os,
@@ -398,7 +399,7 @@ describe('authService > login', () => {
       ipAddress,
       expect.objectContaining({
         userAgent,
-        deviceType: 'desktop',
+        deviceType: 'Desktop',
         os: 'Windows',
         browser: 'Chrome',
       })
@@ -485,7 +486,7 @@ describe('authService > login', () => {
     await authService.login(validCredentials, ipAddress, mobileUserAgent);
 
     const calledDeviceInfo = vi.mocked(tokenService.generateTokenPair).mock.calls[0]?.[2];
-    const expected = { deviceType: 'mobile', browser: 'Safari' };
+    const expected = { deviceType: 'Mobile', browser: 'Safari' };
     logTestInfo({ userAgent: mobileUserAgent }, expected, {
       deviceType: calledDeviceInfo?.deviceType,
       browser: calledDeviceInfo?.browser,
@@ -495,7 +496,7 @@ describe('authService > login', () => {
       expect.any(Object),
       ipAddress,
       expect.objectContaining({
-        deviceType: 'mobile',
+        deviceType: 'Mobile',
         browser: 'Safari',
       })
     );
@@ -515,7 +516,7 @@ describe('authService > login', () => {
     const calledDeviceInfo = vi.mocked(tokenService.generateTokenPair).mock.calls[0]?.[2];
     logTestInfo(
       { userAgent: tabletUserAgent },
-      { deviceType: 'tablet' },
+      { deviceType: 'Tablet' },
       { deviceType: calledDeviceInfo?.deviceType }
     );
 
@@ -523,7 +524,7 @@ describe('authService > login', () => {
       expect.any(Object),
       ipAddress,
       expect.objectContaining({
-        deviceType: 'tablet',
+        deviceType: 'Tablet',
       })
     );
   });
@@ -597,7 +598,7 @@ describe('authService > login', () => {
     const calledDeviceInfo = vi.mocked(tokenService.generateTokenPair).mock.calls[0]?.[2];
     logTestInfo(
       { userAgent: androidUserAgent },
-      { os: 'Android', deviceType: 'mobile' },
+      { os: 'Android', deviceType: 'Mobile' },
       { os: calledDeviceInfo?.os, deviceType: calledDeviceInfo?.deviceType }
     );
 
@@ -606,7 +607,7 @@ describe('authService > login', () => {
       ipAddress,
       expect.objectContaining({
         os: 'Android',
-        deviceType: 'mobile',
+        deviceType: 'Mobile',
       })
     );
   });
@@ -624,7 +625,7 @@ describe('authService > login', () => {
     const calledDeviceInfo = vi.mocked(tokenService.generateTokenPair).mock.calls[0]?.[2];
     logTestInfo(
       { userAgent: iosUserAgent },
-      { os: 'iOS', deviceType: 'mobile' },
+      { os: 'iOS', deviceType: 'Mobile' },
       { os: calledDeviceInfo?.os, deviceType: calledDeviceInfo?.deviceType }
     );
 
@@ -633,7 +634,7 @@ describe('authService > login', () => {
       ipAddress,
       expect.objectContaining({
         os: 'iOS',
-        deviceType: 'mobile',
+        deviceType: 'Mobile',
       })
     );
   });
@@ -678,7 +679,7 @@ describe('authService > login', () => {
     const calledDeviceInfo = vi.mocked(tokenService.generateTokenPair).mock.calls[0]?.[2];
     logTestInfo(
       { userAgent: unknownUserAgent },
-      { deviceType: 'desktop', os: undefined, browser: undefined },
+      { deviceType: 'Desktop', os: undefined, browser: undefined },
       {
         deviceType: calledDeviceInfo?.deviceType,
         os: calledDeviceInfo?.os,
@@ -691,7 +692,7 @@ describe('authService > login', () => {
       ipAddress,
       expect.objectContaining({
         userAgent: unknownUserAgent,
-        deviceType: 'desktop',
+        deviceType: 'Desktop',
       })
     );
     expect(calledDeviceInfo?.os).toBeUndefined();
