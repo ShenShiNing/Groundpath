@@ -158,7 +158,7 @@ function UserMenu({ onLogout }: { onLogout: () => void }) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative rounded-full">
           <Avatar size="sm">
-            <AvatarImage src={undefined} alt={displayName} />
+            <AvatarImage src={user?.avatarUrl ?? undefined} alt={displayName} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -253,6 +253,7 @@ function MobileNav({
             <Separator className="my-4" />
             <div className="flex items-center gap-3 px-2">
               <Avatar size="sm">
+                <AvatarImage src={user?.avatarUrl ?? undefined} alt={user?.username} />
                 <AvatarFallback>{getUserInitials(user?.username, user?.email)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">

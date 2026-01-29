@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { githubOAuthService } from '../services/githubOAuthService';
+import { googleOAuthService } from '../services/googleOAuthService';
 import { handleError } from '../utils/errors';
 import { getClientIp } from '../utils/requestUtils';
 
@@ -45,7 +46,7 @@ function buildErrorCallbackUrl(error: string, returnUrl: string = '/'): string {
 /**
  * Map GitHub OAuth error codes to user-friendly messages
  */
-function getOAuthErrorMessage(error: string): string {
+function getGitHubErrorMessage(error: string): string {
   const errorMessages: Record<string, string> = {
     access_denied: 'You cancelled the GitHub authorization',
     redirect_uri_mismatch: 'OAuth configuration error. Please contact support.',
@@ -54,6 +55,24 @@ function getOAuthErrorMessage(error: string): string {
   };
 
   return errorMessages[error] || 'GitHub authorization failed. Please try again.';
+}
+
+/**
+ * Map Google OAuth error codes to user-friendly messages
+ */
+function getGoogleErrorMessage(error: string): string {
+  const errorMessages: Record<string, string> = {
+    access_denied: 'You cancelled the Google authorization',
+    redirect_uri_mismatch: 'OAuth configuration error. Please contact support.',
+    invalid_request: 'Invalid request. Please try again.',
+    unauthorized_client: 'This application is not authorized for Google login.',
+    unsupported_response_type: 'OAuth configuration error. Please contact support.',
+    invalid_scope: 'OAuth configuration error. Please contact support.',
+    server_error: 'Google server error. Please try again later.',
+    temporarily_unavailable: 'Google is temporarily unavailable. Please try again later.',
+  };
+
+  return errorMessages[error] || 'Google authorization failed. Please try again.';
 }
 
 /**
@@ -88,7 +107,7 @@ export const oauthController = {
 
       // Handle OAuth error (user denied access, etc.)
       if (error) {
-        res.redirect(buildErrorCallbackUrl(getOAuthErrorMessage(error)));
+        res.redirect(buildErrorCallbackUrl(getGitHubErrorMessage(error)));
         return;
       }
 
@@ -121,6 +140,75 @@ export const oauthController = {
       res.redirect(callbackUrl);
     } catch (error) {
       console.error('GitHub OAuth callback error:', error);
+
+      // Extract error message
+      const errorMessage = error instanceof Error ? error.message : 'OAuth authentication failed';
+
+      res.redirect(buildErrorCallbackUrl(errorMessage));
+    }
+  },
+
+  /**
+   * GET /api/auth/google
+   * Initiate Google OAuth flow
+   */
+  async googleAuth(req: Request, res: Response): Promise<void> {
+    try {
+      const returnUrl = typeof req.query.returnUrl === 'string' ? req.query.returnUrl : '/';
+
+      const authUrl = googleOAuthService.generateAuthUrl(returnUrl);
+      res.redirect(authUrl);
+    } catch (error) {
+      console.error('[OAuth] Google auth error:', error);
+      handleError(error, res, 'OAuth controller');
+    }
+  },
+
+  /**
+   * GET /api/auth/google/callback
+   * Handle Google OAuth callback
+   */
+  async googleCallback(req: Request, res: Response): Promise<void> {
+    try {
+      const code = req.query.code as string | undefined;
+      const state = req.query.state as string | undefined;
+      const error = req.query.error as string | undefined;
+
+      // Handle OAuth error (user denied access, etc.)
+      if (error) {
+        res.redirect(buildErrorCallbackUrl(getGoogleErrorMessage(error)));
+        return;
+      }
+
+      // Validate required parameters
+      if (!code || !state) {
+        res.redirect(buildErrorCallbackUrl('Missing code or state parameter'));
+        return;
+      }
+
+      const ipAddress = getClientIp(req);
+      const userAgent = req.headers['user-agent'] ?? null;
+
+      // Process OAuth callback
+      const { authResponse, returnUrl } = await googleOAuthService.handleCallback(
+        code,
+        state,
+        ipAddress,
+        userAgent
+      );
+
+      // Redirect to frontend with tokens
+      const callbackUrl = buildCallbackUrl(returnUrl, {
+        accessToken: authResponse.tokens.accessToken,
+        refreshToken: authResponse.tokens.refreshToken,
+        expiresIn: authResponse.tokens.expiresIn,
+        refreshExpiresIn: authResponse.tokens.refreshExpiresIn,
+        user: JSON.stringify(authResponse.user),
+      });
+
+      res.redirect(callbackUrl);
+    } catch (error) {
+      console.error('Google OAuth callback error:', error);
 
       // Extract error message
       const errorMessage = error instanceof Error ? error.message : 'OAuth authentication failed';
