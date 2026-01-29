@@ -4,12 +4,7 @@ import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
 import { AUTH_CONFIG } from '../config/authConfig';
 import type { AccessTokenPayload } from '../types/authTypes';
 import { AuthError } from '../utils/errors';
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-  calculateExpirationDate,
-} from '../utils/jwtUtils';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwtUtils';
 import { refreshTokenRepository } from '../repositories/refreshTokenRepository';
 import { userRepository } from '../repositories/userRepository';
 
@@ -32,15 +27,11 @@ export const tokenService = {
     const tokenId = uuidv4();
     const refreshTokenString = generateRefreshToken(user.sub, tokenId);
 
-    // Calculate expiration
-    const expiresAt = calculateExpirationDate(AUTH_CONFIG.refreshToken.expiresInSeconds);
-
-    // Store refresh token in database
+    // Store refresh token in database (时间由 MySQL 服务端计算)
     await refreshTokenRepository.create(
       tokenId,
       user.sub,
       refreshTokenString,
-      expiresAt,
       ipAddress,
       deviceInfo
     );

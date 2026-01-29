@@ -1,11 +1,9 @@
 import { eq, and, gt } from 'drizzle-orm';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { db } from '../db';
-import {
-  refreshTokens,
-  type RefreshToken,
-  type NewRefreshToken,
-} from '../db/schema/auth/refreshTokens';
+import { now, addSeconds } from '../db/utils';
+import { refreshTokens, type RefreshToken } from '../db/schema/auth/refreshTokens';
+import { AUTH_CONFIG } from '../config/authConfig';
 
 /**
  * Refresh token repository for database operations
@@ -18,29 +16,18 @@ export const refreshTokenRepository = {
     tokenId: string,
     userId: string,
     token: string,
-    expiresAt: Date,
     ipAddress: string | null,
     deviceInfo: DeviceInfo | null
-  ): Promise<RefreshToken> {
-    const id = tokenId;
-    const newToken: NewRefreshToken = {
-      id,
+  ): Promise<void> {
+    await db.insert(refreshTokens).values({
+      id: tokenId,
       userId,
       token,
-      expiresAt,
       ipAddress,
       deviceInfo,
       revoked: false,
-      createdAt: new Date(),
-      lastUsedAt: new Date(),
-    };
-
-    await db.insert(refreshTokens).values(newToken);
-
-    return {
-      ...newToken,
-      revokedAt: null,
-    } as RefreshToken;
+      expiresAt: addSeconds(AUTH_CONFIG.refreshToken.expiresInSeconds),
+    });
   },
 
   /**
@@ -54,7 +41,7 @@ export const refreshTokenRepository = {
         and(
           eq(refreshTokens.id, tokenId),
           eq(refreshTokens.revoked, false),
-          gt(refreshTokens.expiresAt, new Date())
+          gt(refreshTokens.expiresAt, now())
         )
       )
       .limit(1);
@@ -79,10 +66,7 @@ export const refreshTokenRepository = {
    * Update last used timestamp
    */
   async updateLastUsed(tokenId: string): Promise<void> {
-    await db
-      .update(refreshTokens)
-      .set({ lastUsedAt: new Date() })
-      .where(eq(refreshTokens.id, tokenId));
+    await db.update(refreshTokens).set({ lastUsedAt: now() }).where(eq(refreshTokens.id, tokenId));
   },
 
   /**
@@ -93,7 +77,7 @@ export const refreshTokenRepository = {
       .update(refreshTokens)
       .set({
         revoked: true,
-        revokedAt: new Date(),
+        revokedAt: now(),
       })
       .where(eq(refreshTokens.id, tokenId));
   },
@@ -106,7 +90,7 @@ export const refreshTokenRepository = {
       .update(refreshTokens)
       .set({
         revoked: true,
-        revokedAt: new Date(),
+        revokedAt: now(),
       })
       .where(and(eq(refreshTokens.userId, userId), eq(refreshTokens.revoked, false)));
 
@@ -124,7 +108,7 @@ export const refreshTokenRepository = {
         and(
           eq(refreshTokens.userId, userId),
           eq(refreshTokens.revoked, false),
-          gt(refreshTokens.expiresAt, new Date())
+          gt(refreshTokens.expiresAt, now())
         )
       )
       .orderBy(refreshTokens.lastUsedAt);

@@ -1,5 +1,6 @@
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '../db';
+import { now } from '../db/utils';
 import { users, type User, type NewUser } from '../db/schema/user/users';
 
 /**
@@ -49,7 +50,7 @@ export const userRepository = {
     await db
       .update(users)
       .set({
-        lastLoginAt: new Date(),
+        lastLoginAt: now(),
         lastLoginIp: ipAddress,
       })
       .where(eq(users.id, userId));

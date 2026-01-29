@@ -100,13 +100,6 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 // ==================== Utility Functions ====================
 
 /**
- * Calculate expiration date from now
- */
-export function calculateExpirationDate(expiresInSeconds: number): Date {
-  return new Date(Date.now() + expiresInSeconds * 1000);
-}
-
-/**
  * Extract token from Authorization header
  * Supports: "Bearer <token>" format
  */

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
-import { loginLogs, type NewLoginLog } from '../db/schema/system/loginLogs';
+import { loginLogs } from '../db/schema/system/loginLogs';
 
 type AuthType = 'email' | 'github' | 'wechat' | 'google' | 'password';
 
@@ -18,7 +18,7 @@ export const loginLogRepository = {
     ipAddress: string | null,
     userAgent: string | null
   ): Promise<void> {
-    const log: NewLoginLog = {
+    await db.insert(loginLogs).values({
       id: uuidv4(),
       userId,
       email,
@@ -27,11 +27,8 @@ export const loginLogRepository = {
       failureReason: null,
       ipAddress,
       userAgent,
-      location: null, // Can be populated with IP geolocation service
-      createdAt: new Date(),
-    };
-
-    await db.insert(loginLogs).values(log);
+      location: null,
+    });
   },
 
   /**
@@ -45,7 +42,7 @@ export const loginLogRepository = {
     userAgent: string | null,
     userId?: string
   ): Promise<void> {
-    const log: NewLoginLog = {
+    await db.insert(loginLogs).values({
       id: uuidv4(),
       userId: userId ?? null,
       email,
@@ -55,9 +52,6 @@ export const loginLogRepository = {
       ipAddress,
       userAgent,
       location: null,
-      createdAt: new Date(),
-    };
-
-    await db.insert(loginLogs).values(log);
+    });
   },
 };
