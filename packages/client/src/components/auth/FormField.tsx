@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 interface FormFieldProps {
   name: string;
@@ -21,6 +22,41 @@ interface FormFieldProps {
   onTogglePassword?: () => void;
 }
 
+function PasswordToggleButton({
+  showPassword,
+  onToggle,
+}: {
+  showPassword: boolean;
+  onToggle: () => void;
+}) {
+  const Icon = showPassword ? EyeOff : Eye;
+  return (
+    <button
+      type="button"
+      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+      onClick={onToggle}
+      tabIndex={-1}
+    >
+      <Icon className="size-4" />
+    </button>
+  );
+}
+
+function FieldMessage({ error, hint }: { error?: string; hint?: string }) {
+  if (error) {
+    return <p className="text-xs text-destructive">{error}</p>;
+  }
+  if (hint) {
+    return <p className="text-xs text-muted-foreground">{hint}</p>;
+  }
+  return null;
+}
+
+function getInputType(type: string, showPasswordToggle?: boolean, showPassword?: boolean): string {
+  if (!showPasswordToggle) return type;
+  return showPassword ? 'text' : 'password';
+}
+
 export function FormField({
   name,
   label,
@@ -38,10 +74,7 @@ export function FormField({
   showPassword,
   onTogglePassword,
 }: FormFieldProps) {
-  const hasError = errors.length > 0;
-  const inputType = showPasswordToggle ? (showPassword ? 'text' : 'password') : type;
-  const hasLeftIcon = !!Icon;
-  const hasRightIcon = showPasswordToggle;
+  const inputType = getInputType(type, showPasswordToggle, showPassword);
 
   return (
     <div className="space-y-2">
@@ -52,7 +85,7 @@ export function FormField({
           id={name}
           type={inputType}
           placeholder={placeholder}
-          className={`${hasLeftIcon ? 'pl-10' : ''} ${hasRightIcon ? 'pr-10' : ''}`}
+          className={cn(Icon && 'pl-10', showPasswordToggle && 'pr-10')}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
@@ -60,21 +93,10 @@ export function FormField({
           required={required}
         />
         {showPasswordToggle && onTogglePassword && (
-          <button
-            type="button"
-            className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
-            onClick={onTogglePassword}
-            tabIndex={-1}
-          >
-            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-          </button>
+          <PasswordToggleButton showPassword={!!showPassword} onToggle={onTogglePassword} />
         )}
       </div>
-      {hasError ? (
-        <p className="text-xs text-destructive">{errors[0]}</p>
-      ) : hint ? (
-        <p className="text-xs text-muted-foreground">{hint}</p>
-      ) : null}
+      <FieldMessage error={errors[0]} hint={hint} />
     </div>
   );
 }

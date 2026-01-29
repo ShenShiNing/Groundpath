@@ -131,22 +131,34 @@ function FooterLinkSection({
 }
 
 // ============================================================================
+// Utility Functions
+// ============================================================================
+
+function getUserInitials(username?: string, email?: string): string {
+  if (username) return username.slice(0, 2).toUpperCase();
+  if (email) return email.slice(0, 2).toUpperCase();
+  return 'U';
+}
+
+function getUserDisplayName(username?: string): string {
+  return username ?? 'User';
+}
+
+// ============================================================================
 // User Menu Component
 // ============================================================================
 
 function UserMenu({ onLogout }: { onLogout: () => void }) {
   const { user } = useAuthStore();
-
-  const userInitials = user?.username
-    ? user.username.slice(0, 2).toUpperCase()
-    : (user?.email?.slice(0, 2).toUpperCase() ?? 'U');
+  const userInitials = getUserInitials(user?.username, user?.email);
+  const displayName = getUserDisplayName(user?.username);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative rounded-full">
           <Avatar size="sm">
-            <AvatarImage src={undefined} alt={user?.username ?? 'User'} />
+            <AvatarImage src={undefined} alt={displayName} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -154,7 +166,7 @@ function UserMenu({ onLogout }: { onLogout: () => void }) {
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.username ?? 'User'}</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
           </div>
         </DropdownMenuLabel>
@@ -241,7 +253,7 @@ function MobileNav({
             <Separator className="my-4" />
             <div className="flex items-center gap-3 px-2">
               <Avatar size="sm">
-                <AvatarFallback>{user?.username?.slice(0, 2).toUpperCase() ?? 'U'}</AvatarFallback>
+                <AvatarFallback>{getUserInitials(user?.username, user?.email)}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
                 <span className="text-sm font-medium">{user?.username}</span>

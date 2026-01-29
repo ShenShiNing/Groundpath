@@ -73,18 +73,68 @@ function onRefreshed(token: string) {
   refreshSubscribers = [];
 }
 
+type RetryableRequest = InternalAxiosRequestConfig & { _retry?: boolean };
+
+/** 检查是否应跳过token刷新 */
+function shouldSkipRefresh(error: AxiosError<ApiResponse>, request: RetryableRequest): boolean {
+  return (
+    error.response?.status !== 401 || !!request.url?.includes('/auth/refresh') || !!request._retry
+  );
+}
+
+/** 等待正在进行的token刷新完成 */
+function waitForPendingRefresh(
+  request: RetryableRequest,
+  error: AxiosError<ApiResponse>
+): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    subscribeTokenRefresh((token: string) => {
+      request.headers.Authorization = `Bearer ${token}`;
+      resolve(apiClient(request));
+    });
+    setTimeout(() => reject(error), 10000);
+  });
+}
+
+/** 执行token刷新 */
+async function performTokenRefresh(
+  request: RetryableRequest,
+  refreshToken: string
+): Promise<unknown> {
+  request._retry = true;
+  isRefreshing = true;
+
+  try {
+    const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/auth/refresh', {
+      refreshToken,
+    });
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error('Refresh failed');
+    }
+
+    const { tokens } = response.data.data;
+    onTokenRefreshed?.(tokens);
+    onRefreshed(tokens.accessToken);
+
+    request.headers.Authorization = `Bearer ${tokens.accessToken}`;
+    return apiClient(request);
+  } catch (refreshError) {
+    onAuthError?.();
+    refreshSubscribers = [];
+    throw refreshError;
+  } finally {
+    isRefreshing = false;
+  }
+}
+
 // 响应拦截器 - 处理 401 错误并自动刷新 token
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiResponse>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as RetryableRequest;
 
-    // 跳过：非 401 错误、refresh 请求本身、已重试过的请求
-    if (
-      error.response?.status !== 401 ||
-      originalRequest.url?.includes('/auth/refresh') ||
-      originalRequest._retry
-    ) {
+    if (shouldSkipRefresh(error, originalRequest)) {
       return Promise.reject(error);
     }
 
@@ -95,42 +145,10 @@ apiClient.interceptors.response.use(
     }
 
     if (isRefreshing) {
-      // 等待正在进行的刷新完成
-      return new Promise((resolve, reject) => {
-        subscribeTokenRefresh((token: string) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          resolve(apiClient(originalRequest));
-        });
-        // 添加超时避免无限等待
-        setTimeout(() => reject(error), 10000);
-      });
+      return waitForPendingRefresh(originalRequest, error);
     }
 
-    originalRequest._retry = true;
-    isRefreshing = true;
-
-    try {
-      const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/auth/refresh', {
-        refreshToken,
-      });
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error('Refresh failed');
-      }
-
-      const { tokens } = response.data.data;
-      onTokenRefreshed?.(tokens);
-      onRefreshed(tokens.accessToken);
-
-      originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
-      return apiClient(originalRequest);
-    } catch (refreshError) {
-      onAuthError?.();
-      refreshSubscribers = [];
-      return Promise.reject(refreshError);
-    } finally {
-      isRefreshing = false;
-    }
+    return performTokenRefresh(originalRequest, refreshToken);
   }
 );
 

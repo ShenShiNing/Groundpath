@@ -7,7 +7,9 @@ import type {
   RegisterRequest,
   AuthResponse,
   UserPublicInfo,
+  DeviceInfo,
 } from '@knowledge-agent/shared/types';
+import type { User } from '../db/schema/user/users';
 import type { AccessTokenPayload } from '../types/authTypes';
 import { toUserPublicInfo } from '../types/authTypes';
 import { AuthError } from '../utils/errors';
@@ -17,6 +19,30 @@ import { loginLogRepository } from '../repositories/loginLogRepository';
 import { refreshTokenRepository } from '../repositories/refreshTokenRepository';
 import { tokenService } from './tokenService';
 import { checkAccountRateLimit, resetAccountRateLimit } from '../middleware/rateLimitMiddleware';
+
+/**
+ * Build access token payload and generate auth response with token pair.
+ */
+async function buildAuthResponse(
+  user: User,
+  ipAddress: string | null,
+  deviceInfo: DeviceInfo | null
+): Promise<AuthResponse> {
+  const accessPayload: AccessTokenPayload = {
+    sub: user.id,
+    email: user.email,
+    username: user.username,
+    status: user.status,
+    emailVerified: user.emailVerified,
+  };
+
+  const tokens = await tokenService.generateTokenPair(accessPayload, ipAddress, deviceInfo);
+
+  return {
+    user: toUserPublicInfo(user),
+    tokens,
+  };
+}
 
 /**
  * Authentication service for handling login/logout operations
@@ -71,25 +97,7 @@ export const authService = {
     // Update last login info
     await userRepository.updateLastLogin(user.id, ipAddress);
 
-    // Generate tokens
-    const accessPayload: AccessTokenPayload = {
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-      status: user.status,
-      emailVerified: user.emailVerified,
-    };
-
-    const tokens = await tokenService.generateTokenPair(
-      accessPayload,
-      ipAddress,
-      deviceInfo ?? parseDeviceInfo(userAgent)
-    );
-
-    return {
-      user: toUserPublicInfo(user),
-      tokens,
-    };
+    return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
   },
 
   /**
@@ -211,29 +219,11 @@ export const authService = {
     // Update last login info
     await userRepository.updateLastLogin(user.id, ipAddress);
 
-    // Generate tokens
-    const accessPayload: AccessTokenPayload = {
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-      status: user.status,
-      emailVerified: user.emailVerified,
-    };
-
-    const tokens = await tokenService.generateTokenPair(
-      accessPayload,
-      ipAddress,
-      deviceInfo ?? parseDeviceInfo(userAgent)
-    );
-
-    return {
-      user: toUserPublicInfo(user),
-      tokens,
-    };
+    return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
   },
 
   /**
-   * Refresh access token using refresh token
+   * Refresh authentication tokens
    */
   async refresh(
     refreshToken: string,

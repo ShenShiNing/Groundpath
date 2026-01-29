@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ApiResponse } from '@knowledge-agent/shared';
+import { getClientIp } from '../utils/requestUtils';
 
 // ============================================================================
 // Types
@@ -31,19 +32,6 @@ interface AccountRateLimitResult {
 const cleanupIntervals = new Set<ReturnType<typeof setInterval>>();
 
 /**
- * Extract client IP from request
- * Handles X-Forwarded-For header for proxied requests
- */
-function getClientIp(req: Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0]?.trim();
-    if (ip) return ip;
-  }
-  return req.socket.remoteAddress || 'unknown';
-}
-
-/**
  * Create an in-memory rate limiter middleware
  * Note: For production with multiple server instances, use Redis-based rate limiter
  */
@@ -56,7 +44,7 @@ export function createRateLimiter(options: RateLimitOptions) {
   }
 
   const store = new Map<string, RateLimitEntry>();
-  const keyGenerator = options.keyGenerator ?? getClientIp;
+  const keyGenerator = options.keyGenerator ?? ((req: Request) => getClientIp(req) ?? 'unknown');
   const message = options.message ?? 'Too many requests, please try again later';
 
   // Cleanup expired entries periodically (at least every minute)

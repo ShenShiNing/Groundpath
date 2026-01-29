@@ -1,29 +1,14 @@
 import type { Request, Response } from 'express';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
 import type {
-  ApiResponse,
   LoginRequest,
   RefreshRequest,
   RegisterRequest,
   ChangePasswordRequest,
-  AuthResponse,
-  SessionInfo,
-  UserPublicInfo,
 } from '@knowledge-agent/shared';
 import { authService } from '../services/authService';
-import { handleError, sendErrorResponse } from '../utils/errors';
-
-/**
- * Get client IP address from request
- */
-function getClientIp(req: Request): string | null {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    const ips = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
-    return ips?.trim() ?? null;
-  }
-  return req.socket.remoteAddress ?? null;
-}
+import { handleError, sendErrorResponse, sendSuccessResponse } from '../utils/errors';
+import { getClientIp } from '../utils/requestUtils';
 
 /**
  * Extract authenticated user ID from request, or send 401 response.
@@ -54,12 +39,7 @@ export const authController = {
       const userAgent = req.headers['user-agent'] ?? null;
 
       const result = await authService.register(registerRequest, ipAddress, userAgent);
-
-      const response: ApiResponse<AuthResponse> = {
-        success: true,
-        data: result,
-      };
-      res.status(HTTP_STATUS.CREATED).json(response);
+      sendSuccessResponse(res, result, HTTP_STATUS.CREATED);
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -77,12 +57,7 @@ export const authController = {
       const { oldPassword, newPassword } = req.body as ChangePasswordRequest;
 
       await authService.changePassword(userId, oldPassword, newPassword);
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'Password changed successfully' },
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, { message: 'Password changed successfully' });
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -100,12 +75,7 @@ export const authController = {
       const userAgent = req.headers['user-agent'] ?? null;
 
       const result = await authService.login(loginRequest, ipAddress, userAgent);
-
-      const response: ApiResponse<AuthResponse> = {
-        success: true,
-        data: result,
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, result);
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -123,12 +93,7 @@ export const authController = {
       const userAgent = req.headers['user-agent'] ?? null;
 
       const result = await authService.refresh(refreshToken, ipAddress, userAgent);
-
-      const response: ApiResponse<AuthResponse> = {
-        success: true,
-        data: result,
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, result);
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -147,12 +112,7 @@ export const authController = {
       }
 
       await authService.logout(tokenJti);
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'Successfully logged out' },
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, { message: 'Successfully logged out' });
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -168,15 +128,10 @@ export const authController = {
       if (!userId) return;
 
       const revokedCount = await authService.logoutAll(userId);
-
-      const response: ApiResponse<{ message: string; revokedSessions: number }> = {
-        success: true,
-        data: {
-          message: 'Successfully logged out from all devices',
-          revokedSessions: revokedCount,
-        },
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, {
+        message: 'Successfully logged out from all devices',
+        revokedSessions: revokedCount,
+      });
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -192,12 +147,7 @@ export const authController = {
       if (!userId) return;
 
       const user = await authService.getCurrentUser(userId);
-
-      const response: ApiResponse<UserPublicInfo> = {
-        success: true,
-        data: user,
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, user);
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -213,12 +163,7 @@ export const authController = {
       if (!userId) return;
 
       const sessions = await authService.getSessions(userId);
-
-      const response: ApiResponse<SessionInfo[]> = {
-        success: true,
-        data: sessions,
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, sessions);
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
@@ -247,12 +192,7 @@ export const authController = {
       }
 
       await authService.revokeSession(userId, sessionId);
-
-      const response: ApiResponse<{ message: string }> = {
-        success: true,
-        data: { message: 'Session revoked successfully' },
-      };
-      res.status(HTTP_STATUS.OK).json(response);
+      sendSuccessResponse(res, { message: 'Session revoked successfully' });
     } catch (error) {
       handleError(error, res, 'Auth controller');
     }
