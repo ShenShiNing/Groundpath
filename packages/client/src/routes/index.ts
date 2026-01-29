@@ -5,6 +5,9 @@ import { loginRoute } from './auth/login.route';
 import { signupRoute } from './auth/signup.route';
 import { forgotPasswordRoute } from './auth/forgot-password.route';
 import { callbackRoute } from './auth/callback.route';
+import { profileRoute } from './profile.route';
+import { sessionsRoute } from './sessions.route';
+import { dashboardRoute } from './dashboard.route';
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -13,4 +16,7 @@ export const routeTree = rootRoute.addChildren([
   signupRoute,
   forgotPasswordRoute,
   callbackRoute,
+  profileRoute,
+  sessionsRoute,
+  dashboardRoute,
 ]);

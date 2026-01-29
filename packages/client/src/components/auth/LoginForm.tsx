@@ -37,7 +37,7 @@ export function LoginForm() {
 
       try {
         await login(value.email, value.password);
-        await router.navigate({ to: '/' });
+        await router.navigate({ to: '/dashboard' });
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
         const errorMessage =

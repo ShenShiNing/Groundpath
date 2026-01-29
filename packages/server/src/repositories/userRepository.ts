@@ -1,4 +1,4 @@
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '../db';
 import { now } from '../db/utils';
 import { users, type User, type NewUser } from '../db/schema/user/users';
@@ -83,6 +83,21 @@ export const userRepository = {
   },
 
   /**
+   * Check if username exists excluding a specific user
+   */
+  async existsByUsernameExcludingUser(username: string, excludeUserId: string): Promise<boolean> {
+    const result = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(
+        and(eq(users.username, username), isNull(users.deletedAt), ne(users.id, excludeUserId))
+      )
+      .limit(1);
+
+    return result.length > 0;
+  },
+
+  /**
    * Update user's password
    */
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
@@ -92,5 +107,17 @@ export const userRepository = {
         password: hashedPassword,
       })
       .where(eq(users.id, userId));
+  },
+
+  /**
+   * Update user profile (username, bio, avatarUrl)
+   */
+  async updateProfile(
+    userId: string,
+    data: { username?: string; bio?: string | null; avatarUrl?: string | null }
+  ): Promise<User | undefined> {
+    await db.update(users).set(data).where(eq(users.id, userId));
+
+    return this.findById(userId);
   },
 };

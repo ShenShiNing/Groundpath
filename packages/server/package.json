@@ -15,6 +15,7 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.0.10",
     "@types/nodemailer": "^7.0.9",
     "@types/uuid": "^11.0.0",
@@ -22,12 +23,14 @@
     "tsx": "^4.21.0"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.978.0",
     "@knowledge-agent/shared": "workspace:*",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
     "mysql2": "^3.16.2",
     "nodemailer": "^7.0.13",
     "uuid": "^13.0.0"

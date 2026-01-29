@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import type { SessionInfo, ChangePasswordRequest } from '@knowledge-agent/shared/types';
+import type {
+  SessionInfo,
+  ChangePasswordRequest,
+  UpdateProfileRequest,
+  UserPublicInfo,
+} from '@knowledge-agent/shared/types';
 import { userApi, authApi } from '@/api';
 
 interface UserState {
@@ -7,11 +12,15 @@ interface UserState {
   sessions: SessionInfo[];
   isLoadingSessions: boolean;
   isChangingPassword: boolean;
+  isUpdatingProfile: boolean;
+  isUploadingAvatar: boolean;
 
   // 操作
   fetchSessions: () => Promise<void>;
   revokeSession: (sessionId: string) => Promise<void>;
   changePassword: (data: ChangePasswordRequest) => Promise<void>;
+  updateProfile: (data: UpdateProfileRequest) => Promise<UserPublicInfo>;
+  uploadAvatar: (file: File) => Promise<UserPublicInfo>;
   clearSessions: () => void;
 }
 
@@ -20,6 +29,8 @@ export const useUserStore = create<UserState>()((set, get) => ({
   sessions: [],
   isLoadingSessions: false,
   isChangingPassword: false,
+  isUpdatingProfile: false,
+  isUploadingAvatar: false,
 
   // 获取所有会话
   fetchSessions: async () => {
@@ -51,6 +62,34 @@ export const useUserStore = create<UserState>()((set, get) => ({
       set({ isChangingPassword: false });
     } catch (error) {
       set({ isChangingPassword: false });
+      throw error;
+    }
+  },
+
+  // 更新用户资料
+  updateProfile: async (data: UpdateProfileRequest) => {
+    set({ isUpdatingProfile: true });
+
+    try {
+      const updatedUser = await userApi.updateProfile(data);
+      set({ isUpdatingProfile: false });
+      return updatedUser;
+    } catch (error) {
+      set({ isUpdatingProfile: false });
+      throw error;
+    }
+  },
+
+  // 上传头像
+  uploadAvatar: async (file: File) => {
+    set({ isUploadingAvatar: true });
+
+    try {
+      const updatedUser = await userApi.uploadAvatar(file);
+      set({ isUploadingAvatar: false });
+      return updatedUser;
+    } catch (error) {
+      set({ isUploadingAvatar: false });
       throw error;
     }
   },

@@ -42,6 +42,8 @@ export type {
   ChangePasswordRequest,
 } from '../schemas/auth';
 
+export type { UpdateProfileRequest } from '../schemas/user';
+
 // ==================== Session Types ====================
 
 /** Active session info */

@@ -28,7 +28,7 @@ export function OAuthCallbackPage() {
         error,
         returnUrl: r,
       } = search;
-      const returnUrl = (r as string) || '/';
+      const returnUrl = (r as string) || '/dashboard';
 
       // Handle error case
       if (error) {

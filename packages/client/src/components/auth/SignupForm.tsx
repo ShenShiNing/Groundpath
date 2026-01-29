@@ -96,7 +96,7 @@ export function SignupForm() {
       confirmPassword: data.confirmPassword,
       verificationToken: signupState.verificationToken,
     });
-    await router.navigate({ to: '/' });
+    await router.navigate({ to: '/dashboard' });
   };
 
   const handleBackToEmail = () => {
