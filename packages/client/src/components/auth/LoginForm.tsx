@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/stores';
+import { initiateGitHubLogin } from '@/api';
 import { FormField } from './FormField';
 import { GitHubIcon, GoogleIcon } from './SocialIcons';
 
@@ -148,7 +149,12 @@ export function LoginForm() {
 
                 {/* Social Login Buttons */}
                 <div className="grid grid-cols-2 gap-3">
-                  <Button type="button" variant="outline" disabled={isSubmitting}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSubmitting}
+                    onClick={() => initiateGitHubLogin()}
+                  >
                     <GitHubIcon className="mr-2 h-4 w-4" />
                     GitHub
                   </Button>

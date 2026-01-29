@@ -1,5 +1,6 @@
 import express from 'express';
 import { authController } from '../controller/authController';
+import { oauthController } from '../controller/oauthController';
 import { authenticate, authenticateRefreshToken } from '../middleware/authMiddleware';
 import {
   loginRateLimiter,
@@ -84,5 +85,11 @@ router.get('/sessions', generalRateLimiter, authenticate, authController.session
 
 // Revoke a specific session
 router.delete('/sessions/:id', generalRateLimiter, authenticate, authController.revokeSession);
+
+// ==================== OAuth Routes ====================
+
+// GitHub OAuth
+router.get('/github', oauthController.githubAuth);
+router.get('/github/callback', oauthController.githubCallback);
 
 export default router;

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores';
+import { initiateGitHubLogin } from '@/api';
 import { SignupStepEmail } from './SignupStepEmail';
 import { SignupStepCode } from './SignupStepCode';
 import { SignupStepDetails } from './SignupStepDetails';
@@ -130,7 +131,7 @@ export function SignupForm() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-4">
-                <Button type="button" variant="outline">
+                <Button type="button" variant="outline" onClick={() => initiateGitHubLogin()}>
                   <GitHubIcon className="mr-2 h-4 w-4" />
                   GitHub
                 </Button>
