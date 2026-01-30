@@ -1,24 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { useUserStore, useAuthStore } from '@/stores';
+import { useAuthStore } from '@/stores';
+import { userApi } from '@/api';
+import { queryKeys } from '@/lib/queryClient';
 import { SessionCard } from './SessionCard';
 
 export function SessionList() {
-  const { sessions, isLoadingSessions, fetchSessions, revokeSession } = useUserStore();
+  const queryClient = useQueryClient();
   const logoutAll = useAuthStore((s) => s.logoutAll);
   const [isRevokingAll, setIsRevokingAll] = useState(false);
 
-  useEffect(() => {
-    fetchSessions().catch(() => {
-      toast.error('Failed to load sessions');
-    });
-  }, [fetchSessions]);
+  const {
+    data: sessions = [],
+    isLoading: isLoadingSessions,
+    error,
+  } = useQuery({
+    queryKey: queryKeys.user.sessions,
+    queryFn: userApi.getSessions,
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: userApi.revokeSession,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.user.sessions });
+    },
+  });
+
+  if (error) {
+    toast.error('Failed to load sessions');
+  }
 
   const handleRevoke = async (sessionId: string) => {
     try {
-      await revokeSession(sessionId);
+      await revokeMutation.mutateAsync(sessionId);
       toast.success('Session revoked');
     } catch {
       toast.error('Failed to revoke session');

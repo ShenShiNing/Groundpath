@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AxiosError } from 'axios';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
+  const hasAutoVerified = useRef(false);
 
   // Countdown timer for resend button
   useEffect(() => {
@@ -31,32 +32,46 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  const handleVerify = useCallback(async () => {
-    if (code.length !== 6) {
-      setError('Please enter the 6-digit code');
-      return;
-    }
+  const handleVerify = useCallback(
+    async (codeToVerify: string) => {
+      if (codeToVerify.length !== 6) {
+        setError('Please enter the 6-digit code');
+        return;
+      }
 
-    setError(null);
-    setIsVerifying(true);
+      setError(null);
+      setIsVerifying(true);
 
-    try {
-      const result = await emailApi.verifyCode({ email, code, type: 'register' });
-      onNext(result.verificationToken);
-    } catch (err) {
-      const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || 'Invalid verification code');
-    } finally {
-      setIsVerifying(false);
-    }
-  }, [code, email, onNext]);
+      try {
+        const result = await emailApi.verifyCode({ email, code: codeToVerify, type: 'register' });
+        onNext(result.verificationToken);
+      } catch (err) {
+        const axiosError = err as AxiosError<ApiResponse>;
+        setError(axiosError.response?.data?.error?.message || 'Invalid verification code');
+        // Reset auto-verify flag on error so user can try again
+        hasAutoVerified.current = false;
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [email, onNext]
+  );
 
-  // Auto-verify when 6 digits are entered
-  useEffect(() => {
-    if (code.length === 6) {
-      handleVerify();
-    }
-  }, [code.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Handle code change with auto-verify
+  const handleCodeChange = useCallback(
+    (newCode: string) => {
+      setCode(newCode);
+      // Auto-verify when 6 digits are entered (only once per complete input)
+      if (newCode.length === 6 && !hasAutoVerified.current && !isVerifying) {
+        hasAutoVerified.current = true;
+        handleVerify(newCode);
+      } else if (newCode.length < 6) {
+        // Reset flag when code is incomplete
+        hasAutoVerified.current = false;
+      }
+    },
+    [handleVerify, isVerifying]
+  );
 
   const handleResend = async () => {
     setError(null);
@@ -66,6 +81,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
       await emailApi.sendCode({ email, type: 'register' });
       setResendCooldown(RESEND_COOLDOWN);
       setCode('');
+      hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
       setError(axiosError.response?.data?.error?.message || 'Failed to resend code');
@@ -84,7 +100,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
       <div className="space-y-4">
         <VerificationCodeInput
           value={code}
-          onChange={setCode}
+          onChange={handleCodeChange}
           disabled={isVerifying}
           autoFocus
           error={!!error}

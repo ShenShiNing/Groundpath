@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, Link } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import { Mail, Lock, ArrowLeft } from 'lucide-react';
@@ -161,6 +161,7 @@ function CodeStep({
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
+  const hasAutoVerified = useRef(false);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -170,31 +171,50 @@ function CodeStep({
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  const handleVerify = useCallback(async () => {
-    if (code.length !== 6) {
-      setError('Please enter the 6-digit code');
-      return;
-    }
+  const handleVerify = useCallback(
+    async (codeToVerify: string) => {
+      if (codeToVerify.length !== 6) {
+        setError('Please enter the 6-digit code');
+        return;
+      }
 
-    setError(null);
-    setIsVerifying(true);
+      setError(null);
+      setIsVerifying(true);
 
-    try {
-      const result = await emailApi.verifyCode({ email, code, type: 'reset_password' });
-      onNext(result.verificationToken);
-    } catch (err) {
-      const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || 'Invalid verification code');
-    } finally {
-      setIsVerifying(false);
-    }
-  }, [code, email, onNext]);
+      try {
+        const result = await emailApi.verifyCode({
+          email,
+          code: codeToVerify,
+          type: 'reset_password',
+        });
+        onNext(result.verificationToken);
+      } catch (err) {
+        const axiosError = err as AxiosError<ApiResponse>;
+        setError(axiosError.response?.data?.error?.message || 'Invalid verification code');
+        // Reset auto-verify flag on error so user can try again
+        hasAutoVerified.current = false;
+      } finally {
+        setIsVerifying(false);
+      }
+    },
+    [email, onNext]
+  );
 
-  useEffect(() => {
-    if (code.length === 6) {
-      handleVerify();
-    }
-  }, [code.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Handle code change with auto-verify
+  const handleCodeChange = useCallback(
+    (newCode: string) => {
+      setCode(newCode);
+      // Auto-verify when 6 digits are entered (only once per complete input)
+      if (newCode.length === 6 && !hasAutoVerified.current && !isVerifying) {
+        hasAutoVerified.current = true;
+        handleVerify(newCode);
+      } else if (newCode.length < 6) {
+        // Reset flag when code is incomplete
+        hasAutoVerified.current = false;
+      }
+    },
+    [handleVerify, isVerifying]
+  );
 
   const handleResend = async () => {
     setError(null);
@@ -203,6 +223,7 @@ function CodeStep({
       await emailApi.sendCode({ email, type: 'reset_password' });
       setResendCooldown(RESEND_COOLDOWN);
       setCode('');
+      hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
       setError(axiosError.response?.data?.error?.message || 'Failed to resend code');
@@ -221,7 +242,7 @@ function CodeStep({
       <div className="space-y-4">
         <VerificationCodeInput
           value={code}
-          onChange={setCode}
+          onChange={handleCodeChange}
           disabled={isVerifying}
           autoFocus
           error={!!error}
@@ -233,7 +254,7 @@ function CodeStep({
         <Button
           type="button"
           className="w-full"
-          onClick={handleVerify}
+          onClick={() => handleVerify(code)}
           disabled={code.length !== 6 || isVerifying}
         >
           {isVerifying ? 'Verifying...' : 'Verify Code'}
