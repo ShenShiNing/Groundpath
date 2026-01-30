@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import {
@@ -6,7 +6,6 @@ import {
   verifyAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-  calculateExpirationDate,
   extractBearerToken,
 } from '../../src/utils/jwtUtils';
 import { AUTH_CONFIG } from '../../src/config/authConfig';
@@ -380,55 +379,6 @@ describe('jwtUtils', () => {
       expect(() => verifyRefreshToken('any-token')).toThrow(authError);
 
       vi.mocked(jwt.verify).mockRestore();
-    });
-  });
-
-  // ==================== Utility Function Tests ====================
-  describe('calculateExpirationDate', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it('should calculate correct expiration date', () => {
-      const now = new Date('2024-01-15T10:00:00Z');
-      vi.setSystemTime(now);
-
-      const expiresInSeconds = 900; // 15 minutes
-      const result = calculateExpirationDate(expiresInSeconds);
-
-      expect(result).toEqual(new Date('2024-01-15T10:15:00Z'));
-    });
-
-    it('should handle 0 seconds', () => {
-      const now = new Date('2024-01-15T10:00:00Z');
-      vi.setSystemTime(now);
-
-      const result = calculateExpirationDate(0);
-
-      expect(result).toEqual(now);
-    });
-
-    it('should handle large values (7 days)', () => {
-      const now = new Date('2024-01-15T10:00:00Z');
-      vi.setSystemTime(now);
-
-      const sevenDays = 7 * 24 * 60 * 60; // 604800 seconds
-      const result = calculateExpirationDate(sevenDays);
-
-      expect(result).toEqual(new Date('2024-01-22T10:00:00Z'));
-    });
-
-    it('should handle 1 second', () => {
-      const now = new Date('2024-01-15T10:00:00Z');
-      vi.setSystemTime(now);
-
-      const result = calculateExpirationDate(1);
-
-      expect(result).toEqual(new Date('2024-01-15T10:00:01Z'));
     });
   });
 

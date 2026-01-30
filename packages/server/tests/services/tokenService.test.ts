@@ -15,7 +15,6 @@ vi.mock('../../src/utils/jwtUtils', () => ({
   generateAccessToken: vi.fn(() => 'mock-access-token'),
   generateRefreshToken: vi.fn(() => 'mock-refresh-token'),
   verifyRefreshToken: vi.fn(),
-  calculateExpirationDate: vi.fn(() => new Date('2024-01-22T10:00:00Z')),
 }));
 
 vi.mock('../../src/repositories/refreshTokenRepository', () => ({
@@ -131,7 +130,7 @@ describe('tokenService', () => {
     });
 
     // 场景 4：refresh token 持久化到数据库
-    // 确保调用 repository.create 并传入正确的参数（tokenId、userId、token 字符串、过期时间、IP、设备信息）
+    // 确保调用 repository.create 并传入正确的参数（tokenId、userId、token 字符串、IP、设备信息）
     it('should store refresh token in database', async () => {
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
 
@@ -142,7 +141,6 @@ describe('tokenService', () => {
         'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
-        new Date('2024-01-22T10:00:00Z'),
         ipAddress,
         deviceInfo,
       ];
@@ -156,7 +154,6 @@ describe('tokenService', () => {
         'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
-        new Date('2024-01-22T10:00:00Z'),
         ipAddress,
         deviceInfo
       );
@@ -169,14 +166,13 @@ describe('tokenService', () => {
 
       await tokenService.generateTokenPair(validUser, null, deviceInfo);
 
-      const calledIp = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[4];
+      const calledIp = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[3];
       logTestInfo({ ip: null }, { storedIp: null }, { storedIp: calledIp });
 
       expect(refreshTokenRepository.create).toHaveBeenCalledWith(
         'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
-        expect.any(Date),
         null,
         deviceInfo
       );
@@ -189,7 +185,7 @@ describe('tokenService', () => {
 
       await tokenService.generateTokenPair(validUser, ipAddress, null);
 
-      const calledDeviceInfo = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[5];
+      const calledDeviceInfo = vi.mocked(refreshTokenRepository.create).mock.calls[0]?.[4];
       logTestInfo(
         { deviceInfo: null },
         { storedDeviceInfo: null },
@@ -200,7 +196,6 @@ describe('tokenService', () => {
         'mock-uuid-token-id',
         'user-123',
         'mock-refresh-token',
-        expect.any(Date),
         ipAddress,
         null
       );

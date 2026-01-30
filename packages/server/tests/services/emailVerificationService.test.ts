@@ -7,8 +7,6 @@ import {
   mockCode,
   mockIpAddress,
   mockVerificationCode,
-  mockRecentCode,
-  mockOldCode,
   logTestInfo,
 } from './mocks/emailService.mocks';
 
@@ -26,6 +24,7 @@ vi.mock('../../src/repositories/emailVerificationRepository', () => ({
   emailVerificationRepository: {
     countRecentCodes: vi.fn(),
     getMostRecentCode: vi.fn(),
+    getMostRecentCodeWithAge: vi.fn(),
     invalidateAllForEmail: vi.fn(),
     create: vi.fn(),
     findValidCode: vi.fn(),
@@ -75,7 +74,7 @@ describe('emailVerificationService > sendCode', () => {
   // 应生成验证码、保存到数据库、发送邮件、返回过期时间
   it('should send verification code successfully', async () => {
     vi.mocked(emailVerificationRepository.countRecentCodes).mockResolvedValue(0);
-    vi.mocked(emailVerificationRepository.getMostRecentCode).mockResolvedValue(undefined);
+    vi.mocked(emailVerificationRepository.getMostRecentCodeWithAge).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.invalidateAllForEmail).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.create).mockResolvedValue(undefined);
     vi.mocked(emailService.sendVerificationCode).mockResolvedValue(undefined);
@@ -111,7 +110,7 @@ describe('emailVerificationService > sendCode', () => {
   // 应将邮箱转为小写并去除空格
   it('should normalize email to lowercase and trim', async () => {
     vi.mocked(emailVerificationRepository.countRecentCodes).mockResolvedValue(0);
-    vi.mocked(emailVerificationRepository.getMostRecentCode).mockResolvedValue(undefined);
+    vi.mocked(emailVerificationRepository.getMostRecentCodeWithAge).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.invalidateAllForEmail).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.create).mockResolvedValue(undefined);
     vi.mocked(emailService.sendVerificationCode).mockResolvedValue(undefined);
@@ -153,7 +152,9 @@ describe('emailVerificationService > sendCode', () => {
   // 应抛出 RESEND_COOLDOWN 错误 (429) 并包含剩余秒数
   it('should throw RESEND_COOLDOWN when within cooldown period', async () => {
     vi.mocked(emailVerificationRepository.countRecentCodes).mockResolvedValue(1);
-    vi.mocked(emailVerificationRepository.getMostRecentCode).mockResolvedValue(mockRecentCode);
+    vi.mocked(emailVerificationRepository.getMostRecentCodeWithAge).mockResolvedValue({
+      secondsSinceCreation: 30, // 30 seconds ago (within 60 second cooldown)
+    });
 
     let actual: { code: string; statusCode: number; details?: object } | null = null;
     try {
@@ -178,7 +179,9 @@ describe('emailVerificationService > sendCode', () => {
   // 应允许发送新的验证码
   it('should allow sending code after cooldown period', async () => {
     vi.mocked(emailVerificationRepository.countRecentCodes).mockResolvedValue(1);
-    vi.mocked(emailVerificationRepository.getMostRecentCode).mockResolvedValue(mockOldCode);
+    vi.mocked(emailVerificationRepository.getMostRecentCodeWithAge).mockResolvedValue({
+      secondsSinceCreation: 120, // 2 minutes ago (past 60 second cooldown)
+    });
     vi.mocked(emailVerificationRepository.invalidateAllForEmail).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.create).mockResolvedValue(undefined);
     vi.mocked(emailService.sendVerificationCode).mockResolvedValue(undefined);
@@ -199,7 +202,7 @@ describe('emailVerificationService > sendCode', () => {
   // 应抛出 EMAIL_SEND_FAILED 错误 (500)
   it('should throw EMAIL_SEND_FAILED when email sending fails', async () => {
     vi.mocked(emailVerificationRepository.countRecentCodes).mockResolvedValue(0);
-    vi.mocked(emailVerificationRepository.getMostRecentCode).mockResolvedValue(undefined);
+    vi.mocked(emailVerificationRepository.getMostRecentCodeWithAge).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.invalidateAllForEmail).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.create).mockResolvedValue(undefined);
     vi.mocked(emailService.sendVerificationCode).mockRejectedValue(new Error('SMTP error'));
@@ -222,7 +225,7 @@ describe('emailVerificationService > sendCode', () => {
   // 应先调用 invalidateAllForEmail
   it('should invalidate old codes before creating new one', async () => {
     vi.mocked(emailVerificationRepository.countRecentCodes).mockResolvedValue(0);
-    vi.mocked(emailVerificationRepository.getMostRecentCode).mockResolvedValue(undefined);
+    vi.mocked(emailVerificationRepository.getMostRecentCodeWithAge).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.invalidateAllForEmail).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.create).mockResolvedValue(undefined);
     vi.mocked(emailService.sendVerificationCode).mockResolvedValue(undefined);
@@ -251,7 +254,7 @@ describe('emailVerificationService > sendCode', () => {
   // 应正确处理 reset_password 类型
   it('should handle different verification types', async () => {
     vi.mocked(emailVerificationRepository.countRecentCodes).mockResolvedValue(0);
-    vi.mocked(emailVerificationRepository.getMostRecentCode).mockResolvedValue(undefined);
+    vi.mocked(emailVerificationRepository.getMostRecentCodeWithAge).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.invalidateAllForEmail).mockResolvedValue(undefined);
     vi.mocked(emailVerificationRepository.create).mockResolvedValue(undefined);
     vi.mocked(emailService.sendVerificationCode).mockResolvedValue(undefined);
