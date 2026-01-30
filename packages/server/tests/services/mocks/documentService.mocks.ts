@@ -129,6 +129,7 @@ export const mockStorageResult = {
   storageUrl: 'https://storage.example.com/documents/generated-uuid-123.pdf',
   fileExtension: 'pdf',
   documentType: 'pdf' as const,
+  resolvedMimeType: 'application/pdf',
 };
 
 export const mockTextStorageResult = {
@@ -136,6 +137,7 @@ export const mockTextStorageResult = {
   storageUrl: 'https://storage.example.com/documents/generated-uuid-123.txt',
   fileExtension: 'txt',
   documentType: 'text' as const,
+  resolvedMimeType: 'text/plain',
 };
 
 export const mockMarkdownStorageResult = {
@@ -143,6 +145,7 @@ export const mockMarkdownStorageResult = {
   storageUrl: 'https://storage.example.com/documents/generated-uuid-123.md',
   fileExtension: 'md',
   documentType: 'markdown' as const,
+  resolvedMimeType: 'text/markdown',
 };
 
 // ==================== 日志辅助函数 ====================

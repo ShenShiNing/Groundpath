@@ -3,7 +3,6 @@ import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
 import { AuthError } from '../../src/utils/errors';
 import {
   mockUserId,
-  mockDocumentId,
   mockDocument,
   mockDeletedDocument,
   mockDocumentVersion,
