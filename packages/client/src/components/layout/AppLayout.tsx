@@ -9,6 +9,7 @@ import {
   User,
   Settings,
   Monitor,
+  FileText,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -51,6 +52,7 @@ interface NavItem {
 
 const authenticatedNavItems: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="size-4" /> },
+  { label: 'Documents', to: '/documents', icon: <FileText className="size-4" /> },
   { label: 'Chat', to: '/chat', icon: <MessageSquare className="size-4" /> },
 ];
 
