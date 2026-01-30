@@ -1,23 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, File, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Upload, File, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useUploadDocument } from '@/hooks';
+import { useUploadQueue } from '@/hooks';
+import { queryKeys } from '@/lib/queryClient';
 
 interface DocumentUploadProps {
   folderId?: string | null;
   onSuccess?: () => void;
   className?: string;
-}
-
-interface FileUploadState {
-  file: File;
-  progress: number;
-  status: 'pending' | 'uploading' | 'completed' | 'error';
-  error?: string;
 }
 
 const ACCEPTED_TYPES = {
@@ -27,21 +22,18 @@ const ACCEPTED_TYPES = {
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
 };
 
-const MAX_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_SIZE = 21 * 1024 * 1024; // 21 MiB (allows files that Windows shows as ~20MB)
 
 export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploadProps) {
-  const uploadMutation = useUploadDocument();
-  const [fileStates, setFileStates] = useState<FileUploadState[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const queryClient = useQueryClient();
+  const queue = useUploadQueue({ maxConcurrent: 3 });
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFileStates = acceptedFiles.map((file) => ({
-      file,
-      progress: 0,
-      status: 'pending' as const,
-    }));
-    setFileStates((prev) => [...prev, ...newFileStates]);
-  }, []);
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      queue.addFiles(acceptedFiles);
+    },
+    [queue]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -55,72 +47,29 @@ export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploa
     },
   });
 
-  const removeFile = (index: number) => {
-    setFileStates((prev) => prev.filter((_, i) => i !== index));
+  const handleUpload = () => {
+    queue.startUpload({
+      folderId: folderId ?? undefined,
+      onFileComplete: (_, file) => {
+        toast.success(`Uploaded: ${file.name}`);
+      },
+      onAllComplete: (hasErrors) => {
+        // Invalidate document queries to refresh the list
+        queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
+
+        if (!hasErrors) {
+          // Clear completed files after a delay and close dialog
+          setTimeout(() => {
+            queue.clearCompleted();
+            onSuccess?.();
+          }, 1500);
+        }
+      },
+    });
   };
 
-  const updateFileState = (index: number, updates: Partial<FileUploadState>) => {
-    setFileStates((prev) =>
-      prev.map((state, i) => (i === index ? { ...state, ...updates } : state))
-    );
-  };
-
-  const handleUpload = async () => {
-    const filesToUpload = fileStates.filter((f) => f.status === 'pending' || f.status === 'error');
-    if (filesToUpload.length === 0) return;
-
-    setIsUploading(true);
-
-    let hasError = false;
-
-    for (let i = 0; i < fileStates.length; i++) {
-      const fileState = fileStates[i];
-      if (fileState?.status !== 'pending' && fileState?.status !== 'error') continue;
-
-      updateFileState(i, { status: 'uploading', progress: 0, error: undefined });
-
-      try {
-        await uploadMutation.mutateAsync({
-          file: fileState.file,
-          options: {
-            folderId: folderId ?? undefined,
-            onProgress: (progress) => {
-              updateFileState(i, { progress });
-            },
-          },
-        });
-        updateFileState(i, { status: 'completed', progress: 100 });
-        toast.success(`Uploaded: ${fileState.file.name}`);
-      } catch (error) {
-        hasError = true;
-        updateFileState(i, {
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Upload failed',
-        });
-        toast.error(`Failed to upload: ${fileState.file.name}`);
-      }
-    }
-
-    setIsUploading(false);
-
-    // Only close dialog if all uploads succeeded
-    if (!hasError) {
-      // Clear completed files after a delay
-      setTimeout(() => {
-        setFileStates((prev) => prev.filter((f) => f.status !== 'completed'));
-        onSuccess?.();
-      }, 1500);
-    }
-  };
-
-  const totalProgress =
-    fileStates.length > 0
-      ? Math.round(fileStates.reduce((acc, f) => acc + f.progress, 0) / fileStates.length)
-      : 0;
-
-  const pendingCount = fileStates.filter((f) => f.status === 'pending').length;
-  const errorCount = fileStates.filter((f) => f.status === 'error').length;
-  const hasFilesToUpload = pendingCount > 0 || errorCount > 0;
+  const { files, isUploading, totalProgress, stats } = queue;
+  const hasFilesToUpload = stats.pending > 0 || stats.error > 0;
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -141,21 +90,28 @@ export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploa
           <>
             <p className="text-muted-foreground mb-2">Drag & drop files here, or click to select</p>
             <p className="text-xs text-muted-foreground">
-              Supported: PDF, Markdown, Text, DOCX (max 20MB)
+              Supported: PDF, Markdown, Text, DOCX (max 21MB)
             </p>
           </>
         )}
       </div>
 
-      {fileStates.length > 0 && (
+      {files.length > 0 && (
         <div className="space-y-2">
           <div className="text-sm font-medium">
-            Files ({fileStates.length}){isUploading && ` - Uploading ${totalProgress}%`}
+            Files ({files.length})
+            {isUploading && (
+              <span className="text-muted-foreground">
+                {' '}
+                - Uploading {stats.uploading} of {stats.uploading + stats.pending} ({totalProgress}
+                %)
+              </span>
+            )}
           </div>
           <div className="space-y-2 max-h-64 overflow-y-auto">
-            {fileStates.map((fileState, index) => (
+            {files.map((fileState) => (
               <div
-                key={`${fileState.file.name}-${index}`}
+                key={fileState.id}
                 className={cn(
                   'flex items-center gap-3 p-3 rounded-md border transition-colors',
                   fileState.status === 'completed' &&
@@ -171,6 +127,8 @@ export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploa
                   <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
                 ) : fileState.status === 'uploading' ? (
                   <Loader2 className="h-4 w-4 text-blue-600 animate-spin shrink-0" />
+                ) : fileState.status === 'error' ? (
+                  <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
                 ) : (
                   <File className="h-4 w-4 text-muted-foreground shrink-0" />
                 )}
@@ -194,12 +152,12 @@ export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploa
                     <Progress value={fileState.progress} className="h-1 mt-1" />
                   )}
                 </div>
-                {fileState.status === 'pending' && (
+                {(fileState.status === 'pending' || fileState.status === 'error') && (
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6"
-                    onClick={() => removeFile(index)}
+                    onClick={() => queue.removeFile(fileState.id)}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -228,15 +186,15 @@ export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploa
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Uploading...
               </>
-            ) : errorCount > 0 ? (
+            ) : stats.error > 0 ? (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Retry {errorCount} failed file{errorCount !== 1 ? 's' : ''}
+                Retry {stats.error} failed file{stats.error !== 1 ? 's' : ''}
               </>
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Upload {pendingCount} file{pendingCount !== 1 ? 's' : ''}
+                Upload {stats.pending} file{stats.pending !== 1 ? 's' : ''}
               </>
             )}
           </Button>

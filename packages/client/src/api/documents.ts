@@ -21,6 +21,7 @@ export const documentsApi = {
       description?: string;
       folderId?: string;
       onProgress?: (progress: number) => void;
+      signal?: AbortSignal;
     }
   ): Promise<{ document: DocumentInfo; message: string }> {
     const formData = new FormData();
@@ -34,6 +35,7 @@ export const documentsApi = {
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
+        signal: options?.signal,
         onUploadProgress: options?.onProgress
           ? (progressEvent) => {
               const total = progressEvent.total ?? 0;

@@ -105,8 +105,9 @@ export function useDeleteDocument() {
   return useMutation({
     mutationFn: (documentId: string) => documentsApi.delete(documentId),
     onSuccess: () => {
-      // Invalidate document lists
+      // Invalidate both document and trash lists
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.trash.lists() });
     },
   });
 }

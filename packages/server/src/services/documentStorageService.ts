@@ -68,7 +68,7 @@ function getMaxFileSize(): number {
       return parsed;
     }
   }
-  return 20 * 1024 * 1024; // 20MB default
+  return 21 * 1024 * 1024; // 21 MiB default (allows files that Windows shows as ~20MB)
 }
 
 /**

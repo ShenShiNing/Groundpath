@@ -16,7 +16,7 @@ const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: parseInt(process.env.MAX_DOCUMENT_SIZE ?? '20971520', 10), // 20MB default
+    fileSize: parseInt(process.env.MAX_DOCUMENT_SIZE ?? '22020096', 10), // 21 MiB default
   },
 });
 
@@ -24,7 +24,7 @@ const upload = multer({
 function handleMulterError(err: Error, req: Request, res: Response, next: NextFunction): void {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      const maxSize = parseInt(process.env.MAX_DOCUMENT_SIZE ?? '20971520', 10);
+      const maxSize = parseInt(process.env.MAX_DOCUMENT_SIZE ?? '22020096', 10);
       const maxMB = Math.round(maxSize / (1024 * 1024));
       res.status(400).json({
         success: false,

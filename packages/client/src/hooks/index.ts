@@ -26,3 +26,7 @@ export {
 
 // Utility hooks
 export { useDebouncedValue } from './useDebouncedValue';
+
+// Upload hooks
+export { useUploadQueue } from './useUploadQueue';
+export type { QueueFileState, UploadQueueStats, StartUploadOptions } from './useUploadQueue';

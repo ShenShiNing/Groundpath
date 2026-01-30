@@ -5,7 +5,7 @@ import {
   mysqlEnum,
   index,
   uniqueIndex,
-  text,
+  longtext,
   bigint,
   int,
 } from 'drizzle-orm/mysql-core';
@@ -36,7 +36,7 @@ export const documentVersions = mysqlTable(
     storageKey: varchar('storage_key', { length: 500 }).notNull(),
 
     // Content
-    textContent: text('text_content'),
+    textContent: longtext('text_content'),
     wordCount: int('word_count'),
 
     // Version metadata
