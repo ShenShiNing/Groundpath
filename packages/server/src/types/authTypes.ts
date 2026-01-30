@@ -47,4 +47,13 @@ declare module 'express' {
     user?: AccessTokenPayload;
     refreshContext?: RefreshTokenContext;
   }
+
+  interface Locals {
+    /** Validated request data from Zod schemas */
+    validated?: {
+      body?: unknown;
+      query?: unknown;
+      params?: unknown;
+    };
+  }
 }

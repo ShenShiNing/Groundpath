@@ -38,3 +38,34 @@ export function validateBody<T extends ZodType>(schema: T): RequestHandler {
     next();
   };
 }
+
+/**
+ * Middleware factory to validate request query against a Zod schema
+ */
+export function validateQuery<T extends ZodType>(schema: T): RequestHandler {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: ERROR_CODES.VALIDATION_ERROR,
+          message: 'Validation failed',
+          details: formatZodErrors(result.error),
+        },
+      };
+      res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+      return;
+    }
+    res.locals.validated = { ...res.locals.validated, query: result.data };
+    next();
+  };
+}
+
+/**
+ * Type-safe helper to get validated query from res.locals
+ * Use after validateQuery middleware
+ */
+export function getValidatedQuery<T>(res: Response): T {
+  return res.locals.validated?.query as T;
+}

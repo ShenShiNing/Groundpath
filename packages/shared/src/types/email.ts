@@ -1,3 +1,5 @@
+import { EMAIL_ERROR_CODES } from '../constants';
+
 // Re-export types from schemas (inferred from Zod schemas)
 export type {
   EmailVerificationCodeType,
@@ -6,6 +8,10 @@ export type {
   RegisterWithCodeRequest,
   ResetPasswordRequest,
 } from '../schemas/email';
+
+// ==================== Error Types ====================
+
+export type EmailErrorCode = (typeof EMAIL_ERROR_CODES)[keyof typeof EMAIL_ERROR_CODES];
 
 // ==================== Response Types ====================
 
