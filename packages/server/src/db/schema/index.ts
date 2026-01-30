@@ -8,3 +8,9 @@ export * from './auth/refreshTokens';
 
 // System schemas
 export * from './system/loginLogs';
+
+// Document schemas
+export * from './document/folders';
+export * from './document/documents';
+export * from './document/documentVersions';
+export * from './document/documentChunks';

@@ -3,6 +3,8 @@ import express from 'express';
 import authRoutes from './authRoutes';
 import emailRoutes from './emailRoutes';
 import userRoutes from './userRoutes';
+import documentRoutes from './documentRoutes';
+import folderRoutes from './folderRoutes';
 
 const router = express.Router();
 
@@ -19,5 +21,11 @@ router.use('/api/auth/email', emailRoutes);
 
 // User routes
 router.use('/api/user', userRoutes);
+
+// Document routes
+router.use('/api/documents', documentRoutes);
+
+// Folder routes
+router.use('/api/folders', folderRoutes);
 
 export default router;
