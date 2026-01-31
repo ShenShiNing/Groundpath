@@ -1,8 +1,8 @@
 import { eq, and, isNull, count } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { now } from '@shared/db/utils';
-import { folders, type Folder, type NewFolder } from '@shared/db/schema/document/folders';
-import { documents } from '@shared/db/schema/document/documents';
+import { now } from '@shared/db/db.utils';
+import { folders, type Folder, type NewFolder } from '@shared/db/schema/document/folders.schema';
+import { documents } from '@shared/db/schema/document/documents.schema';
 
 /**
  * Folder repository for database operations

@@ -7,7 +7,7 @@ import type {
   CreateFolderRequest,
   UpdateFolderRequest,
 } from '@knowledge-agent/shared/types';
-import type { Folder } from '@shared/db/schema/document/folders';
+import type { Folder } from '@shared/db/schema/document/folders.schema';
 import { AuthError } from '@shared/errors/errors';
 import { folderRepository } from '../repositories/folder.repository';
 import { documentRepository } from '../repositories/document.repository';

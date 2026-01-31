@@ -10,7 +10,7 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@modules/*": ["src/modules/*"],
-      "@config/*": ["src/config/*"]
+      "@config/*": ["src/shared/config/*"]
     },
 
     // Stricter checks for server code

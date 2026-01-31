@@ -1,10 +1,13 @@
 import type { Request, Response } from 'express';
+import { env } from '@config/env';
+import { createLogger } from '@shared/logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
-import { handleError } from '@shared/errors/errors';
-import { getClientIp } from '@shared/utils/requestUtils';
+import { asyncHandler } from '@shared/errors/async-handler';
+import { getClientIp } from '@shared/utils/request.utils';
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const logger = createLogger('oauth');
+const FRONTEND_URL = env.FRONTEND_URL;
 
 /**
  * Build callback URL with token data (fragment-based for security)
@@ -43,31 +46,20 @@ function buildErrorCallbackUrl(error: string, returnUrl: string = '/'): string {
   return `${FRONTEND_URL}/auth/callback?${params.toString()}`;
 }
 
-/**
- * OAuth controller handlers
- */
 export const oauthController = {
   /**
    * GET /api/auth/oauth/github
-   * Initiate GitHub OAuth flow
    */
-  async githubAuth(req: Request, res: Response): Promise<void> {
-    try {
-      const returnUrl = typeof req.query.returnUrl === 'string' ? req.query.returnUrl : '/';
-
-      const authUrl = githubProvider.generateAuthUrl(returnUrl);
-      res.redirect(authUrl);
-    } catch (error) {
-      console.error('[OAuth] GitHub auth error:', error);
-      handleError(error, res, 'OAuth controller');
-    }
-  },
+  githubAuth: asyncHandler(async (req: Request, res: Response) => {
+    const returnUrl = typeof req.query.returnUrl === 'string' ? req.query.returnUrl : '/';
+    const authUrl = githubProvider.generateAuthUrl(returnUrl);
+    res.redirect(authUrl);
+  }),
 
   /**
    * GET /api/auth/oauth/github/callback
-   * Handle GitHub OAuth callback
    */
-  async githubCallback(req: Request, res: Response): Promise<void> {
+  githubCallback: asyncHandler(async (req: Request, res: Response) => {
     try {
       const code = req.query.code as string | undefined;
       const state = req.query.state as string | undefined;
@@ -107,36 +99,25 @@ export const oauthController = {
 
       res.redirect(callbackUrl);
     } catch (error) {
-      console.error('GitHub OAuth callback error:', error);
-
-      // Extract error message
+      logger.error({ err: error }, 'GitHub OAuth callback error');
       const errorMessage = error instanceof Error ? error.message : 'OAuth authentication failed';
-
       res.redirect(buildErrorCallbackUrl(errorMessage));
     }
-  },
+  }),
 
   /**
    * GET /api/auth/oauth/google
-   * Initiate Google OAuth flow
    */
-  async googleAuth(req: Request, res: Response): Promise<void> {
-    try {
-      const returnUrl = typeof req.query.returnUrl === 'string' ? req.query.returnUrl : '/';
-
-      const authUrl = googleProvider.generateAuthUrl(returnUrl);
-      res.redirect(authUrl);
-    } catch (error) {
-      console.error('[OAuth] Google auth error:', error);
-      handleError(error, res, 'OAuth controller');
-    }
-  },
+  googleAuth: asyncHandler(async (req: Request, res: Response) => {
+    const returnUrl = typeof req.query.returnUrl === 'string' ? req.query.returnUrl : '/';
+    const authUrl = googleProvider.generateAuthUrl(returnUrl);
+    res.redirect(authUrl);
+  }),
 
   /**
    * GET /api/auth/oauth/google/callback
-   * Handle Google OAuth callback
    */
-  async googleCallback(req: Request, res: Response): Promise<void> {
+  googleCallback: asyncHandler(async (req: Request, res: Response) => {
     try {
       const code = req.query.code as string | undefined;
       const state = req.query.state as string | undefined;
@@ -176,12 +157,9 @@ export const oauthController = {
 
       res.redirect(callbackUrl);
     } catch (error) {
-      console.error('Google OAuth callback error:', error);
-
-      // Extract error message
+      logger.error({ err: error }, 'Google OAuth callback error');
       const errorMessage = error instanceof Error ? error.message : 'OAuth authentication failed';
-
       res.redirect(buildErrorCallbackUrl(errorMessage));
     }
-  },
+  }),
 };

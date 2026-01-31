@@ -1,5 +1,6 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { AuthError } from '@shared/errors/errors';
+import { env } from '@config/env';
 import type {
   OAuthProviderConfig,
   OAuthCallbackResult,
@@ -16,11 +17,10 @@ import {
 // ==================== Configuration ====================
 
 function getGoogleConfig(): OAuthProviderConfig {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = env.GOOGLE_CLIENT_ID;
+  const clientSecret = env.GOOGLE_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    console.error('Google OAuth not configured. Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
     throw new AuthError(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'Google OAuth is not configured on this server',
@@ -31,9 +31,8 @@ function getGoogleConfig(): OAuthProviderConfig {
   return {
     clientId,
     clientSecret,
-    callbackUrl:
-      process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/api/auth/oauth/google/callback',
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    callbackUrl: env.GOOGLE_CALLBACK_URL,
+    frontendUrl: env.FRONTEND_URL,
   };
 }
 

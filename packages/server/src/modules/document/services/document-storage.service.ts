@@ -8,19 +8,17 @@ import { v4 as uuidv4 } from 'uuid';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import type { DocumentType } from '@knowledge-agent/shared/types';
+import { env } from '@config/env';
+import { createLogger } from '@shared/logger';
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID ?? '';
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID ?? '';
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY ?? '';
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME ?? '';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL ?? '';
+const logger = createLogger('document-storage');
 
 const s3Client = new S3Client({
   region: 'auto',
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
   credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
   },
 });
 
@@ -58,17 +56,10 @@ const EXTENSION_TO_MIME: Record<string, string> = {
 };
 
 /**
- * Get max file size from environment (default 20MB)
+ * Get max file size from config (default 21 MiB)
  */
 function getMaxFileSize(): number {
-  const envValue = process.env.MAX_DOCUMENT_SIZE;
-  if (envValue) {
-    const parsed = parseInt(envValue, 10);
-    if (!isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-  return 21 * 1024 * 1024; // 21 MiB default (allows files that Windows shows as ~20MB)
+  return env.MAX_DOCUMENT_SIZE;
 }
 
 /**
@@ -194,7 +185,7 @@ export const documentStorageService = {
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: env.R2_BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: resolvedMimeType,
@@ -203,7 +194,7 @@ export const documentStorageService = {
 
     return {
       storageKey: key,
-      storageUrl: `${R2_PUBLIC_URL}/${key}`,
+      storageUrl: `${env.R2_PUBLIC_URL}/${key}`,
       fileExtension: ext,
       documentType,
       resolvedMimeType,
@@ -216,7 +207,7 @@ export const documentStorageService = {
   async deleteDocument(storageKey: string): Promise<void> {
     await s3Client.send(
       new DeleteObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: env.R2_BUCKET_NAME,
         Key: storageKey,
       })
     );
@@ -232,7 +223,7 @@ export const documentStorageService = {
   }> {
     const response = await s3Client.send(
       new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: env.R2_BUCKET_NAME,
         Key: storageKey,
       })
     );
@@ -254,7 +245,7 @@ export const documentStorageService = {
   async getDocumentContent(storageKey: string): Promise<Buffer> {
     const response = await s3Client.send(
       new GetObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: env.R2_BUCKET_NAME,
         Key: storageKey,
       })
     );
@@ -303,7 +294,7 @@ export const documentStorageService = {
             text = pdfData.text || '';
             await pdfParser.destroy();
           } catch (pdfError) {
-            console.error('PDF parsing error:', pdfError);
+            logger.error({ err: pdfError }, 'PDF parsing error');
             return null;
           }
           break;
@@ -313,7 +304,7 @@ export const documentStorageService = {
             const docxResult = await mammoth.extractRawText({ buffer });
             text = docxResult.value || '';
           } catch (docxError) {
-            console.error('DOCX parsing error:', docxError);
+            logger.error({ err: docxError }, 'DOCX parsing error');
             return null;
           }
           break;
@@ -327,7 +318,7 @@ export const documentStorageService = {
 
       return text.length > maxLength ? text.substring(0, maxLength) : text;
     } catch (error) {
-      console.error('Text extraction error:', error);
+      logger.error({ err: error }, 'Text extraction error');
       return null;
     }
   },
@@ -372,26 +363,26 @@ export const storageService = {
 
     await s3Client.send(
       new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: env.R2_BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
       })
     );
 
-    return `${R2_PUBLIC_URL}/${key}`;
+    return `${env.R2_PUBLIC_URL}/${key}`;
   },
 
   /**
    * Delete file from R2 by URL
    */
   async deleteByUrl(url: string): Promise<void> {
-    if (!url.startsWith(R2_PUBLIC_URL)) return;
+    if (!url.startsWith(env.R2_PUBLIC_URL)) return;
 
-    const key = url.replace(`${R2_PUBLIC_URL}/`, '');
+    const key = url.replace(`${env.R2_PUBLIC_URL}/`, '');
     await s3Client.send(
       new DeleteObjectCommand({
-        Bucket: R2_BUCKET_NAME,
+        Bucket: env.R2_BUCKET_NAME,
         Key: key,
       })
     );

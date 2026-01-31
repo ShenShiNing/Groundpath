@@ -1,16 +1,16 @@
 // User schemas
-export * from './user/users';
+export * from './user/users.schema';
 
 // Auth schemas
-export * from './auth/userAuths';
-export * from './auth/emailVerificationCodes';
-export * from './auth/refreshTokens';
+export * from './auth/user-auths.schema';
+export * from './auth/email-verification-codes.schema';
+export * from './auth/refresh-tokens.schema';
 
 // System schemas
-export * from './system/loginLogs';
+export * from './system/login-logs.schema';
 
 // Document schemas
-export * from './document/folders';
-export * from './document/documents';
-export * from './document/documentVersions';
-export * from './document/documentChunks';
+export * from './document/folders.schema';
+export * from './document/documents.schema';
+export * from './document/document-versions.schema';
+export * from './document/document-chunks.schema';

@@ -1,5 +1,6 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { AuthError } from '@shared/errors/errors';
+import { env } from '@config/env';
 import type {
   OAuthProviderConfig,
   OAuthCallbackResult,
@@ -17,11 +18,10 @@ import {
 // ==================== Configuration ====================
 
 function getGitHubConfig(): OAuthProviderConfig {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+  const clientId = env.GITHUB_CLIENT_ID;
+  const clientSecret = env.GITHUB_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    console.error('GitHub OAuth not configured. Missing GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET');
     throw new AuthError(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'GitHub OAuth is not configured on this server',
@@ -32,9 +32,8 @@ function getGitHubConfig(): OAuthProviderConfig {
   return {
     clientId,
     clientSecret,
-    callbackUrl:
-      process.env.GITHUB_CALLBACK_URL || 'http://localhost:3000/api/auth/oauth/github/callback',
-    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+    callbackUrl: env.GITHUB_CALLBACK_URL,
+    frontendUrl: env.FRONTEND_URL,
   };
 }
 

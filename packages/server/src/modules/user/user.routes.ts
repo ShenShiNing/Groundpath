@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { authenticate } from '@shared/middleware/authMiddleware';
+import { authenticate } from '@shared/middleware/auth.middleware';
 import { userController } from './controllers/user.controller';
 import { uploadController } from '../document';
 

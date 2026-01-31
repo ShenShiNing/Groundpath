@@ -11,13 +11,16 @@ import type {
   TrashListResponse,
   VersionListResponse,
 } from '@knowledge-agent/shared/types';
-import type { Document } from '@shared/db/schema/document/documents';
+import type { Document } from '@shared/db/schema/document/documents.schema';
 import { AuthError } from '@shared/errors/errors';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
 import { folderRepository } from '../repositories/folder.repository';
 import { documentStorageService } from '../services/document-storage.service';
+import { createLogger } from '@shared/logger';
+
+const logger = createLogger('document.service');
 
 /**
  * Convert database document to API document info
@@ -343,7 +346,7 @@ export const documentService = {
       try {
         await documentStorageService.deleteDocument(version.storageKey);
       } catch (err) {
-        console.error(`Failed to delete version ${version.id} from storage:`, err);
+        logger.warn({ versionId: version.id, err }, 'Failed to delete version from storage');
       }
     }
 

@@ -1,9 +1,10 @@
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import { env } from '@config/env';
 import { documentController } from './controllers/document.controller';
-import { authenticate } from '@shared/middleware/authMiddleware';
-import { validateBody, validateQuery } from '@shared/middleware/validationMiddleware';
+import { authenticate } from '@shared/middleware/auth.middleware';
+import { validateBody, validateQuery } from '@shared/middleware/validation.middleware';
 import {
   updateDocumentRequestSchema,
   documentListParamsSchema,
@@ -16,7 +17,7 @@ const router = express.Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: parseInt(process.env.MAX_DOCUMENT_SIZE ?? '22020096', 10), // 21 MiB default
+    fileSize: env.MAX_DOCUMENT_SIZE,
   },
 });
 
@@ -24,8 +25,7 @@ const upload = multer({
 function handleMulterError(err: Error, _req: Request, res: Response, next: NextFunction): void {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      const maxSize = parseInt(process.env.MAX_DOCUMENT_SIZE ?? '22020096', 10);
-      const maxMB = Math.round(maxSize / (1024 * 1024));
+      const maxMB = Math.round(env.MAX_DOCUMENT_SIZE / (1024 * 1024));
       res.status(400).json({
         success: false,
         error: {

@@ -4,7 +4,7 @@ import {
   documentChunks,
   type DocumentChunk,
   type NewDocumentChunk,
-} from '@shared/db/schema/document/documentChunks';
+} from '@shared/db/schema/document/document-chunks.schema';
 
 /**
  * Document chunk repository for RAG operations

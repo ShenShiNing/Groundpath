@@ -1,7 +1,11 @@
 import { eq, and, isNull, isNotNull, desc, asc, like, sql, count } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { now } from '@shared/db/utils';
-import { documents, type Document, type NewDocument } from '@shared/db/schema/document/documents';
+import { now } from '@shared/db/db.utils';
+import {
+  documents,
+  type Document,
+  type NewDocument,
+} from '@shared/db/schema/document/documents.schema';
 import type { DocumentListParams, TrashListParams } from '@knowledge-agent/shared/types';
 
 /**

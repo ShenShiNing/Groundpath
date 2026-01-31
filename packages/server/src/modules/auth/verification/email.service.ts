@@ -1,8 +1,8 @@
 import nodemailer from 'nodemailer';
 import type Mail from 'nodemailer/lib/mailer';
 import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
-import { EMAIL_CONFIG } from '@config/emailConfig';
-import { emailTemplates } from '@shared/email/templates/verification';
+import { EMAIL_CONFIG } from '@config/email.config';
+import { emailTemplates } from '@shared/email/templates/verification.template';
 
 // Create transporter (reusable)
 const transporter = nodemailer.createTransport({

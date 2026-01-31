@@ -3,10 +3,13 @@ import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
-import { EMAIL_CONFIG } from '@config/emailConfig';
+import { EMAIL_CONFIG } from '@config/email.config';
 import { emailVerificationRepository } from '../verification/email-verification.repository';
 import { emailService } from './email.service';
 import { AuthError } from '@shared/errors/errors';
+import { createLogger } from '@shared/logger';
+
+const logger = createLogger('email-verification');
 
 interface VerificationTokenPayload {
   sub: string; // email
@@ -159,7 +162,7 @@ export const emailVerificationService = {
         type,
       });
     } catch (error) {
-      console.error('Failed to send verification email:', error);
+      logger.error({ err: error }, 'Failed to send verification email');
       throw new AuthError(
         EMAIL_ERROR_CODES.EMAIL_SEND_FAILED,
         'Failed to send verification email. Please try again later.',

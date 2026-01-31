@@ -1,9 +1,9 @@
 import { eq, and, gt } from 'drizzle-orm';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { db } from '@shared/db';
-import { now, addSeconds } from '@shared/db/utils';
-import { refreshTokens, type RefreshToken } from '@shared/db/schema/auth/refreshTokens';
-import { AUTH_CONFIG } from '@config/authConfig';
+import { now, addSeconds } from '@shared/db/db.utils';
+import { refreshTokens, type RefreshToken } from '@shared/db/schema/auth/refresh-tokens.schema';
+import { AUTH_CONFIG } from '@config/auth.config';
 
 /**
  * Refresh token repository for database operations

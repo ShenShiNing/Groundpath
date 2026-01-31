@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '@shared/db';
-import { loginLogs } from '@shared/db/schema/system/loginLogs';
+import { loginLogs } from '@shared/db/schema/system/login-logs.schema';
 
 type AuthType = 'email' | 'github' | 'wechat' | 'google' | 'password';
 

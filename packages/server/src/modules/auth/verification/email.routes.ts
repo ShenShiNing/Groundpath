@@ -3,8 +3,8 @@ import { emailController } from './email.controller';
 import {
   emailSendRateLimiter,
   emailVerifyRateLimiter,
-} from '@shared/middleware/rateLimitMiddleware';
-import { validateBody } from '@shared/middleware/validationMiddleware';
+} from '@shared/middleware/rate-limit.middleware';
+import { validateBody } from '@shared/middleware/validation.middleware';
 import {
   sendVerificationCodeRequestSchema,
   verifyCodeRequestSchema,

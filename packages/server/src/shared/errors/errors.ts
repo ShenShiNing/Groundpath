@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
 import type { ApiResponse, AppErrorCode } from '@knowledge-agent/shared/types';
+import { logger } from '@shared/logger';
 
 /**
  * Custom error class for authentication errors
@@ -87,7 +88,7 @@ export function handleError(error: unknown, res: Response, context: string): voi
     return;
   }
 
-  console.error(`${context} error:`, error);
+  logger.error({ err: error, context }, 'Unhandled error');
   sendErrorResponse(
     res,
     HTTP_STATUS.INTERNAL_ERROR,

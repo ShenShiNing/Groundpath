@@ -6,7 +6,7 @@ export default defineProject({
     alias: {
       '@shared': path.resolve(__dirname, 'src/shared'),
       '@modules': path.resolve(__dirname, 'src/modules'),
-      '@config': path.resolve(__dirname, 'src/config'),
+      '@config': path.resolve(__dirname, 'src/shared/config'),
     },
   },
   test: {
@@ -14,5 +14,8 @@ export default defineProject({
     environment: 'node',
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist'],
+    env: {
+      NODE_ENV: 'test',
+    },
   },
 });

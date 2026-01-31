@@ -1,14 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
-import { AUTH_CONFIG } from '@config/authConfig';
+import { AUTH_CONFIG } from '@config/auth.config';
 import type { AccessTokenPayload } from '../types/auth.types';
 import { AuthError } from '@shared/errors/errors';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-} from '@shared/utils/jwtUtils';
+} from '@shared/utils/jwt.utils';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userService } from '../../user';
 

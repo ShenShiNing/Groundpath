@@ -11,11 +11,11 @@ import type {
   RegisterWithCodeRequest,
   ResetPasswordRequest,
 } from '@knowledge-agent/shared/types';
-import type { User } from '@shared/db/schema/user/users';
+import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenPayload } from '../types/auth.types';
-import { toUserPublicInfo } from '@shared/utils/userMappers';
+import { toUserPublicInfo } from '@shared/utils/user.mappers';
 import { AuthError } from '@shared/errors/errors';
-import { verifyRefreshToken } from '@shared/utils/jwtUtils';
+import { verifyRefreshToken } from '@shared/utils/jwt.utils';
 import { userService } from '../../user';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
@@ -24,7 +24,7 @@ import { emailVerificationService } from '../verification/email-verification.ser
 import {
   checkAccountRateLimit,
   resetAccountRateLimit,
-} from '@shared/middleware/rateLimitMiddleware';
+} from '@shared/middleware/rate-limit.middleware';
 
 /**
  * Build access token payload and generate auth response with token pair.

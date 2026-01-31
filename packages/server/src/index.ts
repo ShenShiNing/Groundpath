@@ -1,17 +1,17 @@
-import dotenv from 'dotenv';
 import express from 'express';
+import { env } from '@config/env';
+import { logger } from '@shared/logger';
+import { requestLogger } from '@shared/logger/request-logger';
+import { errorMiddleware } from '@shared/middleware/error.middleware';
 import router from './router';
-
-dotenv.config();
 
 const app = express();
 
+app.use(requestLogger);
 app.use(express.json());
 app.use(router);
+app.use(errorMiddleware);
 
-app.listen(process.env.PORT, () => {
-  console.log('\n' + '='.repeat(50));
-  console.log(`Server running on http://localhost:${process.env.PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('='.repeat(50) + '\n');
+app.listen(env.PORT, () => {
+  logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Server started');
 });

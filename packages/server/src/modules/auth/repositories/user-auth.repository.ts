@@ -1,6 +1,10 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { userAuths, type UserAuth, type NewUserAuth } from '@shared/db/schema/auth/userAuths';
+import {
+  userAuths,
+  type UserAuth,
+  type NewUserAuth,
+} from '@shared/db/schema/auth/user-auths.schema';
 
 type AuthType = 'email' | 'github' | 'wechat' | 'google' | 'password';
 

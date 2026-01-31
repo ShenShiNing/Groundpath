@@ -4,7 +4,7 @@ import {
   documentVersions,
   type DocumentVersion,
   type NewDocumentVersion,
-} from '@shared/db/schema/document/documentVersions';
+} from '@shared/db/schema/document/document-versions.schema';
 
 /**
  * Document version repository for database operations

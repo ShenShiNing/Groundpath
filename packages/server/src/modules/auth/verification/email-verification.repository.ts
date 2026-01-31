@@ -1,12 +1,12 @@
 import { eq, and, gt, desc, sql } from 'drizzle-orm';
 import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
 import { db } from '@shared/db';
-import { now, addMinutes, subtractSeconds } from '@shared/db/utils';
+import { now, addMinutes, subtractSeconds } from '@shared/db/db.utils';
 import {
   emailVerificationCodes,
   type EmailVerificationCode,
-} from '@shared/db/schema/auth/emailVerificationCodes';
-import { EMAIL_CONFIG } from '@config/emailConfig';
+} from '@shared/db/schema/auth/email-verification-codes.schema';
+import { EMAIL_CONFIG } from '@config/email.config';
 
 /**
  * Email verification code repository for database operations

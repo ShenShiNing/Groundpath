@@ -1,7 +1,7 @@
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { now } from '@shared/db/utils';
-import { users, type User, type NewUser } from '@shared/db/schema/user/users';
+import { now } from '@shared/db/db.utils';
+import { users, type User, type NewUser } from '@shared/db/schema/user/users.schema';
 
 /**
  * User repository for database operations
