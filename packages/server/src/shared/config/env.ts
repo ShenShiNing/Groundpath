@@ -60,6 +60,10 @@ const envSchema = z.object({
   R2_BUCKET_NAME: z.string().default(''),
   R2_PUBLIC_URL: z.string().default(''),
 
+  // Storage
+  STORAGE_TYPE: z.enum(['local', 'r2']).optional(),
+  LOCAL_STORAGE_PATH: z.string().default('./uploads'),
+
   // Document upload
   MAX_DOCUMENT_SIZE: z.coerce.number().default(22020096), // 21 MiB
 

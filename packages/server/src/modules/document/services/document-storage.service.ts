@@ -1,26 +1,12 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-  GetObjectCommand,
-} from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { env } from '@config/env';
 import { createLogger } from '@shared/logger';
+import { storageProvider } from '../../storage';
 
 const logger = createLogger('document-storage');
-
-const s3Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-  },
-});
 
 /**
  * Allowed document MIME types
@@ -71,7 +57,7 @@ function getFileExtension(filename: string): string {
 }
 
 /**
- * Document storage service for Cloudflare R2
+ * Document storage service
  */
 export const documentStorageService = {
   /**
@@ -151,7 +137,7 @@ export const documentStorageService = {
   },
 
   /**
-   * Upload document to R2
+   * Upload document to storage
    */
   async uploadDocument(
     userId: string,
@@ -183,18 +169,11 @@ export const documentStorageService = {
 
     const key = `documents/${userId}/${uuidv4()}.${ext || 'bin'}`;
 
-    await s3Client.send(
-      new PutObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
-        Key: key,
-        Body: file.buffer,
-        ContentType: resolvedMimeType,
-      })
-    );
+    await storageProvider.upload(key, file.buffer, resolvedMimeType);
 
     return {
       storageKey: key,
-      storageUrl: `${env.R2_PUBLIC_URL}/${key}`,
+      storageUrl: storageProvider.getPublicUrl(key),
       fileExtension: ext,
       documentType,
       resolvedMimeType,
@@ -202,15 +181,10 @@ export const documentStorageService = {
   },
 
   /**
-   * Delete document from R2 by storage key
+   * Delete document from storage by storage key
    */
   async deleteDocument(storageKey: string): Promise<void> {
-    await s3Client.send(
-      new DeleteObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
-        Key: storageKey,
-      })
-    );
+    await storageProvider.delete(storageKey);
   },
 
   /**
@@ -221,46 +195,14 @@ export const documentStorageService = {
     contentType: string | undefined;
     contentLength: number | undefined;
   }> {
-    const response = await s3Client.send(
-      new GetObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
-        Key: storageKey,
-      })
-    );
-
-    if (!response.Body) {
-      throw new Error('No content returned from storage');
-    }
-
-    return {
-      body: response.Body as AsyncIterable<Uint8Array>,
-      contentType: response.ContentType,
-      contentLength: response.ContentLength,
-    };
+    return storageProvider.getStream(storageKey);
   },
 
   /**
    * Get document content as buffer (for text extraction)
    */
   async getDocumentContent(storageKey: string): Promise<Buffer> {
-    const response = await s3Client.send(
-      new GetObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
-        Key: storageKey,
-      })
-    );
-
-    const stream = response.Body;
-    if (!stream) {
-      throw new Error('No content returned from storage');
-    }
-
-    // Convert stream to buffer
-    const chunks: Uint8Array[] = [];
-    for await (const chunk of stream as AsyncIterable<Uint8Array>) {
-      chunks.push(chunk);
-    }
-    return Buffer.concat(chunks);
+    return storageProvider.getBuffer(storageKey);
   },
 
   /**
@@ -335,7 +277,7 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 
 /**
- * Storage service for avatar and image uploads to Cloudflare R2
+ * Storage service for avatar and image uploads
  */
 export const storageService = {
   /**
@@ -352,7 +294,7 @@ export const storageService = {
   },
 
   /**
-   * Upload avatar image to R2
+   * Upload avatar image to storage
    */
   async uploadAvatar(
     userId: string,
@@ -361,30 +303,20 @@ export const storageService = {
     const ext = file.originalname.split('.').pop() ?? 'jpg';
     const key = `avatars/${userId}/${uuidv4()}.${ext}`;
 
-    await s3Client.send(
-      new PutObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      })
-    );
+    await storageProvider.upload(key, file.buffer, file.mimetype);
 
-    return `${env.R2_PUBLIC_URL}/${key}`;
+    return storageProvider.getPublicUrl(key);
   },
 
   /**
-   * Delete file from R2 by URL
+   * Delete file from storage by URL
    */
   async deleteByUrl(url: string): Promise<void> {
-    if (!url.startsWith(env.R2_PUBLIC_URL)) return;
+    // Extract key from URL - try both local and R2 URL patterns
+    const publicUrl = storageProvider.getPublicUrl('');
+    if (!url.startsWith(publicUrl)) return;
 
-    const key = url.replace(`${env.R2_PUBLIC_URL}/`, '');
-    await s3Client.send(
-      new DeleteObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
-        Key: key,
-      })
-    );
+    const key = url.replace(publicUrl, '');
+    await storageProvider.delete(key);
   },
 };

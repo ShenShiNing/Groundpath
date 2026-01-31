@@ -1,10 +1,18 @@
+import path from 'path';
 import type { Request, Response } from 'express';
 import express from 'express';
 import { authRoutes, emailRoutes, oauthRoutes } from './modules/auth';
 import { userRoutes } from './modules/user';
 import { documentRoutes, folderRoutes } from './modules/document';
+import { env } from '@config/env';
 
 const router = express.Router();
+
+// Serve local uploads when using local storage
+const storageType = env.STORAGE_TYPE || (env.NODE_ENV === 'production' ? 'r2' : 'local');
+if (storageType === 'local') {
+  router.use('/api/uploads', express.static(path.resolve(env.LOCAL_STORAGE_PATH)));
+}
 
 // Health check
 router.get('/api/hello', (_req: Request, res: Response) => {

@@ -45,6 +45,10 @@ coverage
 # Local files
 *.local
 
+# Local uploads (for development storage)
+uploads/
+**/uploads/
+
 # OS files
 .DS_Store
 .DS_Store?
