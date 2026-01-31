@@ -10,38 +10,27 @@ import type {
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { apiClient, unwrapResponse } from './client';
 
+export interface UploadOptions {
+  onUploadProgress?: (loaded: number, total: number) => void;
+  signal?: AbortSignal;
+}
+
 export const documentsApi = {
   /**
-   * Upload a new document with progress callback
+   * Upload a new document
    */
   async upload(
-    file: File,
-    options?: {
-      title?: string;
-      description?: string;
-      folderId?: string;
-      onProgress?: (progress: number) => void;
-      signal?: AbortSignal;
-    }
+    formData: FormData,
+    options?: UploadOptions
   ): Promise<{ document: DocumentInfo; message: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (options?.title) formData.append('title', options.title);
-    if (options?.description) formData.append('description', options.description);
-    if (options?.folderId) formData.append('folderId', options.folderId);
-
     const response = await apiClient.post<ApiResponse<{ document: DocumentInfo; message: string }>>(
       '/api/documents',
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
         signal: options?.signal,
-        onUploadProgress: options?.onProgress
-          ? (progressEvent) => {
-              const total = progressEvent.total ?? 0;
-              const progress = total > 0 ? Math.round((progressEvent.loaded / total) * 100) : 0;
-              options.onProgress!(progress);
-            }
+        onUploadProgress: options?.onUploadProgress
+          ? (e) => options.onUploadProgress!(e.loaded, e.total ?? 0)
           : undefined,
       }
     );
@@ -143,24 +132,16 @@ export const documentsApi = {
    */
   async uploadNewVersion(
     documentId: string,
-    file: File,
-    options?: { changeNote?: string; onProgress?: (progress: number) => void }
+    formData: FormData,
+    options?: UploadOptions
   ): Promise<{ document: DocumentInfo; message: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (options?.changeNote) formData.append('changeNote', options.changeNote);
-
     const response = await apiClient.post<ApiResponse<{ document: DocumentInfo; message: string }>>(
       `/api/documents/${documentId}/versions`,
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: options?.onProgress
-          ? (progressEvent) => {
-              const total = progressEvent.total ?? 0;
-              const progress = total > 0 ? Math.round((progressEvent.loaded / total) * 100) : 0;
-              options.onProgress!(progress);
-            }
+        onUploadProgress: options?.onUploadProgress
+          ? (e) => options.onUploadProgress!(e.loaded, e.total ?? 0)
           : undefined,
       }
     );

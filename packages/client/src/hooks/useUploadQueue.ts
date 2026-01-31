@@ -18,6 +18,8 @@ export interface UploadQueueStats {
 
 export interface StartUploadOptions {
   folderId?: string;
+  title?: string;
+  description?: string;
   onFileComplete?: (fileId: string, file: File) => void;
   onAllComplete?: (hasErrors: boolean) => void;
 }
@@ -81,10 +83,18 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
     );
     updateFileById(nextFile.id, { status: 'uploading', progress: 0, error: undefined });
 
+    // Build FormData in hooks layer
+    const formData = new FormData();
+    formData.append('file', nextFile.file);
+    const opts = uploadOptionsRef.current;
+    if (opts.folderId) formData.append('folderId', opts.folderId);
+    if (opts.title) formData.append('title', opts.title);
+    if (opts.description) formData.append('description', opts.description);
+
     documentsApi
-      .upload(nextFile.file, {
-        folderId: uploadOptionsRef.current.folderId,
-        onProgress: (progress) => {
+      .upload(formData, {
+        onUploadProgress: (loaded, total) => {
+          const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
           updateFileById(nextFile.id, { progress });
         },
         signal: abortController.signal,

@@ -70,8 +70,25 @@ export function useUploadDocument() {
         description?: string;
         folderId?: string;
         onProgress?: (progress: number) => void;
+        signal?: AbortSignal;
       };
-    }) => documentsApi.upload(file, options),
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (options?.title) formData.append('title', options.title);
+      if (options?.description) formData.append('description', options.description);
+      if (options?.folderId) formData.append('folderId', options.folderId);
+
+      return documentsApi.upload(formData, {
+        onUploadProgress: options?.onProgress
+          ? (loaded, total) => {
+              const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
+              options.onProgress!(progress);
+            }
+          : undefined,
+        signal: options?.signal,
+      });
+    },
     onSuccess: () => {
       // Invalidate document lists to refetch
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
@@ -156,8 +173,26 @@ export function useUploadNewVersion() {
     }: {
       documentId: string;
       file: File;
-      options?: { changeNote?: string; onProgress?: (progress: number) => void };
-    }) => documentsApi.uploadNewVersion(documentId, file, options),
+      options?: {
+        changeNote?: string;
+        onProgress?: (progress: number) => void;
+        signal?: AbortSignal;
+      };
+    }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (options?.changeNote) formData.append('changeNote', options.changeNote);
+
+      return documentsApi.uploadNewVersion(documentId, formData, {
+        onUploadProgress: options?.onProgress
+          ? (loaded, total) => {
+              const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
+              options.onProgress!(progress);
+            }
+          : undefined,
+        signal: options?.signal,
+      });
+    },
     onSuccess: (_, variables) => {
       // Invalidate document detail and versions
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.detail(variables.documentId) });
