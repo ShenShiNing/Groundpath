@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores';
-import { initiateGitHubLogin } from '@/api';
+import { initiateGitHubLogin, initiateGoogleLogin } from '@/api';
 import { SignupStepEmail } from './SignupStepEmail';
 import { SignupStepCode } from './SignupStepCode';
 import { SignupStepDetails } from './SignupStepDetails';
@@ -135,7 +135,7 @@ export function SignupForm() {
                   <GitHubIcon className="mr-2 h-4 w-4" />
                   GitHub
                 </Button>
-                <Button type="button" variant="outline">
+                <Button type="button" variant="outline" onClick={() => initiateGoogleLogin()}>
                   <GoogleIcon className="mr-2 h-4 w-4" />
                   Google
                 </Button>
