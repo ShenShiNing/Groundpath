@@ -36,8 +36,10 @@ export const authController = {
   changePassword: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
     const { oldPassword, newPassword } = req.body as ChangePasswordRequest;
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] ?? null;
 
-    await authService.changePassword(userId, oldPassword, newPassword);
+    await authService.changePassword(userId, oldPassword, newPassword, ipAddress, userAgent);
     sendSuccessResponse(res, { message: 'Password changed successfully' });
   }),
 
@@ -74,7 +76,11 @@ export const authController = {
       throw new AppError('VALIDATION_ERROR', 'Token ID not found', 400);
     }
 
-    await authService.logout(tokenJti);
+    const userId = req.user?.sub;
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] ?? null;
+
+    await authService.logout(tokenJti, userId, ipAddress, userAgent);
     sendSuccessResponse(res, { message: 'Successfully logged out' });
   }),
 
@@ -83,7 +89,10 @@ export const authController = {
    */
   logoutAll: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const revokedCount = await authService.logoutAll(userId);
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] ?? null;
+
+    const revokedCount = await authService.logoutAll(userId, ipAddress, userAgent);
     sendSuccessResponse(res, {
       message: 'Successfully logged out from all devices',
       revokedSessions: revokedCount,
@@ -120,7 +129,10 @@ export const authController = {
       throw new AppError('VALIDATION_ERROR', 'Session ID is required', 400);
     }
 
-    await authService.revokeSession(userId, sessionId);
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] ?? null;
+
+    await authService.revokeSession(userId, sessionId, ipAddress, userAgent);
     sendSuccessResponse(res, { message: 'Session revoked successfully' });
   }),
 

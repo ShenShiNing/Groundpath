@@ -25,10 +25,25 @@ export const loginLogs = mysqlTable(
     success: boolean('success').notNull(),
     failureReason: varchar('failure_reason', { length: 255 }),
 
-    // 设备和位置信息
+    // 设备和位置信息 (原有)
     ipAddress: varchar('ip_address', { length: 45 }),
     userAgent: text('user_agent'),
-    location: varchar('location', { length: 100 }), // 城市/国家
+    location: varchar('location', { length: 100 }), // 城市/国家 (legacy, kept for compatibility)
+
+    // 设备信息 (新增)
+    deviceType: varchar('device_type', { length: 50 }), // desktop, mobile, tablet, etc.
+    browser: varchar('browser', { length: 50 }),
+    browserVersion: varchar('browser_version', { length: 20 }),
+    os: varchar('os', { length: 50 }),
+    osVersion: varchar('os_version', { length: 20 }),
+
+    // 地理位置信息 (新增)
+    country: varchar('country', { length: 2 }), // ISO 3166-1 alpha-2 code
+    countryName: varchar('country_name', { length: 100 }),
+    region: varchar('region', { length: 100 }),
+    city: varchar('city', { length: 100 }),
+    timezone: varchar('timezone', { length: 50 }),
+    isp: varchar('isp', { length: 100 }),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },

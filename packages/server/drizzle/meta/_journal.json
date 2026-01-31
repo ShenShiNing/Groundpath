@@ -15,6 +15,13 @@
       "when": 1769781632326,
       "tag": "0001_regular_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1769876709036,
+      "tag": "0002_faithful_wilson_fisk",
+      "breakpoints": true
     }
   ]
 }

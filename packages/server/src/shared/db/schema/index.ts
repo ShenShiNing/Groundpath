@@ -8,6 +8,8 @@ export * from './auth/refresh-tokens.schema';
 
 // System schemas
 export * from './system/login-logs.schema';
+export * from './system/operation-logs.schema';
+export * from './system/system-logs.schema';
 
 // Document schemas
 export * from './document/folders.schema';

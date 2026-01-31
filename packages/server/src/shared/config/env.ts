@@ -75,6 +75,18 @@ const envSchema = z.object({
 
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+
+  // Log retention (days)
+  LOG_RETENTION_LOGIN_DAYS: z.coerce.number().int().min(1).default(90),
+  LOG_RETENTION_OPERATION_DAYS: z.coerce.number().int().min(1).default(365),
+  LOG_RETENTION_SYSTEM_DAYS: z.coerce.number().int().min(1).default(30),
+
+  // Log cleanup
+  LOG_CLEANUP_BATCH_SIZE: z.coerce.number().int().min(100).default(1000),
+  LOG_CLEANUP_ENABLED: z
+    .string()
+    .default('true')
+    .transform((v) => v === 'true'),
 });
 
 const result = envSchema.safeParse(process.env);

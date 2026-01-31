@@ -19,8 +19,17 @@ import { documentChunkRepository } from '../repositories/document-chunk.reposito
 import { folderRepository } from '../repositories/folder.repository';
 import { documentStorageService } from '../services/document-storage.service';
 import { createLogger } from '@shared/logger';
+import { logOperation } from '@shared/logger/operation-logger';
 
 const logger = createLogger('document.service');
+
+/**
+ * Request context for logging
+ */
+export interface RequestContext {
+  ipAddress: string | null;
+  userAgent: string | null;
+}
 
 /**
  * Convert database document to API document info
@@ -84,8 +93,11 @@ export const documentService = {
   async upload(
     userId: string,
     file: { buffer: Buffer; mimetype: string; originalname: string; size: number },
-    options?: { title?: string; description?: string; folderId?: string }
+    options?: { title?: string; description?: string; folderId?: string },
+    ctx?: RequestContext
   ): Promise<DocumentInfo> {
+    const startTime = Date.now();
+
     // Validate file
     const validation = documentStorageService.validateFile(file);
     if (!validation.valid) {
@@ -159,6 +171,26 @@ export const documentService = {
       createdBy: userId,
     });
 
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: docId,
+      resourceName: title,
+      action: 'document.upload',
+      description: `Uploaded document: ${file.originalname}`,
+      metadata: {
+        fileName: file.originalname,
+        fileSize: file.size,
+        mimeType: resolvedMimeType,
+        documentType,
+        folderId: options?.folderId ?? null,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
+
     return toDocumentInfo(document);
   },
 
@@ -200,8 +232,10 @@ export const documentService = {
   async update(
     documentId: string,
     userId: string,
-    data: UpdateDocumentRequest
+    data: UpdateDocumentRequest,
+    ctx?: RequestContext
   ): Promise<DocumentInfo> {
+    const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
       throw new AuthError(
@@ -223,11 +257,37 @@ export const documentService = {
       }
     }
 
+    // Capture old values for logging
+    const oldValue = {
+      title: document.title,
+      description: document.description,
+      folderId: document.folderId,
+    };
+
     const updated = await documentRepository.update(documentId, {
       ...(data.title !== undefined && { title: data.title }),
       ...(data.description !== undefined && { description: data.description }),
       ...(data.folderId !== undefined && { folderId: data.folderId }),
       updatedBy: userId,
+    });
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: updated!.title,
+      action: 'document.update',
+      description: 'Updated document metadata',
+      oldValue,
+      newValue: {
+        title: data.title ?? document.title,
+        description: data.description ?? document.description,
+        folderId: data.folderId ?? document.folderId,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
     });
 
     return toDocumentInfo(updated!);
@@ -236,7 +296,8 @@ export const documentService = {
   /**
    * Delete document (soft delete)
    */
-  async delete(documentId: string, userId: string): Promise<void> {
+  async delete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
+    const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
       throw new AuthError(
@@ -247,6 +308,19 @@ export const documentService = {
     }
 
     await documentRepository.softDelete(documentId, userId);
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: document.title,
+      action: 'document.delete',
+      description: `Moved document to trash: ${document.title}`,
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
   },
 
   /**
@@ -254,13 +328,15 @@ export const documentService = {
    */
   async getDownloadStream(
     documentId: string,
-    userId: string
+    userId: string,
+    ctx?: RequestContext
   ): Promise<{
     body: AsyncIterable<Uint8Array>;
     fileName: string;
     contentType: string | undefined;
     contentLength: number | undefined;
   }> {
+    const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
       throw new AuthError(
@@ -284,6 +360,24 @@ export const documentService = {
     }
 
     const stream = await documentStorageService.getDocumentStream(version.storageKey);
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: document.title,
+      action: 'document.download',
+      description: `Downloaded document: ${document.fileName}`,
+      metadata: {
+        fileName: document.fileName,
+        fileSize: document.fileSize,
+        version: document.currentVersion,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
 
     return {
       ...stream,
@@ -313,7 +407,8 @@ export const documentService = {
   /**
    * Restore a deleted document
    */
-  async restore(documentId: string, userId: string): Promise<DocumentInfo> {
+  async restore(documentId: string, userId: string, ctx?: RequestContext): Promise<DocumentInfo> {
+    const startTime = Date.now();
     const document = await documentRepository.findDeletedByIdAndUser(documentId, userId);
     if (!document) {
       throw new AuthError(
@@ -324,13 +419,28 @@ export const documentService = {
     }
 
     const restored = await documentRepository.restore(documentId);
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: document.title,
+      action: 'document.restore',
+      description: `Restored document from trash: ${document.title}`,
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
+
     return toDocumentInfo(restored!);
   },
 
   /**
    * Permanently delete a document
    */
-  async permanentDelete(documentId: string, userId: string): Promise<void> {
+  async permanentDelete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
+    const startTime = Date.now();
     const document = await documentRepository.findDeletedByIdAndUser(documentId, userId);
     if (!document) {
       throw new AuthError(
@@ -354,6 +464,24 @@ export const documentService = {
     await documentChunkRepository.deleteByDocumentId(documentId);
     await documentVersionRepository.deleteByDocumentId(documentId);
     await documentRepository.hardDelete(documentId);
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: document.title,
+      action: 'document.permanent_delete',
+      description: `Permanently deleted document: ${document.title}`,
+      metadata: {
+        fileName: document.fileName,
+        fileSize: document.fileSize,
+        versionsDeleted: versions.length,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
   },
 
   // ==================== Version Operations ====================
@@ -365,8 +493,10 @@ export const documentService = {
     documentId: string,
     userId: string,
     file: { buffer: Buffer; mimetype: string; originalname: string; size: number },
-    options?: { changeNote?: string }
+    options?: { changeNote?: string },
+    ctx?: RequestContext
   ): Promise<DocumentInfo> {
+    const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
       throw new AuthError(
@@ -433,6 +563,26 @@ export const documentService = {
       updatedBy: userId,
     });
 
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: document.title,
+      action: 'document.upload_version',
+      description: `Uploaded new version ${newVersion} for: ${document.title}`,
+      metadata: {
+        previousVersion: document.currentVersion,
+        newVersion,
+        fileName: file.originalname,
+        fileSize: file.size,
+        changeNote: options?.changeNote ?? null,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
+
     return toDocumentInfo(updated!);
   },
 
@@ -471,8 +621,10 @@ export const documentService = {
   async restoreVersion(
     documentId: string,
     versionId: string,
-    userId: string
+    userId: string,
+    ctx?: RequestContext
   ): Promise<DocumentInfo> {
+    const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
       throw new AuthError(
@@ -521,6 +673,24 @@ export const documentService = {
       processingStatus: 'pending',
       chunkCount: 0,
       updatedBy: userId,
+    });
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: document.title,
+      action: 'document.restore_version',
+      description: `Restored document to version ${version.version}`,
+      metadata: {
+        previousVersion: document.currentVersion,
+        restoredFromVersion: version.version,
+        newVersion: newVersionNumber,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
     });
 
     return toDocumentInfo(updated!);

@@ -25,6 +25,12 @@ import {
   checkAccountRateLimit,
   resetAccountRateLimit,
 } from '@shared/middleware/rate-limit.middleware';
+import { detectDevice } from '../../logs/services/device-detection.service';
+import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
+import { logOperation } from '@shared/logger/operation-logger';
+import { createLogger } from '@shared/logger';
+
+const logger = createLogger('auth.service');
 
 /**
  * Build access token payload and generate auth response with token pair.
@@ -47,6 +53,22 @@ async function buildAuthResponse(
   return {
     user: toUserPublicInfo(user),
     tokens,
+  };
+}
+
+/**
+ * Get enhanced login info (device detection + geo-location)
+ * This runs asynchronously and does not block the main flow
+ */
+async function getEnhancedLoginInfo(ipAddress: string | null, userAgent: string | null) {
+  const [geoInfo] = await Promise.all([getGeoLocationAsync(ipAddress)]);
+  const deviceInfo = detectDevice(userAgent);
+
+  logger.info({ ipAddress, userAgent, deviceInfo, geoInfo }, 'Enhanced login info');
+
+  return {
+    deviceInfo,
+    geoInfo,
   };
 }
 
@@ -97,8 +119,18 @@ export const authService = {
       status: 'active',
     });
 
+    // Get enhanced login info asynchronously
+    const enhanced = await getEnhancedLoginInfo(ipAddress, userAgent);
+
     // Record successful registration in login logs
-    await loginLogRepository.recordSuccess(user.id, email, 'password', ipAddress, userAgent);
+    await loginLogRepository.recordSuccess(
+      user.id,
+      email,
+      'password',
+      ipAddress,
+      userAgent,
+      enhanced
+    );
 
     // Update last login info
     await userService.updateLastLogin(user.id, ipAddress);
@@ -109,7 +141,15 @@ export const authService = {
   /**
    * Change user password
    */
-  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+    ipAddress?: string | null,
+    userAgent?: string | null
+  ): Promise<void> {
+    const startTime = Date.now();
+
     // Find user
     const user = await userService.findById(userId);
     if (!user || !user.password) {
@@ -130,6 +170,18 @@ export const authService = {
 
     // Revoke all refresh tokens for security (force re-login on all devices)
     await refreshTokenRepository.revokeAllForUser(userId);
+
+    // Log the operation
+    logOperation({
+      userId,
+      resourceType: 'user',
+      resourceId: userId,
+      action: 'user.change_password',
+      description: 'User changed their password',
+      ipAddress: ipAddress ?? null,
+      userAgent: userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
   },
 
   /**
@@ -153,6 +205,9 @@ export const authService = {
       );
     }
 
+    // Get enhanced login info asynchronously (non-blocking for failures, awaited for success)
+    const enhancedPromise = getEnhancedLoginInfo(ipAddress, userAgent);
+
     // Find user by email
     const user = await userService.findByEmail(email);
 
@@ -164,13 +219,16 @@ export const authService = {
       statusCode?: number,
       userId?: string
     ): Promise<never> => {
+      // Get enhanced info for failure logging (don't block on errors)
+      const enhanced = await enhancedPromise.catch(() => ({ deviceInfo: null, geoInfo: null }));
       await loginLogRepository.recordFailure(
         email,
         'password',
         reason,
         ipAddress,
         userAgent,
-        userId
+        userId,
+        enhanced
       );
       throw new AuthError(errorCode, errorMessage, statusCode);
     };
@@ -206,18 +264,18 @@ export const authService = {
       );
     }
 
-    // Optional: Check email verification
-    // Uncomment if you want to require email verification
-    // if (!user.emailVerified) {
-    //   throw new AuthError(
-    //     AUTH_ERROR_CODES.EMAIL_NOT_VERIFIED,
-    //     'Please verify your email before logging in',
-    //     403
-    //   );
-    // }
+    // Get enhanced info for success logging
+    const enhanced = await enhancedPromise;
 
     // Record successful login
-    await loginLogRepository.recordSuccess(user.id, email, 'password', ipAddress, userAgent);
+    await loginLogRepository.recordSuccess(
+      user.id,
+      email,
+      'password',
+      ipAddress,
+      userAgent,
+      enhanced
+    );
 
     // Reset account rate limit on successful login
     resetAccountRateLimit(email);
@@ -256,15 +314,54 @@ export const authService = {
   /**
    * Logout current device (revoke current refresh token)
    */
-  async logout(tokenId: string): Promise<void> {
+  async logout(
+    tokenId: string,
+    userId?: string,
+    ipAddress?: string | null,
+    userAgent?: string | null
+  ): Promise<void> {
+    const startTime = Date.now();
     await tokenService.revokeToken(tokenId);
+
+    // Log the operation if userId is provided
+    if (userId) {
+      logOperation({
+        userId,
+        resourceType: 'session',
+        resourceId: tokenId,
+        action: 'session.logout',
+        description: 'User logged out from current session',
+        ipAddress: ipAddress ?? null,
+        userAgent: userAgent ?? null,
+        durationMs: Date.now() - startTime,
+      });
+    }
   },
 
   /**
    * Logout all devices (revoke all refresh tokens)
    */
-  async logoutAll(userId: string): Promise<number> {
-    return tokenService.revokeAllUserTokens(userId);
+  async logoutAll(
+    userId: string,
+    ipAddress?: string | null,
+    userAgent?: string | null
+  ): Promise<number> {
+    const startTime = Date.now();
+    const count = await tokenService.revokeAllUserTokens(userId);
+
+    // Log the operation
+    logOperation({
+      userId,
+      resourceType: 'session',
+      action: 'session.logout_all',
+      description: `User logged out from all devices (${count} sessions revoked)`,
+      metadata: { sessionsRevoked: count },
+      ipAddress: ipAddress ?? null,
+      userAgent: userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
+
+    return count;
   },
 
   /**
@@ -288,7 +385,14 @@ export const authService = {
   /**
    * Revoke a specific session
    */
-  async revokeSession(userId: string, sessionId: string): Promise<void> {
+  async revokeSession(
+    userId: string,
+    sessionId: string,
+    ipAddress?: string | null,
+    userAgent?: string | null
+  ): Promise<void> {
+    const startTime = Date.now();
+
     // Verify the session belongs to the user by checking via token service
     const sessions = await tokenService.getUserSessions(userId);
     const session = sessions.find((s) => s.id === sessionId);
@@ -298,6 +402,22 @@ export const authService = {
     }
 
     await tokenService.revokeToken(sessionId);
+
+    // Log the operation
+    logOperation({
+      userId,
+      resourceType: 'session',
+      resourceId: sessionId,
+      action: 'session.revoke',
+      description: 'User revoked a session',
+      metadata: {
+        deviceType: session.deviceInfo?.deviceType ?? null,
+        browser: session.deviceInfo?.browser ?? null,
+      },
+      ipAddress: ipAddress ?? null,
+      userAgent: userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
   },
 
   /**
@@ -359,8 +479,18 @@ export const authService = {
       emailVerified: true,
     });
 
+    // Get enhanced login info asynchronously
+    const enhanced = await getEnhancedLoginInfo(ipAddress, userAgent);
+
     // Record successful registration
-    await loginLogRepository.recordSuccess(user.id, email, 'password', ipAddress, userAgent);
+    await loginLogRepository.recordSuccess(
+      user.id,
+      email,
+      'password',
+      ipAddress,
+      userAgent,
+      enhanced
+    );
 
     // Update last login info
     await userService.updateLastLogin(user.id, ipAddress);

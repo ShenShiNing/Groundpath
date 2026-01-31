@@ -9,7 +9,7 @@ import { documentService } from '../services/document.service';
 import { sendSuccessResponse } from '@shared/errors/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId, getParamId } from '@shared/utils/request.utils';
+import { requireUserId, getParamId, getClientIp } from '@shared/utils/request.utils';
 import { getValidatedQuery } from '@shared/middleware/validation.middleware';
 
 /**
@@ -21,6 +21,16 @@ function decodeFilename(filename: string): string {
   } catch {
     return filename;
   }
+}
+
+/**
+ * Extract request context for logging
+ */
+function getRequestContext(req: Request) {
+  return {
+    ipAddress: getClientIp(req),
+    userAgent: req.headers['user-agent'] ?? null,
+  };
 }
 
 export const documentController = {
@@ -49,7 +59,8 @@ export const documentController = {
         originalname: decodeFilename(file.originalname),
         size: file.size,
       },
-      { title, description, folderId }
+      { title, description, folderId },
+      getRequestContext(req)
     );
 
     sendSuccessResponse(
@@ -95,7 +106,7 @@ export const documentController = {
     }
 
     const data = req.body as UpdateDocumentRequest;
-    const document = await documentService.update(documentId, userId, data);
+    const document = await documentService.update(documentId, userId, data, getRequestContext(req));
     sendSuccessResponse(res, document);
   }),
 
@@ -109,7 +120,7 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
     }
 
-    await documentService.delete(documentId, userId);
+    await documentService.delete(documentId, userId, getRequestContext(req));
     sendSuccessResponse(res, { message: 'Document deleted successfully' });
   }),
 
@@ -125,7 +136,8 @@ export const documentController = {
 
     const { body, fileName, contentType, contentLength } = await documentService.getDownloadStream(
       documentId,
-      userId
+      userId,
+      getRequestContext(req)
     );
 
     // Set download headers
@@ -170,7 +182,7 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
     }
 
-    const document = await documentService.restore(documentId, userId);
+    const document = await documentService.restore(documentId, userId, getRequestContext(req));
     sendSuccessResponse(res, { document, message: 'Document restored successfully' });
   }),
 
@@ -184,7 +196,7 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
     }
 
-    await documentService.permanentDelete(documentId, userId);
+    await documentService.permanentDelete(documentId, userId, getRequestContext(req));
     sendSuccessResponse(res, { message: 'Document permanently deleted' });
   }),
 
@@ -216,7 +228,8 @@ export const documentController = {
         originalname: decodeFilename(file.originalname),
         size: file.size,
       },
-      { changeNote }
+      { changeNote },
+      getRequestContext(req)
     );
 
     sendSuccessResponse(
@@ -252,7 +265,12 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'Document ID and Version ID are required', 400);
     }
 
-    const document = await documentService.restoreVersion(documentId, versionId, userId);
+    const document = await documentService.restoreVersion(
+      documentId,
+      versionId,
+      userId,
+      getRequestContext(req)
+    );
     sendSuccessResponse(res, { document, message: 'Version restored successfully' });
   }),
 };

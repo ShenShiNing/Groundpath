@@ -5,7 +5,7 @@ import { folderService } from '../services/folder.service';
 import { sendSuccessResponse } from '@shared/errors/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId, getParamId } from '@shared/utils/request.utils';
+import { requireUserId, getParamId, getClientIp } from '@shared/utils/request.utils';
 
 /**
  * Simple UUID validation
@@ -15,6 +15,16 @@ function isValidUuid(str: string): boolean {
   return uuidRegex.test(str);
 }
 
+/**
+ * Extract request context for logging
+ */
+function getRequestContext(req: Request) {
+  return {
+    ipAddress: getClientIp(req),
+    userAgent: req.headers['user-agent'] ?? null,
+  };
+}
+
 export const folderController = {
   /**
    * POST /api/folders
@@ -22,7 +32,7 @@ export const folderController = {
   create: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
     const data = req.body as CreateFolderRequest;
-    const folder = await folderService.create(userId, data);
+    const folder = await folderService.create(userId, data, getRequestContext(req));
     sendSuccessResponse(res, folder, HTTP_STATUS.CREATED);
   }),
 
@@ -84,7 +94,7 @@ export const folderController = {
     }
 
     const data = req.body as UpdateFolderRequest;
-    const folder = await folderService.update(folderId, userId, data);
+    const folder = await folderService.update(folderId, userId, data, getRequestContext(req));
     sendSuccessResponse(res, folder);
   }),
 
@@ -100,9 +110,12 @@ export const folderController = {
 
     const { moveContentsToRoot } = req.query as { moveContentsToRoot?: string };
 
-    await folderService.delete(folderId, userId, {
-      moveContentsToRoot: moveContentsToRoot === 'true',
-    });
+    await folderService.delete(
+      folderId,
+      userId,
+      { moveContentsToRoot: moveContentsToRoot === 'true' },
+      getRequestContext(req)
+    );
     sendSuccessResponse(res, { message: 'Folder deleted successfully' });
   }),
 };

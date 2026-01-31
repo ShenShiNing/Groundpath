@@ -11,6 +11,11 @@ import { userAuthRepository } from '../repositories/user-auth.repository';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from '../services/token.service';
 import type { OAuthStateData, OAuthProviderType, OAuthUserData } from './oauth.types';
+import { detectDevice } from '../../logs/services/device-detection.service';
+import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
+import { createLogger } from '@shared/logger';
+
+const logger = createLogger('oauth.service');
 
 // ==================== State Store ====================
 
@@ -191,6 +196,21 @@ export async function generateUniqueUsername(baseName: string): Promise<string> 
 // ==================== Login Recording ====================
 
 /**
+ * Get enhanced login info (device detection + geo-location)
+ */
+async function getEnhancedLoginInfo(ipAddress: string | null, userAgent: string | null) {
+  const [geoInfo] = await Promise.all([getGeoLocationAsync(ipAddress)]);
+  const deviceInfo = detectDevice(userAgent);
+
+  logger.info({ ipAddress, userAgent, deviceInfo, geoInfo }, 'OAuth enhanced login info');
+
+  return {
+    deviceInfo,
+    geoInfo,
+  };
+}
+
+/**
  * Record successful OAuth login
  */
 export async function recordOAuthLogin(
@@ -200,8 +220,18 @@ export async function recordOAuthLogin(
   ipAddress: string | null,
   userAgent: string | null
 ): Promise<AuthResponse> {
-  // Record login
-  await loginLogRepository.recordSuccess(user.id, email, providerType, ipAddress, userAgent);
+  // Get enhanced login info
+  const enhanced = await getEnhancedLoginInfo(ipAddress, userAgent);
+
+  // Record login with enhanced info
+  await loginLogRepository.recordSuccess(
+    user.id,
+    email,
+    providerType,
+    ipAddress,
+    userAgent,
+    enhanced
+  );
 
   // Update last login
   await userService.updateLastLogin(user.id, ipAddress);

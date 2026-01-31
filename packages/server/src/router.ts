@@ -4,6 +4,7 @@ import express from 'express';
 import { authRoutes, emailRoutes, oauthRoutes } from './modules/auth';
 import { userRoutes } from './modules/user';
 import { documentRoutes, folderRoutes } from './modules/document';
+import { logsRoutes } from './modules/logs';
 import { env } from '@config/env';
 
 const router = express.Router();
@@ -36,5 +37,8 @@ router.use('/api/documents', documentRoutes);
 
 // Folder routes
 router.use('/api/folders', folderRoutes);
+
+// Logs routes
+router.use('/api/logs', logsRoutes);
 
 export default router;

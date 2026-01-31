@@ -11,6 +11,8 @@ import type { Folder } from '@shared/db/schema/document/folders.schema';
 import { AuthError } from '@shared/errors/errors';
 import { folderRepository } from '../repositories/folder.repository';
 import { documentRepository } from '../repositories/document.repository';
+import { logOperation } from '@shared/logger/operation-logger';
+import type { RequestContext } from './document.service';
 
 /**
  * Convert database folder to API folder info
@@ -75,7 +77,13 @@ export const folderService = {
   /**
    * Create a new folder
    */
-  async create(userId: string, data: CreateFolderRequest): Promise<FolderInfo> {
+  async create(
+    userId: string,
+    data: CreateFolderRequest,
+    ctx?: RequestContext
+  ): Promise<FolderInfo> {
+    const startTime = Date.now();
+
     // Validate parent folder if specified
     if (data.parentId) {
       const parent = await folderRepository.findByIdAndUser(data.parentId, userId);
@@ -99,6 +107,23 @@ export const folderService = {
       name: data.name,
       path,
       createdBy: userId,
+    });
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'folder',
+      resourceId: folderId,
+      resourceName: data.name,
+      action: 'folder.create',
+      description: `Created folder: ${data.name}`,
+      metadata: {
+        parentId: data.parentId ?? null,
+        path,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
     });
 
     return toFolderInfo(folder);
@@ -148,7 +173,13 @@ export const folderService = {
   /**
    * Update folder
    */
-  async update(folderId: string, userId: string, data: UpdateFolderRequest): Promise<FolderInfo> {
+  async update(
+    folderId: string,
+    userId: string,
+    data: UpdateFolderRequest,
+    ctx?: RequestContext
+  ): Promise<FolderInfo> {
+    const startTime = Date.now();
     const folder = await folderRepository.findByIdAndUser(folderId, userId);
     if (!folder) {
       throw new AuthError(
@@ -189,6 +220,13 @@ export const folderService = {
       }
     }
 
+    // Capture old values for logging
+    const oldValue = {
+      name: folder.name,
+      parentId: folder.parentId,
+      path: folder.path,
+    };
+
     // Build new path if parent changed
     let newPath = folder.path;
     if (data.parentId !== undefined && data.parentId !== folder.parentId) {
@@ -206,6 +244,25 @@ export const folderService = {
       await folderRepository.updateDescendantPaths(folderId, userId);
     }
 
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'folder',
+      resourceId: folderId,
+      resourceName: updated!.name,
+      action: 'folder.update',
+      description: 'Updated folder',
+      oldValue,
+      newValue: {
+        name: data.name ?? folder.name,
+        parentId: data.parentId ?? folder.parentId,
+        path: newPath,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
+
     return toFolderInfo(updated!);
   },
 
@@ -215,8 +272,10 @@ export const folderService = {
   async delete(
     folderId: string,
     userId: string,
-    options?: { moveContentsToRoot?: boolean }
+    options?: { moveContentsToRoot?: boolean },
+    ctx?: RequestContext
   ): Promise<void> {
+    const startTime = Date.now();
     const folder = await folderRepository.findByIdAndUser(folderId, userId);
     if (!folder) {
       throw new AuthError(
@@ -254,5 +313,23 @@ export const folderService = {
     }
 
     await folderRepository.softDelete(folderId, userId);
+
+    // Log operation
+    logOperation({
+      userId,
+      resourceType: 'folder',
+      resourceId: folderId,
+      resourceName: folder.name,
+      action: 'folder.delete',
+      description: `Deleted folder: ${folder.name}`,
+      metadata: {
+        documentCount,
+        childFolderCount: childCount,
+        movedContentsToRoot: options?.moveContentsToRoot ?? false,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
   },
 };
