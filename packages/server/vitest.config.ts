@@ -1,6 +1,14 @@
+import path from 'path';
 import { defineProject } from 'vitest/config';
 
 export default defineProject({
+  resolve: {
+    alias: {
+      '@shared': path.resolve(__dirname, 'src/shared'),
+      '@modules': path.resolve(__dirname, 'src/modules'),
+      '@config': path.resolve(__dirname, 'src/config'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',

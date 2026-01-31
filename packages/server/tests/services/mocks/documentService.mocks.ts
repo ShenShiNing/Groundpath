@@ -1,6 +1,6 @@
-import type { Document } from '../../../src/db/schema/document/documents';
-import type { Folder } from '../../../src/db/schema/document/folders';
-import type { DocumentVersion } from '../../../src/db/schema/document/documentVersions';
+import type { Document } from '../@shared/db/schema/document/documents';
+import type { Folder } from '../@shared/db/schema/document/folders';
+import type { DocumentVersion } from '../@shared/db/schema/document/documentVersions';
 
 // ==================== Shared Test Data ====================
 

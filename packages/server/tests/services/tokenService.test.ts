@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
-import { tokenService } from '../../src/services/tokenService';
-import { AuthError } from '../../src/utils/errors';
-import type { AccessTokenPayload } from '../../src/types/authTypes';
+import { tokenService } from '@modules/auth/services/token.service';
+import { AuthError } from '@shared/errors/errors';
+import type { AccessTokenPayload } from '@modules/auth/types/auth.types';
 
 // ==================== Mocks ====================
 
@@ -11,13 +11,13 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'mock-uuid-token-id'),
 }));
 
-vi.mock('../../src/utils/jwtUtils', () => ({
+vi.mock('@shared/utils/jwtUtils', () => ({
   generateAccessToken: vi.fn(() => 'mock-access-token'),
   generateRefreshToken: vi.fn(() => 'mock-refresh-token'),
   verifyRefreshToken: vi.fn(),
 }));
 
-vi.mock('../../src/repositories/refreshTokenRepository', () => ({
+vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
   refreshTokenRepository: {
     create: vi.fn(),
     findValidById: vi.fn(),
@@ -27,13 +27,13 @@ vi.mock('../../src/repositories/refreshTokenRepository', () => ({
   },
 }));
 
-vi.mock('../../src/repositories/userRepository', () => ({
+vi.mock('@modules/user/repositories/user.repository', () => ({
   userRepository: {
     findById: vi.fn(),
   },
 }));
 
-vi.mock('../../src/config/authConfig', () => ({
+vi.mock('@config/authConfig', () => ({
   AUTH_CONFIG: {
     accessToken: { expiresInSeconds: 900 },
     refreshToken: { expiresInSeconds: 604800 },
@@ -41,13 +41,13 @@ vi.mock('../../src/config/authConfig', () => ({
 }));
 
 // Import mocked modules
-import { refreshTokenRepository } from '../../src/repositories/refreshTokenRepository';
-import { userRepository } from '../../src/repositories/userRepository';
+import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
+import { userRepository } from '@modules/user/repositories/user.repository';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-} from '../../src/utils/jwtUtils';
+} from '@shared/utils/jwtUtils';
 
 // ==================== 日志辅助函数 ====================
 

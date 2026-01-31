@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '../../src/utils/errors';
+import { AuthError } from '@shared/errors/errors';
 import {
   mockEmail,
   mockCode,
@@ -20,7 +20,7 @@ vi.mock('crypto', () => ({
   randomInt: vi.fn(() => 123456),
 }));
 
-vi.mock('../../src/repositories/emailVerificationRepository', () => ({
+vi.mock('@modules/auth/verification/email-verification.repository', () => ({
   emailVerificationRepository: {
     countRecentCodes: vi.fn(),
     getMostRecentCode: vi.fn(),
@@ -32,13 +32,13 @@ vi.mock('../../src/repositories/emailVerificationRepository', () => ({
   },
 }));
 
-vi.mock('../../src/services/emailService', () => ({
+vi.mock('@modules/auth/verification/email.service', () => ({
   emailService: {
     sendVerificationCode: vi.fn(),
   },
 }));
 
-vi.mock('../../src/config/emailConfig', () => ({
+vi.mock('@config/emailConfig', () => ({
   EMAIL_CONFIG: {
     verification: {
       secret: 'test-verification-secret',
@@ -52,9 +52,9 @@ vi.mock('../../src/config/emailConfig', () => ({
 }));
 
 // Import after mocks
-import { emailVerificationService } from '../../src/services/emailVerificationService';
-import { emailVerificationRepository } from '../../src/repositories/emailVerificationRepository';
-import { emailService } from '../../src/services/emailService';
+import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
+import { emailVerificationRepository } from '@modules/auth/verification/email-verification.repository';
+import { emailService } from '@modules/auth/verification/email.service';
 
 // ==================== sendCode ====================
 // 场景：发送验证码到用户邮箱

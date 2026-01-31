@@ -1,0 +1,212 @@
+import { v4 as uuidv4 } from 'uuid';
+import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
+import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
+import type { User } from '@shared/db/schema/user/users';
+import type { AccessTokenPayload } from '../types/auth.types';
+import { toUserPublicInfo } from '@shared/utils/userMappers';
+import { AuthError } from '@shared/errors/errors';
+import { userService } from '../../user';
+import { userAuthRepository } from '../repositories/user-auth.repository';
+import { loginLogRepository } from '../repositories/login-log.repository';
+import { tokenService } from '../services/token.service';
+import type { OAuthStateData, OAuthProviderType, OAuthUserData } from './oauth.types';
+
+// ==================== State Store ====================
+
+// In-memory state store (for production, use Redis)
+const stateStore = new Map<string, OAuthStateData>();
+
+/**
+ * Generate a state token and store it with the return URL
+ */
+export function generateState(returnUrl: string = '/'): string {
+  const state = uuidv4();
+
+  // Store state with expiration (5 minutes)
+  stateStore.set(state, {
+    returnUrl,
+    expiresAt: Date.now() + 5 * 60 * 1000,
+  });
+
+  // Clean up expired states
+  cleanupExpiredStates();
+
+  return state;
+}
+
+/**
+ * Validate state parameter and return stored data
+ */
+export function validateState(state: string): { returnUrl: string } | null {
+  const stored = stateStore.get(state);
+  if (!stored || stored.expiresAt < Date.now()) {
+    stateStore.delete(state);
+    return null;
+  }
+
+  stateStore.delete(state);
+  return { returnUrl: stored.returnUrl };
+}
+
+/**
+ * Clean up expired state entries
+ */
+function cleanupExpiredStates(): void {
+  const now = Date.now();
+  for (const [key, value] of stateStore.entries()) {
+    if (value.expiresAt < now) {
+      stateStore.delete(key);
+    }
+  }
+}
+
+// ==================== Auth Response ====================
+
+/**
+ * Build auth response with JWT tokens for OAuth login
+ */
+export async function buildAuthResponse(
+  user: User,
+  ipAddress: string | null,
+  deviceInfo: DeviceInfo | null
+): Promise<AuthResponse> {
+  const accessPayload: AccessTokenPayload = {
+    sub: user.id,
+    email: user.email,
+    username: user.username,
+    status: user.status,
+    emailVerified: user.emailVerified,
+  };
+
+  const tokens = await tokenService.generateTokenPair(accessPayload, ipAddress, deviceInfo);
+
+  return {
+    user: toUserPublicInfo(user),
+    tokens,
+  };
+}
+
+// ==================== User Management ====================
+
+/**
+ * Find existing user or create new one for OAuth
+ */
+export async function findOrCreateOAuthUser(userData: OAuthUserData): Promise<User> {
+  const { providerType, providerId, email, username, avatarUrl, accessToken, profile } = userData;
+
+  // Check if OAuth account is already linked
+  const existingAuth = await userAuthRepository.findByAuthTypeAndId(providerType, providerId);
+
+  if (existingAuth) {
+    // Update OAuth token and profile
+    await userAuthRepository.updateAuthData(existingAuth.id, {
+      accessToken,
+      profile,
+    });
+
+    // Return existing user
+    const user = await userService.findById(existingAuth.userId);
+    if (!user) {
+      throw new AuthError(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
+    return user;
+  }
+
+  // Check if email exists - link OAuth to existing account
+  const existingUser = await userService.findByEmail(email.toLowerCase().trim());
+
+  if (existingUser) {
+    // Link OAuth to existing user
+    await userAuthRepository.create({
+      id: uuidv4(),
+      userId: existingUser.id,
+      authType: providerType,
+      authId: providerId,
+      authData: {
+        accessToken,
+        profile,
+      },
+    });
+
+    return existingUser;
+  }
+
+  // Create new user (without password)
+  const userId = uuidv4();
+  const uniqueUsername = await generateUniqueUsername(username);
+
+  const newUser = await userService.create({
+    id: userId,
+    username: uniqueUsername,
+    email: email.toLowerCase().trim(),
+    password: null, // OAuth users have no password
+    avatarUrl,
+    status: 'active',
+    emailVerified: true, // OAuth email is verified
+  });
+
+  // Create auth record
+  await userAuthRepository.create({
+    id: uuidv4(),
+    userId: newUser.id,
+    authType: providerType,
+    authId: providerId,
+    authData: {
+      accessToken,
+      profile,
+    },
+  });
+
+  return newUser;
+}
+
+/**
+ * Generate a unique username based on base name
+ */
+export async function generateUniqueUsername(baseName: string): Promise<string> {
+  // Sanitize the name: remove special characters, replace spaces with underscores
+  let baseUsername = baseName
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '_')
+    .substring(0, 20);
+
+  // Ensure it's not empty
+  if (!baseUsername) {
+    baseUsername = 'user';
+  }
+
+  let username = baseUsername;
+  let suffix = 0;
+
+  while (await userService.existsByUsername(username)) {
+    suffix++;
+    username = `${baseUsername}${suffix}`;
+  }
+
+  return username;
+}
+
+// ==================== Login Recording ====================
+
+/**
+ * Record successful OAuth login
+ */
+export async function recordOAuthLogin(
+  user: User,
+  email: string,
+  providerType: OAuthProviderType,
+  ipAddress: string | null,
+  userAgent: string | null
+): Promise<AuthResponse> {
+  // Record login
+  await loginLogRepository.recordSuccess(user.id, email, providerType, ipAddress, userAgent);
+
+  // Update last login
+  await userService.updateLastLogin(user.id, ipAddress);
+
+  // Generate auth response
+  const deviceInfo = parseDeviceInfo(userAgent);
+  return buildAuthResponse(user, ipAddress, deviceInfo);
+}

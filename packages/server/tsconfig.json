@@ -3,7 +3,22 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["node"]
+    "types": ["node"],
+
+    // Path aliases to reduce deep relative imports
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@modules/*": ["src/modules/*"],
+      "@config/*": ["src/config/*"]
+    },
+
+    // Stricter checks for server code
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Not needed for server
+    "jsx": "preserve"
   },
   "include": ["src"]
 }

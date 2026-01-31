@@ -4,7 +4,7 @@
  */
 export function initiateGitHubLogin(returnUrl: string = '/'): void {
   const params = new URLSearchParams({ returnUrl });
-  window.location.href = `/api/auth/github?${params.toString()}`;
+  window.location.href = `/api/auth/oauth/github?${params.toString()}`;
 }
 
 /**
@@ -13,5 +13,5 @@ export function initiateGitHubLogin(returnUrl: string = '/'): void {
  */
 export function initiateGoogleLogin(returnUrl: string = '/'): void {
   const params = new URLSearchParams({ returnUrl });
-  window.location.href = `/api/auth/google?${params.toString()}`;
+  window.location.href = `/api/auth/oauth/google?${params.toString()}`;
 }

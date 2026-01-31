@@ -1,32 +1,32 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Request, Response } from 'express';
 import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '../../src/utils/errors';
+import { AuthError } from '@shared/errors/errors';
 import { logTestInfo } from './mocks/emailService.mocks';
 
 // ==================== Mocks ====================
 
-vi.mock('../../src/services/emailVerificationService', () => ({
+vi.mock('@modules/auth/verification/email-verification.service', () => ({
   emailVerificationService: {
     sendCode: vi.fn(),
     verifyCode: vi.fn(),
   },
 }));
 
-vi.mock('../../src/repositories/userRepository', () => ({
+vi.mock('@modules/user/repositories/user.repository', () => ({
   userRepository: {
     existsByEmail: vi.fn(),
   },
 }));
 
-vi.mock('../../src/utils/requestUtils', () => ({
+vi.mock('@shared/utils/requestUtils', () => ({
   getClientIp: vi.fn(() => '192.168.1.1'),
 }));
 
 // Import after mocks
-import { emailController } from '../../src/controller/emailController';
-import { emailVerificationService } from '../../src/services/emailVerificationService';
-import { userRepository } from '../../src/repositories/userRepository';
+import { emailController } from '@modules/auth/verification/email.controller';
+import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
+import { userRepository } from '@modules/user/repositories/user.repository';
 
 // ==================== Test Helpers ====================
 

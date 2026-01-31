@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '../../src/utils/errors';
+import { AuthError } from '@shared/errors/errors';
 import {
   mockUserId,
   mockFolderId,
@@ -22,7 +22,7 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'generated-uuid-123'),
 }));
 
-vi.mock('../../src/repositories/documentRepository', () => ({
+vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
@@ -37,7 +37,7 @@ vi.mock('../../src/repositories/documentRepository', () => ({
   },
 }));
 
-vi.mock('../../src/repositories/documentVersionRepository', () => ({
+vi.mock('@modules/document/repositories/document-version.repository', () => ({
   documentVersionRepository: {
     create: vi.fn(),
     listByDocumentId: vi.fn(),
@@ -45,13 +45,13 @@ vi.mock('../../src/repositories/documentVersionRepository', () => ({
   },
 }));
 
-vi.mock('../../src/repositories/folderRepository', () => ({
+vi.mock('@modules/document/repositories/folder.repository', () => ({
   folderRepository: {
     findByIdAndUser: vi.fn(),
   },
 }));
 
-vi.mock('../../src/services/documentStorageService', () => ({
+vi.mock('@modules/document/services/document-storage.service', () => ({
   documentStorageService: {
     validateFile: vi.fn(),
     uploadDocument: vi.fn(),
@@ -62,11 +62,11 @@ vi.mock('../../src/services/documentStorageService', () => ({
 }));
 
 // Import after mocks
-import { documentService } from '../../src/services/documentService';
-import { documentRepository } from '../../src/repositories/documentRepository';
-import { documentVersionRepository } from '../../src/repositories/documentVersionRepository';
-import { folderRepository } from '../../src/repositories/folderRepository';
-import { documentStorageService } from '../../src/services/documentStorageService';
+import { documentService } from '@modules/document/services/document.service';
+import { documentRepository } from '@modules/document/repositories/document.repository';
+import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
+import { folderRepository } from '@modules/document/repositories/folder.repository';
+import { documentStorageService } from '@modules/document/services/document-storage.service';
 
 // ==================== upload ====================
 // 场景：用户上传新文档

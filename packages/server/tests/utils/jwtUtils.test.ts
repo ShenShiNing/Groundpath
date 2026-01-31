@@ -7,10 +7,10 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
   extractBearerToken,
-} from '../../src/utils/jwtUtils';
-import { AUTH_CONFIG } from '../../src/config/authConfig';
-import type { AccessTokenPayload, RefreshTokenPayload } from '../../src/types/authTypes';
-import { AuthError } from '../../src/utils/errors';
+} from '@shared/utils/jwtUtils';
+import { AUTH_CONFIG } from '@config/authConfig';
+import type { AccessTokenPayload, RefreshTokenPayload } from '@modules/auth/types/auth.types';
+import { AuthError } from '@shared/errors/errors';
 
 describe('jwtUtils', () => {
   // ==================== Access Token Tests ====================

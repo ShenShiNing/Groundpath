@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AuthError, isAuthError } from '../../src/utils/errors';
+import { AuthError, isAuthError } from '@shared/errors/errors';
 
 describe('AuthError', () => {
   it('should create an error with correct properties', () => {

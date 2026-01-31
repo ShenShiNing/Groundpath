@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '../../src/utils/errors';
+import { AuthError } from '@shared/errors/errors';
 import { mockUser, mockTokenPair, mockSessions, logTestInfo } from './mocks/authService.mocks';
 
 // ==================== Mocks ====================
@@ -16,11 +16,11 @@ vi.mock('bcryptjs', () => ({
   },
 }));
 
-vi.mock('../../src/utils/jwtUtils', () => ({
+vi.mock('@shared/utils/jwtUtils', () => ({
   verifyRefreshToken: vi.fn(),
 }));
 
-vi.mock('../../src/repositories/userRepository', () => ({
+vi.mock('@modules/user/repositories/user.repository', () => ({
   userRepository: {
     findByEmail: vi.fn(),
     findById: vi.fn(),
@@ -32,20 +32,20 @@ vi.mock('../../src/repositories/userRepository', () => ({
   },
 }));
 
-vi.mock('../../src/repositories/loginLogRepository', () => ({
+vi.mock('@modules/auth/repositories/login-log.repository', () => ({
   loginLogRepository: {
     recordSuccess: vi.fn(),
     recordFailure: vi.fn(),
   },
 }));
 
-vi.mock('../../src/repositories/refreshTokenRepository', () => ({
+vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
   refreshTokenRepository: {
     revokeAllForUser: vi.fn(),
   },
 }));
 
-vi.mock('../../src/services/tokenService', () => ({
+vi.mock('@modules/auth/services/token.service', () => ({
   tokenService: {
     generateTokenPair: vi.fn(),
     refreshTokens: vi.fn(),
@@ -55,16 +55,16 @@ vi.mock('../../src/services/tokenService', () => ({
   },
 }));
 
-vi.mock('../../src/middleware/rateLimitMiddleware', () => ({
+vi.mock('@shared/middleware/rateLimitMiddleware', () => ({
   checkAccountRateLimit: vi.fn(() => ({ allowed: true })),
   resetAccountRateLimit: vi.fn(),
 }));
 
 // Import after mocks
-import { authService } from '../../src/services/authService';
-import { userRepository } from '../../src/repositories/userRepository';
-import { tokenService } from '../../src/services/tokenService';
-import { verifyRefreshToken } from '../../src/utils/jwtUtils';
+import { authService } from '@modules/auth/services/auth.service';
+import { userRepository } from '@modules/user/repositories/user.repository';
+import { tokenService } from '@modules/auth/services/token.service';
+import { verifyRefreshToken } from '@shared/utils/jwtUtils';
 
 // ==================== Session Management ====================
 describe('authService > session management', () => {

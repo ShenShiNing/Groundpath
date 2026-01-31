@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '../../src/utils/errors';
+import { AuthError } from '@shared/errors/errors';
 import {
   mockUserId,
   mockFolderId,
@@ -16,7 +16,7 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'generated-uuid-123'),
 }));
 
-vi.mock('../../src/repositories/folderRepository', () => ({
+vi.mock('@modules/document/repositories/folder.repository', () => ({
   folderRepository: {
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
@@ -34,16 +34,16 @@ vi.mock('../../src/repositories/folderRepository', () => ({
   },
 }));
 
-vi.mock('../../src/repositories/documentRepository', () => ({
+vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     moveAllFromFolderToRoot: vi.fn(),
   },
 }));
 
 // Import after mocks
-import { folderService } from '../../src/services/folderService';
-import { folderRepository } from '../../src/repositories/folderRepository';
-import { documentRepository } from '../../src/repositories/documentRepository';
+import { folderService } from '@modules/document/services/folder.service';
+import { folderRepository } from '@modules/document/repositories/folder.repository';
+import { documentRepository } from '@modules/document/repositories/document.repository';
 
 // ==================== create ====================
 // 场景：创建文件夹
