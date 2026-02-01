@@ -26,4 +26,7 @@ app.listen(env.PORT, () => {
 
   // Initialize scheduled tasks
   initializeScheduler();
+
+  // Note: Qdrant collections are now created on-demand per knowledge base
+  // when documents are uploaded or processed. See knowledge-base.service.ts
 });

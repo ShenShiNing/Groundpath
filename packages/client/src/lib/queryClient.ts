@@ -41,6 +41,22 @@ export const queryKeys = {
       [...queryKeys.folders.all, 'children', parentId ?? 'root'] as const,
   },
 
+  // Knowledge Bases
+  knowledgeBases: {
+    all: ['knowledgeBases'] as const,
+    lists: () => [...queryKeys.knowledgeBases.all, 'list'] as const,
+    details: () => [...queryKeys.knowledgeBases.all, 'detail'] as const,
+    detail: (id: string) => [...queryKeys.knowledgeBases.details(), id] as const,
+    documents: (kbId: string, params: Record<string, unknown>) =>
+      [...queryKeys.knowledgeBases.detail(kbId), 'documents', params] as const,
+    documentTree: (kbId: string) =>
+      [...queryKeys.knowledgeBases.detail(kbId), 'documentTree'] as const,
+    folders: (kbId: string) => [...queryKeys.knowledgeBases.detail(kbId), 'folders'] as const,
+    folderTree: (kbId: string) => [...queryKeys.knowledgeBases.detail(kbId), 'folderTree'] as const,
+    conversations: (kbId: string) =>
+      [...queryKeys.knowledgeBases.detail(kbId), 'conversations'] as const,
+  },
+
   // User
   user: {
     sessions: ['user', 'sessions'] as const,

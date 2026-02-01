@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
+import { DOCUMENT_ERROR_CODES, KNOWLEDGE_BASE_ERROR_CODES } from '@knowledge-agent/shared';
 import type {
   DocumentInfo,
   DocumentListItem,
@@ -20,6 +20,9 @@ import { folderRepository } from '../repositories/folder.repository';
 import { documentStorageService } from '../services/document-storage.service';
 import { createLogger } from '@shared/logger';
 import { logOperation } from '@shared/logger/operation-logger';
+import { processingService } from '@modules/rag/services/processing.service';
+import { vectorRepository } from '@modules/vector';
+import { knowledgeBaseService } from '@modules/knowledge-base';
 
 const logger = createLogger('document.service');
 
@@ -93,10 +96,22 @@ export const documentService = {
   async upload(
     userId: string,
     file: { buffer: Buffer; mimetype: string; originalname: string; size: number },
-    options?: { title?: string; description?: string; folderId?: string },
+    options?: { title?: string; description?: string; folderId?: string; knowledgeBaseId?: string },
     ctx?: RequestContext
   ): Promise<DocumentInfo> {
     const startTime = Date.now();
+
+    // knowledgeBaseId is required
+    if (!options?.knowledgeBaseId) {
+      throw new AuthError(
+        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
+        'Knowledge base ID is required',
+        400
+      );
+    }
+
+    // Validate knowledge base exists and belongs to user
+    await knowledgeBaseService.validateOwnership(options.knowledgeBaseId, userId);
 
     // Validate file
     const validation = documentStorageService.validateFile(file);
@@ -108,7 +123,7 @@ export const documentService = {
       );
     }
 
-    // Validate folder if specified
+    // Validate folder if specified (must belong to same KB)
     if (options?.folderId) {
       const folder = await folderRepository.findByIdAndUser(options.folderId, userId);
       if (!folder) {
@@ -116,6 +131,13 @@ export const documentService = {
           DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
           'Target folder not found',
           404
+        );
+      }
+      if (folder.knowledgeBaseId !== options.knowledgeBaseId) {
+        throw new AuthError(
+          DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
+          'Folder does not belong to this knowledge base',
+          400
         );
       }
     }
@@ -159,6 +181,7 @@ export const documentService = {
       id: docId,
       userId,
       folderId: options?.folderId ?? null,
+      knowledgeBaseId: options.knowledgeBaseId,
       title,
       description: options?.description ?? null,
       currentVersion: 1,
@@ -185,10 +208,16 @@ export const documentService = {
         mimeType: resolvedMimeType,
         documentType,
         folderId: options?.folderId ?? null,
+        knowledgeBaseId: options.knowledgeBaseId,
       },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
       durationMs: Date.now() - startTime,
+    });
+
+    // Trigger async document processing for RAG
+    processingService.processDocument(docId, userId).catch((err) => {
+      logger.warn({ documentId: docId, err }, 'Failed to trigger document processing');
     });
 
     return toDocumentInfo(document);
@@ -460,8 +489,19 @@ export const documentService = {
       }
     }
 
-    // Delete chunks, versions, then document
+    // Delete chunks, vectors, versions, then document
     await documentChunkRepository.deleteByDocumentId(documentId);
+
+    // Determine collection name for vector deletion
+    try {
+      const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(
+        document.knowledgeBaseId
+      );
+      await vectorRepository.deleteByDocumentId(embeddingConfig.collectionName, documentId);
+    } catch (err) {
+      logger.warn({ documentId, err }, 'Failed to delete vectors from Qdrant');
+    }
+
     await documentVersionRepository.deleteByDocumentId(documentId);
     await documentRepository.hardDelete(documentId);
 
@@ -583,6 +623,14 @@ export const documentService = {
       durationMs: Date.now() - startTime,
     });
 
+    // Trigger async document processing for RAG
+    processingService.processDocument(documentId, userId).catch((err) => {
+      logger.warn(
+        { documentId, err },
+        'Failed to trigger document processing after version upload'
+      );
+    });
+
     return toDocumentInfo(updated!);
   },
 
@@ -691,6 +739,14 @@ export const documentService = {
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
       durationMs: Date.now() - startTime,
+    });
+
+    // Trigger async document processing for RAG
+    processingService.processDocument(documentId, userId).catch((err) => {
+      logger.warn(
+        { documentId, err },
+        'Failed to trigger document processing after version restore'
+      );
     });
 
     return toDocumentInfo(updated!);

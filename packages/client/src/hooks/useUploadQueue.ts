@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { documentsApi } from '@/api';
+import { documentsApi, knowledgeBasesApi } from '@/api';
 
 export interface QueueFileState {
   id: string;
@@ -17,6 +17,7 @@ export interface UploadQueueStats {
 }
 
 export interface StartUploadOptions {
+  knowledgeBaseId?: string;
   folderId?: string;
   title?: string;
   description?: string;
@@ -91,14 +92,24 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
     if (opts.title) formData.append('title', opts.title);
     if (opts.description) formData.append('description', opts.description);
 
-    documentsApi
-      .upload(formData, {
-        onUploadProgress: (loaded, total) => {
-          const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
-          updateFileById(nextFile.id, { progress });
-        },
-        signal: abortController.signal,
-      })
+    // Use KB-specific API when knowledgeBaseId is provided, otherwise use documents API
+    const uploadPromise = opts.knowledgeBaseId
+      ? knowledgeBasesApi.uploadDocument(opts.knowledgeBaseId, formData, {
+          onUploadProgress: (loaded, total) => {
+            const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
+            updateFileById(nextFile.id, { progress });
+          },
+          signal: abortController.signal,
+        })
+      : documentsApi.upload(formData, {
+          onUploadProgress: (loaded, total) => {
+            const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
+            updateFileById(nextFile.id, { progress });
+          },
+          signal: abortController.signal,
+        });
+
+    uploadPromise
       .then(() => {
         updateFileById(nextFile.id, { status: 'completed', progress: 100 });
         uploadOptionsRef.current.onFileComplete?.(nextFile.id, nextFile.file);

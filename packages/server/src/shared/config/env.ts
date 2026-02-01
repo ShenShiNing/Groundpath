@@ -73,6 +73,34 @@ const envSchema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
 
+  // Embedding Provider
+  EMBEDDING_PROVIDER: z.enum(['zhipu', 'openai', 'ollama']).default('zhipu'),
+
+  // 智谱 (default)
+  ZHIPU_API_KEY: z.string().optional(),
+  ZHIPU_EMBEDDING_MODEL: z.string().default('embedding-3'),
+  ZHIPU_EMBEDDING_DIMENSIONS: z.coerce.number().default(1024),
+
+  // OpenAI (alternative)
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
+
+  // Ollama (local)
+  OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
+  OLLAMA_EMBEDDING_MODEL: z.string().default('nomic-embed-text'),
+
+  // Qdrant
+  QDRANT_URL: z.string().default('http://localhost:6333'),
+  QDRANT_API_KEY: z.string().optional(),
+  // DEPRECATED: Collections are now named dynamically per knowledge base
+  // Format: embedding_{provider}_{dimensions} (e.g., embedding_zhipu_1024)
+  // Kept for reference only - not used in new code
+  QDRANT_COLLECTION_NAME: z.string().default('document_chunks'),
+
+  // Chunking
+  CHUNK_SIZE: z.coerce.number().default(512),
+  CHUNK_OVERLAP: z.coerce.number().default(50),
+
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 

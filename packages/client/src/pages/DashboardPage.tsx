@@ -5,22 +5,24 @@ import { UserSummary, QuickLinks } from '@/components/dashboard';
 
 export function DashboardPage() {
   return (
-    <AppLayout showFooter="simple">
-      <div className="container max-w-4xl py-8">
-        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+    <AppLayout>
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
 
-        <div className="space-y-6">
-          {/* User Summary */}
-          <Card>
-            <CardContent className="p-6">
-              <UserSummary />
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* User Summary */}
+            <Card>
+              <CardContent className="p-6">
+                <UserSummary />
+              </CardContent>
+            </Card>
 
-          <Separator />
+            <Separator />
 
-          {/* Quick Links */}
-          <QuickLinks />
+            {/* Quick Links */}
+            <QuickLinks />
+          </div>
         </div>
       </div>
     </AppLayout>

@@ -8,6 +8,7 @@ export const createFolderRequestSchema = z.object({
     .min(1, 'Folder name is required')
     .max(100, 'Folder name must be at most 100 characters'),
   parentId: z.string().uuid().nullable().optional(),
+  knowledgeBaseId: z.string().uuid(),
 });
 
 export const updateFolderRequestSchema = z.object({
@@ -43,6 +44,7 @@ export const documentListParamsSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
   folderId: z.string().uuid().nullable().optional(),
+  knowledgeBaseId: z.string().uuid().optional(),
   documentType: documentTypeSchema.optional(),
   search: z.string().max(100).optional(),
   sortBy: z.enum(['createdAt', 'updatedAt', 'title', 'fileSize']).default('createdAt'),

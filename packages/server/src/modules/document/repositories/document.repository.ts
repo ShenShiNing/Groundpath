@@ -52,11 +52,16 @@ export const documentRepository = {
     userId: string,
     params: DocumentListParams
   ): Promise<{ documents: Document[]; total: number }> {
-    const { page, pageSize, folderId, documentType, search, sortBy, sortOrder } = params;
+    const { page, pageSize, folderId, knowledgeBaseId, documentType, search, sortBy, sortOrder } =
+      params;
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
     const conditions = [eq(documents.userId, userId), isNull(documents.deletedAt)];
+
+    if (knowledgeBaseId) {
+      conditions.push(eq(documents.knowledgeBaseId, knowledgeBaseId));
+    }
 
     if (folderId === null) {
       conditions.push(isNull(documents.folderId));

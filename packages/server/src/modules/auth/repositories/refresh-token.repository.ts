@@ -1,4 +1,4 @@
-import { eq, and, gt } from 'drizzle-orm';
+import { eq, and, gt, or, lt, inArray } from 'drizzle-orm';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { db } from '@shared/db';
 import { now, addSeconds } from '@shared/db/db.utils';
@@ -115,10 +115,19 @@ export const refreshTokenRepository = {
   },
 
   /**
-   * Delete expired tokens (cleanup job)
+   * Delete invalid tokens in batches (revoked or expired)
    */
-  async deleteExpired(): Promise<number> {
-    const result = await db.delete(refreshTokens).where(and(eq(refreshTokens.revoked, true)));
+  async deleteInvalid(batchSize: number = 1000): Promise<number> {
+    const invalidTokens = await db
+      .select({ id: refreshTokens.id })
+      .from(refreshTokens)
+      .where(or(eq(refreshTokens.revoked, true), lt(refreshTokens.expiresAt, now())))
+      .limit(batchSize);
+
+    if (invalidTokens.length === 0) return 0;
+
+    const ids = invalidTokens.map((t) => t.id);
+    const result = await db.delete(refreshTokens).where(inArray(refreshTokens.id, ids));
 
     return result[0]?.affectedRows ?? 0;
   },

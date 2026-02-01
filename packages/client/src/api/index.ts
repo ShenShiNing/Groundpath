@@ -5,3 +5,12 @@ export { userApi } from './user';
 export { initiateGitHubLogin, initiateGoogleLogin } from './oauth';
 export { documentsApi } from './documents';
 export { foldersApi } from './folders';
+export { knowledgeBasesApi } from './knowledge-bases';
+export {
+  chatApi,
+  type ChatCitation,
+  type ChatMessage,
+  type SendMessageRequest,
+  type SendMessageResponse,
+  type ChatConversation,
+} from './chat';

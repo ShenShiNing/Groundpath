@@ -48,7 +48,7 @@ function AuthLogo() {
 
 export function AuthPageLayout({ children, title, description, footer }: AuthPageLayoutProps) {
   return (
-    <AppLayout showFooter="simple">
+    <AppLayout showSidebar={false}>
       <div className="min-h-[calc(100vh-4rem-5rem)] flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Header */}

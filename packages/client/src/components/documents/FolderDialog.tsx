@@ -20,18 +20,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useFolders, useCreateFolder, useUpdateFolder } from '@/hooks';
+import { useKBFolders, useCreateFolderInKB, useUpdateFolder } from '@/hooks';
 
 interface FolderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   folder?: FolderInfo;
   parentId?: string | null;
+  knowledgeBaseId?: string;
 }
 
-export function FolderDialog({ open, onOpenChange, folder, parentId }: FolderDialogProps) {
-  const { data: folders = [] } = useFolders();
-  const createMutation = useCreateFolder();
+export function FolderDialog({
+  open,
+  onOpenChange,
+  folder,
+  parentId,
+  knowledgeBaseId,
+}: FolderDialogProps) {
+  // Use KB-specific folder list when knowledgeBaseId is provided
+  const effectiveKbId = knowledgeBaseId ?? folder?.knowledgeBaseId;
+  const { data: folders = [] } = useKBFolders(effectiveKbId);
+  const createMutation = useCreateFolderInKB();
   const updateMutation = useUpdateFolder();
 
   const isEditing = !!folder;
@@ -54,9 +63,16 @@ export function FolderDialog({ open, onOpenChange, folder, parentId }: FolderDia
           });
           toast.success('Folder updated');
         } else {
+          if (!effectiveKbId) {
+            toast.error('Knowledge base ID is required');
+            return;
+          }
           await createMutation.mutateAsync({
-            name: value.name,
-            parentId: value.parentId,
+            kbId: effectiveKbId,
+            data: {
+              name: value.name,
+              parentId: value.parentId,
+            },
           });
           toast.success('Folder created');
         }
@@ -86,7 +102,7 @@ export function FolderDialog({ open, onOpenChange, folder, parentId }: FolderDia
           </DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Update the folder name and settings.'
+              ? 'Update the folder name and location.'
               : 'Create a new folder to organize your documents.'}
           </DialogDescription>
         </DialogHeader>

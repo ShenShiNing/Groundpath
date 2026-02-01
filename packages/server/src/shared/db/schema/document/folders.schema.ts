@@ -2,6 +2,7 @@ import { mysqlTable, varchar, timestamp, index } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
 import { documents } from './documents.schema';
+import { knowledgeBases } from './knowledge-bases.schema';
 
 export const folders = mysqlTable(
   'folders',
@@ -10,6 +11,9 @@ export const folders = mysqlTable(
 
     // Ownership
     userId: varchar('user_id', { length: 36 }).notNull(),
+
+    // Knowledge base association
+    knowledgeBaseId: varchar('knowledge_base_id', { length: 36 }).notNull(),
 
     // Folder structure
     parentId: varchar('parent_id', { length: 36 }),
@@ -26,6 +30,7 @@ export const folders = mysqlTable(
   },
   (table) => [
     index('user_id_idx').on(table.userId),
+    index('knowledge_base_id_idx').on(table.knowledgeBaseId),
     index('parent_id_idx').on(table.parentId),
     index('deleted_at_idx').on(table.deletedAt),
     index('path_idx').on(table.path),
@@ -37,6 +42,10 @@ export const foldersRelations = relations(folders, ({ one, many }) => ({
   user: one(users, {
     fields: [folders.userId],
     references: [users.id],
+  }),
+  knowledgeBase: one(knowledgeBases, {
+    fields: [folders.knowledgeBaseId],
+    references: [knowledgeBases.id],
   }),
   parent: one(folders, {
     fields: [folders.parentId],

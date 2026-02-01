@@ -24,6 +24,24 @@ export {
   useDeleteFolder,
 } from './useFolders';
 
+// Knowledge Base hooks
+export {
+  useKnowledgeBases,
+  useKnowledgeBase,
+  useKBDocuments,
+  useKBFolders,
+  useKBFolderTree,
+  useKBDocumentTree,
+  useCreateKnowledgeBase,
+  useUpdateKnowledgeBase,
+  useDeleteKnowledgeBase,
+  useUploadToKB,
+  useCreateFolderInKB,
+  useDeleteDocuments,
+  useMoveDocuments,
+  type DocumentTreeNode,
+} from './useKnowledgeBases';
+
 // Utility hooks
 export { useDebouncedValue } from './useDebouncedValue';
 

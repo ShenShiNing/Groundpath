@@ -10,6 +10,7 @@ import { useUploadQueue } from '@/hooks';
 import { queryKeys } from '@/lib/queryClient';
 
 interface DocumentUploadProps {
+  knowledgeBaseId?: string;
   folderId?: string | null;
   onSuccess?: () => void;
   className?: string;
@@ -24,7 +25,12 @@ const ACCEPTED_TYPES = {
 
 const MAX_SIZE = 21 * 1024 * 1024; // 21 MiB (allows files that Windows shows as ~20MB)
 
-export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploadProps) {
+export function DocumentUpload({
+  knowledgeBaseId,
+  folderId,
+  onSuccess,
+  className,
+}: DocumentUploadProps) {
   const queryClient = useQueryClient();
   const queue = useUploadQueue({ maxConcurrent: 3 });
 
@@ -49,6 +55,7 @@ export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploa
 
   const handleUpload = () => {
     queue.startUpload({
+      knowledgeBaseId: knowledgeBaseId ?? undefined,
       folderId: folderId ?? undefined,
       onFileComplete: (_, file) => {
         toast.success(`Uploaded: ${file.name}`);
@@ -56,6 +63,14 @@ export function DocumentUpload({ folderId, onSuccess, className }: DocumentUploa
       onAllComplete: (hasErrors) => {
         // Invalidate document queries to refresh the list
         queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
+        if (knowledgeBaseId) {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.knowledgeBases.documents(knowledgeBaseId, {}),
+          });
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.knowledgeBases.detail(knowledgeBaseId),
+          });
+        }
 
         if (!hasErrors) {
           // Clear completed files after a delay and close dialog

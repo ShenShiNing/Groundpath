@@ -13,6 +13,7 @@ import { folderRepository } from '../repositories/folder.repository';
 import { documentRepository } from '../repositories/document.repository';
 import { logOperation } from '@shared/logger/operation-logger';
 import type { RequestContext } from './document.service';
+import { knowledgeBaseService } from '@modules/knowledge-base';
 
 /**
  * Convert database folder to API folder info
@@ -24,6 +25,7 @@ function toFolderInfo(folder: Folder): FolderInfo {
     parentId: folder.parentId,
     name: folder.name,
     path: folder.path,
+    knowledgeBaseId: folder.knowledgeBaseId,
     createdAt: folder.createdAt,
     updatedAt: folder.updatedAt,
   };
@@ -84,6 +86,9 @@ export const folderService = {
   ): Promise<FolderInfo> {
     const startTime = Date.now();
 
+    // Validate knowledge base exists and belongs to user
+    await knowledgeBaseService.validateOwnership(data.knowledgeBaseId, userId);
+
     // Validate parent folder if specified
     if (data.parentId) {
       const parent = await folderRepository.findByIdAndUser(data.parentId, userId);
@@ -92,6 +97,14 @@ export const folderService = {
           DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
           'Parent folder not found',
           404
+        );
+      }
+      // Ensure parent is in the same knowledge base
+      if (parent.knowledgeBaseId !== data.knowledgeBaseId) {
+        throw new AuthError(
+          DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
+          'Parent folder does not belong to this knowledge base',
+          400
         );
       }
     }
@@ -106,6 +119,7 @@ export const folderService = {
       parentId: data.parentId ?? null,
       name: data.name,
       path,
+      knowledgeBaseId: data.knowledgeBaseId,
       createdBy: userId,
     });
 
@@ -120,6 +134,7 @@ export const folderService = {
       metadata: {
         parentId: data.parentId ?? null,
         path,
+        knowledgeBaseId: data.knowledgeBaseId,
       },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
@@ -155,10 +170,32 @@ export const folderService = {
   },
 
   /**
+   * List all folders in a knowledge base (flat list)
+   */
+  async listByKnowledgeBase(knowledgeBaseId: string, userId: string): Promise<FolderInfo[]> {
+    // Validate knowledge base ownership
+    await knowledgeBaseService.validateOwnership(knowledgeBaseId, userId);
+
+    const folders = await folderRepository.listByKnowledgeBase(knowledgeBaseId, userId);
+    return folders.map(toFolderInfo);
+  },
+
+  /**
    * Get folder tree for a user
    */
   async getTree(userId: string): Promise<FolderTreeNode[]> {
     const folders = await folderRepository.listByUser(userId);
+    return buildFolderTree(folders);
+  },
+
+  /**
+   * Get folder tree for a knowledge base
+   */
+  async getTreeByKnowledgeBase(knowledgeBaseId: string, userId: string): Promise<FolderTreeNode[]> {
+    // Validate knowledge base ownership
+    await knowledgeBaseService.validateOwnership(knowledgeBaseId, userId);
+
+    const folders = await folderRepository.listByKnowledgeBase(knowledgeBaseId, userId);
     return buildFolderTree(folders);
   },
 

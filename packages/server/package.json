@@ -31,6 +31,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.978.0",
     "@knowledge-agent/shared": "workspace:*",
+    "@qdrant/js-client-rest": "^1.16.2",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.1",
@@ -41,6 +42,7 @@
     "mysql2": "^3.16.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.13",
+    "openai": "^6.17.0",
     "pdf-parse": "^2.4.5",
     "pino": "^10.3.0",
     "pino-http": "^11.0.0",

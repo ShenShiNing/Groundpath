@@ -1,0 +1,9 @@
+export type { VectorPoint, ChunkPayload, SearchOptions, SearchResult } from './vector.types';
+export {
+  getQdrantClient,
+  ensureCollection,
+  ensureDefaultCollection,
+  getCollectionName,
+  resetCollectionCache,
+} from './qdrant.client';
+export { vectorRepository } from './vector.repository';

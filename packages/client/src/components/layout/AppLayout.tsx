@@ -1,20 +1,23 @@
-import { useState } from 'react';
-import { Link, useRouter } from '@tanstack/react-router';
+import { useState, useCallback } from 'react';
+import { Link, useRouter, useLocation } from '@tanstack/react-router';
 import {
   Brain,
   LogOut,
-  Menu,
+  PanelLeftClose,
+  PanelLeft,
   LayoutDashboard,
   MessageSquare,
   User,
   Settings,
   Monitor,
-  FileText,
+  Database,
+  ChevronDown,
+  Search,
+  Plus,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,100 +40,24 @@ import { authApi } from '@/api';
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  showFooter?: 'full' | 'simple' | 'none';
+  showSidebar?: boolean;
 }
 
 interface NavItem {
   label: string;
   to: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
 }
 
 // ============================================================================
 // Constants
 // ============================================================================
 
-const authenticatedNavItems: NavItem[] = [
+const mainNavItems: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="size-4" /> },
-  { label: 'Documents', to: '/documents', icon: <FileText className="size-4" /> },
+  { label: 'Knowledge Bases', to: '/knowledge-bases', icon: <Database className="size-4" /> },
   { label: 'Chat', to: '/chat', icon: <MessageSquare className="size-4" /> },
 ];
-
-const publicNavItems: NavItem[] = [
-  { label: 'Features', to: '/' },
-  { label: 'Docs', to: '/' },
-  { label: 'Pricing', to: '/' },
-];
-
-const footerLinks = {
-  product: [
-    { label: 'Features', to: '/' },
-    { label: 'Integrations', to: '/' },
-    { label: 'Security', to: '/' },
-  ],
-  resources: [
-    { label: 'Documentation', to: '/' },
-    { label: 'API Reference', to: '/' },
-    { label: 'Community', to: '/' },
-  ],
-  company: [
-    { label: 'About', to: '/' },
-    { label: 'Blog', to: '/' },
-    { label: 'Careers', to: '/' },
-  ],
-};
-
-// ============================================================================
-// Sub-components
-// ============================================================================
-
-function Logo({ className }: { className?: string }) {
-  return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-        <Brain className="size-5" />
-      </div>
-      <span className="text-lg font-bold">KnowledgeAgent</span>
-    </div>
-  );
-}
-
-function NavLink({ item, className }: { item: NavItem; className?: string }) {
-  return (
-    <Link
-      to={item.to}
-      className={cn(
-        'text-sm font-medium text-muted-foreground hover:text-foreground transition-colors',
-        className
-      )}
-    >
-      {item.label}
-    </Link>
-  );
-}
-
-function FooterLinkSection({
-  title,
-  links,
-}: {
-  title: string;
-  links: { label: string; to: string }[];
-}) {
-  return (
-    <div>
-      <h4 className="text-sm font-semibold mb-4">{title}</h4>
-      <ul className="space-y-3 text-sm text-muted-foreground">
-        {links.map((link) => (
-          <li key={link.label}>
-            <Link to={link.to} className="hover:text-foreground transition-colors">
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
 // ============================================================================
 // Utility Functions
@@ -147,10 +74,51 @@ function getUserDisplayName(username?: string): string {
 }
 
 // ============================================================================
+// Sidebar Navigation Item
+// ============================================================================
+
+function SidebarNavItem({
+  item,
+  isCollapsed,
+  isActive,
+}: {
+  item: NavItem;
+  isCollapsed: boolean;
+  isActive: boolean;
+}) {
+  const content = (
+    <Link
+      to={item.to}
+      className={cn(
+        'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+        'hover:bg-accent',
+        isActive
+          ? 'bg-accent text-accent-foreground font-medium'
+          : 'text-muted-foreground hover:text-foreground'
+      )}
+    >
+      {item.icon}
+      {!isCollapsed && <span>{item.label}</span>}
+    </Link>
+  );
+
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="right">{item.label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return content;
+}
+
+// ============================================================================
 // User Menu Component
 // ============================================================================
 
-function UserMenu({ onLogout }: { onLogout: () => void }) {
+function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed: boolean }) {
   const { user } = useAuthStore();
   const userInitials = getUserInitials(user?.username, user?.email);
   const displayName = getUserDisplayName(user?.username);
@@ -158,14 +126,31 @@ function UserMenu({ onLogout }: { onLogout: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative rounded-full">
+        <button
+          className={cn(
+            'flex items-center gap-3 w-full rounded-md px-3 py-2 text-sm transition-colors',
+            'hover:bg-accent text-left'
+          )}
+        >
           <Avatar size="sm">
             <AvatarImage src={user?.avatarUrl ?? undefined} alt={displayName} />
-            <AvatarFallback>{userInitials}</AvatarFallback>
+            <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
           </Avatar>
-        </Button>
+          {!isCollapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-medium">{displayName}</p>
+              </div>
+              <ChevronDown className="size-4 text-muted-foreground" />
+            </>
+          )}
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent
+        align={isCollapsed ? 'center' : 'start'}
+        side={isCollapsed ? 'right' : 'top'}
+        className="w-56"
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{displayName}</p>
@@ -176,26 +161,26 @@ function UserMenu({ onLogout }: { onLogout: () => void }) {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link to={'/profile' as string}>
-              <User />
+              <User className="size-4 mr-2" />
               Profile
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to={'/settings' as string}>
-              <Settings />
+              <Settings className="size-4 mr-2" />
               Settings
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to={'/sessions' as string}>
-              <Monitor />
+              <Monitor className="size-4 mr-2" />
               Sessions
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
-          <LogOut />
+          <LogOut className="size-4 mr-2" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -204,239 +189,157 @@ function UserMenu({ onLogout }: { onLogout: () => void }) {
 }
 
 // ============================================================================
-// Mobile Navigation Component
+// Sidebar Component
 // ============================================================================
 
-function MobileNav({
-  isAuthenticated,
+function Sidebar({
+  isCollapsed,
+  onToggleCollapse,
   onLogout,
 }: {
-  isAuthenticated: boolean;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
   onLogout: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const { user } = useAuthStore();
+  const location = useLocation();
+  const { accessToken } = useAuthStore();
+  const isAuthenticated = !!accessToken;
 
-  const navItems = isAuthenticated ? authenticatedNavItems : publicNavItems;
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
 
-  return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="size-5" />
-          <span className="sr-only">Toggle menu</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-72">
-        <SheetHeader>
-          <SheetTitle asChild>
-            <Logo />
-          </SheetTitle>
-        </SheetHeader>
-        <Separator className="my-4" />
-        <nav className="flex flex-col gap-2">
-          {navItems.map((item) => (
-            <Button
-              key={item.label}
-              variant="ghost"
-              className="justify-start gap-2"
-              asChild
-              onClick={() => setOpen(false)}
-            >
-              <Link to={item.to}>
-                {item.icon}
-                {item.label}
-              </Link>
-            </Button>
-          ))}
-        </nav>
-        {isAuthenticated && (
-          <>
-            <Separator className="my-4" />
-            <div className="flex items-center gap-3 px-2">
-              <Avatar size="sm">
-                <AvatarImage src={user?.avatarUrl ?? undefined} alt={user?.username} />
-                <AvatarFallback>{getUserInitials(user?.username, user?.email)}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">{user?.username}</span>
-                <span className="text-xs text-muted-foreground">{user?.email}</span>
-              </div>
-            </div>
-            <Separator className="my-4" />
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive"
-              onClick={() => {
-                setOpen(false);
-                onLogout();
-              }}
-            >
-              <LogOut className="size-4" />
-              Log out
-            </Button>
-          </>
-        )}
-        {!isAuthenticated && (
-          <>
-            <Separator className="my-4" />
-            <div className="flex flex-col gap-2">
-              <Button variant="outline" asChild onClick={() => setOpen(false)}>
-                <Link to={'/auth/login' as string}>Log in</Link>
-              </Button>
-              <Button asChild onClick={() => setOpen(false)}>
-                <Link to={'/auth/signup' as string}>Get Started</Link>
-              </Button>
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-// ============================================================================
-// Desktop Navigation Component
-// ============================================================================
-
-function DesktopNav({ isAuthenticated }: { isAuthenticated: boolean }) {
-  const navItems = isAuthenticated ? authenticatedNavItems : publicNavItems;
+  if (!isAuthenticated) return null;
 
   return (
-    <nav className="hidden md:flex items-center gap-1">
-      {isAuthenticated
-        ? navItems.map((item) => (
-            <Button key={item.label} variant="ghost" size="sm" asChild>
-              <Link to={item.to}>{item.label}</Link>
-            </Button>
-          ))
-        : navItems.map((item) => <NavLink key={item.label} item={item} className="px-3" />)}
-    </nav>
-  );
-}
-
-// ============================================================================
-// Header Component
-// ============================================================================
-
-function Header({ isAuthenticated, onLogout }: { isAuthenticated: boolean; onLogout: () => void }) {
-  return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-      <div className="container flex h-16 items-center gap-4">
-        {/* Mobile Menu */}
-        <MobileNav isAuthenticated={isAuthenticated} onLogout={onLogout} />
-
-        {/* Logo */}
-        <Link to={(isAuthenticated ? '/dashboard' : '/') as string}>
-          <Logo />
+    <aside
+      className={cn(
+        'flex flex-col border-r bg-background transition-all duration-200',
+        isCollapsed ? 'w-13' : 'w-60'
+      )}
+    >
+      {/* Logo & Collapse Toggle */}
+      <div className="flex items-center justify-between h-14 px-3 border-b">
+        <Link
+          to="/dashboard"
+          className={cn(
+            'flex items-center gap-2 hover:opacity-80 transition-opacity',
+            isCollapsed && 'justify-center w-full'
+          )}
+        >
+          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+            <Brain className="size-4" />
+          </div>
+          {!isCollapsed && <span className="font-semibold text-sm">KnowledgeAgent</span>}
         </Link>
+        {!isCollapsed && (
+          <Button variant="ghost" size="icon" className="size-7" onClick={onToggleCollapse}>
+            <PanelLeftClose className="size-4" />
+          </Button>
+        )}
+      </div>
 
-        {/* Desktop Navigation */}
-        <DesktopNav isAuthenticated={isAuthenticated} />
+      {/* Search (collapsed: icon only) */}
+      {!isCollapsed ? (
+        <div className="p-3">
+          <Button
+            variant="outline"
+            className="w-full justify-start text-muted-foreground font-normal"
+          >
+            <Search className="size-4 mr-2" />
+            Search...
+            <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+        </div>
+      ) : (
+        <div className="p-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="w-full h-9">
+                <Search className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Search</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
 
-        {/* Right Side Actions */}
-        <div className="ml-auto flex items-center gap-2">
-          {isAuthenticated ? (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ModeToggle />
-                </TooltipTrigger>
-                <TooltipContent>Toggle theme</TooltipContent>
-              </Tooltip>
-              <UserMenu onLogout={onLogout} />
-            </>
+      {/* Quick Actions */}
+      {!isCollapsed ? (
+        <div className="px-3 pb-3">
+          <Button variant="default" size="sm" className="w-full" asChild>
+            <Link to="/knowledge-bases">
+              <Plus className="size-4 mr-2" />
+              New Knowledge Base
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="px-2 pb-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="default" size="icon" className="w-full h-9" asChild>
+                <Link to="/knowledge-bases">
+                  <Plus className="size-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">New Knowledge Base</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+
+      <Separator />
+
+      {/* Navigation */}
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
+        {mainNavItems.map((item) => (
+          <SidebarNavItem
+            key={item.to}
+            item={item}
+            isCollapsed={isCollapsed}
+            isActive={isActive(item.to)}
+          />
+        ))}
+      </nav>
+
+      {/* Bottom Section */}
+      <div className="mt-auto border-t p-2">
+        {/* Theme Toggle */}
+        <div className={cn('flex items-center mb-2', isCollapsed ? 'justify-center' : 'px-1')}>
+          {isCollapsed ? (
+            <ModeToggle />
           ) : (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <ModeToggle />
-                </TooltipTrigger>
-                <TooltipContent>Toggle theme</TooltipContent>
-              </Tooltip>
-              <Button variant="ghost" size="sm" asChild className="hidden md:inline-flex">
-                <Link to={'/auth/login' as string}>Log in</Link>
-              </Button>
-              <Button size="sm" asChild className="hidden md:inline-flex">
-                <Link to={'/auth/signup' as string}>Get Started</Link>
-              </Button>
-            </>
+            <div className="flex items-center justify-between w-full">
+              <span className="text-xs text-muted-foreground px-2">Theme</span>
+              <ModeToggle />
+            </div>
           )}
         </div>
+
+        {/* Collapse Toggle (when collapsed) */}
+        {isCollapsed && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full h-9 mb-2"
+                onClick={onToggleCollapse}
+              >
+                <PanelLeft className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Expand sidebar</TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* User Menu */}
+        <UserMenu onLogout={onLogout} isCollapsed={isCollapsed} />
       </div>
-    </header>
-  );
-}
-
-// ============================================================================
-// Footer Component
-// ============================================================================
-
-function FullFooter() {
-  return (
-    <div className="container">
-      <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
-        {/* Brand */}
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="flex size-6 items-center justify-center rounded bg-primary/10 text-primary">
-              <Brain className="size-4" />
-            </div>
-            <span className="font-bold">KnowledgeAgent</span>
-          </div>
-          <p className="text-sm text-muted-foreground">The enterprise-ready RAG pipeline.</p>
-        </div>
-
-        {/* Links */}
-        <FooterLinkSection title="Product" links={footerLinks.product} />
-        <FooterLinkSection title="Resources" links={footerLinks.resources} />
-        <FooterLinkSection title="Company" links={footerLinks.company} />
-      </div>
-
-      <Separator className="my-8" />
-
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pb-4">
-        <p className="text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} KnowledgeAgent Inc. All rights reserved.
-        </p>
-        <div className="flex gap-6 text-xs text-muted-foreground">
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Privacy Policy
-          </Link>
-          <Link to="/" className="hover:text-foreground transition-colors">
-            Terms of Service
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SimpleFooter() {
-  return (
-    <div className="container flex flex-col md:flex-row justify-between items-center gap-4">
-      <p className="text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} KnowledgeAgent Inc. All rights reserved.
-      </p>
-      <div className="flex gap-6 text-xs text-muted-foreground">
-        <Link to="/" className="hover:text-foreground transition-colors">
-          Privacy
-        </Link>
-        <Link to="/" className="hover:text-foreground transition-colors">
-          Terms
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function Footer({ variant }: { variant: 'full' | 'simple' | 'none' }) {
-  if (variant === 'none') return null;
-
-  return (
-    <footer className="border-t py-12">
-      {variant === 'full' ? <FullFooter /> : <SimpleFooter />}
-    </footer>
+    </aside>
   );
 }
 
@@ -444,12 +347,14 @@ function Footer({ variant }: { variant: 'full' | 'simple' | 'none' }) {
 // Main Layout Component
 // ============================================================================
 
-export function AppLayout({ children, showFooter = 'full' }: AppLayoutProps) {
+export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const router = useRouter();
   const { accessToken, refreshToken, clearAuth } = useAuthStore();
   const isAuthenticated = !!accessToken;
 
-  const handleLogout = async () => {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleLogout = useCallback(async () => {
     try {
       if (refreshToken) {
         await authApi.logout(refreshToken);
@@ -458,13 +363,32 @@ export function AppLayout({ children, showFooter = 'full' }: AppLayoutProps) {
       clearAuth();
       await router.navigate({ to: '/auth/login' });
     }
-  };
+  }, [refreshToken, clearAuth, router]);
 
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => !prev);
+  }, []);
+
+  // Non-authenticated layout (landing pages, auth pages)
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <main className="flex-1">{children}</main>
+      </div>
+    );
+  }
+
+  // Authenticated layout with sidebar
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header isAuthenticated={isAuthenticated} onLogout={handleLogout} />
-      <main className="flex-1">{children}</main>
-      <Footer variant={showFooter} />
+    <div className="h-screen flex overflow-hidden bg-background">
+      {showSidebar && (
+        <Sidebar
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={handleToggleSidebar}
+          onLogout={handleLogout}
+        />
+      )}
+      <main className="flex-1 flex flex-col overflow-hidden">{children}</main>
     </div>
   );
 }

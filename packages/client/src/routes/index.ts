@@ -8,9 +8,10 @@ import { callbackRoute } from './auth/callback.route';
 import { profileRoute } from './profile.route';
 import { sessionsRoute } from './sessions.route';
 import { dashboardRoute } from './dashboard.route';
-import { documentsRoute } from './documents.route';
 import { documentDetailRoute } from './documents.$id.route';
 import { trashRoute } from './trash.route';
+import { knowledgeBasesRoute } from './knowledge-bases.route';
+import { knowledgeBaseDetailRoute } from './knowledge-bases.$id.route';
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -22,7 +23,8 @@ export const routeTree = rootRoute.addChildren([
   profileRoute,
   sessionsRoute,
   dashboardRoute,
-  documentsRoute,
   documentDetailRoute,
   trashRoute,
+  knowledgeBasesRoute,
+  knowledgeBaseDetailRoute,
 ]);

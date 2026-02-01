@@ -102,7 +102,7 @@ export function TrashPage() {
   };
 
   return (
-    <AppLayout showFooter="simple">
+    <AppLayout>
       <div className="container py-6">
         <div className="flex items-center justify-between mb-6">
           <div>

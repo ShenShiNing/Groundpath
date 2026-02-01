@@ -53,6 +53,23 @@ export const folderRepository = {
   },
 
   /**
+   * List all folders in a knowledge base
+   */
+  async listByKnowledgeBase(knowledgeBaseId: string, userId: string): Promise<Folder[]> {
+    return db
+      .select()
+      .from(folders)
+      .where(
+        and(
+          eq(folders.knowledgeBaseId, knowledgeBaseId),
+          eq(folders.userId, userId),
+          isNull(folders.deletedAt)
+        )
+      )
+      .orderBy(folders.name);
+  },
+
+  /**
    * List child folders of a parent
    */
   async listByParent(userId: string, parentId: string | null): Promise<Folder[]> {

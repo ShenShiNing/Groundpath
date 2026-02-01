@@ -6,7 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 
 const HomePage = () => {
   return (
-    <AppLayout showFooter="full">
+    <AppLayout showSidebar={false}>
       {/* Hero Section */}
       <section className="container py-24 md:py-32">
         <div className="mx-auto max-w-5xl text-center">

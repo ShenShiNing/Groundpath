@@ -18,11 +18,11 @@ export function DocumentDetailPage() {
   };
 
   return (
-    <AppLayout showFooter="simple">
+    <AppLayout>
       <div className="container max-w-5xl py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <Link to="/documents">
+          <Link to="/knowledge-bases">
             <Button variant="ghost" size="icon">
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -53,8 +53,8 @@ export function DocumentDetailPage() {
                 <CardContent>
                   <DocumentViewer
                     documentType={document.documentType}
-                    textContent={document.textContent}
-                    storageUrl={document.storageUrl}
+                    textContent={null}
+                    storageUrl={null}
                     fileName={document.fileName}
                     isLoading={isLoading}
                   />
@@ -80,8 +80,8 @@ export function DocumentDetailPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">Document not found</p>
-              <Link to="/documents" className="mt-4 inline-block">
-                <Button variant="outline">Back to Documents</Button>
+              <Link to="/knowledge-bases" className="mt-4 inline-block">
+                <Button variant="outline">Back to Knowledge Bases</Button>
               </Link>
             </CardContent>
           </Card>

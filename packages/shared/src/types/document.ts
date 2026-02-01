@@ -66,6 +66,7 @@ export interface FolderInfo {
   parentId: string | null;
   name: string;
   path: string;
+  knowledgeBaseId: string;
   createdAt: Date;
   updatedAt: Date;
 }
