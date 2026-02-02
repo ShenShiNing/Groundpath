@@ -220,22 +220,34 @@ function Sidebar({
     >
       {/* Logo & Collapse Toggle */}
       <div className="flex items-center justify-between h-14 px-3 border-b">
-        <Link
-          to="/dashboard"
-          className={cn(
-            'flex items-center gap-2 hover:opacity-80 transition-opacity',
-            isCollapsed && 'justify-center w-full'
-          )}
-        >
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Brain className="size-4" />
-          </div>
-          {!isCollapsed && <span className="font-semibold text-sm">KnowledgeAgent</span>}
-        </Link>
-        {!isCollapsed && (
-          <Button variant="ghost" size="icon" className="size-7" onClick={onToggleCollapse}>
-            <PanelLeftClose className="size-4" />
-          </Button>
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="group/logo flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground mx-auto cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={onToggleCollapse}
+              >
+                <Brain className="size-4 group-hover/logo:hidden" />
+                <PanelLeft className="size-4 hidden group-hover/logo:block" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Expand sidebar</TooltipContent>
+          </Tooltip>
+        ) : (
+          <>
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Brain className="size-4" />
+              </div>
+              <span className="font-semibold text-sm">KnowledgeAgent</span>
+            </Link>
+            <Button variant="ghost" size="icon" className="size-7" onClick={onToggleCollapse}>
+              <PanelLeftClose className="size-4" />
+            </Button>
+          </>
         )}
       </div>
 
@@ -318,23 +330,6 @@ function Sidebar({
             </div>
           )}
         </div>
-
-        {/* Collapse Toggle (when collapsed) */}
-        {isCollapsed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-full h-9 mb-2"
-                onClick={onToggleCollapse}
-              >
-                <PanelLeft className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Expand sidebar</TooltipContent>
-          </Tooltip>
-        )}
 
         {/* User Menu */}
         <UserMenu onLogout={onLogout} isCollapsed={isCollapsed} />

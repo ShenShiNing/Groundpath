@@ -22,6 +22,7 @@ export class OllamaProvider implements EmbeddingProvider {
   private readonly baseUrl: string;
   private readonly model: string;
   private readonly dimensions: number;
+  private readonly timeout = 60_000; // 60s timeout for local model
 
   constructor() {
     this.baseUrl = env.OLLAMA_BASE_URL;
@@ -34,36 +35,58 @@ export class OllamaProvider implements EmbeddingProvider {
   }
 
   async embed(text: string): Promise<number[]> {
-    const response = await fetch(`${this.baseUrl}/api/embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: this.model, prompt: text }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Ollama API error (${response.status}): ${errorText}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/api/embeddings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: this.model, prompt: text }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ollama API error (${response.status}): ${errorText}`);
+      }
+
+      const data = (await response.json()) as OllamaEmbeddingResponse;
+      return data.embedding;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error(`Ollama API request timed out after ${this.timeout / 1000}s`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    const data = (await response.json()) as OllamaEmbeddingResponse;
-    return data.embedding;
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
     // Try the /api/embed endpoint (Ollama 0.4.0+) which supports batch input
     try {
       const response = await fetch(`${this.baseUrl}/api/embed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: this.model, input: texts }),
+        signal: controller.signal,
       });
 
       if (response.ok) {
         const data = (await response.json()) as OllamaEmbeddingsResponse;
         return data.embeddings;
       }
-    } catch {
-      // Fall back to sequential embedding
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error(`Ollama API batch request timed out after ${this.timeout / 1000}s`);
+      }
+      // Fall back to sequential embedding for other errors
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     // Fallback: sequential embedding

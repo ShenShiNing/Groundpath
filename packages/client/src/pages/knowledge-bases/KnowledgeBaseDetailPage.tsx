@@ -6,7 +6,7 @@ import {
   Layers,
   FileText,
   ChevronRight,
-  ChevronLeft,
+  ArrowLeft,
   Upload,
   FolderPlus,
   LayoutGrid,
@@ -18,12 +18,15 @@ import {
   Download,
   Search,
   Folder,
+  ChevronDown,
+  X,
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,7 +44,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -112,7 +117,7 @@ const documentTypeConfig: Record<DocumentType, { color: string; bgColor: string 
 };
 
 // ============================================================================
-// Folder Tree Item Component
+// Folder Tree Item (for popover)
 // ============================================================================
 
 function FolderTreeItem({
@@ -142,13 +147,13 @@ function FolderTreeItem({
           'hover:bg-accent',
           isSelected && 'bg-accent font-medium'
         )}
-        style={{ paddingLeft: `${12 + level * 16}px` }}
+        style={{ paddingLeft: `${8 + level * 16}px` }}
         onClick={() => onSelect(folder.id)}
       >
         {hasChildren ? (
           <ChevronRight
             className={cn(
-              'size-4 text-muted-foreground transition-transform shrink-0 cursor-pointer',
+              'size-3.5 text-muted-foreground transition-transform shrink-0 cursor-pointer',
               isExpanded && 'rotate-90'
             )}
             onClick={(e) => {
@@ -157,11 +162,13 @@ function FolderTreeItem({
             }}
           />
         ) : (
-          <span className="w-4 shrink-0" />
+          <span className="w-3.5 shrink-0" />
         )}
-        <Folder className="size-4 text-amber-500 shrink-0" />
+        <Folder className="size-3.5 text-amber-500 shrink-0" />
         <span className="truncate">{folder.name}</span>
-        <span className="ml-auto text-xs text-muted-foreground">{folder.documentCount}</span>
+        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+          {folder.documentCount}
+        </span>
       </button>
 
       {isExpanded && hasChildren && (
@@ -184,7 +191,7 @@ function FolderTreeItem({
 }
 
 // ============================================================================
-// Document Grid Card Component
+// Document Grid Card
 // ============================================================================
 
 function DocumentGridCard({
@@ -205,11 +212,13 @@ function DocumentGridCard({
   return (
     <div
       className={cn(
-        'group flex flex-col p-4 rounded-lg border bg-card',
-        'hover:bg-accent/50 transition-colors cursor-pointer'
+        'group relative flex flex-col rounded-xl border bg-card p-4',
+        'hover:border-foreground/15 hover:shadow-sm',
+        'transition-all duration-200 cursor-pointer'
       )}
       onClick={onSelect}
     >
+      {/* File icon + actions */}
       <div className="flex items-start justify-between mb-3">
         <div className={cn('size-10 rounded-lg flex items-center justify-center', config.bgColor)}>
           <FileText className={cn('size-5', config.color)} />
@@ -219,7 +228,7 @@ function DocumentGridCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity -mr-1 -mt-1"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreHorizontal className="size-4" />
@@ -259,17 +268,20 @@ function DocumentGridCard({
         </DropdownMenu>
       </div>
 
-      <h4 className="font-medium text-sm truncate mb-1" title={document.title}>
+      {/* Title */}
+      <h4 className="font-medium text-sm leading-snug truncate mb-1.5" title={document.title}>
         {document.title}
       </h4>
 
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-        <span>{document.fileExtension.toUpperCase()}</span>
-        <span>·</span>
+      {/* Meta */}
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+        <span className="font-mono uppercase">{document.fileExtension}</span>
+        <span className="text-muted-foreground/50">/</span>
         <span>{formatBytes(document.fileSize)}</span>
       </div>
 
-      <div className="mt-auto pt-2">
+      {/* Status */}
+      <div className="mt-auto">
         <ProcessingStatusBadge status={document.processingStatus} />
       </div>
     </div>
@@ -277,7 +289,7 @@ function DocumentGridCard({
 }
 
 // ============================================================================
-// Document Table Row Component
+// Document Table Row
 // ============================================================================
 
 function DocumentTableRow({
@@ -310,7 +322,7 @@ function DocumentTableRow({
           <span className="font-medium text-sm truncate">{document.title}</span>
         </div>
       </TableCell>
-      <TableCell className="text-sm text-muted-foreground">
+      <TableCell className="text-sm text-muted-foreground font-mono">
         {document.fileExtension.toUpperCase()}
       </TableCell>
       <TableCell className="text-sm text-muted-foreground">
@@ -367,6 +379,7 @@ export default function KnowledgeBaseDetailPage() {
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
+  const [folderPopoverOpen, setFolderPopoverOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
     open: false,
     documents: [],
@@ -403,6 +416,12 @@ export default function KnowledgeBaseDetailPage() {
     return buildFolderPath(folderTree, currentFolderId);
   }, [folderTree, currentFolderId]);
 
+  const currentFolderName = useMemo(() => {
+    if (!currentFolderId) return 'All Documents';
+    const last = folderPath[folderPath.length - 1];
+    return last?.name ?? 'All Documents';
+  }, [currentFolderId, folderPath]);
+
   // Handlers
   const handleUploadSuccess = useCallback(() => {
     setUploadOpen(false);
@@ -414,9 +433,10 @@ export default function KnowledgeBaseDetailPage() {
     window.location.href = `/documents/${doc.id}`;
   }, []);
 
-  const handleFolderSelect = useCallback((folderId: string) => {
+  const handleFolderSelect = useCallback((folderId: string | null) => {
     setCurrentFolderId(folderId);
     setSearch('');
+    setFolderPopoverOpen(false);
   }, []);
 
   const handleFolderToggle = useCallback((folderId: string) => {
@@ -471,25 +491,27 @@ export default function KnowledgeBaseDetailPage() {
   if (kbLoading) {
     return (
       <AppLayout>
-        <div className="flex-1 flex overflow-hidden">
-          <aside className="w-60 flex-none border-r p-4 space-y-4">
-            <Skeleton className="h-6 w-24" />
-            <Skeleton className="h-9 w-full" />
-            <div className="space-y-2 pt-4">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header skeleton */}
+          <div className="px-6 py-4 border-b">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-6 w-48" />
             </div>
-          </aside>
-          <main className="flex-1 p-6">
-            <Skeleton className="h-10 w-64 mb-6" />
-            <div className="grid grid-cols-4 gap-4">
-              <Skeleton className="h-32 rounded-lg" />
-              <Skeleton className="h-32 rounded-lg" />
-              <Skeleton className="h-32 rounded-lg" />
-              <Skeleton className="h-32 rounded-lg" />
+          </div>
+          {/* Toolbar skeleton */}
+          <div className="px-6 py-3 border-b flex items-center gap-3">
+            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-8 w-48 ml-auto" />
+          </div>
+          {/* Content skeleton */}
+          <div className="flex-1 p-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+              {[...Array(12)].map((_, i) => (
+                <Skeleton key={i} className="h-36 rounded-xl" />
+              ))}
             </div>
-          </main>
+          </div>
         </div>
       </AppLayout>
     );
@@ -516,279 +538,336 @@ export default function KnowledgeBaseDetailPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Folder Tree */}
-        <aside className="w-60 flex-none flex flex-col border-r bg-muted/20">
-          {/* KB Header */}
-          <div className="p-3 border-b">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="size-7 -ml-1" asChild>
-                <Link to="/knowledge-bases">
-                  <ChevronLeft className="size-4" />
-                </Link>
-              </Button>
-              <div className="size-7 rounded-md bg-primary flex items-center justify-center">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* ================================================================ */}
+        {/* Page Header                                                      */}
+        {/* ================================================================ */}
+        <header className="px-6 py-3.5 border-b bg-background">
+          <div className="flex items-center gap-3">
+            {/* Back */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8 shrink-0" asChild>
+                  <Link to="/knowledge-bases">
+                    <ArrowLeft className="size-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Back to Knowledge Bases</TooltipContent>
+            </Tooltip>
+
+            {/* KB identity */}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="size-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
                 <Layers className="size-4 text-primary-foreground" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-sm font-semibold truncate">{knowledgeBase.name}</h1>
+              <div className="min-w-0">
+                <h1 className="text-base font-semibold truncate leading-tight">
+                  {knowledgeBase.name}
+                </h1>
+                <div className="flex items-center gap-2.5 text-xs text-muted-foreground mt-0.5">
+                  <span className="flex items-center gap-1">
+                    <FileText className="size-3" />
+                    {knowledgeBase.documentCount} docs
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Layers className="size-3" />
+                    {knowledgeBase.totalChunks} chunks
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 mt-2 ml-6 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <FileText className="size-3" />
-                {knowledgeBase.documentCount}
-              </span>
-              <span className="flex items-center gap-1">
-                <Layers className="size-3" />
-                {knowledgeBase.totalChunks}
-              </span>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Header actions */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={isChatOpen ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="size-8"
+                    onClick={handleOpenChat}
+                  >
+                    <MessageSquare className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Chat with KB</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => setEditDialogOpen(true)}
+                  >
+                    <Settings className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Settings</TooltipContent>
+              </Tooltip>
             </div>
           </div>
+        </header>
 
-          {/* Actions */}
-          <div className="p-2 border-b space-y-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => setUploadOpen(true)}
-            >
-              <Upload className="size-4 mr-2" />
-              Upload
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => setFolderDialogOpen(true)}
-            >
-              <FolderPlus className="size-4 mr-2" />
-              New Folder
-            </Button>
-          </div>
-
-          {/* Folder Tree */}
-          <ScrollArea className="flex-1">
-            <div className="p-2">
-              <button
-                className={cn(
-                  'flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left',
-                  'hover:bg-accent',
-                  currentFolderId === null && 'bg-accent font-medium'
-                )}
-                onClick={() => setCurrentFolderId(null)}
-              >
-                <Home className="size-4" />
-                <span>All Documents</span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {knowledgeBase.documentCount}
-                </span>
-              </button>
-
-              {folderTree?.map((folder) => (
-                <FolderTreeItem
-                  key={folder.id}
-                  folder={folder}
-                  level={0}
-                  currentFolderId={currentFolderId}
-                  expandedIds={expandedFolderIds}
-                  onSelect={handleFolderSelect}
-                  onToggle={handleFolderToggle}
-                />
-              ))}
-            </div>
-          </ScrollArea>
-
-          {/* Bottom Actions */}
-          <div className="p-2 border-t space-y-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => setEditDialogOpen(true)}
-            >
-              <Settings className="size-4 mr-2" />
-              Settings
-            </Button>
-            <Button
-              variant={isChatOpen ? 'secondary' : 'ghost'}
-              size="sm"
-              className="w-full justify-start"
-              onClick={handleOpenChat}
-            >
-              <MessageSquare className="size-4 mr-2" />
-              Chat
-            </Button>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-background">
-            {/* Breadcrumb */}
-            <nav className="flex items-center gap-1 text-sm">
-              <button
-                className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-                onClick={() => handleFolderNavigate(null)}
-              >
-                <Home className="size-4" />
-                <span>Root</span>
-              </button>
-
-              {folderPath.map((folder, index) => (
-                <div key={folder.id} className="flex items-center gap-1">
-                  <ChevronRight className="size-4 text-muted-foreground" />
+        {/* ================================================================ */}
+        {/* Toolbar                                                          */}
+        {/* ================================================================ */}
+        <div className="px-6 py-2.5 border-b bg-background flex items-center gap-2">
+          {/* Folder selector + breadcrumb */}
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Popover open={folderPopoverOpen} onOpenChange={setFolderPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 text-sm font-medium shrink-0"
+                >
+                  <Folder className="size-3.5 text-muted-foreground" />
+                  {currentFolderName}
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-64 p-1.5">
+                <ScrollArea className="max-h-72">
                   <button
                     className={cn(
-                      'px-2 py-1 rounded-md transition-colors',
-                      index === folderPath.length - 1
-                        ? 'font-medium text-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      'flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left',
+                      'hover:bg-accent',
+                      currentFolderId === null && 'bg-accent font-medium'
                     )}
-                    onClick={() => handleFolderNavigate(folder.id)}
+                    onClick={() => handleFolderSelect(null)}
                   >
-                    {folder.name}
+                    <Home className="size-3.5" />
+                    <span>All Documents</span>
+                    <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                      {knowledgeBase.documentCount}
+                    </span>
                   </button>
-                </div>
-              ))}
-            </nav>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <div className="relative w-48">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                <Input
-                  className="pl-9 h-8 text-sm"
-                  placeholder="Search documents..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
+                  {folderTree && folderTree.length > 0 && (
+                    <>
+                      <Separator className="my-1" />
+                      {folderTree.map((folder) => (
+                        <FolderTreeItem
+                          key={folder.id}
+                          folder={folder}
+                          level={0}
+                          currentFolderId={currentFolderId}
+                          expandedIds={expandedFolderIds}
+                          onSelect={(folderId) => handleFolderSelect(folderId)}
+                          onToggle={handleFolderToggle}
+                        />
+                      ))}
+                    </>
+                  )}
 
-              <div className="flex items-center border rounded-md p-0.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn('h-7 w-7 rounded-sm', viewMode === 'grid' && 'bg-muted')}
-                      onClick={() => setViewMode('grid')}
+                  <Separator className="my-1" />
+                  <button
+                    className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left text-muted-foreground hover:bg-accent hover:text-foreground"
+                    onClick={() => {
+                      setFolderPopoverOpen(false);
+                      setFolderDialogOpen(true);
+                    }}
+                  >
+                    <FolderPlus className="size-3.5" />
+                    <span>New Folder</span>
+                  </button>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
+
+            {/* Breadcrumb trail (when inside a folder) */}
+            {folderPath.length > 0 && (
+              <nav className="flex items-center gap-0.5 text-sm text-muted-foreground min-w-0">
+                <ChevronRight className="size-3.5 shrink-0" />
+                <button
+                  className="px-1.5 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors truncate"
+                  onClick={() => handleFolderNavigate(null)}
+                >
+                  Root
+                </button>
+                {folderPath.slice(0, -1).map((folder) => (
+                  <div key={folder.id} className="flex items-center gap-0.5 min-w-0">
+                    <ChevronRight className="size-3.5 shrink-0" />
+                    <button
+                      className="px-1.5 py-0.5 rounded hover:bg-accent hover:text-foreground transition-colors truncate"
+                      onClick={() => handleFolderNavigate(folder.id)}
                     >
-                      <LayoutGrid className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Grid view</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn('h-7 w-7 rounded-sm', viewMode === 'table' && 'bg-muted')}
-                      onClick={() => setViewMode('table')}
-                    >
-                      <List className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Table view</TooltipContent>
-                </Tooltip>
-              </div>
-
-              <Button size="sm" onClick={() => setUploadOpen(true)}>
-                <Upload className="size-4 mr-2" />
-                Upload
-              </Button>
-            </div>
+                      {folder.name}
+                    </button>
+                  </div>
+                ))}
+              </nav>
+            )}
           </div>
 
-          {/* Document Content */}
-          <ScrollArea className="flex-1">
-            <div className="p-4">
-              {docsLoading ? (
-                viewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {[...Array(10)].map((_, i) => (
-                      <Skeleton key={i} className="h-36 rounded-lg" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {[...Array(8)].map((_, i) => (
-                      <Skeleton key={i} className="h-12 rounded-lg" />
-                    ))}
-                  </div>
-                )
-              ) : filteredDocuments.length > 0 ? (
-                viewMode === 'grid' ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {filteredDocuments.map((doc) => (
-                      <DocumentGridCard
-                        key={doc.id}
-                        document={doc}
-                        onSelect={() => handleDocumentClick(doc)}
-                        onEdit={() => handleDocumentClick(doc)}
-                        onDelete={() => handleDeleteDocument(doc)}
-                        onDownload={() => handleDownloadDocument(doc)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50 hover:bg-muted/50">
-                          <TableHead className="font-medium">Name</TableHead>
-                          <TableHead className="font-medium w-24">Type</TableHead>
-                          <TableHead className="font-medium w-24">Size</TableHead>
-                          <TableHead className="font-medium w-32">Status</TableHead>
-                          <TableHead className="w-12"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredDocuments.map((doc) => (
-                          <DocumentTableRow
-                            key={doc.id}
-                            document={doc}
-                            onSelect={() => handleDocumentClick(doc)}
-                            onEdit={() => handleDocumentClick(doc)}
-                            onDelete={() => handleDeleteDocument(doc)}
-                            onDownload={() => handleDownloadDocument(doc)}
-                          />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <div className="size-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                    <Upload className="size-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-medium mb-1">
-                    {search ? 'No documents found' : 'No documents yet'}
-                  </h3>
-                  <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                    {search
-                      ? `No documents match "${search}".`
-                      : 'Upload files to get started with your knowledge base.'}
-                  </p>
-                  {search ? (
-                    <Button variant="outline" onClick={() => setSearch('')}>
-                      Clear search
-                    </Button>
-                  ) : (
-                    <Button onClick={() => setUploadOpen(true)}>
-                      <Upload className="size-4 mr-2" />
-                      Upload Documents
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Search */}
+          <div className="relative w-52">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+            <Input
+              className="pl-8 h-8 text-sm"
+              placeholder="Search documents..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setSearch('')}
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* View toggle */}
+          <div className="flex items-center border rounded-lg p-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn('h-7 w-7 rounded-md', viewMode === 'grid' && 'bg-muted')}
+                  onClick={() => setViewMode('grid')}
+                >
+                  <LayoutGrid className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Grid view</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn('h-7 w-7 rounded-md', viewMode === 'table' && 'bg-muted')}
+                  onClick={() => setViewMode('table')}
+                >
+                  <List className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Table view</TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Upload */}
+          <Button size="sm" className="h-8" onClick={() => setUploadOpen(true)}>
+            <Upload className="size-3.5 mr-1.5" />
+            Upload
+          </Button>
         </div>
+
+        {/* ================================================================ */}
+        {/* Document Content                                                 */}
+        {/* ================================================================ */}
+        <ScrollArea className="flex-1">
+          <div className="p-6">
+            {/* Active filter indicator */}
+            {search && (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm text-muted-foreground">Searching for</span>
+                <Badge variant="secondary" className="gap-1">
+                  "{search}"
+                  <button onClick={() => setSearch('')}>
+                    <X className="size-3" />
+                  </button>
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {filteredDocuments.length} result{filteredDocuments.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+
+            {docsLoading ? (
+              viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                  {[...Array(12)].map((_, i) => (
+                    <Skeleton key={i} className="h-36 rounded-xl" />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {[...Array(8)].map((_, i) => (
+                    <Skeleton key={i} className="h-14 rounded-lg" />
+                  ))}
+                </div>
+              )
+            ) : filteredDocuments.length > 0 ? (
+              viewMode === 'grid' ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                  {filteredDocuments.map((doc) => (
+                    <DocumentGridCard
+                      key={doc.id}
+                      document={doc}
+                      onSelect={() => handleDocumentClick(doc)}
+                      onEdit={() => handleDocumentClick(doc)}
+                      onDelete={() => handleDeleteDocument(doc)}
+                      onDownload={() => handleDownloadDocument(doc)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="border rounded-xl overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead className="font-medium">Name</TableHead>
+                        <TableHead className="font-medium w-24">Type</TableHead>
+                        <TableHead className="font-medium w-24">Size</TableHead>
+                        <TableHead className="font-medium w-32">Status</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDocuments.map((doc) => (
+                        <DocumentTableRow
+                          key={doc.id}
+                          document={doc}
+                          onSelect={() => handleDocumentClick(doc)}
+                          onEdit={() => handleDocumentClick(doc)}
+                          onDelete={() => handleDeleteDocument(doc)}
+                          onDownload={() => handleDownloadDocument(doc)}
+                        />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )
+            ) : (
+              <div className="flex flex-col items-center justify-center py-24 text-center">
+                <div className="size-14 rounded-2xl bg-muted flex items-center justify-center mb-5">
+                  <Upload className="size-6 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-base mb-1.5">
+                  {search ? 'No documents found' : 'No documents yet'}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-5 max-w-sm">
+                  {search
+                    ? `No documents match "${search}".`
+                    : 'Upload files to get started with your knowledge base.'}
+                </p>
+                {search ? (
+                  <Button variant="outline" onClick={() => setSearch('')}>
+                    Clear search
+                  </Button>
+                ) : (
+                  <Button onClick={() => setUploadOpen(true)}>
+                    <Upload className="size-4 mr-2" />
+                    Upload Documents
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </div>
 
       {/* Chat Panel */}

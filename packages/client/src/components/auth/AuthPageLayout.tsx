@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { AppLayout } from '@/components/layout/AppLayout';
+import { Brain } from 'lucide-react';
+import { useAuthStore } from '@/stores';
 
 interface AuthPageLayoutProps {
   children: React.ReactNode;
@@ -8,56 +9,35 @@ interface AuthPageLayoutProps {
   footer: React.ReactNode;
 }
 
-function AuthLogo() {
+function AuthHeader() {
+  const { accessToken } = useAuthStore();
+  const isAuthenticated = !!accessToken;
+
   return (
-    <div className="size-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg ring-1 ring-primary/10">
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        height="24"
-        viewBox="0 0 24 24"
-        width="24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M12 2L2 7L12 12L22 7L12 2Z"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-        />
-        <path
-          d="M2 17L12 22L22 17"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-        />
-        <path
-          d="M2 12L12 17L22 12"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-        />
-        <circle cx="12" cy="12" fill="currentColor" r="2" />
-      </svg>
-    </div>
+    <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+      <div className="container flex h-14 items-center justify-center">
+        <Link to={isAuthenticated ? '/dashboard' : '/'} className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Brain className="size-4" />
+          </div>
+          <span className="text-base font-semibold tracking-tight">KnowledgeAgent</span>
+        </Link>
+      </div>
+    </header>
   );
 }
 
 export function AuthPageLayout({ children, title, description, footer }: AuthPageLayoutProps) {
   return (
-    <AppLayout showSidebar={false}>
-      <div className="min-h-[calc(100vh-4rem-5rem)] flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background">
+      <AuthHeader />
+
+      <div className="min-h-screen flex flex-col items-center justify-center px-4 pt-14">
+        <div className="w-full max-w-md py-8">
           {/* Header */}
-          <div className="flex flex-col items-center text-center space-y-4 mb-8">
-            <AuthLogo />
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-              <p className="text-sm text-muted-foreground">{description}</p>
-            </div>
+          <div className="flex flex-col items-center text-center space-y-2 mb-8">
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
 
           {/* Form */}
@@ -67,7 +47,7 @@ export function AuthPageLayout({ children, title, description, footer }: AuthPag
           {footer}
         </div>
       </div>
-    </AppLayout>
+    </div>
   );
 }
 

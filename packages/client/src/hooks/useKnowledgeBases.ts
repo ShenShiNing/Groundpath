@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { queryKeys } from '@/lib/queryClient';
 import { knowledgeBasesApi } from '@/api/knowledge-bases';
 import { documentsApi } from '@/api/documents';
@@ -29,12 +29,52 @@ export function useKnowledgeBase(id: string | undefined) {
   });
 }
 
+const POLLING_INTERVAL = 3000; // 3 seconds
+const POLLING_MAX_DURATION = 5 * 60 * 1000; // 5 minutes max polling
+
 export function useKBDocuments(kbId: string | undefined, params?: Partial<DocumentListParams>) {
-  return useQuery({
+  // Track when polling started for processing documents
+  const pollingStartRef = useRef<number | null>(null);
+
+  const query = useQuery({
     queryKey: queryKeys.knowledgeBases.documents(kbId!, params ?? {}),
     queryFn: () => knowledgeBasesApi.listDocuments(kbId!, params),
     enabled: !!kbId,
+    refetchInterval: (q) => {
+      const documents = q.state.data?.documents;
+      if (!documents) return false;
+
+      const hasProcessing = documents.some(
+        (doc) => doc.processingStatus === 'pending' || doc.processingStatus === 'processing'
+      );
+
+      if (!hasProcessing) {
+        // Reset polling start time when no documents are processing
+        pollingStartRef.current = null;
+        return false;
+      }
+
+      // Initialize polling start time
+      if (pollingStartRef.current === null) {
+        pollingStartRef.current = Date.now();
+      }
+
+      // Stop polling after max duration
+      const elapsed = Date.now() - pollingStartRef.current;
+      if (elapsed > POLLING_MAX_DURATION) {
+        return false;
+      }
+
+      return POLLING_INTERVAL;
+    },
   });
+
+  // Reset polling start when kbId changes
+  useEffect(() => {
+    pollingStartRef.current = null;
+  }, [kbId]);
+
+  return query;
 }
 
 export function useKBFolders(kbId: string | undefined) {

@@ -4,6 +4,21 @@ import type { VectorPoint, SearchResult, ChunkPayload } from './vector.types';
 
 const logger = createLogger('vector.repository');
 
+// Helper to add timeout to async operations
+async function withTimeout<T>(promise: Promise<T>, ms: number, operation: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${operation} timed out after ${ms}ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId!);
+  }
+}
+
+const QDRANT_TIMEOUT = 30_000; // 30 seconds
+
 export const vectorRepository = {
   /**
    * Upsert vectors to a specific collection
@@ -13,14 +28,18 @@ export const vectorRepository = {
 
     const qdrant = getQdrantClient();
 
-    await qdrant.upsert(collectionName, {
-      wait: true,
-      points: points.map((p) => ({
-        id: p.id,
-        vector: p.vector,
-        payload: p.payload as unknown as Record<string, unknown>,
-      })),
-    });
+    await withTimeout(
+      qdrant.upsert(collectionName, {
+        wait: true,
+        points: points.map((p) => ({
+          id: p.id,
+          vector: p.vector,
+          payload: p.payload as unknown as Record<string, unknown>,
+        })),
+      }),
+      QDRANT_TIMEOUT,
+      `Qdrant upsert to ${collectionName}`
+    );
 
     logger.debug({ collectionName, count: points.length }, 'Upserted vectors');
   },
@@ -92,14 +111,23 @@ export const vectorRepository = {
   async deleteByDocumentId(collectionName: string, documentId: string): Promise<void> {
     const qdrant = getQdrantClient();
 
-    await qdrant.delete(collectionName, {
-      wait: true,
-      filter: {
-        must: [{ key: 'documentId', match: { value: documentId } }],
-      },
-    });
+    try {
+      await withTimeout(
+        qdrant.delete(collectionName, {
+          wait: true,
+          filter: {
+            must: [{ key: 'documentId', match: { value: documentId } }],
+          },
+        }),
+        QDRANT_TIMEOUT,
+        `Qdrant delete by documentId ${documentId}`
+      );
 
-    logger.debug({ collectionName, documentId }, 'Deleted vectors for document');
+      logger.debug({ collectionName, documentId }, 'Deleted vectors for document');
+    } catch (error) {
+      logger.warn({ collectionName, documentId, error }, 'Failed to delete vectors for document');
+      // Don't throw - allow processing to continue even if vector deletion fails
+    }
   },
 
   /**
@@ -108,14 +136,25 @@ export const vectorRepository = {
   async deleteByKnowledgeBaseId(collectionName: string, knowledgeBaseId: string): Promise<void> {
     const qdrant = getQdrantClient();
 
-    await qdrant.delete(collectionName, {
-      wait: true,
-      filter: {
-        must: [{ key: 'knowledgeBaseId', match: { value: knowledgeBaseId } }],
-      },
-    });
+    try {
+      await withTimeout(
+        qdrant.delete(collectionName, {
+          wait: true,
+          filter: {
+            must: [{ key: 'knowledgeBaseId', match: { value: knowledgeBaseId } }],
+          },
+        }),
+        QDRANT_TIMEOUT,
+        `Qdrant delete by knowledgeBaseId ${knowledgeBaseId}`
+      );
 
-    logger.debug({ collectionName, knowledgeBaseId }, 'Deleted vectors for knowledge base');
+      logger.debug({ collectionName, knowledgeBaseId }, 'Deleted vectors for knowledge base');
+    } catch (error) {
+      logger.warn(
+        { collectionName, knowledgeBaseId, error },
+        'Failed to delete vectors for knowledge base'
+      );
+    }
   },
 
   /**

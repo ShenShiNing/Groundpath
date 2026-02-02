@@ -139,7 +139,11 @@ export const processingService = {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error({ documentId, error: message }, 'Document processing failed');
-      await documentRepository.updateProcessingStatus(documentId, 'failed', message);
+      try {
+        await documentRepository.updateProcessingStatus(documentId, 'failed', message);
+      } catch (updateError) {
+        logger.error({ documentId, updateError }, 'Failed to update document status to failed');
+      }
     }
   },
 };

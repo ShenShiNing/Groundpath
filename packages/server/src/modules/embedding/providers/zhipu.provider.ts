@@ -66,21 +66,41 @@ export class ZhipuProvider implements EmbeddingProvider {
       body.dimensions = this.dimensions;
     }
 
-    const response = await fetch(ZHIPU_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Zhipu API error (${response.status}): ${errorText}`);
+    try {
+      const response = await fetch(ZHIPU_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Zhipu API error (${response.status}): ${errorText}`);
+      }
+
+      const data = (await response.json()) as ZhipuEmbeddingResponse;
+      if (!data.data?.[0]?.embedding) {
+        throw new Error(
+          `Zhipu API returned unexpected response: ${JSON.stringify(data).slice(0, 200)}`
+        );
+      }
+      return data.data[0].embedding;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error(
+          `Zhipu API request timed out after 30s (input length: ${text.length} chars)`
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = (await response.json()) as ZhipuEmbeddingResponse;
-    return data.data[0]!.embedding;
   }
 }
