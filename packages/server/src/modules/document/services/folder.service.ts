@@ -8,7 +8,7 @@ import type {
   UpdateFolderRequest,
 } from '@knowledge-agent/shared/types';
 import type { Folder } from '@shared/db/schema/document/folders.schema';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { folderRepository } from '../repositories/folder.repository';
 import { documentRepository } from '../repositories/document.repository';
 import { logOperation } from '@shared/logger/operation-logger';
@@ -93,7 +93,7 @@ export const folderService = {
     if (data.parentId) {
       const parent = await folderRepository.findByIdAndUser(data.parentId, userId);
       if (!parent) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
           'Parent folder not found',
           404
@@ -101,7 +101,7 @@ export const folderService = {
       }
       // Ensure parent is in the same knowledge base
       if (parent.knowledgeBaseId !== data.knowledgeBaseId) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
           'Parent folder does not belong to this knowledge base',
           400
@@ -150,7 +150,7 @@ export const folderService = {
   async getById(folderId: string, userId: string): Promise<FolderWithCounts> {
     const folder = await folderRepository.findByIdAndUser(folderId, userId);
     if (!folder) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
         'Folder not found',
         404
@@ -219,7 +219,7 @@ export const folderService = {
     const startTime = Date.now();
     const folder = await folderRepository.findByIdAndUser(folderId, userId);
     if (!folder) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
         'Folder not found',
         404
@@ -229,7 +229,7 @@ export const folderService = {
     // Check for circular reference if changing parent
     if (data.parentId !== undefined) {
       if (data.parentId === folderId) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.CIRCULAR_REFERENCE as 'CIRCULAR_REFERENCE',
           'A folder cannot be its own parent',
           400
@@ -239,7 +239,7 @@ export const folderService = {
       if (data.parentId) {
         const isDescendant = await folderRepository.isAncestorOf(folderId, data.parentId);
         if (isDescendant) {
-          throw new AuthError(
+          throw Errors.auth(
             DOCUMENT_ERROR_CODES.CIRCULAR_REFERENCE as 'CIRCULAR_REFERENCE',
             'Cannot move folder to one of its descendants',
             400
@@ -248,7 +248,7 @@ export const folderService = {
 
         const parent = await folderRepository.findByIdAndUser(data.parentId, userId);
         if (!parent) {
-          throw new AuthError(
+          throw Errors.auth(
             DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
             'Parent folder not found',
             404
@@ -315,7 +315,7 @@ export const folderService = {
     const startTime = Date.now();
     const folder = await folderRepository.findByIdAndUser(folderId, userId);
     if (!folder) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
         'Folder not found',
         404
@@ -341,7 +341,7 @@ export const folderService = {
           await folderRepository.updateDescendantPaths(child.id, userId);
         }
       } else {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.FOLDER_NOT_EMPTY as 'FOLDER_NOT_EMPTY',
           'Folder is not empty. Move contents first or use moveContentsToRoot option.',
           400

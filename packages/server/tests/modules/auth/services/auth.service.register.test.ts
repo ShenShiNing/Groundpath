@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { RegisterRequest } from '@knowledge-agent/shared/types';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import { mockTokenPair, mockCreatedUser, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
@@ -143,7 +143,7 @@ describe('authService > register', () => {
     try {
       await authService.register(validRegisterData, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS, statusCode: 400 };
@@ -163,7 +163,7 @@ describe('authService > register', () => {
     try {
       await authService.register(validRegisterData, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS, statusCode: 400 };

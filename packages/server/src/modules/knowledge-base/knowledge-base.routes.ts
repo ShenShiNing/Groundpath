@@ -12,7 +12,7 @@ import {
   documentListParamsSchema,
 } from '@knowledge-agent/shared/schemas';
 import { documentService, folderService } from '@modules/document';
-import { sendSuccessResponse } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils/request.utils';

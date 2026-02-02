@@ -14,7 +14,7 @@ import type {
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenPayload } from '../types/auth.types';
 import { toUserPublicInfo } from '@shared/utils/user.mappers';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { verifyRefreshToken } from '@shared/utils/jwt.utils';
 import { withTransaction } from '@shared/db/db.utils';
 import { userService } from '../../user';
@@ -90,7 +90,7 @@ export const authService = {
     // Check if email already exists
     const emailExists = await userService.existsByEmail(email);
     if (emailExists) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
         'An account with this email already exists',
         400
@@ -100,7 +100,7 @@ export const authService = {
     // Check if username already exists
     const usernameExists = await userService.existsByUsername(username);
     if (usernameExists) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
         'This username is already taken',
         400
@@ -155,13 +155,13 @@ export const authService = {
     // Find user (outside transaction - read-only)
     const user = await userService.findById(userId);
     if (!user || !user.password) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
     }
 
     // Verify old password (outside transaction - no DB writes)
     const isValidPassword = await bcrypt.compare(oldPassword, user.password);
     if (!isValidPassword) {
-      throw new AuthError(AUTH_ERROR_CODES.INVALID_PASSWORD, 'Current password is incorrect', 400);
+      throw Errors.auth(AUTH_ERROR_CODES.INVALID_PASSWORD, 'Current password is incorrect', 400);
     }
 
     // Hash new password (outside transaction - no DB writes)
@@ -203,7 +203,7 @@ export const authService = {
     const rateCheck = checkAccountRateLimit(email);
     if (!rateCheck.allowed) {
       const minutes = Math.ceil((rateCheck.retryAfter ?? 0) / 60);
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.RATE_LIMITED,
         `Too many failed login attempts. Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`,
         429
@@ -235,7 +235,7 @@ export const authService = {
         userId,
         enhanced
       );
-      throw new AuthError(errorCode, errorMessage, statusCode);
+      throw Errors.auth(errorCode, errorMessage, statusCode);
     };
 
     if (!user || !user.password) {
@@ -307,7 +307,7 @@ export const authService = {
     const user = await userService.findById(sub);
 
     if (!user) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
     }
 
     return {
@@ -375,7 +375,7 @@ export const authService = {
   async getCurrentUser(userId: string): Promise<UserPublicInfo> {
     const user = await userService.findById(userId);
     if (!user) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
     }
     return toUserPublicInfo(user);
   },
@@ -403,7 +403,7 @@ export const authService = {
     const session = sessions.find((s) => s.id === sessionId);
 
     if (!session) {
-      throw new AuthError(AUTH_ERROR_CODES.SESSION_NOT_FOUND, 'Session not found', 404);
+      throw Errors.auth(AUTH_ERROR_CODES.SESSION_NOT_FOUND, 'Session not found', 404);
     }
 
     await tokenService.revokeToken(sessionId);
@@ -443,7 +443,7 @@ export const authService = {
 
     // Ensure the email matches
     if (verifiedEmail !== email.toLowerCase().trim()) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
         'Verification token does not match the provided email',
         400
@@ -453,7 +453,7 @@ export const authService = {
     // Check if email already exists
     const emailExists = await userService.existsByEmail(email);
     if (emailExists) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
         'An account with this email already exists',
         400
@@ -463,7 +463,7 @@ export const authService = {
     // Check if username already exists
     const usernameExists = await userService.existsByUsername(username);
     if (usernameExists) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
         'This username is already taken',
         400
@@ -520,7 +520,7 @@ export const authService = {
 
     // Ensure the email matches
     if (verifiedEmail !== email.toLowerCase().trim()) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
         'Verification token does not match the provided email',
         400
@@ -530,7 +530,7 @@ export const authService = {
     // Find user (outside transaction - read-only)
     const user = await userService.findByEmail(email);
     if (!user) {
-      throw new AuthError(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
     // Hash new password (outside transaction - no DB writes)

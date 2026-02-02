@@ -1,5 +1,5 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { env } from '@config/env';
 import type {
   OAuthProviderConfig,
@@ -22,7 +22,7 @@ function getGitHubConfig(): OAuthProviderConfig {
   const clientSecret = env.GITHUB_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'GitHub OAuth is not configured on this server',
       500
@@ -59,7 +59,7 @@ async function exchangeCodeForToken(code: string): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'Unable to connect to GitHub. Please try again.',
       400
@@ -68,7 +68,7 @@ async function exchangeCodeForToken(code: string): Promise<string> {
 
   const data = (await response.json()) as GitHubTokenResponse;
   if (data.error) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'GitHub authorization failed. Please try again.',
       400
@@ -90,7 +90,7 @@ async function getGitHubUser(accessToken: string): Promise<GitHubUser> {
   });
 
   if (!response.ok) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'Unable to retrieve your GitHub profile. Please try again.',
       400
@@ -152,7 +152,7 @@ export const githubProvider = {
     // Validate state
     const stateData = validateState(state);
     if (!stateData) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
         'Login session expired. Please try again.',
         400
@@ -167,7 +167,7 @@ export const githubProvider = {
     const email = githubUser.email || (await getGitHubPrimaryEmail(accessToken));
 
     if (!email) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.OAUTH_FAILED,
         'No verified email found on your GitHub account. Please add and verify an email address in your GitHub settings.',
         400

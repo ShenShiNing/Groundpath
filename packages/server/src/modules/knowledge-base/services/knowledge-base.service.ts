@@ -8,7 +8,7 @@ import type {
   EmbeddingProviderType,
 } from '@knowledge-agent/shared/types';
 import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
 import { logOperation } from '@shared/logger/operation-logger';
 import { env } from '@config/env';
@@ -68,7 +68,7 @@ function getEmbeddingConfigForProvider(provider: EmbeddingProviderType): {
       };
     }
     default:
-      throw new AuthError(
+      throw Errors.auth(
         KNOWLEDGE_BASE_ERROR_CODES.INVALID_EMBEDDING_PROVIDER as 'INVALID_EMBEDDING_PROVIDER',
         `Invalid embedding provider: ${provider}`,
         400
@@ -176,7 +176,7 @@ export const knowledgeBaseService = {
   async getById(kbId: string, userId: string): Promise<KnowledgeBaseInfo> {
     const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
     if (!kb) {
-      throw new AuthError(
+      throw Errors.auth(
         KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
         'Knowledge base not found',
         404
@@ -206,7 +206,7 @@ export const knowledgeBaseService = {
 
     const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
     if (!kb) {
-      throw new AuthError(
+      throw Errors.auth(
         KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
         'Knowledge base not found',
         404
@@ -255,7 +255,7 @@ export const knowledgeBaseService = {
 
     const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
     if (!kb) {
-      throw new AuthError(
+      throw Errors.auth(
         KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
         'Knowledge base not found',
         404
@@ -288,7 +288,7 @@ export const knowledgeBaseService = {
   async getEmbeddingConfig(kbId: string): Promise<EmbeddingConfig> {
     const kb = await knowledgeBaseRepository.findById(kbId);
     if (!kb) {
-      throw new AuthError(
+      throw Errors.auth(
         KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
         'Knowledge base not found',
         404
@@ -312,7 +312,7 @@ export const knowledgeBaseService = {
   async validateOwnership(kbId: string, userId: string): Promise<KnowledgeBase> {
     const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
     if (!kb) {
-      throw new AuthError(
+      throw Errors.auth(
         KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
         'Knowledge base not found or access denied',
         404

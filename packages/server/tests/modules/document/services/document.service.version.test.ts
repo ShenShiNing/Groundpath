@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import {
   mockUserId,
   mockDocumentId,
@@ -202,7 +202,7 @@ describe('documentService > uploadNewVersion', () => {
     try {
       await documentService.uploadNewVersion('nonexistent', mockUserId, mockFile);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -232,7 +232,7 @@ describe('documentService > uploadNewVersion', () => {
         size: 1024,
       });
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -348,7 +348,7 @@ describe('documentService > getVersionHistory', () => {
     try {
       await documentService.getVersionHistory('nonexistent', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -504,7 +504,7 @@ describe('documentService > restoreVersion', () => {
     try {
       await documentService.restoreVersion('nonexistent', mockVersionId, mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -525,7 +525,7 @@ describe('documentService > restoreVersion', () => {
     try {
       await documentService.restoreVersion(mockDocumentId, 'nonexistent-version', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code, message: (error as AuthError).message };
+      actual = { code: (error as AppError).code, message: (error as AppError).message };
     }
 
     logTestInfo(
@@ -550,7 +550,7 @@ describe('documentService > restoreVersion', () => {
     try {
       await documentService.restoreVersion(mockDocumentId, mockVersionId, mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(

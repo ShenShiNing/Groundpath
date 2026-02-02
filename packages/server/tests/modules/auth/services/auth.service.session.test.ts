@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import { mockUser, mockTokenPair, mockSessions, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
@@ -148,7 +148,7 @@ describe('authService > session management', () => {
       try {
         await authService.refresh(refreshToken, ipAddress, userAgent);
       } catch (error) {
-        actual = { code: (error as AuthError).code };
+        actual = { code: (error as AppError).code };
       }
 
       const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID };
@@ -232,7 +232,7 @@ describe('authService > session management', () => {
       try {
         await authService.getCurrentUser('non-existent');
       } catch (error) {
-        actual = { code: (error as AuthError).code };
+        actual = { code: (error as AppError).code };
       }
 
       const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID };
@@ -330,7 +330,7 @@ describe('authService > session management', () => {
       try {
         await authService.revokeSession('user-123', 'non-existent-session');
       } catch (error) {
-        actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+        actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
       }
 
       const expected = { code: AUTH_ERROR_CODES.SESSION_NOT_FOUND, statusCode: 404 };
@@ -357,7 +357,7 @@ describe('authService > session management', () => {
       try {
         await authService.revokeSession('user-123', 'session-1');
       } catch (error) {
-        actual = { code: (error as AuthError).code };
+        actual = { code: (error as AppError).code };
       }
 
       const expected = { code: AUTH_ERROR_CODES.SESSION_NOT_FOUND };

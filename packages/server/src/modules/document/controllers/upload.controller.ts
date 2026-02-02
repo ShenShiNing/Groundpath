@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { storageService } from '../services/document-storage.service';
 import { userService } from '../../user';
 import { toUserPublicInfo } from '@shared/utils/user.mappers';
-import { sendSuccessResponse } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId } from '@shared/utils/request.utils';

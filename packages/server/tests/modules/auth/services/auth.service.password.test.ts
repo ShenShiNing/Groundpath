@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import { mockUser, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
@@ -160,7 +160,7 @@ describe('authService > changePassword', () => {
     try {
       await authService.changePassword(userId, oldPassword, newPassword);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID };
@@ -179,7 +179,7 @@ describe('authService > changePassword', () => {
     try {
       await authService.changePassword(userId, oldPassword, newPassword);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID };
@@ -198,7 +198,7 @@ describe('authService > changePassword', () => {
     try {
       await authService.changePassword(userId, oldPassword, newPassword);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: AUTH_ERROR_CODES.INVALID_PASSWORD, statusCode: 400 };

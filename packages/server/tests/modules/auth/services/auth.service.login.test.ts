@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { LoginRequest } from '@knowledge-agent/shared/types';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import { mockUser, mockTokenPair, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
@@ -145,7 +145,7 @@ describe('authService > login', () => {
     try {
       await authService.login(validCredentials, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: AUTH_ERROR_CODES.RATE_LIMITED, statusCode: 429 };
@@ -171,7 +171,7 @@ describe('authService > login', () => {
     try {
       await authService.login(validCredentials, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code, message: (error as AuthError).message };
+      actual = { code: (error as AppError).code, message: (error as AppError).message };
     }
 
     const expected = { code: AUTH_ERROR_CODES.RATE_LIMITED, messageContains: '0 minute' };
@@ -197,7 +197,7 @@ describe('authService > login', () => {
     try {
       await authService.login(validCredentials, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code, message: (error as AuthError).message };
+      actual = { code: (error as AppError).code, message: (error as AppError).message };
     }
 
     const expected = { code: AUTH_ERROR_CODES.RATE_LIMITED, messagePattern: '1 minute.' };
@@ -221,7 +221,7 @@ describe('authService > login', () => {
       await authService.login(validCredentials, ipAddress, userAgent);
     } catch (error) {
       actual = {
-        code: (error as AuthError).code,
+        code: (error as AppError).code,
         loggedFailure: vi.mocked(loginLogRepository.recordFailure).mock.calls.length > 0,
       };
     }
@@ -255,7 +255,7 @@ describe('authService > login', () => {
     try {
       await authService.login(validCredentials, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     const expected = { code: AUTH_ERROR_CODES.INVALID_CREDENTIALS };
@@ -275,7 +275,7 @@ describe('authService > login', () => {
     try {
       await authService.login(validCredentials, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     const expected = { code: AUTH_ERROR_CODES.INVALID_CREDENTIALS };
@@ -308,7 +308,7 @@ describe('authService > login', () => {
     try {
       await authService.login(validCredentials, ipAddress, userAgent);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: AUTH_ERROR_CODES.USER_BANNED, statusCode: 403 };

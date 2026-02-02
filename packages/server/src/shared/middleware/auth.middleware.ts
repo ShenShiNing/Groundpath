@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { refreshRequestSchema } from '@knowledge-agent/shared/schemas';
-import { AuthError, handleError } from '../errors/errors';
+import { Errors, handleError } from '../errors';
 import { extractBearerToken, verifyAccessToken, verifyRefreshToken } from '../utils/jwt.utils';
 import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
 
@@ -14,7 +14,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const token = extractBearerToken(req.headers.authorization);
 
     if (!token) {
-      throw new AuthError(AUTH_ERROR_CODES.MISSING_TOKEN, 'Authorization token required');
+      throw Errors.auth(AUTH_ERROR_CODES.MISSING_TOKEN, 'Authorization token required');
     }
 
     // Verify and decode access token
@@ -22,7 +22,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     // Check if user is banned
     if (payload.status === 'banned') {
-      throw new AuthError(AUTH_ERROR_CODES.USER_BANNED, 'Your account has been banned', 403);
+      throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'Your account has been banned', 403);
     }
 
     // Attach user to request
@@ -70,7 +70,7 @@ export async function authenticateRefreshToken(
   try {
     const result = refreshRequestSchema.safeParse(req.body);
     if (!result.success) {
-      throw new AuthError(AUTH_ERROR_CODES.MISSING_TOKEN, 'Refresh token required');
+      throw Errors.auth(AUTH_ERROR_CODES.MISSING_TOKEN, 'Refresh token required');
     }
     const { refreshToken } = result.data;
 
@@ -80,7 +80,7 @@ export async function authenticateRefreshToken(
     // Verify token exists in database and is valid
     const storedToken = await refreshTokenRepository.findValidById(payload.jti);
     if (!storedToken || storedToken.token !== refreshToken) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
     }
 
     // Attach refresh context to request

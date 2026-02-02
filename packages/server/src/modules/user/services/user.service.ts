@@ -2,7 +2,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { UpdateProfileRequest, UserPublicInfo } from '@knowledge-agent/shared/types';
 import type { User, NewUser } from '@shared/db/schema/user/users.schema';
 import type { Transaction } from '@shared/db/db.utils';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { userRepository } from '../repositories/user.repository';
 import { toUserPublicInfo } from '@shared/utils/user.mappers';
 
@@ -80,7 +80,7 @@ export const userService = {
     // Find user first
     const existingUser = await userRepository.findById(userId);
     if (!existingUser) {
-      throw new AuthError(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
     // Check username uniqueness if changing
@@ -90,7 +90,7 @@ export const userService = {
         userId
       );
       if (usernameExists) {
-        throw new AuthError(
+        throw Errors.auth(
           AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
           'This username is already taken',
           400
@@ -109,7 +109,7 @@ export const userService = {
     });
 
     if (!updatedUser) {
-      throw new AuthError(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
     return toUserPublicInfo(updatedUser);

@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { z } from '@knowledge-agent/shared/schemas';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { sendSuccessResponse, handleError, AuthError } from '@shared/errors/errors';
+import { sendSuccessResponse, handleError, Errors } from '@shared/errors';
 import { getParamId } from '@shared/utils/request.utils';
 import { searchService } from '../services/search.service';
 import { processingService } from '../services/processing.service';
@@ -46,7 +46,7 @@ export const ragController = {
       const documentId = getParamId(req, 'documentId');
 
       if (!documentId) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
           'Document ID required',
           400
@@ -55,7 +55,7 @@ export const ragController = {
 
       const document = await documentRepository.findByIdAndUser(documentId, userId);
       if (!document) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
           'Document not found',
           404
@@ -81,7 +81,7 @@ export const ragController = {
       const documentId = getParamId(req, 'documentId');
 
       if (!documentId) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
           'Document ID required',
           400
@@ -90,7 +90,7 @@ export const ragController = {
 
       const document = await documentRepository.findByIdAndUser(documentId, userId);
       if (!document) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
           'Document not found',
           404

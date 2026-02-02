@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import {
   mockEmail,
   mockCode,
@@ -138,7 +138,7 @@ describe('emailVerificationService > sendCode', () => {
     try {
       await emailVerificationService.sendCode(mockEmail, 'register', mockIpAddress);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED, statusCode: 429 };
@@ -162,9 +162,9 @@ describe('emailVerificationService > sendCode', () => {
       await emailVerificationService.sendCode(mockEmail, 'register', mockIpAddress);
     } catch (error) {
       actual = {
-        code: (error as AuthError).code,
-        statusCode: (error as AuthError).statusCode,
-        details: (error as AuthError).details,
+        code: (error as AppError).code,
+        statusCode: (error as AppError).statusCode,
+        details: (error as AppError).details,
       };
     }
 
@@ -213,7 +213,7 @@ describe('emailVerificationService > sendCode', () => {
     try {
       await emailVerificationService.sendCode(mockEmail, 'register', mockIpAddress);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.EMAIL_SEND_FAILED, statusCode: 500 };
@@ -314,7 +314,7 @@ describe('emailVerificationService > verifyCode', () => {
     try {
       await emailVerificationService.verifyCode(mockEmail, 'wrong-code', 'register');
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.CODE_INVALID, statusCode: 400 };
@@ -406,7 +406,7 @@ describe('emailVerificationService > verifyToken', () => {
     try {
       emailVerificationService.verifyToken(token, 'register');
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.VERIFICATION_TOKEN_EXPIRED, statusCode: 400 };
@@ -425,7 +425,7 @@ describe('emailVerificationService > verifyToken', () => {
     try {
       emailVerificationService.verifyToken(token, 'register');
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID, statusCode: 400 };
@@ -444,7 +444,7 @@ describe('emailVerificationService > verifyToken', () => {
     try {
       emailVerificationService.verifyToken(token, 'reset_password'); // Wrong type
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID, statusCode: 400 };
@@ -464,7 +464,7 @@ describe('emailVerificationService > verifyToken', () => {
     try {
       emailVerificationService.verifyToken(token, 'register');
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID, statusCode: 400 };
@@ -481,7 +481,7 @@ describe('emailVerificationService > verifyToken', () => {
     try {
       emailVerificationService.verifyToken('malformed-token', 'register');
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     const expected = { code: EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID, statusCode: 400 };

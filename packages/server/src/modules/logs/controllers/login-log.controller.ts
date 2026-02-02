@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { loginLogService } from '../services/login-log.service';
-import { sendSuccessResponse } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId } from '@shared/utils/request.utils';
 import { getValidatedQuery } from '@shared/middleware/validation.middleware';

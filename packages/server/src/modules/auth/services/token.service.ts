@@ -3,7 +3,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
 import { AUTH_CONFIG } from '@config/auth.config';
 import type { AccessTokenPayload } from '../types/auth.types';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -68,7 +68,7 @@ export const tokenService = {
       // Check if token exists and is valid in database
       const storedToken = await refreshTokenRepository.findValidById(payload.jti, tx);
       if (!storedToken) {
-        throw new AuthError(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
+        throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
       }
 
       // Verify token string matches (extra security)
@@ -76,7 +76,7 @@ export const tokenService = {
         // Token mismatch - possible token reuse attack
         // Revoke all tokens for this user as a security measure
         await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
-        throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
+        throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
       }
 
       // Token replay detection: if lastUsedAt was updated very recently,
@@ -88,7 +88,7 @@ export const tokenService = {
         if (Date.now() - lastUsedMs < TOKEN_REPLAY_WINDOW_MS) {
           // Possible replay attack - revoke all tokens for this user
           await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
-          throw new AuthError(
+          throw Errors.auth(
             AUTH_ERROR_CODES.TOKEN_INVALID,
             'Suspicious token activity detected. All sessions have been revoked.'
           );
@@ -102,13 +102,13 @@ export const tokenService = {
       const user = await userService.findById(payload.sub);
       if (!user) {
         await refreshTokenRepository.revoke(payload.jti, tx);
-        throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+        throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
       }
 
       // Check user status
       if (user.status === 'banned') {
         await refreshTokenRepository.revokeAllForUser(user.id, tx);
-        throw new AuthError(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
+        throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
       }
 
       // Revoke old refresh token (token rotation)

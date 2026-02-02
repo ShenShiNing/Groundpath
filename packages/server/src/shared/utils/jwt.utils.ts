@@ -2,7 +2,7 @@ import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { AUTH_CONFIG } from '@config/auth.config';
 import type { AccessTokenPayload, RefreshTokenPayload } from '@modules/auth/types/auth.types';
-import { AuthError } from '../errors/errors';
+import { AppError, Errors } from '../errors';
 
 // ==================== Access Token ====================
 
@@ -36,10 +36,10 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
     };
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Access token has expired');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Access token has expired');
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
     }
     throw error;
   }
@@ -75,7 +75,7 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
     }) as JwtPayload & RefreshTokenPayload;
 
     if (decoded.type !== 'refresh') {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token type');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token type');
     }
 
     return {
@@ -84,14 +84,14 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
       type: decoded.type,
     };
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof AppError) {
       throw error;
     }
     if (error instanceof jwt.TokenExpiredError) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Refresh token has expired');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Refresh token has expired');
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token');
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token');
     }
     throw error;
   }

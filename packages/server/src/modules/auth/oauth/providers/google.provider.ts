@@ -1,5 +1,5 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { env } from '@config/env';
 import type {
   OAuthProviderConfig,
@@ -21,7 +21,7 @@ function getGoogleConfig(): OAuthProviderConfig {
   const clientSecret = env.GOOGLE_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'Google OAuth is not configured on this server',
       500
@@ -59,7 +59,7 @@ async function exchangeCodeForToken(code: string): Promise<GoogleTokenResponse> 
   });
 
   if (!response.ok) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'Unable to connect to Google. Please try again.',
       400
@@ -68,7 +68,7 @@ async function exchangeCodeForToken(code: string): Promise<GoogleTokenResponse> 
 
   const data = (await response.json()) as GoogleTokenResponse;
   if (data.error) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'Google authorization failed. Please try again.',
       400
@@ -89,7 +89,7 @@ async function getGoogleUser(accessToken: string): Promise<GoogleUser> {
   });
 
   if (!response.ok) {
-    throw new AuthError(
+    throw Errors.auth(
       AUTH_ERROR_CODES.OAUTH_FAILED,
       'Unable to retrieve your Google profile. Please try again.',
       400
@@ -134,7 +134,7 @@ export const googleProvider = {
     // Validate state
     const stateData = validateState(state);
     if (!stateData) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
         'Login session expired. Please try again.',
         400
@@ -148,7 +148,7 @@ export const googleProvider = {
     const googleUser = await getGoogleUser(tokenData.access_token);
 
     if (!googleUser.email || !googleUser.verified_email) {
-      throw new AuthError(
+      throw Errors.auth(
         AUTH_ERROR_CODES.OAUTH_FAILED,
         'No verified email found on your Google account. Please verify your email address in your Google settings.',
         400

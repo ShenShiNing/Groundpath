@@ -5,7 +5,7 @@ import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenPayload } from '../types/auth.types';
 import { toUserPublicInfo } from '@shared/utils/user.mappers';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { userService } from '../../user';
 import { userAuthRepository } from '../repositories/user-auth.repository';
 import { loginLogRepository } from '../repositories/login-log.repository';
@@ -113,7 +113,7 @@ export async function findOrCreateOAuthUser(userData: OAuthUserData): Promise<Us
     // Return existing user
     const user = await userService.findById(existingAuth.userId);
     if (!user) {
-      throw new AuthError(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
     return user;
   }

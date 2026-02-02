@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import type { UpdateProfileRequest } from '@knowledge-agent/shared/types';
 import { userService } from '../services/user.service';
-import { sendSuccessResponse } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId } from '@shared/utils/request.utils';
 

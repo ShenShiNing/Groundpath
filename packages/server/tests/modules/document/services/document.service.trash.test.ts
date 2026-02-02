@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import {
   mockUserId,
   mockDocument,
@@ -241,7 +241,7 @@ describe('documentService > restore', () => {
     try {
       await documentService.restore('nonexistent', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     logTestInfo(
@@ -320,7 +320,7 @@ describe('documentService > permanentDelete', () => {
     try {
       await documentService.permanentDelete('nonexistent', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(

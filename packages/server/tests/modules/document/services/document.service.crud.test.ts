@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import {
   mockUserId,
   mockDocumentId,
@@ -122,7 +122,7 @@ describe('documentService > getById', () => {
     try {
       await documentService.getById('nonexistent-id', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     logTestInfo(
@@ -334,7 +334,7 @@ describe('documentService > update', () => {
         folderId: 'nonexistent-folder',
       });
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -355,7 +355,7 @@ describe('documentService > update', () => {
     try {
       await documentService.update('nonexistent', mockUserId, { title: 'New' });
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -399,7 +399,7 @@ describe('documentService > delete', () => {
     try {
       await documentService.delete('nonexistent', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -458,7 +458,7 @@ describe('documentService > getDownloadStream', () => {
     try {
       await documentService.getDownloadStream('nonexistent', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(

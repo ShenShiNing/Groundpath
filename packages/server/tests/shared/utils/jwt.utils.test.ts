@@ -10,7 +10,7 @@ import {
 } from '@shared/utils/jwt.utils';
 import { AUTH_CONFIG } from '@config/auth.config';
 import type { AccessTokenPayload, RefreshTokenPayload } from '@modules/auth/types/auth.types';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 
 describe('jwtUtils', () => {
   // ==================== Access Token Tests ====================
@@ -112,26 +112,26 @@ describe('jwtUtils', () => {
         algorithm: 'HS256',
       });
 
-      expect(() => verifyAccessToken(expiredToken)).toThrow(AuthError);
+      expect(() => verifyAccessToken(expiredToken)).toThrow(AppError);
       try {
         verifyAccessToken(expiredToken);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_EXPIRED);
-        expect((error as AuthError).message).toBe('Access token has expired');
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_EXPIRED);
+        expect((error as AppError).message).toBe('Access token has expired');
       }
     });
 
     it('should throw TOKEN_INVALID error for malformed token', () => {
       const malformedToken = 'not.a.valid.jwt.token';
 
-      expect(() => verifyAccessToken(malformedToken)).toThrow(AuthError);
+      expect(() => verifyAccessToken(malformedToken)).toThrow(AppError);
       try {
         verifyAccessToken(malformedToken);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-        expect((error as AuthError).message).toBe('Invalid access token');
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect((error as AppError).message).toBe('Invalid access token');
       }
     });
 
@@ -141,22 +141,22 @@ describe('jwtUtils', () => {
         algorithm: 'HS256',
       });
 
-      expect(() => verifyAccessToken(tokenWithWrongSecret)).toThrow(AuthError);
+      expect(() => verifyAccessToken(tokenWithWrongSecret)).toThrow(AppError);
       try {
         verifyAccessToken(tokenWithWrongSecret);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
       }
     });
 
     it('should throw TOKEN_INVALID error for empty token', () => {
-      expect(() => verifyAccessToken('')).toThrow(AuthError);
+      expect(() => verifyAccessToken('')).toThrow(AppError);
       try {
         verifyAccessToken('');
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
       }
     });
 
@@ -167,12 +167,12 @@ describe('jwtUtils', () => {
       parts[2] = 'invalid_signature';
       const tamperedToken = parts.join('.');
 
-      expect(() => verifyAccessToken(tamperedToken)).toThrow(AuthError);
+      expect(() => verifyAccessToken(tamperedToken)).toThrow(AppError);
       try {
         verifyAccessToken(tamperedToken);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
       }
     });
 
@@ -183,7 +183,7 @@ describe('jwtUtils', () => {
         algorithm: 'HS384',
       });
 
-      expect(() => verifyAccessToken(tokenWithDiffAlgo)).toThrow(AuthError);
+      expect(() => verifyAccessToken(tokenWithDiffAlgo)).toThrow(AppError);
     });
 
     it('should re-throw unknown errors', () => {
@@ -268,24 +268,24 @@ describe('jwtUtils', () => {
         { expiresIn: '-1s', algorithm: 'HS256' }
       );
 
-      expect(() => verifyRefreshToken(expiredToken)).toThrow(AuthError);
+      expect(() => verifyRefreshToken(expiredToken)).toThrow(AppError);
       try {
         verifyRefreshToken(expiredToken);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_EXPIRED);
-        expect((error as AuthError).message).toBe('Refresh token has expired');
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_EXPIRED);
+        expect((error as AppError).message).toBe('Refresh token has expired');
       }
     });
 
     it('should throw TOKEN_INVALID error for malformed token', () => {
-      expect(() => verifyRefreshToken('invalid.token')).toThrow(AuthError);
+      expect(() => verifyRefreshToken('invalid.token')).toThrow(AppError);
       try {
         verifyRefreshToken('invalid.token');
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-        expect((error as AuthError).message).toBe('Invalid refresh token');
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect((error as AppError).message).toBe('Invalid refresh token');
       }
     });
 
@@ -296,12 +296,12 @@ describe('jwtUtils', () => {
         { expiresIn: '7d', algorithm: 'HS256' }
       );
 
-      expect(() => verifyRefreshToken(tokenWithWrongSecret)).toThrow(AuthError);
+      expect(() => verifyRefreshToken(tokenWithWrongSecret)).toThrow(AppError);
       try {
         verifyRefreshToken(tokenWithWrongSecret);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
       }
     });
 
@@ -312,13 +312,13 @@ describe('jwtUtils', () => {
         { expiresIn: '7d', algorithm: 'HS256' }
       );
 
-      expect(() => verifyRefreshToken(tokenWithWrongType)).toThrow(AuthError);
+      expect(() => verifyRefreshToken(tokenWithWrongType)).toThrow(AppError);
       try {
         verifyRefreshToken(tokenWithWrongType);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-        expect((error as AuthError).message).toBe('Invalid token type');
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect((error as AppError).message).toBe('Invalid token type');
       }
     });
 
@@ -329,17 +329,17 @@ describe('jwtUtils', () => {
         { expiresIn: '7d', algorithm: 'HS256' }
       );
 
-      expect(() => verifyRefreshToken(tokenWithoutType)).toThrow(AuthError);
+      expect(() => verifyRefreshToken(tokenWithoutType)).toThrow(AppError);
       try {
         verifyRefreshToken(tokenWithoutType);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
       }
     });
 
     it('should throw TOKEN_INVALID error for empty token', () => {
-      expect(() => verifyRefreshToken('')).toThrow(AuthError);
+      expect(() => verifyRefreshToken('')).toThrow(AppError);
     });
 
     it('should throw TOKEN_INVALID error for token with tampered signature', () => {
@@ -348,12 +348,12 @@ describe('jwtUtils', () => {
       parts[2] = 'tampered_signature_here';
       const tamperedToken = parts.join('.');
 
-      expect(() => verifyRefreshToken(tamperedToken)).toThrow(AuthError);
+      expect(() => verifyRefreshToken(tamperedToken)).toThrow(AppError);
       try {
         verifyRefreshToken(tamperedToken);
       } catch (error) {
-        expect(error).toBeInstanceOf(AuthError);
-        expect((error as AuthError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
       }
     });
 
@@ -369,8 +369,8 @@ describe('jwtUtils', () => {
       vi.mocked(jwt.verify).mockRestore();
     });
 
-    it('should re-throw AuthError without wrapping', () => {
-      const authError = new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Custom auth error');
+    it('should re-throw AppError without wrapping', () => {
+      const authError = new AppError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Custom auth error');
 
       vi.spyOn(jwt, 'verify').mockImplementation(() => {
         throw authError;
@@ -483,7 +483,7 @@ describe('jwtUtils', () => {
     it('should fail when using access token secret to verify refresh token', () => {
       const refreshToken = generateRefreshToken('user-1', 'token-1');
 
-      expect(() => verifyAccessToken(refreshToken)).toThrow(AuthError);
+      expect(() => verifyAccessToken(refreshToken)).toThrow(AppError);
     });
 
     it('should fail when using refresh token secret to verify access token', () => {
@@ -495,7 +495,7 @@ describe('jwtUtils', () => {
         emailVerified: true,
       });
 
-      expect(() => verifyRefreshToken(accessToken)).toThrow(AuthError);
+      expect(() => verifyRefreshToken(accessToken)).toThrow(AppError);
     });
   });
 });

@@ -3,8 +3,8 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { SendVerificationCodeRequest, VerifyCodeRequest } from '@knowledge-agent/shared';
 import { emailVerificationService } from '../verification/email-verification.service';
 import { userService } from '../../user';
-import { sendSuccessResponse } from '@shared/errors/errors';
-import { AuthError } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
+import { Errors } from '@shared/errors';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { getClientIp } from '@shared/utils/request.utils';
 
@@ -20,7 +20,7 @@ export const emailController = {
     if (type === 'register') {
       const emailExists = await userService.existsByEmail(email);
       if (emailExists) {
-        throw new AuthError(
+        throw Errors.auth(
           AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
           'An account with this email already exists',
           400

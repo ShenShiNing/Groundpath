@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import { logTestInfo } from '@tests/__mocks__/email.mocks';
 
 // ==================== Mocks ====================
@@ -116,14 +116,14 @@ describe('emailController > sendCode', () => {
     });
     await callController(emailController.sendCode, req, res, next);
 
-    const error = getNextError() as AuthError;
+    const error = getNextError() as AppError;
     logTestInfo(
       { email: 'existing@example.com', type: 'register', emailExists: true },
       { code: AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS },
       { code: error?.code }
     );
 
-    expect(error).toBeInstanceOf(AuthError);
+    expect(error).toBeInstanceOf(AppError);
     expect(error.statusCode).toBe(400);
     expect(error.code).toBe(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS);
   });
@@ -184,7 +184,7 @@ describe('emailController > sendCode', () => {
   it('should handle rate limit errors from service', async () => {
     vi.mocked(userService.existsByEmail).mockResolvedValue(false);
     vi.mocked(emailVerificationService.sendCode).mockRejectedValue(
-      new AuthError(EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED, 'Too many codes', 429)
+      new AppError(EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED, 'Too many codes', 429)
     );
 
     const { req, res, next, getNextError } = createMockReqRes({
@@ -193,14 +193,14 @@ describe('emailController > sendCode', () => {
     });
     await callController(emailController.sendCode, req, res, next);
 
-    const error = getNextError() as AuthError;
+    const error = getNextError() as AppError;
     logTestInfo(
       { serviceError: EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED },
       { statusCode: 429, code: EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED },
       { statusCode: error?.statusCode, code: error?.code }
     );
 
-    expect(error).toBeInstanceOf(AuthError);
+    expect(error).toBeInstanceOf(AppError);
     expect(error.statusCode).toBe(429);
     expect(error.code).toBe(EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED);
   });
@@ -247,7 +247,7 @@ describe('emailController > verifyCode', () => {
   // 应将 CODE_INVALID 错误传递给 next
   it('should return CODE_INVALID error on invalid code', async () => {
     vi.mocked(emailVerificationService.verifyCode).mockRejectedValue(
-      new AuthError(EMAIL_ERROR_CODES.CODE_INVALID, 'Invalid or expired code', 400)
+      new AppError(EMAIL_ERROR_CODES.CODE_INVALID, 'Invalid or expired code', 400)
     );
 
     const { req, res, next, getNextError } = createMockReqRes({
@@ -257,14 +257,14 @@ describe('emailController > verifyCode', () => {
     });
     await callController(emailController.verifyCode, req, res, next);
 
-    const error = getNextError() as AuthError;
+    const error = getNextError() as AppError;
     logTestInfo(
       { code: '000000' },
       { statusCode: 400, code: EMAIL_ERROR_CODES.CODE_INVALID },
       { statusCode: error?.statusCode, code: error?.code }
     );
 
-    expect(error).toBeInstanceOf(AuthError);
+    expect(error).toBeInstanceOf(AppError);
     expect(error.statusCode).toBe(400);
     expect(error.code).toBe(EMAIL_ERROR_CODES.CODE_INVALID);
   });

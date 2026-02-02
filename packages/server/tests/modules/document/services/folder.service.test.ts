@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import {
   mockUserId,
   mockFolderId,
@@ -149,7 +149,7 @@ describe('folderService > create', () => {
         knowledgeBaseId: mockKnowledgeBaseId,
       });
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     logTestInfo(
@@ -220,7 +220,7 @@ describe('folderService > getById', () => {
     try {
       await folderService.getById('nonexistent', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -377,7 +377,7 @@ describe('folderService > update', () => {
     try {
       await folderService.update(mockFolderId, mockUserId, { parentId: mockFolderId });
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     logTestInfo(
@@ -399,7 +399,7 @@ describe('folderService > update', () => {
     try {
       await folderService.update(mockFolderId, mockUserId, { parentId: 'folder-child-1' });
     } catch (error) {
-      actual = { code: (error as AuthError).code, message: (error as AuthError).message };
+      actual = { code: (error as AppError).code, message: (error as AppError).message };
     }
 
     logTestInfo(
@@ -424,7 +424,7 @@ describe('folderService > update', () => {
     try {
       await folderService.update(mockFolderId, mockUserId, { parentId: 'nonexistent-parent' });
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -530,7 +530,7 @@ describe('folderService > update', () => {
     try {
       await folderService.update('nonexistent', mockUserId, { name: 'New' });
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(
@@ -579,7 +579,7 @@ describe('folderService > delete', () => {
     try {
       await folderService.delete(mockFolderId, mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     logTestInfo(
@@ -678,7 +678,7 @@ describe('folderService > delete', () => {
     try {
       await folderService.delete('nonexistent', mockUserId);
     } catch (error) {
-      actual = { code: (error as AuthError).code };
+      actual = { code: (error as AppError).code };
     }
 
     logTestInfo(

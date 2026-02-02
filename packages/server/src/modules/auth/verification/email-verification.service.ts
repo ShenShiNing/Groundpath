@@ -6,7 +6,7 @@ import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
 import { EMAIL_CONFIG } from '@config/email.config';
 import { emailVerificationRepository } from '../verification/email-verification.repository';
 import { emailService } from './email.service';
-import { AuthError } from '@shared/errors/errors';
+import { AppError, Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('email-verification');
@@ -58,7 +58,7 @@ function verifyVerificationToken(
     }) as JwtPayload & VerificationTokenPayload;
 
     if (decoded.purpose !== 'email_verified') {
-      throw new AuthError(
+      throw Errors.auth(
         EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID,
         'Invalid verification token',
         400
@@ -66,7 +66,7 @@ function verifyVerificationToken(
     }
 
     if (decoded.type !== expectedType) {
-      throw new AuthError(
+      throw Errors.auth(
         EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID,
         'Invalid verification token type',
         400
@@ -79,18 +79,18 @@ function verifyVerificationToken(
       purpose: decoded.purpose,
     };
   } catch (error) {
-    if (error instanceof AuthError) {
+    if (error instanceof AppError) {
       throw error;
     }
     if (error instanceof jwt.TokenExpiredError) {
-      throw new AuthError(
+      throw Errors.auth(
         EMAIL_ERROR_CODES.VERIFICATION_TOKEN_EXPIRED,
         'Verification token has expired. Please verify your email again.',
         400
       );
     }
     if (error instanceof jwt.JsonWebTokenError) {
-      throw new AuthError(
+      throw Errors.auth(
         EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID,
         'Invalid verification token',
         400
@@ -117,7 +117,7 @@ export const emailVerificationService = {
     // Check rate limits - max codes per hour
     const recentCount = await emailVerificationRepository.countRecentCodes(normalizedEmail, type);
     if (recentCount >= EMAIL_CONFIG.verification.maxCodesPerHour) {
-      throw new AuthError(
+      throw Errors.auth(
         EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED,
         'Too many verification codes requested. Please try again later.',
         429
@@ -135,7 +135,7 @@ export const emailVerificationService = {
 
       if (secondsSinceCreation < cooldownSeconds) {
         const remainingSeconds = cooldownSeconds - secondsSinceCreation;
-        throw new AuthError(
+        throw Errors.auth(
           EMAIL_ERROR_CODES.RESEND_COOLDOWN,
           `Please wait ${remainingSeconds} seconds before requesting another code`,
           429,
@@ -163,7 +163,7 @@ export const emailVerificationService = {
       });
     } catch (error) {
       logger.error({ err: error }, 'Failed to send verification email');
-      throw new AuthError(
+      throw Errors.auth(
         EMAIL_ERROR_CODES.EMAIL_SEND_FAILED,
         'Failed to send verification email. Please try again later.',
         500
@@ -196,7 +196,7 @@ export const emailVerificationService = {
     );
 
     if (!verificationCode) {
-      throw new AuthError(
+      throw Errors.auth(
         EMAIL_ERROR_CODES.CODE_INVALID,
         'Invalid or expired verification code',
         400

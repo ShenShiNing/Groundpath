@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { operationLogService } from '../services/operation-log.service';
-import { sendSuccessResponse } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId, getParamId } from '@shared/utils/request.utils';

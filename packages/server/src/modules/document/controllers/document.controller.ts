@@ -6,7 +6,7 @@ import type {
   TrashListParams,
 } from '@knowledge-agent/shared/types';
 import { documentService } from '../services/document.service';
-import { sendSuccessResponse } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils/request.utils';

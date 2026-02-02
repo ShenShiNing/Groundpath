@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
 import type { CreateFolderRequest, UpdateFolderRequest } from '@knowledge-agent/shared/types';
 import { folderService } from '../services/folder.service';
-import { sendSuccessResponse } from '@shared/errors/errors';
+import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils/request.utils';

@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { tokenService } from '@modules/auth/services/token.service';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import type { AccessTokenPayload } from '@modules/auth/types/auth.types';
 
 // ==================== Mocks ====================
@@ -316,7 +316,7 @@ describe('tokenService', () => {
       try {
         await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
       } catch (error) {
-        actual = { code: (error as AuthError).code, message: (error as AuthError).message };
+        actual = { code: (error as AppError).code, message: (error as AppError).message };
       }
 
       const expected = {
@@ -348,7 +348,7 @@ describe('tokenService', () => {
         await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
       } catch (error) {
         actual = {
-          code: (error as AuthError).code,
+          code: (error as AppError).code,
           revokedAll: vi.mocked(refreshTokenRepository.revokeAllForUser).mock.calls.length > 0,
         };
       }
@@ -377,7 +377,7 @@ describe('tokenService', () => {
       try {
         await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
       } catch (error) {
-        actual = { code: (error as AuthError).code };
+        actual = { code: (error as AppError).code };
       }
 
       const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID };
@@ -401,8 +401,8 @@ describe('tokenService', () => {
         await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
       } catch (error) {
         actual = {
-          code: (error as AuthError).code,
-          statusCode: (error as AuthError).statusCode,
+          code: (error as AppError).code,
+          statusCode: (error as AppError).statusCode,
           revokedAll: vi.mocked(refreshTokenRepository.revokeAllForUser).mock.calls.length > 0,
         };
       }

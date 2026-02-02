@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AuthError } from '@shared/errors/errors';
+import { AppError } from '@shared/errors';
 import {
   mockUserId,
   mockFolderId,
@@ -349,7 +349,7 @@ describe('documentService > upload', () => {
         { knowledgeBaseId: mockKnowledgeBaseId }
       );
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     logTestInfo(
@@ -375,7 +375,7 @@ describe('documentService > upload', () => {
         knowledgeBaseId: mockKnowledgeBaseId,
       });
     } catch (error) {
-      actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
 
     logTestInfo(

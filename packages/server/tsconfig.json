@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": ".",
     "types": ["node"],
 
     // Path aliases to reduce deep relative imports
@@ -10,7 +10,8 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@modules/*": ["src/modules/*"],
-      "@config/*": ["src/shared/config/*"]
+      "@config/*": ["src/shared/config/*"],
+      "@tests/*": ["tests/*"]
     },
 
     // Stricter checks for server code
@@ -20,5 +21,5 @@
     // Not needed for server
     "jsx": "preserve"
   },
-  "include": ["src"]
+  "include": ["src", "tests"]
 }

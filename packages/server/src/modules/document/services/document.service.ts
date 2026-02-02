@@ -12,7 +12,7 @@ import type {
   VersionListResponse,
 } from '@knowledge-agent/shared/types';
 import type { Document } from '@shared/db/schema/document/documents.schema';
-import { AuthError } from '@shared/errors/errors';
+import { Errors } from '@shared/errors';
 import { buildPagination } from '@shared/utils/pagination';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
@@ -104,7 +104,7 @@ export const documentService = {
 
     // knowledgeBaseId is required
     if (!options?.knowledgeBaseId) {
-      throw new AuthError(
+      throw Errors.auth(
         KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
         'Knowledge base ID is required',
         400
@@ -117,7 +117,7 @@ export const documentService = {
     // Validate file
     const validation = documentStorageService.validateFile(file);
     if (!validation.valid) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.INVALID_FILE_TYPE as 'INVALID_FILE_TYPE',
         validation.error!,
         400
@@ -128,14 +128,14 @@ export const documentService = {
     if (options?.folderId) {
       const folder = await folderRepository.findByIdAndUser(options.folderId, userId);
       if (!folder) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
           'Target folder not found',
           404
         );
       }
       if (folder.knowledgeBaseId !== options.knowledgeBaseId) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
           'Folder does not belong to this knowledge base',
           400
@@ -230,7 +230,7 @@ export const documentService = {
   async getById(documentId: string, userId: string): Promise<DocumentInfo> {
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found',
         404
@@ -263,7 +263,7 @@ export const documentService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found',
         404
@@ -274,7 +274,7 @@ export const documentService = {
     if (data.folderId !== undefined && data.folderId !== null) {
       const folder = await folderRepository.findByIdAndUser(data.folderId, userId);
       if (!folder) {
-        throw new AuthError(
+        throw Errors.auth(
           DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
           'Target folder not found',
           404
@@ -325,7 +325,7 @@ export const documentService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found',
         404
@@ -364,7 +364,7 @@ export const documentService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found',
         404
@@ -377,7 +377,7 @@ export const documentService = {
       document.currentVersion
     );
     if (!version) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document version not found',
         404
@@ -431,7 +431,7 @@ export const documentService = {
     const startTime = Date.now();
     const document = await documentRepository.findDeletedByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found in trash',
         404
@@ -463,7 +463,7 @@ export const documentService = {
     const startTime = Date.now();
     const document = await documentRepository.findDeletedByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found in trash',
         404
@@ -530,7 +530,7 @@ export const documentService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found',
         404
@@ -540,7 +540,7 @@ export const documentService = {
     // Validate file
     const validation = documentStorageService.validateFile(file);
     if (!validation.valid) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.INVALID_FILE_TYPE as 'INVALID_FILE_TYPE',
         validation.error!,
         400
@@ -631,7 +631,7 @@ export const documentService = {
   async getVersionHistory(documentId: string, userId: string): Promise<VersionListResponse> {
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found',
         404
@@ -666,7 +666,7 @@ export const documentService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Document not found',
         404
@@ -675,7 +675,7 @@ export const documentService = {
 
     const version = await documentVersionRepository.findById(versionId);
     if (!version || version.documentId !== documentId) {
-      throw new AuthError(
+      throw Errors.auth(
         DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
         'Version not found',
         404
