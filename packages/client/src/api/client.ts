@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiResponse, AuthResponse } from '@knowledge-agent/shared/types';
+import { isSuccessResponse } from '@knowledge-agent/shared/types';
 
 /** API 请求错误 */
 export class ApiRequestError extends Error {
@@ -16,15 +17,16 @@ export class ApiRequestError extends Error {
 
 /** 解包 API 响应，提取 data 或抛出错误 */
 export function unwrapResponse<T>(response: ApiResponse<T>): T {
-  if (!response.success || !response.data) {
-    const error = response.error ?? { code: 'UNKNOWN_ERROR', message: 'Unknown error' };
-    throw new ApiRequestError(error.code, error.message, error.details);
+  if (isSuccessResponse(response)) {
+    return response.data;
   }
-  return response.data;
+  const error = response.error;
+  throw new ApiRequestError(error.code, error.message, error.details);
 }
 
 const apiClient = axios.create({
   baseURL: '',
+  timeout: 30000, // 30 秒超时
   headers: {
     'Content-Type': 'application/json',
   },

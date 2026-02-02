@@ -9,6 +9,7 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
 } from '@shared/utils/jwt.utils';
+import { withTransaction, type Transaction } from '@shared/db/db.utils';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userService } from '../../user';
 
@@ -22,7 +23,8 @@ export const tokenService = {
   async generateTokenPair(
     user: AccessTokenPayload,
     ipAddress: string | null,
-    deviceInfo: DeviceInfo | null
+    deviceInfo: DeviceInfo | null,
+    tx?: Transaction
   ): Promise<TokenPair> {
     // Generate access token
     const accessToken = generateAccessToken(user);
@@ -37,7 +39,8 @@ export const tokenService = {
       user.sub,
       refreshTokenString,
       ipAddress,
-      deviceInfo
+      deviceInfo,
+      tx
     );
 
     return {
@@ -51,55 +54,77 @@ export const tokenService = {
   /**
    * Refresh tokens using a valid refresh token
    * Implements token rotation - old token is revoked, new one is issued
+   * Wrapped in a transaction to ensure atomicity of the rotation process
    */
   async refreshTokens(
     refreshToken: string,
     ipAddress: string | null,
     deviceInfo: DeviceInfo | null
   ): Promise<TokenPair> {
-    // Verify the JWT signature and structure
+    // Verify the JWT signature and structure (outside transaction - no DB involved)
     const payload = verifyRefreshToken(refreshToken);
 
-    // Check if token exists and is valid in database
-    const storedToken = await refreshTokenRepository.findValidById(payload.jti);
-    if (!storedToken) {
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
-    }
+    return withTransaction(async (tx) => {
+      // Check if token exists and is valid in database
+      const storedToken = await refreshTokenRepository.findValidById(payload.jti, tx);
+      if (!storedToken) {
+        throw new AuthError(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
+      }
 
-    // Verify token string matches (extra security)
-    if (storedToken.token !== refreshToken) {
-      // Token mismatch - possible token reuse attack
-      // Revoke all tokens for this user as a security measure
-      await refreshTokenRepository.revokeAllForUser(payload.sub);
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
-    }
+      // Verify token string matches (extra security)
+      if (storedToken.token !== refreshToken) {
+        // Token mismatch - possible token reuse attack
+        // Revoke all tokens for this user as a security measure
+        await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
+        throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
+      }
 
-    // Get user to check status
-    const user = await userService.findById(payload.sub);
-    if (!user) {
-      await refreshTokenRepository.revoke(payload.jti);
-      throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
-    }
+      // Token replay detection: if lastUsedAt was updated very recently,
+      // this token may have been stolen and replayed by an attacker.
+      // A legitimate client would not refresh the same token twice in quick succession.
+      if (storedToken.lastUsedAt) {
+        const lastUsedMs = new Date(storedToken.lastUsedAt).getTime();
+        const TOKEN_REPLAY_WINDOW_MS = 5000; // 5 seconds
+        if (Date.now() - lastUsedMs < TOKEN_REPLAY_WINDOW_MS) {
+          // Possible replay attack - revoke all tokens for this user
+          await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
+          throw new AuthError(
+            AUTH_ERROR_CODES.TOKEN_INVALID,
+            'Suspicious token activity detected. All sessions have been revoked.'
+          );
+        }
+      }
 
-    // Check user status
-    if (user.status === 'banned') {
-      await refreshTokenRepository.revokeAllForUser(user.id);
-      throw new AuthError(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
-    }
+      // Mark token as used before revoking
+      await refreshTokenRepository.updateLastUsed(payload.jti, tx);
 
-    // Revoke old refresh token (token rotation)
-    await refreshTokenRepository.revoke(payload.jti);
+      // Get user to check status
+      const user = await userService.findById(payload.sub);
+      if (!user) {
+        await refreshTokenRepository.revoke(payload.jti, tx);
+        throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+      }
 
-    // Generate new token pair
-    const accessPayload: AccessTokenPayload = {
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-      status: user.status,
-      emailVerified: user.emailVerified,
-    };
+      // Check user status
+      if (user.status === 'banned') {
+        await refreshTokenRepository.revokeAllForUser(user.id, tx);
+        throw new AuthError(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
+      }
 
-    return this.generateTokenPair(accessPayload, ipAddress, deviceInfo);
+      // Revoke old refresh token (token rotation)
+      await refreshTokenRepository.revoke(payload.jti, tx);
+
+      // Generate new token pair
+      const accessPayload: AccessTokenPayload = {
+        sub: user.id,
+        email: user.email,
+        username: user.username,
+        status: user.status,
+        emailVerified: user.emailVerified,
+      };
+
+      return this.generateTokenPair(accessPayload, ipAddress, deviceInfo, tx);
+    });
   },
 
   /**

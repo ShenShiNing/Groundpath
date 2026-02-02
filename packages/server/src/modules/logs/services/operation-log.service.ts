@@ -1,4 +1,5 @@
 import type { OperationLog } from '@shared/db/schema/system/operation-logs.schema';
+import { buildPagination } from '@shared/utils/pagination';
 import {
   operationLogRepository,
   type OperationLogListParams,
@@ -76,12 +77,7 @@ export const operationLogService = {
 
     return {
       logs: logs.map(toOperationLogListItem),
-      pagination: {
-        page: params.page,
-        pageSize: params.pageSize,
-        total,
-        totalPages: Math.ceil(total / params.pageSize),
-      },
+      pagination: buildPagination(total, params.page, params.pageSize),
     };
   },
 

@@ -13,6 +13,7 @@ import type {
 } from '@knowledge-agent/shared/types';
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { AuthError } from '@shared/errors/errors';
+import { buildPagination } from '@shared/utils/pagination';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
@@ -246,12 +247,7 @@ export const documentService = {
 
     return {
       documents: documents.map(toDocumentListItem),
-      pagination: {
-        page: params.page,
-        pageSize: params.pageSize,
-        total,
-        totalPages: Math.ceil(total / params.pageSize),
-      },
+      pagination: buildPagination(total, params.page, params.pageSize),
     };
   },
 
@@ -424,12 +420,7 @@ export const documentService = {
 
     return {
       documents: documents.map(toTrashDocumentListItem),
-      pagination: {
-        page: params.page,
-        pageSize: params.pageSize,
-        total,
-        totalPages: Math.ceil(total / params.pageSize),
-      },
+      pagination: buildPagination(total, params.page, params.pageSize),
     };
   },
 

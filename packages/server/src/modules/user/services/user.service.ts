@@ -1,6 +1,7 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { UpdateProfileRequest, UserPublicInfo } from '@knowledge-agent/shared/types';
 import type { User, NewUser } from '@shared/db/schema/user/users.schema';
+import type { Transaction } from '@shared/db/db.utils';
 import { AuthError } from '@shared/errors/errors';
 import { userRepository } from '../repositories/user.repository';
 import { toUserPublicInfo } from '@shared/utils/user.mappers';
@@ -56,8 +57,8 @@ export const userService = {
   /**
    * Update user's password
    */
-  async updatePassword(userId: string, hashedPassword: string): Promise<void> {
-    return userRepository.updatePassword(userId, hashedPassword);
+  async updatePassword(userId: string, hashedPassword: string, tx?: Transaction): Promise<void> {
+    return userRepository.updatePassword(userId, hashedPassword, tx);
   },
 
   /**

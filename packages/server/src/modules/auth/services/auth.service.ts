@@ -16,6 +16,7 @@ import type { AccessTokenPayload } from '../types/auth.types';
 import { toUserPublicInfo } from '@shared/utils/user.mappers';
 import { AuthError } from '@shared/errors/errors';
 import { verifyRefreshToken } from '@shared/utils/jwt.utils';
+import { withTransaction } from '@shared/db/db.utils';
 import { userService } from '../../user';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
@@ -140,6 +141,7 @@ export const authService = {
 
   /**
    * Change user password
+   * Wrapped in a transaction to ensure password update and token revocation are atomic
    */
   async changePassword(
     userId: string,
@@ -150,28 +152,31 @@ export const authService = {
   ): Promise<void> {
     const startTime = Date.now();
 
-    // Find user
+    // Find user (outside transaction - read-only)
     const user = await userService.findById(userId);
     if (!user || !user.password) {
       throw new AuthError(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
     }
 
-    // Verify old password
+    // Verify old password (outside transaction - no DB writes)
     const isValidPassword = await bcrypt.compare(oldPassword, user.password);
     if (!isValidPassword) {
       throw new AuthError(AUTH_ERROR_CODES.INVALID_PASSWORD, 'Current password is incorrect', 400);
     }
 
-    // Hash new password
+    // Hash new password (outside transaction - no DB writes)
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password
-    await userService.updatePassword(userId, hashedPassword);
+    // Transaction: update password and revoke all tokens atomically
+    await withTransaction(async (tx) => {
+      // Update password
+      await userService.updatePassword(userId, hashedPassword, tx);
 
-    // Revoke all refresh tokens for security (force re-login on all devices)
-    await refreshTokenRepository.revokeAllForUser(userId);
+      // Revoke all refresh tokens for security (force re-login on all devices)
+      await refreshTokenRepository.revokeAllForUser(userId, tx);
+    });
 
-    // Log the operation
+    // Log the operation (outside transaction - non-critical)
     logOperation({
       userId,
       resourceType: 'user',
@@ -500,13 +505,14 @@ export const authService = {
 
   /**
    * Reset user password with verified email
+   * Wrapped in a transaction to ensure password update and token revocation are atomic
    */
   async resetPassword(
     data: ResetPasswordRequest
   ): Promise<{ message: string; sessionsRevoked?: number }> {
     const { email, newPassword, verificationToken, logoutAllDevices } = data;
 
-    // Verify the verification token
+    // Verify the verification token (outside transaction - no DB writes)
     const { email: verifiedEmail } = emailVerificationService.verifyToken(
       verificationToken,
       'reset_password'
@@ -521,23 +527,26 @@ export const authService = {
       );
     }
 
-    // Find user
+    // Find user (outside transaction - read-only)
     const user = await userService.findByEmail(email);
     if (!user) {
       throw new AuthError(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }
 
-    // Hash new password
+    // Hash new password (outside transaction - no DB writes)
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update password
-    await userService.updatePassword(user.id, hashedPassword);
+    // Transaction: update password and optionally revoke sessions atomically
+    const sessionsRevoked = await withTransaction(async (tx) => {
+      // Update password
+      await userService.updatePassword(user.id, hashedPassword, tx);
 
-    // Optionally revoke all sessions
-    let sessionsRevoked: number | undefined;
-    if (logoutAllDevices !== false) {
-      sessionsRevoked = await refreshTokenRepository.revokeAllForUser(user.id);
-    }
+      // Optionally revoke all sessions
+      if (logoutAllDevices !== false) {
+        return refreshTokenRepository.revokeAllForUser(user.id, tx);
+      }
+      return undefined;
+    });
 
     return {
       message: 'Password reset successfully',

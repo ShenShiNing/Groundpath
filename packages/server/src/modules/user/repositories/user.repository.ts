@@ -1,6 +1,6 @@
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { now } from '@shared/db/db.utils';
+import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
 import { users, type User, type NewUser } from '@shared/db/schema/user/users.schema';
 
 /**
@@ -100,8 +100,9 @@ export const userRepository = {
   /**
    * Update user's password
    */
-  async updatePassword(userId: string, hashedPassword: string): Promise<void> {
-    await db
+  async updatePassword(userId: string, hashedPassword: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(users)
       .set({
         password: hashedPassword,

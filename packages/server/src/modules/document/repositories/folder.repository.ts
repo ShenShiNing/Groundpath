@@ -1,4 +1,4 @@
-import { eq, and, isNull, count } from 'drizzle-orm';
+import { eq, and, isNull, count, like, sql } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { now } from '@shared/db/db.utils';
 import { folders, type Folder, type NewFolder } from '@shared/db/schema/document/folders.schema';
@@ -154,38 +154,42 @@ export const folderRepository = {
 
   /**
    * Check if folder is ancestor of another folder (to prevent circular references)
+   * Uses the materialized path column to avoid N+1 queries
    */
   async isAncestorOf(potentialAncestorId: string, folderId: string): Promise<boolean> {
-    let currentFolder = await this.findById(folderId);
+    const folder = await this.findById(folderId);
+    if (!folder) return false;
 
-    while (currentFolder?.parentId) {
-      if (currentFolder.parentId === potentialAncestorId) {
-        return true;
-      }
-      currentFolder = await this.findById(currentFolder.parentId);
-    }
-
-    return false;
+    // The path column stores materialized paths like "/grandparentId/parentId/"
+    // Check if the potential ancestor ID appears in the path
+    return (
+      folder.path.includes(`/${potentialAncestorId}/`) || folder.parentId === potentialAncestorId
+    );
   },
 
   /**
    * Get all descendant folder IDs (for cascading operations)
+   * Uses path prefix matching instead of BFS traversal to avoid N+1 queries
    */
   async getAllDescendantIds(folderId: string, userId: string): Promise<string[]> {
-    const descendants: string[] = [];
-    const toProcess = [folderId];
+    const folder = await this.findById(folderId);
+    if (!folder) return [];
 
-    while (toProcess.length > 0) {
-      const currentId = toProcess.pop()!;
-      const children = await this.listByParent(userId, currentId);
+    // Match all folders whose path contains this folder's ID
+    // e.g., path LIKE '%/folderId/%' catches all descendants
+    const pathPrefix = `${folder.path}${folderId}/`;
+    const descendants = await db
+      .select({ id: folders.id })
+      .from(folders)
+      .where(
+        and(
+          eq(folders.userId, userId),
+          like(folders.path, `${pathPrefix}%`),
+          isNull(folders.deletedAt)
+        )
+      );
 
-      for (const child of children) {
-        descendants.push(child.id);
-        toProcess.push(child.id);
-      }
-    }
-
-    return descendants;
+    return descendants.map((d) => d.id);
   },
 
   /**
@@ -206,18 +210,44 @@ export const folderRepository = {
 
   /**
    * Update paths for all descendants (when a folder is moved)
+   * Uses batch update with string replacement instead of recursive queries
    */
   async updateDescendantPaths(folderId: string, userId: string): Promise<void> {
     const folder = await this.findById(folderId);
     if (!folder) return;
 
-    const children = await this.listByParent(userId, folderId);
-    for (const child of children) {
-      const newPath = `${folder.path}${folderId}/`;
-      await db.update(folders).set({ path: newPath }).where(eq(folders.id, child.id));
+    // Get all direct children and update their paths
+    const newBasePath = `${folder.path}${folderId}/`;
 
-      // Recursively update descendants
-      await this.updateDescendantPaths(child.id, userId);
+    // Update all folders whose parentId matches this folder
+    // This includes direct children - their path should be newBasePath
+    const directChildren = await this.listByParent(userId, folderId);
+    if (directChildren.length === 0) return;
+
+    // For each child, update its path and all its descendants in a single query
+    for (const child of directChildren) {
+      const oldChildPath = child.path;
+      const newChildPath = newBasePath;
+
+      // Update this child's path
+      await db.update(folders).set({ path: newChildPath }).where(eq(folders.id, child.id));
+
+      // Batch update all descendants of this child using path prefix replacement
+      // REPLACE(path, oldPrefix, newPrefix) for all folders with matching path prefix
+      if (oldChildPath !== newChildPath) {
+        await db
+          .update(folders)
+          .set({
+            path: sql`REPLACE(${folders.path}, ${oldChildPath + child.id + '/'}, ${newChildPath + child.id + '/'})`,
+          })
+          .where(
+            and(
+              eq(folders.userId, userId),
+              like(folders.path, `${oldChildPath}${child.id}/%`),
+              isNull(folders.deletedAt)
+            )
+          );
+      }
     }
   },
 };

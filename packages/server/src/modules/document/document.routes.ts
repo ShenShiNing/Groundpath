@@ -13,11 +13,44 @@ import {
 
 const router = express.Router();
 
-// Configure multer for memory storage
+/**
+ * Allowed document MIME types for upload
+ * Must stay in sync with document-storage.service.ts ALLOWED_MIME_TYPES
+ */
+const ALLOWED_DOCUMENT_MIMES = new Set([
+  'application/pdf',
+  'text/markdown',
+  'text/x-markdown',
+  'text/plain',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+
+/**
+ * Allowed extensions (fallback when MIME type is unreliable, e.g. .md files)
+ */
+const ALLOWED_EXTENSIONS = new Set(['pdf', 'md', 'markdown', 'txt', 'docx']);
+
+/**
+ * Extract file extension from filename
+ */
+function getExtension(filename: string): string {
+  const parts = filename.split('.');
+  return parts.length > 1 ? (parts.pop() ?? '').toLowerCase() : '';
+}
+
+// Configure multer for memory storage with file filter
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: env.MAX_DOCUMENT_SIZE,
+  },
+  fileFilter: (_req, file, cb) => {
+    const ext = getExtension(file.originalname);
+    if (ALLOWED_DOCUMENT_MIMES.has(file.mimetype) || ALLOWED_EXTENSIONS.has(ext)) {
+      cb(null, true);
+    } else {
+      cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'file'));
+    }
   },
 });
 
@@ -31,6 +64,17 @@ function handleMulterError(err: Error, _req: Request, res: Response, next: NextF
         error: {
           code: 'FILE_TOO_LARGE',
           message: `File too large. Maximum size is ${maxMB}MB`,
+        },
+      });
+      return;
+    }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      const allowedExts = [...ALLOWED_EXTENSIONS].join(', ');
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_FILE_TYPE',
+          message: `Invalid file type. Allowed extensions: ${allowedExts}`,
         },
       });
       return;

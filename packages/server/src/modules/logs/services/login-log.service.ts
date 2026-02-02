@@ -1,4 +1,6 @@
 import type { LoginLog } from '@shared/db/schema/system/login-logs.schema';
+import type { PaginationMeta } from '@shared/utils/pagination';
+import { buildPagination } from '@shared/utils/pagination';
 import {
   loginLogRepository,
   type LoginLogListParams,
@@ -21,12 +23,7 @@ export interface LoginLogListItem {
 
 export interface LoginLogListResponse {
   logs: LoginLogListItem[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: PaginationMeta;
 }
 
 /**
@@ -58,12 +55,7 @@ export const loginLogService = {
 
     return {
       logs: logs.map(toLoginLogListItem),
-      pagination: {
-        page: params.page,
-        pageSize: params.pageSize,
-        total,
-        totalPages: Math.ceil(total / params.pageSize),
-      },
+      pagination: buildPagination(total, params.page, params.pageSize),
     };
   },
 
