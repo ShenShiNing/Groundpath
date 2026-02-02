@@ -7,8 +7,9 @@ import {
   mockFolder,
   mockChildFolder,
   mockGrandchildFolder,
+  mockKnowledgeBaseId,
   logTestInfo,
-} from './mocks/document.service.mocks';
+} from '@tests/__mocks__/document.mocks';
 
 // ==================== Mocks ====================
 
@@ -40,17 +41,51 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
   },
 }));
 
+// Mock shared logger to avoid circular dependencies
+vi.mock('@shared/logger', () => ({
+  createLogger: vi.fn(() => ({
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  })),
+}));
+
+// Mock @modules/user to avoid circular import issues
+vi.mock('@modules/user', () => ({
+  userService: {
+    findById: vi.fn(),
+    findByEmail: vi.fn(),
+    updateLastLogin: vi.fn(),
+  },
+  userRepository: {
+    findById: vi.fn(),
+    findByEmail: vi.fn(),
+  },
+}));
+
+// Mock knowledge base service
+vi.mock('@modules/knowledge-base', () => ({
+  knowledgeBaseService: {
+    validateOwnership: vi.fn(),
+    getEmbeddingConfig: vi.fn(),
+  },
+}));
+
 // Import after mocks
 import { folderService } from '@modules/document/services/folder.service';
 import { folderRepository } from '@modules/document/repositories/folder.repository';
 import { documentRepository } from '@modules/document/repositories/document.repository';
+import { knowledgeBaseService } from '@modules/knowledge-base';
 
 // ==================== create ====================
 // 场景：创建文件夹
-// 职责：验证父级文件夹 → 构建路径 → 创建数据库记录
+// 职责：验证知识库 → 验证父级文件夹 → 构建路径 → 创建数据库记录
 describe('folderService > create', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default mock for knowledgeBaseService.validateOwnership
+    vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(undefined);
   });
 
   // 场景 1：创建根文件夹（无 parentId）
@@ -60,6 +95,7 @@ describe('folderService > create', () => {
 
     const result = await folderService.create(mockUserId, {
       name: 'Test Folder',
+      knowledgeBaseId: mockKnowledgeBaseId,
     });
 
     logTestInfo(
@@ -68,6 +104,10 @@ describe('folderService > create', () => {
       { id: result.id, path: result.path }
     );
 
+    expect(knowledgeBaseService.validateOwnership).toHaveBeenCalledWith(
+      mockKnowledgeBaseId,
+      mockUserId
+    );
     expect(result.id).toBe(mockFolderId);
     expect(result.path).toBe('/');
     expect(folderRepository.findByIdAndUser).not.toHaveBeenCalled();
@@ -83,6 +123,7 @@ describe('folderService > create', () => {
     const result = await folderService.create(mockUserId, {
       name: 'Child Folder',
       parentId: mockFolderId,
+      knowledgeBaseId: mockKnowledgeBaseId,
     });
 
     logTestInfo(
@@ -105,6 +146,7 @@ describe('folderService > create', () => {
       await folderService.create(mockUserId, {
         name: 'Orphan',
         parentId: 'nonexistent-parent',
+        knowledgeBaseId: mockKnowledgeBaseId,
       });
     } catch (error) {
       actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
@@ -129,7 +171,10 @@ describe('folderService > create', () => {
       name: 'No Desc',
     });
 
-    const result = await folderService.create(mockUserId, { name: 'No Desc' });
+    const result = await folderService.create(mockUserId, {
+      name: 'No Desc',
+      knowledgeBaseId: mockKnowledgeBaseId,
+    });
 
     const createCall = vi.mocked(folderRepository.create).mock.calls[0]?.[0];
     logTestInfo({ name: 'No Desc' }, { name: 'No Desc' }, { name: createCall?.name });

@@ -8,7 +8,7 @@ import {
   mockIpAddress,
   mockVerificationCode,
   logTestInfo,
-} from './mocks/email.service.mocks';
+} from '@tests/__mocks__/email.mocks';
 
 // ==================== Mocks ====================
 

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { AuthError } from '@shared/errors/errors';
-import { mockUser, mockTokenPair, mockSessions, logTestInfo } from './mocks/auth.service.mocks';
+import { mockUser, mockTokenPair, mockSessions, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
 

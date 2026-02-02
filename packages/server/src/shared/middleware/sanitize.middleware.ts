@@ -90,9 +90,12 @@ export function sanitizeMiddleware(req: Request, _res: Response, next: NextFunct
     req.body = sanitizeObject(req.body as Record<string, unknown>);
   }
 
-  // Sanitize query parameters
+  // Sanitize query parameters (mutate in place since req.query is read-only in Express 5)
   if (req.query && typeof req.query === 'object') {
-    req.query = sanitizeObject(req.query as Record<string, unknown>) as typeof req.query;
+    const sanitizedQuery = sanitizeObject(req.query as Record<string, unknown>);
+    for (const key of Object.keys(req.query)) {
+      (req.query as Record<string, unknown>)[key] = sanitizedQuery[key];
+    }
   }
 
   next();
@@ -134,7 +137,10 @@ export function createSanitizeMiddleware(additionalSkipFields: string[] = []) {
     }
 
     if (req.query && typeof req.query === 'object') {
-      req.query = sanitize(req.query) as typeof req.query;
+      const sanitizedQuery = sanitize(req.query) as Record<string, unknown>;
+      for (const key of Object.keys(req.query)) {
+        (req.query as Record<string, unknown>)[key] = sanitizedQuery[key];
+      }
     }
 
     next();

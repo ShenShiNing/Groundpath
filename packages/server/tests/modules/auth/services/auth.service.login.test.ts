@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { LoginRequest } from '@knowledge-agent/shared/types';
 import { AuthError } from '@shared/errors/errors';
-import { mockUser, mockTokenPair, logTestInfo } from './mocks/auth.service.mocks';
+import { mockUser, mockTokenPair, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
 
@@ -236,7 +236,11 @@ describe('authService > login', () => {
       'Invalid credentials',
       ipAddress,
       userAgent,
-      undefined
+      undefined,
+      expect.objectContaining({
+        deviceInfo: expect.any(Object),
+        geoInfo: expect.any(Object),
+      })
     );
   });
 
@@ -284,7 +288,11 @@ describe('authService > login', () => {
       'Invalid password',
       ipAddress,
       userAgent,
-      'user-123'
+      'user-123',
+      expect.objectContaining({
+        deviceInfo: expect.any(Object),
+        geoInfo: expect.any(Object),
+      })
     );
   });
 
@@ -323,7 +331,9 @@ describe('authService > login', () => {
     const calledWith = vi.mocked(loginLogRepository.recordSuccess).mock.calls[0];
     logTestInfo(
       { userId: 'user-123', email: validCredentials.email },
-      { loggedWith: ['user-123', 'test@example.com', 'password', ipAddress, userAgent] },
+      {
+        loggedWith: ['user-123', 'test@example.com', 'password', ipAddress, userAgent, 'enhanced'],
+      },
       { loggedWith: calledWith }
     );
 
@@ -332,7 +342,11 @@ describe('authService > login', () => {
       'test@example.com',
       'password',
       ipAddress,
-      userAgent
+      userAgent,
+      expect.objectContaining({
+        deviceInfo: expect.any(Object),
+        geoInfo: expect.any(Object),
+      })
     );
   });
 

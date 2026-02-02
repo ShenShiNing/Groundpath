@@ -13,8 +13,9 @@ import {
   mockStorageResult,
   mockTextStorageResult,
   mockMarkdownStorageResult,
+  mockKnowledgeBaseId,
   logTestInfo,
-} from './mocks/document.service.mocks';
+} from '@tests/__mocks__/document.mocks';
 
 // ==================== Mocks ====================
 
@@ -61,19 +62,48 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
   },
 }));
 
+vi.mock('@modules/knowledge-base', () => ({
+  knowledgeBaseService: {
+    validateOwnership: vi.fn(),
+    getEmbeddingConfig: vi.fn(),
+  },
+}));
+
+vi.mock('@modules/rag/services/processing.service', () => ({
+  processingService: {
+    processDocument: vi.fn(() => Promise.resolve()),
+  },
+}));
+
+vi.mock('@shared/logger/operation-logger', () => ({
+  logOperation: vi.fn(),
+}));
+
+vi.mock('@shared/logger', () => ({
+  createLogger: vi.fn(() => ({
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  })),
+}));
+
 // Import after mocks
 import { documentService } from '@modules/document/services/document.service';
 import { documentRepository } from '@modules/document/repositories/document.repository';
 import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
 import { folderRepository } from '@modules/document/repositories/folder.repository';
 import { documentStorageService } from '@modules/document/services/document-storage.service';
+import { knowledgeBaseService } from '@modules/knowledge-base';
 
 // ==================== upload ====================
 // 场景：用户上传新文档
-// 职责：文件验证 → 文件夹验证 → 上传到R2 → 文本提取 → 创建数据库记录
+// 职责：文件验证 → 知识库验证 → 文件夹验证 → 上传到R2 → 文本提取 → 创建数据库记录
 describe('documentService > upload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default mock for knowledgeBaseService.validateOwnership
+    vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(undefined);
   });
 
   // 场景 1：成功上传 PDF 文档到指定文件夹
@@ -92,6 +122,7 @@ describe('documentService > upload', () => {
       title: 'My PDF',
       description: 'A test PDF',
       folderId: mockFolderId,
+      knowledgeBaseId: mockKnowledgeBaseId,
     });
 
     logTestInfo(
@@ -100,6 +131,10 @@ describe('documentService > upload', () => {
       { id: result.id, title: result.title }
     );
 
+    expect(knowledgeBaseService.validateOwnership).toHaveBeenCalledWith(
+      mockKnowledgeBaseId,
+      mockUserId
+    );
     expect(documentStorageService.validateFile).toHaveBeenCalledWith(mockFile);
     expect(folderRepository.findByIdAndUser).toHaveBeenCalledWith(mockFolderId, mockUserId);
     expect(documentStorageService.uploadDocument).toHaveBeenCalledWith(mockUserId, mockFile);
@@ -108,6 +143,7 @@ describe('documentService > upload', () => {
         id: 'generated-uuid-123',
         userId: mockUserId,
         folderId: mockFolderId,
+        knowledgeBaseId: mockKnowledgeBaseId,
         title: 'My PDF',
         description: 'A test PDF',
         currentVersion: 1,
@@ -128,7 +164,7 @@ describe('documentService > upload', () => {
       folderId: null,
     });
 
-    await documentService.upload(mockUserId, mockFile);
+    await documentService.upload(mockUserId, mockFile, { knowledgeBaseId: mockKnowledgeBaseId });
 
     logTestInfo(
       { folderId: 'undefined' },
@@ -157,7 +193,7 @@ describe('documentService > upload', () => {
       title: 'test',
     });
 
-    await documentService.upload(mockUserId, mockFile);
+    await documentService.upload(mockUserId, mockFile, { knowledgeBaseId: mockKnowledgeBaseId });
 
     const createdTitle = vi.mocked(documentRepository.create).mock.calls[0]?.[0]?.title;
     logTestInfo(
@@ -185,7 +221,9 @@ describe('documentService > upload', () => {
       documentType: 'text',
     });
 
-    await documentService.upload(mockUserId, mockTextFile);
+    await documentService.upload(mockUserId, mockTextFile, {
+      knowledgeBaseId: mockKnowledgeBaseId,
+    });
 
     const versionCreateCall = vi.mocked(documentVersionRepository.create).mock.calls[0]?.[0];
     logTestInfo(
@@ -213,7 +251,9 @@ describe('documentService > upload', () => {
       documentType: 'markdown',
     });
 
-    await documentService.upload(mockUserId, mockMarkdownFile);
+    await documentService.upload(mockUserId, mockMarkdownFile, {
+      knowledgeBaseId: mockKnowledgeBaseId,
+    });
 
     const versionCreateCall = vi.mocked(documentVersionRepository.create).mock.calls[0]?.[0];
     logTestInfo(
@@ -236,7 +276,7 @@ describe('documentService > upload', () => {
       id: 'generated-uuid-123',
     });
 
-    await documentService.upload(mockUserId, mockFile);
+    await documentService.upload(mockUserId, mockFile, { knowledgeBaseId: mockKnowledgeBaseId });
 
     logTestInfo(
       { documentType: 'pdf' },
@@ -274,7 +314,9 @@ describe('documentService > upload', () => {
       id: 'generated-uuid-123',
     });
 
-    await documentService.upload(mockUserId, longTextFile);
+    await documentService.upload(mockUserId, longTextFile, {
+      knowledgeBaseId: mockKnowledgeBaseId,
+    });
 
     const versionCreateCall = vi.mocked(documentVersionRepository.create).mock.calls[0]?.[0];
     logTestInfo(
@@ -296,12 +338,16 @@ describe('documentService > upload', () => {
 
     let actual: { code: string; statusCode: number } | null = null;
     try {
-      await documentService.upload(mockUserId, {
-        buffer: Buffer.from('exe'),
-        originalname: 'test.exe',
-        mimetype: 'application/x-msdownload',
-        size: 1024,
-      });
+      await documentService.upload(
+        mockUserId,
+        {
+          buffer: Buffer.from('exe'),
+          originalname: 'test.exe',
+          mimetype: 'application/x-msdownload',
+          size: 1024,
+        },
+        { knowledgeBaseId: mockKnowledgeBaseId }
+      );
     } catch (error) {
       actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
     }
@@ -326,6 +372,7 @@ describe('documentService > upload', () => {
     try {
       await documentService.upload(mockUserId, mockFile, {
         folderId: 'nonexistent-folder',
+        knowledgeBaseId: mockKnowledgeBaseId,
       });
     } catch (error) {
       actual = { code: (error as AuthError).code, statusCode: (error as AuthError).statusCode };
@@ -355,7 +402,7 @@ describe('documentService > upload', () => {
       currentVersion: 1,
     });
 
-    await documentService.upload(mockUserId, mockFile);
+    await documentService.upload(mockUserId, mockFile, { knowledgeBaseId: mockKnowledgeBaseId });
 
     const createCall = vi.mocked(documentRepository.create).mock.calls[0]?.[0];
     logTestInfo({}, { currentVersion: 1 }, { currentVersion: createCall?.currentVersion });

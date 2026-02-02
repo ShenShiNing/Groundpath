@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { RegisterRequest } from '@knowledge-agent/shared/types';
 import { AuthError } from '@shared/errors/errors';
-import { mockTokenPair, mockCreatedUser, logTestInfo } from './mocks/auth.service.mocks';
+import { mockTokenPair, mockCreatedUser, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
 
@@ -224,7 +224,11 @@ describe('authService > register', () => {
       'newuser@example.com',
       'password',
       ipAddress,
-      userAgent
+      userAgent,
+      expect.objectContaining({
+        deviceInfo: expect.any(Object),
+        geoInfo: expect.any(Object),
+      })
     );
   });
 

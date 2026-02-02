@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { AuthError } from '@shared/errors/errors';
-import { mockUser, logTestInfo } from './mocks/auth.service.mocks';
+import { mockUser, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
 
@@ -21,8 +21,9 @@ vi.mock('@shared/utils/jwt.utils', () => ({
   verifyRefreshToken: vi.fn(),
 }));
 
-vi.mock('@modules/user/repositories/user.repository', () => ({
-  userRepository: {
+// Mock userService (not userRepository) - authService uses userService
+vi.mock('@modules/user', () => ({
+  userService: {
     findByEmail: vi.fn(),
     findById: vi.fn(),
     updateLastLogin: vi.fn(),
@@ -61,9 +62,15 @@ vi.mock('@shared/middleware/rate-limit.middleware', () => ({
   resetAccountRateLimit: vi.fn(),
 }));
 
+// Mock withTransaction to bypass real database
+vi.mock('@shared/db/db.utils', () => ({
+  withTransaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
+  getDbContext: vi.fn((tx?: unknown) => tx ?? {}),
+}));
+
 // Import after mocks
 import { authService } from '@modules/auth/services/auth.service';
-import { userRepository } from '@modules/user/repositories/user.repository';
+import { userService } from '@modules/user';
 import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
 
 // ==================== changePassword ====================
@@ -81,10 +88,10 @@ describe('authService > changePassword', () => {
   // 场景 1：正常修改密码
   // 应验证旧密码、哈希新密码、更新数据库、吊销所有令牌
   it('should change password successfully with valid old password', async () => {
-    vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+    vi.mocked(userService.findById).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(bcrypt.hash).mockResolvedValue('$2a$12$newhashedpassword' as never);
-    vi.mocked(userRepository.updatePassword).mockResolvedValue(undefined);
+    vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
 
     await authService.changePassword(userId, oldPassword, newPassword);
@@ -93,22 +100,22 @@ describe('authService > changePassword', () => {
       { userId, oldPassword: '***', newPassword: '***' },
       { passwordUpdated: true, tokensRevoked: true },
       {
-        passwordUpdated: vi.mocked(userRepository.updatePassword).mock.calls.length > 0,
+        passwordUpdated: vi.mocked(userService.updatePassword).mock.calls.length > 0,
         tokensRevoked: vi.mocked(refreshTokenRepository.revokeAllForUser).mock.calls.length > 0,
       }
     );
 
-    expect(userRepository.updatePassword).toHaveBeenCalledWith(userId, '$2a$12$newhashedpassword');
-    expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith(userId);
+    expect(userService.updatePassword).toHaveBeenCalledWith(userId, '$2a$12$newhashedpassword', {});
+    expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith(userId, {});
   });
 
   // 场景 2：验证旧密码是否正确比对
   // 应使用 bcrypt.compare 验证旧密码
   it('should verify old password with bcrypt', async () => {
-    vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+    vi.mocked(userService.findById).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(bcrypt.hash).mockResolvedValue('$2a$12$newhashedpassword' as never);
-    vi.mocked(userRepository.updatePassword).mockResolvedValue(undefined);
+    vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
 
     await authService.changePassword(userId, oldPassword, newPassword);
@@ -126,10 +133,10 @@ describe('authService > changePassword', () => {
   // 场景 3：验证新密码正确哈希
   // 应使用 bcrypt.hash 对新密码进行哈希
   it('should hash new password with bcrypt', async () => {
-    vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+    vi.mocked(userService.findById).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(bcrypt.hash).mockResolvedValue('$2a$12$newhashedpassword' as never);
-    vi.mocked(userRepository.updatePassword).mockResolvedValue(undefined);
+    vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
 
     await authService.changePassword(userId, oldPassword, newPassword);
@@ -147,7 +154,7 @@ describe('authService > changePassword', () => {
   // 场景 4：用户不存在
   // 应抛出 TOKEN_INVALID 错误
   it('should throw TOKEN_INVALID when user not found', async () => {
-    vi.mocked(userRepository.findById).mockResolvedValue(undefined);
+    vi.mocked(userService.findById).mockResolvedValue(undefined);
 
     let actual: { code: string } | null = null;
     try {
@@ -166,7 +173,7 @@ describe('authService > changePassword', () => {
   // 应抛出 TOKEN_INVALID 错误
   it('should throw TOKEN_INVALID when user has no password (OAuth user)', async () => {
     const oauthUser = { ...mockUser, password: null };
-    vi.mocked(userRepository.findById).mockResolvedValue(oauthUser);
+    vi.mocked(userService.findById).mockResolvedValue(oauthUser);
 
     let actual: { code: string } | null = null;
     try {
@@ -184,7 +191,7 @@ describe('authService > changePassword', () => {
   // 场景 6：旧密码不正确
   // 应抛出 INVALID_PASSWORD 错误 (400)
   it('should throw INVALID_PASSWORD when old password is incorrect', async () => {
-    vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+    vi.mocked(userService.findById).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
     let actual: { code: string; statusCode: number } | null = null;
@@ -204,10 +211,10 @@ describe('authService > changePassword', () => {
   // 场景 7：密码更新后应吊销所有 refresh token
   // 安全措施：强制所有设备重新登录
   it('should revoke all refresh tokens after password change', async () => {
-    vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+    vi.mocked(userService.findById).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(bcrypt.hash).mockResolvedValue('$2a$12$newhashedpassword' as never);
-    vi.mocked(userRepository.updatePassword).mockResolvedValue(undefined);
+    vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(5);
 
     await authService.changePassword(userId, oldPassword, newPassword);
@@ -219,7 +226,7 @@ describe('authService > changePassword', () => {
       { revokedForUser: revokeCalls[0]?.[0], callCount: revokeCalls.length }
     );
 
-    expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith(userId);
+    expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith(userId, {});
     expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledTimes(1);
   });
 });

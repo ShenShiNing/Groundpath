@@ -24,11 +24,13 @@ vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
     revoke: vi.fn(),
     revokeAllForUser: vi.fn(),
     getActiveSessionsForUser: vi.fn(),
+    updateLastUsed: vi.fn(),
   },
 }));
 
-vi.mock('@modules/user/repositories/user.repository', () => ({
-  userRepository: {
+// Mock userService (not userRepository) - tokenService uses userService.findById
+vi.mock('@modules/user', () => ({
+  userService: {
     findById: vi.fn(),
   },
 }));
@@ -40,9 +42,15 @@ vi.mock('@config/auth.config', () => ({
   },
 }));
 
+// Mock withTransaction to bypass real database
+vi.mock('@shared/db/db.utils', () => ({
+  withTransaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
+  getDbContext: vi.fn((tx?: unknown) => tx ?? {}),
+}));
+
 // Import mocked modules
 import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
-import { userRepository } from '@modules/user/repositories/user.repository';
+import { userService } from '@modules/user';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -130,7 +138,7 @@ describe('tokenService', () => {
     });
 
     // 场景 4：refresh token 持久化到数据库
-    // 确保调用 repository.create 并传入正确的参数（tokenId、userId、token 字符串、IP、设备信息）
+    // 确保调用 repository.create 并传入正确的参数（tokenId、userId、token 字符串、IP、设备信息、tx）
     it('should store refresh token in database', async () => {
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
 
@@ -143,6 +151,7 @@ describe('tokenService', () => {
         'mock-refresh-token',
         ipAddress,
         deviceInfo,
+        undefined, // tx parameter (undefined when called without transaction)
       ];
       logTestInfo(
         { userId: validUser.sub, ip: ipAddress, deviceInfo },
@@ -155,7 +164,8 @@ describe('tokenService', () => {
         'user-123',
         'mock-refresh-token',
         ipAddress,
-        deviceInfo
+        deviceInfo,
+        undefined
       );
     });
 
@@ -174,7 +184,8 @@ describe('tokenService', () => {
         'user-123',
         'mock-refresh-token',
         null,
-        deviceInfo
+        deviceInfo,
+        undefined
       );
     });
 
@@ -197,7 +208,8 @@ describe('tokenService', () => {
         'user-123',
         'mock-refresh-token',
         ipAddress,
-        null
+        null,
+        undefined
       );
     });
   });
@@ -226,7 +238,7 @@ describe('tokenService', () => {
       ipAddress: '192.168.1.1',
       deviceInfo: null,
       createdAt: new Date(),
-      lastUsedAt: new Date(),
+      lastUsedAt: new Date(Date.now() - 60000), // 60 seconds ago - outside replay window
     };
 
     const mockUser = {
@@ -254,9 +266,10 @@ describe('tokenService', () => {
     it('should refresh tokens successfully', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
-      vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+      vi.mocked(userService.findById).mockResolvedValue(mockUser);
       vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
+      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       const result = await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
 
@@ -276,9 +289,10 @@ describe('tokenService', () => {
     it('should verify the refresh token JWT', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
-      vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+      vi.mocked(userService.findById).mockResolvedValue(mockUser);
       vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
+      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
 
@@ -327,6 +341,7 @@ describe('tokenService', () => {
         storedTokenWithDifferentString
       );
       vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
+      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       let actual: { code: string; revokedAll: boolean } | null = null;
       try {
@@ -346,7 +361,7 @@ describe('tokenService', () => {
       );
 
       expect(actual?.revokedAll).toBe(true);
-      expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123');
+      expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
     });
 
     // 场景 5：用户不存在（可能已被删除）
@@ -354,8 +369,9 @@ describe('tokenService', () => {
     it('should throw TOKEN_INVALID if user not found', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
-      vi.mocked(userRepository.findById).mockResolvedValue(undefined);
+      vi.mocked(userService.findById).mockResolvedValue(undefined);
       vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
+      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       let actual: { code: string } | null = null;
       try {
@@ -376,8 +392,9 @@ describe('tokenService', () => {
       const bannedUser = { ...mockUser, status: 'banned' as const };
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
-      vi.mocked(userRepository.findById).mockResolvedValue(bannedUser);
+      vi.mocked(userService.findById).mockResolvedValue(bannedUser);
       vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(2);
+      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       let actual: { code: string; statusCode: number; revokedAll: boolean } | null = null;
       try {
@@ -395,7 +412,7 @@ describe('tokenService', () => {
 
       expect(actual?.code).toBe(AUTH_ERROR_CODES.USER_BANNED);
       expect(actual?.statusCode).toBe(403);
-      expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123');
+      expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
     });
 
     // 场景 7：令牌轮换 — 旧 token 被吊销
@@ -403,9 +420,10 @@ describe('tokenService', () => {
     it('should revoke old token (token rotation)', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
-      vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+      vi.mocked(userService.findById).mockResolvedValue(mockUser);
       vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
+      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
 
@@ -416,7 +434,7 @@ describe('tokenService', () => {
         { revokedTokenId }
       );
 
-      expect(refreshTokenRepository.revoke).toHaveBeenCalledWith('token-id-456');
+      expect(refreshTokenRepository.revoke).toHaveBeenCalledWith('token-id-456', {});
     });
   });
 

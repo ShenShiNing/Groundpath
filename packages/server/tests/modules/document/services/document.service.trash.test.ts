@@ -7,7 +7,7 @@ import {
   mockDeletedDocument,
   mockDocumentVersion,
   logTestInfo,
-} from './mocks/document.service.mocks';
+} from '@tests/__mocks__/document.mocks';
 
 // ==================== Mocks ====================
 
@@ -59,6 +59,33 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
     deleteDocument: vi.fn(),
     getDocumentStream: vi.fn(),
   },
+}));
+
+vi.mock('@modules/knowledge-base', () => ({
+  knowledgeBaseService: {
+    validateOwnership: vi.fn(),
+    getEmbeddingConfig: vi.fn(() =>
+      Promise.resolve({
+        collectionName: 'test-collection',
+      })
+    ),
+  },
+}));
+
+vi.mock('@modules/vector', () => ({
+  vectorRepository: {
+    deleteByDocumentId: vi.fn(() => Promise.resolve()),
+  },
+}));
+
+vi.mock('@modules/rag/services/processing.service', () => ({
+  processingService: {
+    processDocument: vi.fn(() => Promise.resolve()),
+  },
+}));
+
+vi.mock('@shared/logger/operation-logger', () => ({
+  logOperation: vi.fn(),
 }));
 
 // Mock logger - use inline object to avoid hoisting issues

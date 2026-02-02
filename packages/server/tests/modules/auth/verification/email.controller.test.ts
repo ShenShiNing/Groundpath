@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import { AuthError } from '@shared/errors/errors';
-import { logTestInfo } from './mocks/email.service.mocks';
+import { logTestInfo } from '@tests/__mocks__/email.mocks';
 
 // ==================== Mocks ====================
 

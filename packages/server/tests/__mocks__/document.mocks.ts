@@ -8,10 +8,12 @@ export const mockUserId = 'user-123';
 export const mockFolderId = 'folder-456';
 export const mockDocumentId = 'doc-789';
 export const mockVersionId = 'version-101';
+export const mockKnowledgeBaseId = 'kb-123';
 
 export const mockFolder: Folder = {
   id: mockFolderId,
   userId: mockUserId,
+  knowledgeBaseId: mockKnowledgeBaseId,
   parentId: null,
   name: 'Test Folder',
   path: '/',
@@ -26,6 +28,7 @@ export const mockFolder: Folder = {
 export const mockChildFolder: Folder = {
   id: 'folder-child-1',
   userId: mockUserId,
+  knowledgeBaseId: mockKnowledgeBaseId,
   parentId: mockFolderId,
   name: 'Child Folder',
   path: `/${mockFolderId}/`,
@@ -40,6 +43,7 @@ export const mockChildFolder: Folder = {
 export const mockGrandchildFolder: Folder = {
   id: 'folder-grandchild-1',
   userId: mockUserId,
+  knowledgeBaseId: mockKnowledgeBaseId,
   parentId: 'folder-child-1',
   name: 'Grandchild Folder',
   path: `/${mockFolderId}/folder-child-1/`,
@@ -55,6 +59,7 @@ export const mockDocument: Document = {
   id: mockDocumentId,
   userId: mockUserId,
   folderId: mockFolderId,
+  knowledgeBaseId: mockKnowledgeBaseId,
   title: 'Test Document',
   description: 'Test document description',
   fileName: 'test.pdf',
@@ -78,6 +83,7 @@ export const mockDeletedDocument: Document = {
   ...mockDocument,
   id: 'doc-deleted-1',
   title: 'Deleted Document',
+  knowledgeBaseId: mockKnowledgeBaseId,
   deletedBy: mockUserId,
   deletedAt: new Date('2024-01-15'),
 };

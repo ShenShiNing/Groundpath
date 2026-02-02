@@ -8,7 +8,7 @@ import {
   mockDocumentVersion,
   mockFolder,
   logTestInfo,
-} from './mocks/document.service.mocks';
+} from '@tests/__mocks__/document.mocks';
 
 // ==================== Mocks ====================
 
@@ -54,6 +54,32 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
     deleteDocument: vi.fn(),
     getDocumentStream: vi.fn(),
   },
+}));
+
+vi.mock('@modules/knowledge-base', () => ({
+  knowledgeBaseService: {
+    validateOwnership: vi.fn(),
+    getEmbeddingConfig: vi.fn(),
+  },
+}));
+
+vi.mock('@modules/rag/services/processing.service', () => ({
+  processingService: {
+    processDocument: vi.fn(() => Promise.resolve()),
+  },
+}));
+
+vi.mock('@shared/logger/operation-logger', () => ({
+  logOperation: vi.fn(),
+}));
+
+vi.mock('@shared/logger', () => ({
+  createLogger: vi.fn(() => ({
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  })),
 }));
 
 // Import after mocks

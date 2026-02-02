@@ -7,6 +7,7 @@ export default defineProject({
       '@shared': path.resolve(__dirname, 'src/shared'),
       '@modules': path.resolve(__dirname, 'src/modules'),
       '@config': path.resolve(__dirname, 'src/shared/config'),
+      '@tests': path.resolve(__dirname, 'tests'),
     },
   },
   test: {
