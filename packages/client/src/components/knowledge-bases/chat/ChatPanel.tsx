@@ -150,10 +150,10 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
         </div>
 
         {/* Main content with optional sidebar */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 min-h-0">
           {/* Sidebar */}
           {showSidebar && (
-            <div className="w-50 h-full border-r flex-shrink-0">
+            <div className="w-50 h-full border-r shrink-0">
               <ConversationList
                 knowledgeBaseId={knowledgeBaseId}
                 currentConversationId={conversationId}
@@ -176,9 +176,9 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
 
             {/* Messages */}
             <div className="flex-1 min-h-0">
-              <ScrollArea className="h-full px-4 py-4">
+              <ScrollArea className="h-full py-4">
                 {messages.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-3 opacity-60">
+                  <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-3 opacity-60 px-4">
                     <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
                       <Sparkles className="size-6 text-primary" />
                     </div>
@@ -189,7 +189,7 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
                     </p>
                   </div>
                 ) : (
-                  <div>
+                  <div className="pl-4 pr-5 w-full">
                     {messages.map((message) => (
                       <ChatMessage
                         key={message.id}

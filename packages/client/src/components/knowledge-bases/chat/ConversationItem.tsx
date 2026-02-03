@@ -18,8 +18,11 @@ export interface ConversationItemProps {
 // Helpers
 // ============================================================================
 
-function formatDate(date: string): string {
+function formatDate(date: Date | string | null): string {
+  if (!date) return '';
   const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+
   const now = new Date();
   const diff = now.getTime() - d.getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -28,10 +31,11 @@ function formatDate(date: string): string {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } else if (days === 1) {
     return 'Yesterday';
-  } else if (days < 7) {
-    return d.toLocaleDateString([], { weekday: 'short' });
   } else {
-    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }
 
@@ -63,8 +67,7 @@ export function ConversationItem({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{conversation.title || 'New conversation'}</p>
         <p className="text-[10px] text-muted-foreground">
-          {formatDate(conversation.updatedAt)}
-          {conversation.messageCount > 0 && ` · ${conversation.messageCount} messages`}
+          {formatDate(conversation.lastMessageAt || conversation.createdAt)}
         </p>
       </div>
       <Button
