@@ -15,10 +15,8 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  isInitialized: boolean;
 
   // 操作
-  initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (data: Omit<RegisterRequest, 'deviceInfo'>) => Promise<void>;
   registerWithCode: (data: Omit<RegisterWithCodeRequest, 'deviceInfo'>) => Promise<void>;
@@ -38,44 +36,6 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
-      isInitialized: false,
-
-      // 初始化：应用启动时验证 token 有效性
-      initialize: async () => {
-        const { accessToken, refreshToken, isInitialized } = get();
-
-        if (isInitialized) return;
-
-        if (!accessToken || !refreshToken) {
-          set({ isInitialized: true });
-          return;
-        }
-
-        set({ isLoading: true });
-
-        try {
-          // 尝试刷新 token 以验证会话有效性
-          const response = await authApi.refresh(refreshToken);
-          set({
-            user: response.user,
-            accessToken: response.tokens.accessToken,
-            refreshToken: response.tokens.refreshToken,
-            isAuthenticated: true,
-            isInitialized: true,
-            isLoading: false,
-          });
-        } catch {
-          // Token 无效，清除认证状态
-          set({
-            user: null,
-            accessToken: null,
-            refreshToken: null,
-            isAuthenticated: false,
-            isInitialized: true,
-            isLoading: false,
-          });
-        }
-      },
 
       // 登录
       login: async (email: string, password: string) => {
@@ -143,8 +103,9 @@ export const useAuthStore = create<AuthState>()(
           if (refreshToken) {
             await authApi.logout(refreshToken);
           }
-        } catch {
-          // 忽略登出错误，无论如何都清除本地状态
+        } catch (error) {
+          // 登出失败也要继续清除本地状态
+          console.error('[Auth] Logout API failed:', error);
         } finally {
           set({
             user: null,
@@ -162,8 +123,9 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           await authApi.logoutAll();
-        } catch {
-          // 忽略错误，无论如何都清除本地状态
+        } catch (error) {
+          // 登出失败也要继续清除本地状态
+          console.error('[Auth] Logout all API failed:', error);
         } finally {
           set({
             user: null,
@@ -212,18 +174,23 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// 在 store 创建后立即同步设置 token 访问器
-// 这确保在任何 API 请求发出之前，访问器已经就绪
+// ============================================================================
+// 初始化 Token 访问器
+// 在 store 创建后立即设置，确保在任何 API 请求发出之前访问器已就绪
+// ============================================================================
+
 setTokenAccessors({
   getAccessToken: () => useAuthStore.getState().accessToken,
   getRefreshToken: () => useAuthStore.getState().refreshToken,
   onTokenRefreshed: (tokens) => {
+    console.log('[Auth] Tokens refreshed automatically');
     useAuthStore.setState({
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     });
   },
   onAuthError: () => {
+    console.warn('[Auth] Authentication error, clearing session');
     useAuthStore.getState().clearAuth();
   },
 });

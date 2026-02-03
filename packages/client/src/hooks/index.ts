@@ -42,9 +42,21 @@ export {
   type DocumentTreeNode,
 } from './useKnowledgeBases';
 
+// Conversation hooks
+export { useConversations, useDeleteConversation, useUpdateConversation } from './useConversations';
+
 // Utility hooks
 export { useDebouncedValue } from './useDebouncedValue';
 
 // Upload hooks
 export { useUploadQueue } from './useUploadQueue';
 export type { QueueFileState, UploadQueueStats, StartUploadOptions } from './useUploadQueue';
+
+// LLM Configuration hooks
+export {
+  useLLMConfig,
+  useLLMProviders,
+  useLLMModels,
+  useUpdateLLMConfig,
+  useTestLLMConnection,
+} from './useLLMConfig';

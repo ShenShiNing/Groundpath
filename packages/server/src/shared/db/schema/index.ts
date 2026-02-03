@@ -17,3 +17,8 @@ export * from './document/folders.schema';
 export * from './document/documents.schema';
 export * from './document/document-versions.schema';
 export * from './document/document-chunks.schema';
+
+// AI schemas
+export * from './ai/llm-configs.schema';
+export * from './ai/conversations.schema';
+export * from './ai/messages.schema';

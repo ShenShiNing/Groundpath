@@ -24,8 +24,8 @@ function escapeHtml(str: string): string {
 }
 
 /**
- * Fields that should NOT be sanitized (passwords, tokens, etc.)
- * These fields contain user credentials that must be preserved exactly
+ * Fields that should NOT be sanitized (passwords, tokens, URLs, API keys, etc.)
+ * These fields contain user credentials or data that must be preserved exactly
  */
 const SKIP_SANITIZE_FIELDS = new Set([
   'password',
@@ -37,6 +37,10 @@ const SKIP_SANITIZE_FIELDS = new Set([
   'accessToken',
   'code',
   'verificationCode',
+  // API configuration fields
+  'apiKey',
+  'baseUrl',
+  'url',
 ]);
 
 /**

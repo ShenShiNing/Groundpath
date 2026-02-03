@@ -12,6 +12,7 @@ import { documentDetailRoute } from './documents.$id.route';
 import { trashRoute } from './trash.route';
 import { knowledgeBasesRoute } from './knowledge-bases.route';
 import { knowledgeBaseDetailRoute } from './knowledge-bases.$id.route';
+import { aiSettingsRoute } from './settings.ai.route';
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -27,4 +28,5 @@ export const routeTree = rootRoute.addChildren([
   trashRoute,
   knowledgeBasesRoute,
   knowledgeBaseDetailRoute,
+  aiSettingsRoute,
 ]);

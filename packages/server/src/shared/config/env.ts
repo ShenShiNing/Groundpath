@@ -101,6 +101,14 @@ const envSchema = z.object({
   CHUNK_SIZE: z.coerce.number().default(512),
   CHUNK_OVERLAP: z.coerce.number().default(50),
 
+  // Encryption (for API keys)
+  ENCRYPTION_KEY: z.string().min(32),
+
+  // LLM Providers (used as fallback when user hasn't configured their own)
+  ANTHROPIC_API_KEY: z.string().optional(),
+  DEEPSEEK_API_KEY: z.string().optional(),
+  DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
+
   // Logging
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 

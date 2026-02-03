@@ -7,6 +7,8 @@ import { documentRoutes, folderRoutes } from './modules/document';
 import { knowledgeBaseRoutes } from './modules/knowledge-base';
 import { logsRoutes } from './modules/logs';
 import { ragRoutes } from './modules/rag';
+import { llmRoutes } from './modules/llm';
+import { chatRoutes } from './modules/chat';
 import { env } from '@config/env';
 
 const router = express.Router();
@@ -48,5 +50,11 @@ router.use('/api/logs', logsRoutes);
 
 // RAG routes
 router.use('/api/rag', ragRoutes);
+
+// LLM configuration routes
+router.use('/api/llm', llmRoutes);
+
+// Chat routes
+router.use('/api/chat', chatRoutes);
 
 export default router;

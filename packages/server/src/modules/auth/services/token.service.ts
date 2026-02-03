@@ -82,17 +82,20 @@ export const tokenService = {
       // Token replay detection: if lastUsedAt was updated very recently,
       // this token may have been stolen and replayed by an attacker.
       // A legitimate client would not refresh the same token twice in quick succession.
-      if (storedToken.lastUsedAt) {
-        const lastUsedMs = new Date(storedToken.lastUsedAt).getTime();
-        const TOKEN_REPLAY_WINDOW_MS = 5000; // 5 seconds
-        if (Date.now() - lastUsedMs < TOKEN_REPLAY_WINDOW_MS) {
-          // Possible replay attack - revoke all tokens for this user
-          await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
-          throw Errors.auth(
-            AUTH_ERROR_CODES.TOKEN_INVALID,
-            'Suspicious token activity detected. All sessions have been revoked.'
-          );
-        }
+      const TOKEN_REPLAY_WINDOW_SECONDS = 5;
+      const wasRecentlyUsed = await refreshTokenRepository.wasUsedWithinSeconds(
+        payload.jti,
+        TOKEN_REPLAY_WINDOW_SECONDS,
+        tx
+      );
+
+      if (wasRecentlyUsed) {
+        // Possible replay attack - revoke all tokens for this user
+        await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
+        throw Errors.auth(
+          AUTH_ERROR_CODES.TOKEN_INVALID,
+          'Suspicious token activity detected. All sessions have been revoked.'
+        );
       }
 
       // Mark token as used before revoking

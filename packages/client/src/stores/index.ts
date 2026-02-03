@@ -6,3 +6,4 @@ export {
   type Citation,
   type ChatPanelState,
 } from './chatPanelStore';
+export { useAISettingsStore, canFetchModels, type TestStatus } from './aiSettingsStore';

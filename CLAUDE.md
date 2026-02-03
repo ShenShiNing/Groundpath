@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Knowledge Agent is a monorepo with a React frontend and Express backend, managed with pnpm workspaces.
+Knowledge Agent is a RAG (Retrieval-Augmented Generation) application with a React frontend and Express backend, managed with pnpm workspaces. It supports document upload, text extraction, vector embedding, and semantic search across knowledge bases.
 
 ## Commands
 
@@ -31,6 +31,25 @@ pnpm format           # Format code with Prettier
 pnpm format:check     # Check formatting without writing
 ```
 
+### Testing (Server)
+
+```bash
+cd packages/server
+pnpm test             # Run all tests once
+pnpm test:watch       # Run tests in watch mode
+pnpm test:coverage    # Run tests with coverage report
+```
+
+### Database (Drizzle ORM)
+
+```bash
+cd packages/server
+pnpm db:generate      # Generate migration files from schema changes
+pnpm db:migrate       # Run pending migrations
+pnpm db:push          # Push schema directly (dev only)
+pnpm db:studio        # Open Drizzle Studio GUI
+```
+
 ### Package-specific commands
 
 ```bash
@@ -45,7 +64,7 @@ pnpm -F @knowledge-agent/shared <command>   # Run command in shared package
 
 - `packages/client` - React 19 frontend with Vite, Tailwind CSS, and shadcn components
 - `packages/server` - Express 5 backend with TypeScript
-- `packages/shared` - Shared types, constants, and utilities for client and server
+- `packages/shared` - Shared types, constants, schemas, and utilities
 
 ### Frontend Stack
 
@@ -56,7 +75,6 @@ pnpm -F @knowledge-agent/shared <command>   # Run command in shared package
 - **TanStack Router** for file-based routing (`src/routes/`)
 - **TanStack Query** for server state management
 - **Zustand** for client state (`src/stores/`)
-- **Axios** for API requests
 
 ### Frontend Patterns
 
@@ -70,22 +88,50 @@ pnpm -F @knowledge-agent/shared <command>   # Run command in shared package
 
 - **Express 5** with TypeScript
 - **tsx** for development hot reload
-- **Drizzle ORM** with MySQL (schema at `src/db/schema/`)
+- **Drizzle ORM** with MySQL
+- **Qdrant** for vector storage
 - **JWT authentication** with access/refresh token pattern
-- Environment config via dotenv (`packages/server/.env`)
+- **Pino** for structured logging
 
 ### Backend Architecture
 
 ```
 packages/server/src/
-├── controller/     # Request handlers
-├── services/       # Business logic
-├── repositories/   # Database operations
-├── middleware/     # Auth middleware (authenticate, optionalAuthenticate)
-├── routes/         # Route definitions
-├── db/schema/      # Drizzle table definitions
-├── types/          # TypeScript interfaces
-└── utils/          # Helpers (errors.ts, jwtUtils.ts)
+├── modules/            # Feature modules (vertical slices)
+│   ├── auth/           # Authentication, OAuth, email verification
+│   ├── user/           # User profile management
+│   ├── document/       # Document CRUD, versions, folders
+│   ├── knowledge-base/ # Knowledge base management
+│   ├── embedding/      # Embedding providers (OpenAI, Zhipu, Ollama)
+│   ├── vector/         # Qdrant vector operations
+│   ├── rag/            # Document processing, chunking, search
+│   ├── storage/        # File storage (local, R2)
+│   └── logs/           # Operation and login logs
+├── shared/
+│   ├── config/         # Environment and auth config
+│   ├── db/             # Database connection and schema
+│   ├── errors/         # AppError class and Errors factory
+│   ├── middleware/     # Auth, validation, rate limiting
+│   ├── logger/         # Pino logger setup
+│   └── utils/          # JWT, pagination, request helpers
+└── router.ts           # Main route aggregation
+```
+
+Each module follows the pattern: `controllers/` → `services/` → `repositories/`
+
+### Error Handling
+
+Use `AppError` class with `Errors` factory for consistent error responses:
+
+```typescript
+import { Errors } from '@shared/errors';
+
+// General errors
+throw Errors.notFound('Document');
+throw Errors.validation('Invalid input', { field: 'email' });
+
+// Auth errors with typed codes
+throw Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Token has expired');
 ```
 
 ### Authentication Flow
@@ -93,19 +139,38 @@ packages/server/src/
 - Access tokens: 15 min expiry, contains user info
 - Refresh tokens: 7 days, stored in DB with rotation on use
 - Multi-device session tracking with device info
-- Custom `AuthError` class with error codes
+- OAuth providers: GitHub, Google
 
 ### Shared Package Exports
 
 Import from `@knowledge-agent/shared`:
 
-- `@knowledge-agent/shared/types` - Auth types (TokenPair, AuthResponse, LoginRequest)
+- `@knowledge-agent/shared/types` - All TypeScript interfaces
 - `@knowledge-agent/shared/constants` - HTTP_STATUS, ERROR_CODES, AUTH_ERROR_CODES
-- `@knowledge-agent/shared/utils` - isNullish, safeJsonParse, sleep
+- `@knowledge-agent/shared/schemas` - Zod validation schemas
+- `@knowledge-agent/shared/utils` - isNullish, safeJsonParse, sleep, parseDeviceInfo
+
+### Path Aliases (Server)
+
+- `@shared/*` → `src/shared/*`
+- `@modules/*` → `src/modules/*`
+- `@config/*` → `src/shared/config/*`
+- `@tests/*` → `tests/*`
 
 ## TypeScript Configuration
 
 - Bundler module resolution
 - Full strict mode enabled
 - `noUncheckedIndexedAccess` and `noImplicitOverride` enabled
-- Unused locals/parameters warnings disabled at root level, enabled in client
+
+## Answer
+
+- When answering the question, please use Chinese.
+
+## Code standards
+
+- Compliant with best practices
+- High scalability
+- High readability
+- High security
+- After the code has been modified, check for and remove the obsolete code.

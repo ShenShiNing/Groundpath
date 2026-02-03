@@ -1,4 +1,4 @@
-import { eq, and, gt, or, lt, inArray } from 'drizzle-orm';
+import { eq, and, gt, or, lt, inArray, sql } from 'drizzle-orm';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { db } from '@shared/db';
 import { now, addSeconds, getDbContext, type Transaction } from '@shared/db/db.utils';
@@ -50,6 +50,26 @@ export const refreshTokenRepository = {
       .limit(1);
 
     return result[0];
+  },
+
+  /**
+   * Check if token was used within the replay window (in seconds)
+   * Uses database time comparison to avoid timezone issues
+   */
+  async wasUsedWithinSeconds(tokenId: string, seconds: number, tx?: Transaction): Promise<boolean> {
+    const ctx = getDbContext(tx);
+    const result = await ctx
+      .select({ count: sql<number>`1` })
+      .from(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.id, tokenId),
+          gt(refreshTokens.lastUsedAt, sql`DATE_SUB(NOW(), INTERVAL ${seconds} SECOND)`)
+        )
+      )
+      .limit(1);
+
+    return result.length > 0;
   },
 
   /**

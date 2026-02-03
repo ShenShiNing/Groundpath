@@ -6,11 +6,16 @@ export { initiateGitHubLogin, initiateGoogleLogin } from './oauth';
 export { documentsApi } from './documents';
 export { foldersApi } from './folders';
 export { knowledgeBasesApi } from './knowledge-bases';
+export { llmConfigApi } from './llm-config';
 export {
   chatApi,
-  type ChatCitation,
-  type ChatMessage,
-  type SendMessageRequest,
-  type SendMessageResponse,
-  type ChatConversation,
+  conversationApi,
+  messageApi,
+  sendMessageWithSSE,
+  type SSEHandlers,
+  type ConversationInfo,
+  type ConversationListItem,
+  type MessageInfo,
+  type Citation,
+  type SSEEvent,
 } from './chat';

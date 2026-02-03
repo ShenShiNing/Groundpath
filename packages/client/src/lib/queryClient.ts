@@ -84,4 +84,12 @@ export const queryKeys = {
   user: {
     sessions: ['user', 'sessions'] as const,
   },
+
+  // LLM Configuration
+  llm: {
+    config: ['llm', 'config'] as const,
+    providers: ['llm', 'providers'] as const,
+    models: (provider: string, hasKey: boolean, baseUrl: string | null) =>
+      ['llm', 'models', provider, hasKey, baseUrl] as const,
+  },
 };
