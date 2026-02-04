@@ -33,6 +33,44 @@ function getRequestContext(req: Request) {
   };
 }
 
+/**
+ * Stream file download to response (shared logic for download and preview)
+ */
+async function streamDownload(req: Request, res: Response): Promise<void> {
+  const userId = requireUserId(req);
+  const documentId = getParamId(req, 'id');
+  if (!documentId) {
+    throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
+  }
+
+  const { body, fileName, contentType, contentLength } = await documentService.getDownloadStream(
+    documentId,
+    userId,
+    getRequestContext(req)
+  );
+
+  // Set download headers
+  const encodedFileName = encodeURIComponent(fileName);
+  const isInline = req.query.inline === '1';
+  const dispositionType = isInline ? 'inline' : 'attachment';
+  res.setHeader(
+    'Content-Disposition',
+    `${dispositionType}; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
+  );
+  if (contentType) {
+    res.setHeader('Content-Type', contentType);
+  }
+  if (contentLength) {
+    res.setHeader('Content-Length', contentLength);
+  }
+
+  // Stream the file to response
+  for await (const chunk of body) {
+    res.write(chunk);
+  }
+  res.end();
+}
+
 export const documentController = {
   /**
    * POST /api/documents
@@ -142,38 +180,7 @@ export const documentController = {
    * GET /api/documents/:id/download
    */
   download: asyncHandler(async (req: Request, res: Response) => {
-    const userId = requireUserId(req);
-    const documentId = getParamId(req, 'id');
-    if (!documentId) {
-      throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
-    }
-
-    const { body, fileName, contentType, contentLength } = await documentService.getDownloadStream(
-      documentId,
-      userId,
-      getRequestContext(req)
-    );
-
-    // Set download headers
-    const encodedFileName = encodeURIComponent(fileName);
-    const isInline = req.query.inline === '1';
-    const dispositionType = isInline ? 'inline' : 'attachment';
-    res.setHeader(
-      'Content-Disposition',
-      `${dispositionType}; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
-    );
-    if (contentType) {
-      res.setHeader('Content-Type', contentType);
-    }
-    if (contentLength) {
-      res.setHeader('Content-Length', contentLength);
-    }
-
-    // Stream the file to response
-    for await (const chunk of body) {
-      res.write(chunk);
-    }
-    res.end();
+    await streamDownload(req, res);
   }),
 
   /**
@@ -181,7 +188,7 @@ export const documentController = {
    */
   preview: asyncHandler(async (req: Request, res: Response) => {
     req.query.inline = '1';
-    return documentController.download(req, res);
+    await streamDownload(req, res);
   }),
 
   // ==================== Trash Operations ====================

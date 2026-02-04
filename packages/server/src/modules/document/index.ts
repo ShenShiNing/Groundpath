@@ -6,6 +6,8 @@ export * from './controllers/folder.controller';
 
 // Services
 export * from './services/document.service';
+export * from './services/document-trash.service';
+export * from './services/document-version.service';
 export * from './services/folder.service';
 export * from './services/document-storage.service';
 

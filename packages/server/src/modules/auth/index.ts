@@ -3,6 +3,8 @@ export * from './controllers/auth.controller';
 
 // Services
 export * from './services/auth.service';
+export * from './services/session.service';
+export * from './services/password.service';
 export * from './services/token.service';
 export * from './services/token-cleanup.service';
 

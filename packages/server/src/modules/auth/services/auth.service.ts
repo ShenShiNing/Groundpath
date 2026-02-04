@@ -16,10 +16,8 @@ import type { AccessTokenPayload } from '../types/auth.types';
 import { toUserPublicInfo } from '@shared/utils/user.mappers';
 import { Errors } from '@shared/errors';
 import { verifyRefreshToken } from '@shared/utils/jwt.utils';
-import { withTransaction } from '@shared/db/db.utils';
 import { userService } from '../../user';
 import { loginLogRepository } from '../repositories/login-log.repository';
-import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { tokenService } from './token.service';
 import { emailVerificationService } from '../verification/email-verification.service';
 import {
@@ -28,8 +26,9 @@ import {
 } from '@shared/middleware/rate-limit.middleware';
 import { detectDevice } from '../../logs/services/device-detection.service';
 import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
-import { logOperation } from '@shared/logger/operation-logger';
 import { createLogger } from '@shared/logger';
+import { sessionService } from './session.service';
+import { passwordService } from './password.service';
 
 const logger = createLogger('auth.service');
 
@@ -137,56 +136,6 @@ export const authService = {
     await userService.updateLastLogin(user.id, ipAddress);
 
     return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
-  },
-
-  /**
-   * Change user password
-   * Wrapped in a transaction to ensure password update and token revocation are atomic
-   */
-  async changePassword(
-    userId: string,
-    oldPassword: string,
-    newPassword: string,
-    ipAddress?: string | null,
-    userAgent?: string | null
-  ): Promise<void> {
-    const startTime = Date.now();
-
-    // Find user (outside transaction - read-only)
-    const user = await userService.findById(userId);
-    if (!user || !user.password) {
-      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
-    }
-
-    // Verify old password (outside transaction - no DB writes)
-    const isValidPassword = await bcrypt.compare(oldPassword, user.password);
-    if (!isValidPassword) {
-      throw Errors.auth(AUTH_ERROR_CODES.INVALID_PASSWORD, 'Current password is incorrect', 400);
-    }
-
-    // Hash new password (outside transaction - no DB writes)
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
-
-    // Transaction: update password and revoke all tokens atomically
-    await withTransaction(async (tx) => {
-      // Update password
-      await userService.updatePassword(userId, hashedPassword, tx);
-
-      // Revoke all refresh tokens for security (force re-login on all devices)
-      await refreshTokenRepository.revokeAllForUser(userId, tx);
-    });
-
-    // Log the operation (outside transaction - non-critical)
-    logOperation({
-      userId,
-      resourceType: 'user',
-      resourceId: userId,
-      action: 'user.change_password',
-      description: 'User changed their password',
-      ipAddress: ipAddress ?? null,
-      userAgent: userAgent ?? null,
-      durationMs: Date.now() - startTime,
-    });
   },
 
   /**
@@ -317,115 +266,6 @@ export const authService = {
   },
 
   /**
-   * Logout current device (revoke current refresh token)
-   */
-  async logout(
-    tokenId: string,
-    userId?: string,
-    ipAddress?: string | null,
-    userAgent?: string | null
-  ): Promise<void> {
-    const startTime = Date.now();
-    await tokenService.revokeToken(tokenId);
-
-    // Log the operation if userId is provided
-    if (userId) {
-      logOperation({
-        userId,
-        resourceType: 'session',
-        resourceId: tokenId,
-        action: 'session.logout',
-        description: 'User logged out from current session',
-        ipAddress: ipAddress ?? null,
-        userAgent: userAgent ?? null,
-        durationMs: Date.now() - startTime,
-      });
-    }
-  },
-
-  /**
-   * Logout all devices (revoke all refresh tokens)
-   */
-  async logoutAll(
-    userId: string,
-    ipAddress?: string | null,
-    userAgent?: string | null
-  ): Promise<number> {
-    const startTime = Date.now();
-    const count = await tokenService.revokeAllUserTokens(userId);
-
-    // Log the operation
-    logOperation({
-      userId,
-      resourceType: 'session',
-      action: 'session.logout_all',
-      description: `User logged out from all devices (${count} sessions revoked)`,
-      metadata: { sessionsRevoked: count },
-      ipAddress: ipAddress ?? null,
-      userAgent: userAgent ?? null,
-      durationMs: Date.now() - startTime,
-    });
-
-    return count;
-  },
-
-  /**
-   * Get current user info
-   */
-  async getCurrentUser(userId: string): Promise<UserPublicInfo> {
-    const user = await userService.findById(userId);
-    if (!user) {
-      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
-    }
-    return toUserPublicInfo(user);
-  },
-
-  /**
-   * Get active sessions for current user
-   */
-  async getSessions(userId: string, currentTokenId?: string) {
-    return tokenService.getUserSessions(userId, currentTokenId);
-  },
-
-  /**
-   * Revoke a specific session
-   */
-  async revokeSession(
-    userId: string,
-    sessionId: string,
-    ipAddress?: string | null,
-    userAgent?: string | null
-  ): Promise<void> {
-    const startTime = Date.now();
-
-    // Verify the session belongs to the user by checking via token service
-    const sessions = await tokenService.getUserSessions(userId);
-    const session = sessions.find((s) => s.id === sessionId);
-
-    if (!session) {
-      throw Errors.auth(AUTH_ERROR_CODES.SESSION_NOT_FOUND, 'Session not found', 404);
-    }
-
-    await tokenService.revokeToken(sessionId);
-
-    // Log the operation
-    logOperation({
-      userId,
-      resourceType: 'session',
-      resourceId: sessionId,
-      action: 'session.revoke',
-      description: 'User revoked a session',
-      metadata: {
-        deviceType: session.deviceInfo?.deviceType ?? null,
-        browser: session.deviceInfo?.browser ?? null,
-      },
-      ipAddress: ipAddress ?? null,
-      userAgent: userAgent ?? null,
-      durationMs: Date.now() - startTime,
-    });
-  },
-
-  /**
    * Register a new user with a verified email (code-based flow)
    */
   async registerWithCode(
@@ -504,53 +344,81 @@ export const authService = {
   },
 
   /**
-   * Reset user password with verified email
-   * Wrapped in a transaction to ensure password update and token revocation are atomic
+   * Get current user info
    */
-  async resetPassword(
+  async getCurrentUser(userId: string): Promise<UserPublicInfo> {
+    const user = await userService.findById(userId);
+    if (!user) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+    }
+    return toUserPublicInfo(user);
+  },
+
+  // ==================== Session Operations (delegated) ====================
+
+  /**
+   * Logout current device (revoke current refresh token)
+   */
+  logout(
+    tokenId: string,
+    userId?: string,
+    ipAddress?: string | null,
+    userAgent?: string | null
+  ): Promise<void> {
+    return sessionService.logout(tokenId, userId, ipAddress, userAgent);
+  },
+
+  /**
+   * Logout all devices (revoke all refresh tokens)
+   */
+  logoutAll(userId: string, ipAddress?: string | null, userAgent?: string | null): Promise<number> {
+    return sessionService.logoutAll(userId, ipAddress, userAgent);
+  },
+
+  /**
+   * Get active sessions for current user
+   */
+  getSessions(userId: string, currentTokenId?: string) {
+    return sessionService.getSessions(userId, currentTokenId);
+  },
+
+  /**
+   * Revoke a specific session
+   */
+  revokeSession(
+    userId: string,
+    sessionId: string,
+    ipAddress?: string | null,
+    userAgent?: string | null
+  ): Promise<void> {
+    return sessionService.revokeSession(userId, sessionId, ipAddress, userAgent);
+  },
+
+  // ==================== Password Operations (delegated) ====================
+
+  /**
+   * Change user password
+   */
+  changePassword(
+    userId: string,
+    oldPassword: string,
+    newPassword: string,
+    ipAddress?: string | null,
+    userAgent?: string | null
+  ): Promise<void> {
+    return passwordService.changePassword(userId, oldPassword, newPassword, ipAddress, userAgent);
+  },
+
+  /**
+   * Reset user password with verified email
+   */
+  resetPassword(
     data: ResetPasswordRequest
   ): Promise<{ message: string; sessionsRevoked?: number }> {
-    const { email, newPassword, verificationToken, logoutAllDevices } = data;
-
-    // Verify the verification token (outside transaction - no DB writes)
-    const { email: verifiedEmail } = emailVerificationService.verifyToken(
-      verificationToken,
-      'reset_password'
-    );
-
-    // Ensure the email matches
-    if (verifiedEmail !== email.toLowerCase().trim()) {
-      throw Errors.auth(
-        AUTH_ERROR_CODES.TOKEN_INVALID,
-        'Verification token does not match the provided email',
-        400
-      );
-    }
-
-    // Find user (outside transaction - read-only)
-    const user = await userService.findByEmail(email);
-    if (!user) {
-      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
-    }
-
-    // Hash new password (outside transaction - no DB writes)
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
-
-    // Transaction: update password and optionally revoke sessions atomically
-    const sessionsRevoked = await withTransaction(async (tx) => {
-      // Update password
-      await userService.updatePassword(user.id, hashedPassword, tx);
-
-      // Optionally revoke all sessions
-      if (logoutAllDevices !== false) {
-        return refreshTokenRepository.revokeAllForUser(user.id, tx);
-      }
-      return undefined;
-    });
-
-    return {
-      message: 'Password reset successfully',
-      sessionsRevoked,
-    };
+    return passwordService.resetPassword(data);
   },
 };
+
+// Re-export sub-services for direct access
+export { sessionService } from './session.service';
+export { passwordService } from './password.service';
