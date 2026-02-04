@@ -2,7 +2,8 @@ import express from 'express';
 import multer from 'multer';
 import { authenticate } from '@shared/middleware/auth.middleware';
 import { userController } from './controllers/user.controller';
-import { uploadController } from '../document';
+// Direct import to avoid circular dependency through barrels
+import { uploadController } from '@modules/document/controllers/upload.controller';
 
 const router = express.Router();
 

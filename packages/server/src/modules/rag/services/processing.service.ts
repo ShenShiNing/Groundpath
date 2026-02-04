@@ -1,8 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '@shared/logger';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
-import { documentChunkRepository } from '@modules/document/repositories/document-chunk.repository';
+import {
+  documentRepository,
+  documentVersionRepository,
+  documentChunkRepository,
+} from '@modules/document';
 import { getEmbeddingProviderByType } from '@modules/embedding';
 import { vectorRepository, ensureCollection } from '@modules/vector';
 import type { VectorPoint } from '@modules/vector';
@@ -26,8 +28,11 @@ export const processingService = {
         throw new Error(`Document not found: ${documentId}`);
       }
 
-      // Get knowledge base embedding config
+      // Save old chunk count for delta calculation
+      const oldChunkCount = document.chunkCount;
       const kbId = document.knowledgeBaseId;
+
+      // Get knowledge base embedding config
       const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(kbId);
       const { provider, dimensions, collectionName } = embeddingConfig;
 
@@ -39,9 +44,15 @@ export const processingService = {
         documentId,
         document.currentVersion
       );
+
+      // Early exit: no text content
       if (!version?.textContent) {
         logger.warn({ documentId }, 'No text content available for processing');
         await documentRepository.updateProcessingStatus(documentId, 'completed', undefined, 0);
+        // Deduct old chunk count from KB
+        if (oldChunkCount > 0) {
+          await knowledgeBaseService.incrementTotalChunks(kbId, -oldChunkCount);
+        }
         return;
       }
 
@@ -51,9 +62,15 @@ export const processingService = {
 
       // Chunk the text
       const chunks = chunkingService.chunkText(version.textContent);
+
+      // Early exit: no chunks generated
       if (chunks.length === 0) {
         logger.warn({ documentId }, 'No chunks generated from text');
         await documentRepository.updateProcessingStatus(documentId, 'completed', undefined, 0);
+        // Deduct old chunk count from KB
+        if (oldChunkCount > 0) {
+          await knowledgeBaseService.incrementTotalChunks(kbId, -oldChunkCount);
+        }
         return;
       }
 
@@ -123,14 +140,19 @@ export const processingService = {
         chunks.length
       );
 
-      // Update KB total chunks (delta = new chunks)
-      await knowledgeBaseService.incrementTotalChunks(kbId, chunks.length);
+      // Update KB total chunks using delta calculation
+      const chunkDelta = chunks.length - oldChunkCount;
+      if (chunkDelta !== 0) {
+        await knowledgeBaseService.incrementTotalChunks(kbId, chunkDelta);
+      }
 
       logger.info(
         {
           documentId,
           knowledgeBaseId: kbId,
           chunkCount: chunks.length,
+          oldChunkCount,
+          chunkDelta,
           provider: embeddingProvider.getName(),
           collectionName,
         },

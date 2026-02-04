@@ -1,5 +1,6 @@
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '@shared/db';
+import { getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
   documentChunks,
   type DocumentChunk,
@@ -71,8 +72,9 @@ export const documentChunkRepository = {
   /**
    * Delete all chunks for a document
    */
-  async deleteByDocumentId(documentId: string): Promise<void> {
-    await db.delete(documentChunks).where(eq(documentChunks.documentId, documentId));
+  async deleteByDocumentId(documentId: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx.delete(documentChunks).where(eq(documentChunks.documentId, documentId));
   },
 
   /**

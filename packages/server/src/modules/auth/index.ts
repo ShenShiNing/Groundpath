@@ -4,6 +4,7 @@ export * from './controllers/auth.controller';
 // Services
 export * from './services/auth.service';
 export * from './services/token.service';
+export * from './services/token-cleanup.service';
 
 // Repositories
 export * from './repositories/refresh-token.repository';

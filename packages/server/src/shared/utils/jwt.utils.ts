@@ -1,7 +1,7 @@
 import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { AUTH_CONFIG } from '@config/auth.config';
-import type { AccessTokenPayload, RefreshTokenPayload } from '@modules/auth/types/auth.types';
+import type { AccessTokenPayload, RefreshTokenPayload } from '@modules/auth';
 import { AppError, Errors } from '../errors';
 
 // ==================== Access Token ====================

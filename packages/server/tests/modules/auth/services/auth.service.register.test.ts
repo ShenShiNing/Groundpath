@@ -60,13 +60,19 @@ vi.mock('@modules/auth/services/token.service', () => ({
 vi.mock('@shared/middleware/rate-limit.middleware', () => ({
   checkAccountRateLimit: vi.fn(() => ({ allowed: true })),
   resetAccountRateLimit: vi.fn(),
+  loginRateLimiter: vi.fn((_req, _res, next) => next()),
+  registerRateLimiter: vi.fn((_req, _res, next) => next()),
+  refreshRateLimiter: vi.fn((_req, _res, next) => next()),
+  generalRateLimiter: vi.fn((_req, _res, next) => next()),
+  passwordResetRateLimiter: vi.fn((_req, _res, next) => next()),
+  emailSendRateLimiter: vi.fn((_req, _res, next) => next()),
+  emailVerifyRateLimiter: vi.fn((_req, _res, next) => next()),
 }));
 
 // Import after mocks
-import { authService } from '@modules/auth/services/auth.service';
-import { userRepository } from '@modules/user/repositories/user.repository';
-import { loginLogRepository } from '@modules/auth/repositories/login-log.repository';
-import { tokenService } from '@modules/auth/services/token.service';
+import { authService } from '@modules/auth';
+import { userRepository } from '@modules/user';
+import { loginLogRepository, tokenService } from '@modules/auth';
 
 // ==================== register ====================
 // 场景：新用户注册账户

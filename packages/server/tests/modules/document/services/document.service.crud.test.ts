@@ -16,6 +16,13 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'generated-uuid-123'),
 }));
 
+// Mock withTransaction to simply execute the callback
+vi.mock('@shared/db/db.utils', () => ({
+  withTransaction: vi.fn((callback) => callback({})),
+  getDbContext: vi.fn((tx) => tx ?? {}),
+  now: vi.fn(() => new Date()),
+}));
+
 vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     create: vi.fn(),
@@ -40,6 +47,12 @@ vi.mock('@modules/document/repositories/document-version.repository', () => ({
   },
 }));
 
+vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
+  documentChunkRepository: {
+    deleteByDocumentId: vi.fn(),
+  },
+}));
+
 vi.mock('@modules/document/repositories/folder.repository', () => ({
   folderRepository: {
     findByIdAndUser: vi.fn(),
@@ -59,7 +72,19 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
 vi.mock('@modules/knowledge-base', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
-    getEmbeddingConfig: vi.fn(),
+    getEmbeddingConfig: vi.fn(() =>
+      Promise.resolve({
+        collectionName: 'test-collection',
+      })
+    ),
+    incrementDocumentCount: vi.fn(),
+    incrementTotalChunks: vi.fn(),
+  },
+}));
+
+vi.mock('@modules/vector', () => ({
+  vectorRepository: {
+    deleteByDocumentId: vi.fn(() => Promise.resolve(true)),
   },
 }));
 
@@ -83,11 +108,11 @@ vi.mock('@shared/logger', () => ({
 }));
 
 // Import after mocks
-import { documentService } from '@modules/document/services/document.service';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
-import { folderRepository } from '@modules/document/repositories/folder.repository';
-import { documentStorageService } from '@modules/document/services/document-storage.service';
+import { documentService } from '@modules/document';
+import { documentRepository } from '@modules/document';
+import { documentVersionRepository } from '@modules/document';
+import { folderRepository } from '@modules/document';
+import { documentStorageService } from '@modules/document';
 
 // ==================== getById ====================
 // 场景：通过 ID 获取文档详情（含所有权检查）
@@ -388,7 +413,11 @@ describe('documentService > delete', () => {
       { softDeleteCalled: vi.mocked(documentRepository.softDelete).mock.calls.length > 0 }
     );
 
-    expect(documentRepository.softDelete).toHaveBeenCalledWith(mockDocumentId, mockUserId);
+    expect(documentRepository.softDelete).toHaveBeenCalledWith(
+      mockDocumentId,
+      mockUserId,
+      expect.anything() // tx parameter
+    );
   });
 
   // 场景 2：文档不存在

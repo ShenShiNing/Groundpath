@@ -1,8 +1,5 @@
 import { createLogger } from '@shared/logger';
-import {
-  systemLogRepository,
-  type CreateSystemLogInput,
-} from '@modules/logs/repositories/system-log.repository';
+import { systemLogRepository, type CreateSystemLogInput } from '@modules/logs';
 import type { LogLevel, LogCategory } from '@shared/db/schema/system/system-logs.schema';
 
 const logger = createLogger('system-logger');

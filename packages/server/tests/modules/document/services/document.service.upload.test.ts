@@ -14,6 +14,7 @@ import {
   mockTextStorageResult,
   mockMarkdownStorageResult,
   mockKnowledgeBaseId,
+  mockKnowledgeBase,
   logTestInfo,
 } from '@tests/__mocks__/document.mocks';
 
@@ -21,6 +22,13 @@ import {
 
 vi.mock('uuid', () => ({
   v4: vi.fn(() => 'generated-uuid-123'),
+}));
+
+// Mock withTransaction to simply execute the callback
+vi.mock('@shared/db/db.utils', () => ({
+  withTransaction: vi.fn((callback) => callback({})),
+  getDbContext: vi.fn((tx) => tx ?? {}),
+  now: vi.fn(() => new Date()),
 }));
 
 vi.mock('@modules/document/repositories/document.repository', () => ({
@@ -66,6 +74,8 @@ vi.mock('@modules/knowledge-base', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
     getEmbeddingConfig: vi.fn(),
+    incrementDocumentCount: vi.fn(),
+    incrementTotalChunks: vi.fn(),
   },
 }));
 
@@ -89,11 +99,11 @@ vi.mock('@shared/logger', () => ({
 }));
 
 // Import after mocks
-import { documentService } from '@modules/document/services/document.service';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
-import { folderRepository } from '@modules/document/repositories/folder.repository';
-import { documentStorageService } from '@modules/document/services/document-storage.service';
+import { documentService } from '@modules/document';
+import { documentRepository } from '@modules/document';
+import { documentVersionRepository } from '@modules/document';
+import { folderRepository } from '@modules/document';
+import { documentStorageService } from '@modules/document';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
 // ==================== upload ====================
@@ -103,7 +113,7 @@ describe('documentService > upload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default mock for knowledgeBaseService.validateOwnership
-    vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(undefined);
+    vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(mockKnowledgeBase);
   });
 
   // 场景 1：成功上传 PDF 文档到指定文件夹

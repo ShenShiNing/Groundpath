@@ -64,6 +64,9 @@ export const vectorRepository = {
 
     const mustConditions: unknown[] = [{ key: 'userId', match: { value: userId } }];
 
+    // Exclude soft-deleted vectors
+    const mustNotConditions: unknown[] = [{ key: 'isDeleted', match: { value: true } }];
+
     // Filter by knowledge base if specified
     if (options?.knowledgeBaseId) {
       mustConditions.push({
@@ -82,6 +85,7 @@ export const vectorRepository = {
 
     const filter: Record<string, unknown> = {
       must: mustConditions,
+      must_not: mustNotConditions,
     };
 
     const results = await qdrant.search(collectionName, {
@@ -107,10 +111,16 @@ export const vectorRepository = {
 
   /**
    * Delete vectors by document ID from a specific collection
+   * First marks as deleted (soft delete), then attempts physical deletion.
+   * Returns true if soft delete succeeded (vectors won't appear in search).
    */
-  async deleteByDocumentId(collectionName: string, documentId: string): Promise<void> {
+  async deleteByDocumentId(collectionName: string, documentId: string): Promise<boolean> {
     const qdrant = getQdrantClient();
 
+    // Step 1: Soft delete - mark vectors as deleted (critical for search exclusion)
+    const softDeleteSuccess = await this.markAsDeleted(collectionName, { documentId });
+
+    // Step 2: Physical delete - attempt to remove vectors entirely
     try {
       await withTimeout(
         qdrant.delete(collectionName, {
@@ -125,17 +135,28 @@ export const vectorRepository = {
 
       logger.debug({ collectionName, documentId }, 'Deleted vectors for document');
     } catch (error) {
-      logger.warn({ collectionName, documentId, error }, 'Failed to delete vectors for document');
-      // Don't throw - allow processing to continue even if vector deletion fails
+      logger.warn(
+        { collectionName, documentId, error, softDeleteSuccess },
+        'Physical vector deletion failed, but soft delete may have succeeded'
+      );
+      // Don't throw - soft delete provides safety net
     }
+
+    return softDeleteSuccess;
   },
 
   /**
    * Delete all vectors for a knowledge base from a specific collection
+   * First marks as deleted (soft delete), then attempts physical deletion.
+   * Returns true if soft delete succeeded.
    */
-  async deleteByKnowledgeBaseId(collectionName: string, knowledgeBaseId: string): Promise<void> {
+  async deleteByKnowledgeBaseId(collectionName: string, knowledgeBaseId: string): Promise<boolean> {
     const qdrant = getQdrantClient();
 
+    // Step 1: Soft delete
+    const softDeleteSuccess = await this.markAsDeleted(collectionName, { knowledgeBaseId });
+
+    // Step 2: Physical delete
     try {
       await withTimeout(
         qdrant.delete(collectionName, {
@@ -151,9 +172,94 @@ export const vectorRepository = {
       logger.debug({ collectionName, knowledgeBaseId }, 'Deleted vectors for knowledge base');
     } catch (error) {
       logger.warn(
-        { collectionName, knowledgeBaseId, error },
-        'Failed to delete vectors for knowledge base'
+        { collectionName, knowledgeBaseId, error, softDeleteSuccess },
+        'Physical vector deletion failed for knowledge base'
       );
+    }
+
+    return softDeleteSuccess;
+  },
+
+  /**
+   * Mark vectors as deleted (soft delete) by setting isDeleted: true in payload.
+   * This immediately excludes vectors from search results.
+   * Returns true if the operation succeeded.
+   */
+  async markAsDeleted(
+    collectionName: string,
+    filter: { documentId?: string; knowledgeBaseId?: string }
+  ): Promise<boolean> {
+    const qdrant = getQdrantClient();
+
+    const mustConditions: unknown[] = [];
+    if (filter.documentId) {
+      mustConditions.push({ key: 'documentId', match: { value: filter.documentId } });
+    }
+    if (filter.knowledgeBaseId) {
+      mustConditions.push({ key: 'knowledgeBaseId', match: { value: filter.knowledgeBaseId } });
+    }
+
+    if (mustConditions.length === 0) {
+      logger.warn('markAsDeleted called without filter - skipping');
+      return false;
+    }
+
+    try {
+      await withTimeout(
+        qdrant.setPayload(collectionName, {
+          payload: { isDeleted: true },
+          filter: { must: mustConditions },
+          wait: true,
+        }),
+        QDRANT_TIMEOUT,
+        `Qdrant markAsDeleted for ${JSON.stringify(filter)}`
+      );
+
+      logger.debug({ collectionName, filter }, 'Marked vectors as deleted');
+      return true;
+    } catch (error) {
+      logger.warn({ collectionName, filter, error }, 'Failed to mark vectors as deleted');
+      return false;
+    }
+  },
+
+  /**
+   * Physically delete vectors that are marked as deleted (cleanup task).
+   * Returns the number of vectors deleted.
+   */
+  async purgeDeletedVectors(collectionName: string): Promise<number> {
+    const qdrant = getQdrantClient();
+
+    try {
+      // First count how many will be deleted
+      const countResult = await qdrant.count(collectionName, {
+        filter: {
+          must: [{ key: 'isDeleted', match: { value: true } }],
+        },
+        exact: true,
+      });
+
+      if (countResult.count === 0) {
+        return 0;
+      }
+
+      // Delete them
+      await withTimeout(
+        qdrant.delete(collectionName, {
+          wait: true,
+          filter: {
+            must: [{ key: 'isDeleted', match: { value: true } }],
+          },
+        }),
+        QDRANT_TIMEOUT,
+        `Qdrant purge deleted vectors from ${collectionName}`
+      );
+
+      logger.info({ collectionName, count: countResult.count }, 'Purged deleted vectors');
+      return countResult.count;
+    } catch (error) {
+      logger.warn({ collectionName, error }, 'Failed to purge deleted vectors');
+      return 0;
     }
   },
 

@@ -2,6 +2,9 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { z } from '@knowledge-agent/shared/schemas';
 
+// Track if environment has been loaded (for CLI scripts)
+let envLoaded = false;
+
 // Determine NODE_ENV before loading env files
 const nodeEnv = process.env.NODE_ENV || 'development';
 
@@ -14,6 +17,9 @@ const envDir = path.resolve(import.meta.dirname, '../../..');
 dotenv.config({ path: path.join(envDir, `.env.${nodeEnv}.local`) });
 dotenv.config({ path: path.join(envDir, `.env.${nodeEnv}`) });
 dotenv.config({ path: path.join(envDir, '.env') });
+
+// Mark as loaded after dotenv.config calls
+envLoaded = true;
 
 const envSchema = z.object({
   // Server
@@ -123,15 +129,31 @@ const envSchema = z.object({
     .string()
     .default('true')
     .transform((v) => v === 'true'),
+
+  // Counter sync (optional weekly sync for data consistency)
+  COUNTER_SYNC_ENABLED: z
+    .string()
+    .default('false')
+    .transform((v) => v === 'true'),
 });
 
 const result = envSchema.safeParse(process.env);
 
 if (!result.success) {
-  console.error('❌ Invalid environment variables:');
-  console.error(result.error.flatten().fieldErrors);
+  console.error('Invalid environment variables:');
+  console.error('  Environment: %s', nodeEnv);
+  console.error('  Config dir: %s', envDir);
+  console.error('  Errors:', JSON.stringify(result.error.flatten().fieldErrors, null, 2));
   process.exit(1);
 }
 
 export const env = result.data;
 export type Env = z.infer<typeof envSchema>;
+
+/**
+ * Check if environment has been loaded via dotenv.
+ * Useful for CLI scripts to verify env initialization.
+ */
+export function isEnvLoaded(): boolean {
+  return envLoaded;
+}

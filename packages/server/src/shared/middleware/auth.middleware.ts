@@ -3,7 +3,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { refreshRequestSchema } from '@knowledge-agent/shared/schemas';
 import { Errors, handleError } from '../errors';
 import { extractBearerToken, verifyAccessToken, verifyRefreshToken } from '../utils/jwt.utils';
-import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
+import { refreshTokenRepository } from '@modules/auth';
 
 /**
  * Middleware to authenticate requests using JWT access token

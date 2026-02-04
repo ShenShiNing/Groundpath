@@ -15,6 +15,13 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'generated-uuid-123'),
 }));
 
+// Mock withTransaction to simply execute the callback
+vi.mock('@shared/db/db.utils', () => ({
+  withTransaction: vi.fn((callback) => callback({})),
+  getDbContext: vi.fn((tx) => tx ?? {}),
+  now: vi.fn(() => new Date()),
+}));
+
 vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     create: vi.fn(),
@@ -69,6 +76,8 @@ vi.mock('@modules/knowledge-base', () => ({
         collectionName: 'test-collection',
       })
     ),
+    incrementDocumentCount: vi.fn(() => Promise.resolve()),
+    incrementTotalChunks: vi.fn(() => Promise.resolve()),
   },
 }));
 
@@ -107,10 +116,10 @@ vi.mock('@shared/logger', () => ({
 }));
 
 // Import after mocks
-import { documentService } from '@modules/document/services/document.service';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
-import { documentStorageService } from '@modules/document/services/document-storage.service';
+import { documentService } from '@modules/document';
+import { documentRepository } from '@modules/document';
+import { documentVersionRepository } from '@modules/document';
+import { documentStorageService } from '@modules/document';
 
 // ==================== listTrash ====================
 // 场景：查询已删除的文档（回收站）
@@ -229,7 +238,7 @@ describe('documentService > restore', () => {
       'doc-deleted-1',
       mockUserId
     );
-    expect(documentRepository.restore).toHaveBeenCalledWith('doc-deleted-1');
+    expect(documentRepository.restore).toHaveBeenCalledWith('doc-deleted-1', expect.anything());
     expect(result.id).toBeDefined();
   });
 
@@ -285,7 +294,7 @@ describe('documentService > permanentDelete', () => {
     expect(documentStorageService.deleteDocument).toHaveBeenCalledWith(
       mockDocumentVersion.storageKey
     );
-    expect(documentRepository.hardDelete).toHaveBeenCalledWith('doc-deleted-1');
+    expect(documentRepository.hardDelete).toHaveBeenCalledWith('doc-deleted-1', expect.anything());
   });
 
   // 场景 2：R2 存储删除失败 — 仍然应该硬删除数据库记录
@@ -309,7 +318,7 @@ describe('documentService > permanentDelete', () => {
     );
 
     // The main assertion is that hard delete still happens even when storage deletion fails
-    expect(documentRepository.hardDelete).toHaveBeenCalledWith('doc-deleted-1');
+    expect(documentRepository.hardDelete).toHaveBeenCalledWith('doc-deleted-1', expect.anything());
   });
 
   // 场景 3：回收站中找不到文档

@@ -7,3 +7,4 @@ export {
   resetCollectionCache,
 } from './qdrant.client';
 export { vectorRepository } from './vector.repository';
+export { vectorCleanupService } from './vector-cleanup.service';

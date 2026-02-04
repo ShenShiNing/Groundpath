@@ -3,6 +3,7 @@ export * from './services/geo-location.service';
 export * from './services/device-detection.service';
 export * from './services/login-log.service';
 export * from './services/operation-log.service';
+export * from './services/log-cleanup.service';
 
 // Repositories
 export * from './repositories/operation-log.repository';

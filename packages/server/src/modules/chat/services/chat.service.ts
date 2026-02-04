@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Citation, SSEEvent } from '@knowledge-agent/shared/types';
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { llmService } from '@modules/llm';
-import { searchService } from '@modules/rag/services/search.service';
+import { searchService } from '@modules/rag';
 import type { SearchResult } from '@modules/vector';
 import { documentRepository } from '@modules/document';
 import { conversationService } from './conversation.service';

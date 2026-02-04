@@ -106,6 +106,30 @@ export function getOrRefreshToken(): Promise<string> {
   return refreshPromise;
 }
 
+/**
+ * Ensure we have a usable access token. If missing/expired and a refresh token exists,
+ * proactively refresh once. Throws ApiRequestError on failure.
+ */
+export async function ensureAccessToken(): Promise<string | null> {
+  const token = tokenAccessors?.getAccessToken() ?? null;
+
+  if (token) {
+    return token;
+  }
+
+  if (!hasRefreshToken()) {
+    return null;
+  }
+
+  try {
+    const newToken = await getOrRefreshToken();
+    return newToken;
+  } catch {
+    // Upstream can catch and surface a friendly message
+    throw new ApiRequestError('AUTH_ERROR', 'Session expired. Please login again.');
+  }
+}
+
 /** 检查错误是否需要刷新 token */
 function shouldRefreshToken(
   error: AxiosError<ApiResponse>,

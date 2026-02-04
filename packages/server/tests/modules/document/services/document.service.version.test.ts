@@ -18,6 +18,13 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'generated-uuid-123'),
 }));
 
+// Mock withTransaction to simply execute the callback
+vi.mock('@shared/db/db.utils', () => ({
+  withTransaction: vi.fn((callback) => callback({})),
+  getDbContext: vi.fn((tx) => tx ?? {}),
+  now: vi.fn(() => new Date()),
+}));
+
 vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     create: vi.fn(),
@@ -61,6 +68,8 @@ vi.mock('@modules/knowledge-base', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
     getEmbeddingConfig: vi.fn(),
+    incrementDocumentCount: vi.fn(),
+    incrementTotalChunks: vi.fn(),
   },
 }));
 
@@ -84,10 +93,10 @@ vi.mock('@shared/logger', () => ({
 }));
 
 // Import after mocks
-import { documentService } from '@modules/document/services/document.service';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
-import { documentStorageService } from '@modules/document/services/document-storage.service';
+import { documentService } from '@modules/document';
+import { documentRepository } from '@modules/document';
+import { documentVersionRepository } from '@modules/document';
+import { documentStorageService } from '@modules/document';
 
 // ==================== uploadNewVersion ====================
 // 场景：上传文档的新版本
@@ -166,7 +175,8 @@ describe('documentService > uploadNewVersion', () => {
         source: 'upload',
         changeNote: 'Bug fix',
         createdBy: mockUserId,
-      })
+      }),
+      expect.anything() // tx parameter
     );
   });
 
@@ -277,7 +287,8 @@ describe('documentService > uploadNewVersion', () => {
         fileExtension: mockStorageResult.fileExtension,
         currentVersion: 2, // document.currentVersion + 1
         updatedBy: mockUserId,
-      })
+      }),
+      expect.anything() // tx parameter
     );
   });
 });
@@ -492,7 +503,8 @@ describe('documentService > restoreVersion', () => {
         documentType: mockDocumentVersion.documentType,
         currentVersion: 3, // 2 + 1
         updatedBy: mockUserId,
-      })
+      }),
+      expect.anything() // tx parameter
     );
   });
 

@@ -1,5 +1,6 @@
 import { eq, and, desc } from 'drizzle-orm';
 import { db } from '@shared/db';
+import { getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
   documentVersions,
   type DocumentVersion,
@@ -13,9 +14,10 @@ export const documentVersionRepository = {
   /**
    * Create a new version record
    */
-  async create(data: NewDocumentVersion): Promise<DocumentVersion> {
-    await db.insert(documentVersions).values(data);
-    const result = await db
+  async create(data: NewDocumentVersion, tx?: Transaction): Promise<DocumentVersion> {
+    const ctx = getDbContext(tx);
+    await ctx.insert(documentVersions).values(data);
+    const result = await ctx
       .select()
       .from(documentVersions)
       .where(eq(documentVersions.id, data.id))
@@ -66,7 +68,8 @@ export const documentVersionRepository = {
   /**
    * Delete all versions of a document
    */
-  async deleteByDocumentId(documentId: string): Promise<void> {
-    await db.delete(documentVersions).where(eq(documentVersions.documentId, documentId));
+  async deleteByDocumentId(documentId: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx.delete(documentVersions).where(eq(documentVersions.documentId, documentId));
   },
 };

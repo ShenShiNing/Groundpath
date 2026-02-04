@@ -1,6 +1,6 @@
 import { eq, and, isNull, sql } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { now } from '@shared/db/db.utils';
+import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
   knowledgeBases,
   type KnowledgeBase,
@@ -90,25 +90,27 @@ export const knowledgeBaseRepository = {
   },
 
   /**
-   * Increment document count
+   * Increment document count (with floor at 0)
    */
-  async incrementDocumentCount(id: string, delta: number): Promise<void> {
-    await db
+  async incrementDocumentCount(id: string, delta: number, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(knowledgeBases)
       .set({
-        documentCount: sql`${knowledgeBases.documentCount} + ${delta}`,
+        documentCount: sql`GREATEST(${knowledgeBases.documentCount} + ${delta}, 0)`,
       })
       .where(eq(knowledgeBases.id, id));
   },
 
   /**
-   * Increment total chunks count
+   * Increment total chunks count (with floor at 0)
    */
-  async incrementTotalChunks(id: string, delta: number): Promise<void> {
-    await db
+  async incrementTotalChunks(id: string, delta: number, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(knowledgeBases)
       .set({
-        totalChunks: sql`${knowledgeBases.totalChunks} + ${delta}`,
+        totalChunks: sql`GREATEST(${knowledgeBases.totalChunks} + ${delta}, 0)`,
       })
       .where(eq(knowledgeBases.id, id));
   },
@@ -127,5 +129,12 @@ export const knowledgeBaseRepository = {
         ...(counters.totalChunks !== undefined && { totalChunks: counters.totalChunks }),
       })
       .where(eq(knowledgeBases.id, id));
+  },
+
+  /**
+   * List all knowledge bases (for admin operations like counter sync)
+   */
+  async listAll(): Promise<KnowledgeBase[]> {
+    return db.select().from(knowledgeBases).where(isNull(knowledgeBases.deletedAt));
   },
 };

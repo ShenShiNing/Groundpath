@@ -167,10 +167,73 @@ Import from `@knowledge-agent/shared`:
 
 - When answering the question, please use Chinese.
 
-## Code standards
+## Code Quality & Architecture Guardrails (for Claude Code)
 
-- Compliant with best practices
-- High scalability
-- High readability
-- High security
-- After the code has been modified, check for and remove the obsolete code.
+1. Imports
+   - Controllers/services/repositories must be imported via the module barrel (`@modules/foo`); avoid deep imports across layers.
+   - Shared types/constants come from `@knowledge-agent/shared/*`; do not redefine magic strings or enums.
+
+2. Domain Consistency
+   - Multi-step flows (upload/delete/restore/versioning, etc.) must be orchestrated in a single service/use-case to avoid scattered side effects. When touching counts/vectors/storage, keep operations paired (delete → decrement; restore/rebuild → increment).
+   - Counter/stat updates must be idempotent with floor protection (no negative totals).
+
+3. Errors & Logging
+   - Use only `AppError/Errors` for returning errors. For external calls, log whether the failure is retryable/non-retryable.
+   - Logs should include `requestId/traceId` (when available), key entity IDs (userId/documentId/kbId), and the operation name.
+
+4. Async & Timeouts
+   - External calls (Qdrant, LLM/Embedding, storage) must have timeouts and error handling—no bare awaits.
+   - Long/ retryable work should have a queue or background job entrypoint; avoid blocking the request path.
+
+5. Security & Validation
+   - All inputs must pass Zod/middleware validation before business logic; never trust raw `req.body/query/params`.
+   - Minimize data exposure in responses; avoid leaking sensitive fields.
+
+6. Testability
+   - New public functions/flows should allow dependency injection or mocking; avoid hard-coded new client instances.
+   - When changing core flows, add or update unit/integration tests accordingly.
+
+7. Transactions & Concurrency
+   - For consistency-sensitive flows (upload/delete/restore/versioning, counter updates), prefer DB transactions or per-entity mutexes to avoid race conditions.
+   - Queue/background jobs must be idempotent: reprocessing should not double-count or duplicate vectors.
+
+8. Timeouts & Retry Policy
+   - External calls must define `timeout`, `maxRetries`, and `backoff`, configurable via `config/*`; avoid hardcoded values inside business logic.
+   - Classify errors as retryable/non-retryable to prevent runaway retries.
+
+9. Config & Defaults
+   - All tunables (batch size, cron, concurrency, timeouts) live in config with documented defaults; reflect new env vars in both `.env.example` and Zod schema.
+
+10. Observability
+
+- Core flows log start/success/failure with latency and key IDs; prefer structured logs.
+- Add metrics/traces (Prometheus/OpenTelemetry) for new critical paths; use `service.operation` naming.
+
+11. Contracts
+
+- Controllers accept only validated DTOs; services assume validated inputs.
+- Responses use existing success/error wrappers for consistent shape.
+
+12. Frontend state/rendering
+
+- Provide Zustand selectors to avoid full-store subscriptions; wrap APIs with React Query (loading/error states included).
+- Components must have typed props and stable keys for list rendering.
+
+13. Tests
+
+- Changes touching counters/vectors/storage need at least one integration test covering delta updates, idempotency, and failure rollback.
+- Keep at least one real (non-mocked) contract/integration test for critical external dependencies.
+
+14. Code organization
+
+- Avoid giant files/functions (>~400 lines). Split or add a clear outline. Prefer small composable functions.
+- Export by domain/use-case, keep helpers internal when possible.
+
+15. Security & Privacy
+
+- Never log tokens/keys/PII; mask when necessary. Expose only minimum required fields to clients.
+
+16. Performance safeguards
+
+- Set upper bounds and pagination for batch operations; limit concurrency (e.g., p-limit) around external calls.
+- For large files/text, prefer streaming or chunked processing to avoid high memory usage.

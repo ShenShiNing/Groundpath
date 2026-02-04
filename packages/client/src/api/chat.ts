@@ -12,7 +12,13 @@ import type {
   UpdateConversationInput,
   SendMessageInput,
 } from '@knowledge-agent/shared/schemas';
-import { apiClient, unwrapResponse, getOrRefreshToken, hasRefreshToken } from './client';
+import {
+  apiClient,
+  unwrapResponse,
+  getOrRefreshToken,
+  hasRefreshToken,
+  ensureAccessToken,
+} from './client';
 
 // Re-export types for convenience
 export type { ConversationInfo, ConversationListItem, MessageInfo, Citation, SSEEvent };
@@ -112,8 +118,8 @@ export interface SSEHandlers {
 }
 
 /**
- * Send a message with SSE streaming response
- * Returns an AbortController to cancel the stream
+ * Low-level SSE sender: parses stream and emits events via handlers.
+ * Returns an AbortController to cancel the stream.
  */
 export function sendMessageWithSSE(
   conversationId: string,
@@ -125,6 +131,11 @@ export function sendMessageWithSSE(
 
   const sendRequest = async (isRetry = false) => {
     try {
+      // Proactively refresh token if missing before first attempt
+      if (!isRetry && hasRefreshToken()) {
+        await ensureAccessToken();
+      }
+
       const token = getAccessToken();
       const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
         method: 'POST',
@@ -150,6 +161,12 @@ export function sendMessageWithSSE(
           });
           return;
         }
+      } else if (response.status === 401 && !hasRefreshToken()) {
+        handlers.onError({
+          code: 'AUTH_ERROR',
+          message: 'Session expired. Please login again.',
+        });
+        return;
       }
 
       if (!response.ok) {
@@ -170,44 +187,42 @@ export function sendMessageWithSSE(
       const decoder = new TextDecoder();
       let buffer = '';
 
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const jsonStr = line.slice(6).trim();
-              if (!jsonStr) continue;
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
 
-              try {
-                const event = JSON.parse(jsonStr) as SSEEvent;
-                switch (event.type) {
-                  case 'chunk':
-                    handlers.onChunk(event.data);
-                    break;
-                  case 'sources':
-                    handlers.onSources(event.data);
-                    break;
-                  case 'done':
-                    handlers.onDone(event.data);
-                    break;
-                  case 'error':
-                    handlers.onError(event.data);
-                    break;
-                }
-              } catch {
-                // Skip malformed JSON
-              }
+          try {
+            const event = JSON.parse(jsonStr) as SSEEvent;
+            switch (event.type) {
+              case 'chunk':
+                handlers.onChunk(event.data);
+                break;
+              case 'sources':
+                handlers.onSources(event.data);
+                break;
+              case 'done':
+                handlers.onDone(event.data);
+                break;
+              case 'error':
+                handlers.onError(event.data);
+                break;
+              default:
+                // ignore unknown event
+                break;
             }
+          } catch {
+            // Skip malformed JSON
           }
         }
-      } finally {
-        reader.releaseLock();
       }
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {

@@ -8,6 +8,7 @@ import {
   mockChildFolder,
   mockGrandchildFolder,
   mockKnowledgeBaseId,
+  mockKnowledgeBase,
   logTestInfo,
 } from '@tests/__mocks__/document.mocks';
 
@@ -69,13 +70,15 @@ vi.mock('@modules/knowledge-base', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
     getEmbeddingConfig: vi.fn(),
+    incrementDocumentCount: vi.fn(),
+    incrementTotalChunks: vi.fn(),
   },
 }));
 
 // Import after mocks
-import { folderService } from '@modules/document/services/folder.service';
-import { folderRepository } from '@modules/document/repositories/folder.repository';
-import { documentRepository } from '@modules/document/repositories/document.repository';
+import { folderService } from '@modules/document';
+import { folderRepository } from '@modules/document';
+import { documentRepository } from '@modules/document';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
 // ==================== create ====================
@@ -85,7 +88,7 @@ describe('folderService > create', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Default mock for knowledgeBaseService.validateOwnership
-    vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(undefined);
+    vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(mockKnowledgeBase);
   });
 
   // 场景 1：创建根文件夹（无 parentId）

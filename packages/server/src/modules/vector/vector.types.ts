@@ -11,6 +11,8 @@ export interface ChunkPayload {
   version: number;
   chunkIndex: number;
   content: string;
+  /** Soft delete marker - vectors marked as deleted will be excluded from search */
+  isDeleted?: boolean;
 }
 
 export interface SearchOptions {

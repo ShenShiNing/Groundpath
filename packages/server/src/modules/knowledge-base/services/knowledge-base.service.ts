@@ -8,6 +8,7 @@ import type {
   EmbeddingProviderType,
 } from '@knowledge-agent/shared/types';
 import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
+import type { Transaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
 import { logOperation } from '@shared/logger/operation-logger';
@@ -324,14 +325,14 @@ export const knowledgeBaseService = {
   /**
    * Increment document count
    */
-  async incrementDocumentCount(kbId: string, delta: number): Promise<void> {
-    await knowledgeBaseRepository.incrementDocumentCount(kbId, delta);
+  async incrementDocumentCount(kbId: string, delta: number, tx?: Transaction): Promise<void> {
+    await knowledgeBaseRepository.incrementDocumentCount(kbId, delta, tx);
   },
 
   /**
    * Increment total chunks count
    */
-  async incrementTotalChunks(kbId: string, delta: number): Promise<void> {
-    await knowledgeBaseRepository.incrementTotalChunks(kbId, delta);
+  async incrementTotalChunks(kbId: string, delta: number, tx?: Transaction): Promise<void> {
+    await knowledgeBaseRepository.incrementTotalChunks(kbId, delta, tx);
   },
 };

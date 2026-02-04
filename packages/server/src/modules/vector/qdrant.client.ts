@@ -74,6 +74,10 @@ export async function ensureCollection(collectionName: string, dimensions: numbe
     field_name: 'knowledgeBaseId',
     field_schema: 'keyword',
   });
+  await qdrant.createPayloadIndex(collectionName, {
+    field_name: 'isDeleted',
+    field_schema: 'bool',
+  });
 
   initializedCollections.add(collectionName);
   logger.info({ collectionName, dimensions }, 'Qdrant collection created');

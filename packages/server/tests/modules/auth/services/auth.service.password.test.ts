@@ -60,6 +60,13 @@ vi.mock('@modules/auth/services/token.service', () => ({
 vi.mock('@shared/middleware/rate-limit.middleware', () => ({
   checkAccountRateLimit: vi.fn(() => ({ allowed: true })),
   resetAccountRateLimit: vi.fn(),
+  loginRateLimiter: vi.fn((_req, _res, next) => next()),
+  registerRateLimiter: vi.fn((_req, _res, next) => next()),
+  refreshRateLimiter: vi.fn((_req, _res, next) => next()),
+  generalRateLimiter: vi.fn((_req, _res, next) => next()),
+  passwordResetRateLimiter: vi.fn((_req, _res, next) => next()),
+  emailSendRateLimiter: vi.fn((_req, _res, next) => next()),
+  emailVerifyRateLimiter: vi.fn((_req, _res, next) => next()),
 }));
 
 // Mock withTransaction to bypass real database
@@ -69,9 +76,9 @@ vi.mock('@shared/db/db.utils', () => ({
 }));
 
 // Import after mocks
-import { authService } from '@modules/auth/services/auth.service';
+import { authService } from '@modules/auth';
 import { userService } from '@modules/user';
-import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
+import { refreshTokenRepository } from '@modules/auth';
 
 // ==================== changePassword ====================
 // 场景：用户修改密码

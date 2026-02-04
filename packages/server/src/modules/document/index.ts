@@ -1,7 +1,8 @@
 // Controllers
 export * from './controllers/document.controller';
 export * from './controllers/folder.controller';
-export * from './controllers/upload.controller';
+// Note: upload.controller is not exported here to avoid circular dependency
+// (it imports from @modules/user, which imports from @modules/document)
 
 // Services
 export * from './services/document.service';

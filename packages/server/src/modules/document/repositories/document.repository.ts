@@ -1,6 +1,6 @@
 import { eq, and, isNull, isNotNull, desc, asc, like, sql, count } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { now } from '@shared/db/db.utils';
+import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
   documents,
   type Document,
@@ -24,8 +24,9 @@ export const documentRepository = {
   /**
    * Find document by ID (non-deleted only)
    */
-  async findById(id: string): Promise<Document | undefined> {
-    const result = await db
+  async findById(id: string, tx?: Transaction): Promise<Document | undefined> {
+    const ctx = getDbContext(tx);
+    const result = await ctx
       .select()
       .from(documents)
       .where(and(eq(documents.id, id), isNull(documents.deletedAt)))
@@ -127,17 +128,20 @@ export const documentRepository = {
         | 'chunkCount'
         | 'updatedBy'
       >
-    >
+    >,
+    tx?: Transaction
   ): Promise<Document | undefined> {
-    await db.update(documents).set(data).where(eq(documents.id, id));
-    return this.findById(id);
+    const ctx = getDbContext(tx);
+    await ctx.update(documents).set(data).where(eq(documents.id, id));
+    return this.findById(id, tx);
   },
 
   /**
    * Soft delete document
    */
-  async softDelete(id: string, deletedBy: string): Promise<void> {
-    await db
+  async softDelete(id: string, deletedBy: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(documents)
       .set({
         deletedAt: now(),
@@ -259,22 +263,24 @@ export const documentRepository = {
   /**
    * Restore a soft-deleted document
    */
-  async restore(id: string): Promise<Document | undefined> {
-    await db
+  async restore(id: string, tx?: Transaction): Promise<Document | undefined> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(documents)
       .set({
         deletedAt: null,
         deletedBy: null,
       })
       .where(eq(documents.id, id));
-    return this.findById(id);
+    return this.findById(id, tx);
   },
 
   /**
    * Hard delete document (permanent)
    */
-  async hardDelete(id: string): Promise<void> {
-    await db.delete(documents).where(eq(documents.id, id));
+  async hardDelete(id: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx.delete(documents).where(eq(documents.id, id));
   },
 
   /**
@@ -294,5 +300,27 @@ export const documentRepository = {
       updateData.chunkCount = chunkCount;
     }
     await db.update(documents).set(updateData).where(eq(documents.id, id));
+  },
+
+  /**
+   * Count active documents in a knowledge base
+   */
+  async countByKnowledgeBaseId(knowledgeBaseId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(documents)
+      .where(and(eq(documents.knowledgeBaseId, knowledgeBaseId), isNull(documents.deletedAt)));
+    return result[0]?.count ?? 0;
+  },
+
+  /**
+   * Sum chunk counts of active documents in a knowledge base
+   */
+  async sumChunksByKnowledgeBaseId(knowledgeBaseId: string): Promise<number> {
+    const result = await db
+      .select({ total: sql<number>`COALESCE(SUM(${documents.chunkCount}), 0)` })
+      .from(documents)
+      .where(and(eq(documents.knowledgeBaseId, knowledgeBaseId), isNull(documents.deletedAt)));
+    return result[0]?.total ?? 0;
   },
 };

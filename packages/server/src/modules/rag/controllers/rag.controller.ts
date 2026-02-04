@@ -5,7 +5,7 @@ import { sendSuccessResponse, handleError, Errors } from '@shared/errors';
 import { getParamId } from '@shared/utils/request.utils';
 import { searchService } from '../services/search.service';
 import { processingService } from '../services/processing.service';
-import { documentRepository } from '@modules/document/repositories/document.repository';
+import { documentRepository } from '@modules/document';
 
 const searchSchema = z.object({
   query: z.string().min(1).max(1000),

@@ -12,6 +12,7 @@ import type {
   VersionListResponse,
 } from '@knowledge-agent/shared/types';
 import type { Document } from '@shared/db/schema/document/documents.schema';
+import { withTransaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
 import { buildPagination } from '@shared/utils/pagination';
 import { documentRepository } from '../repositories/document.repository';
@@ -21,7 +22,7 @@ import { folderRepository } from '../repositories/folder.repository';
 import { documentStorageService } from '../services/document-storage.service';
 import { createLogger } from '@shared/logger';
 import { logOperation } from '@shared/logger/operation-logger';
-import { processingService } from '@modules/rag/services/processing.service';
+import { processingService } from '@modules/rag';
 import { vectorRepository } from '@modules/vector';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
@@ -195,6 +196,9 @@ export const documentService = {
       createdBy: userId,
     });
 
+    // Increment knowledge base document count
+    await knowledgeBaseService.incrementDocumentCount(options.knowledgeBaseId, 1);
+
     // Log operation
     logOperation({
       userId,
@@ -320,6 +324,8 @@ export const documentService = {
 
   /**
    * Delete document (soft delete)
+   * MySQL operations are wrapped in a transaction for atomicity.
+   * Qdrant operations run outside the transaction (eventual consistency).
    */
   async delete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();
@@ -332,7 +338,40 @@ export const documentService = {
       );
     }
 
-    await documentRepository.softDelete(documentId, userId);
+    const currentChunkCount = document.chunkCount;
+
+    // All MySQL operations in a single transaction
+    await withTransaction(async (tx) => {
+      // 1. Soft delete document and reset chunkCount
+      await documentRepository.softDelete(documentId, userId, tx);
+      await documentRepository.update(documentId, { chunkCount: 0 }, tx);
+
+      // 2. Delete chunks from MySQL
+      await documentChunkRepository.deleteByDocumentId(documentId, tx);
+
+      // 3. Update knowledge base counters
+      await knowledgeBaseService.incrementDocumentCount(document.knowledgeBaseId, -1, tx);
+      if (currentChunkCount > 0) {
+        await knowledgeBaseService.incrementTotalChunks(
+          document.knowledgeBaseId,
+          -currentChunkCount,
+          tx
+        );
+      }
+    });
+
+    // 4. Delete vectors from Qdrant (outside transaction - eventual consistency)
+    try {
+      const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(
+        document.knowledgeBaseId
+      );
+      await vectorRepository.deleteByDocumentId(embeddingConfig.collectionName, documentId);
+    } catch (err) {
+      logger.warn(
+        { documentId, chunkCount: currentChunkCount, err },
+        'Vector deletion failed - vectors marked as deleted for search exclusion'
+      );
+    }
 
     // Log operation
     logOperation({
@@ -342,6 +381,9 @@ export const documentService = {
       resourceName: document.title,
       action: 'document.delete',
       description: `Moved document to trash: ${document.title}`,
+      metadata: {
+        chunksDeleted: currentChunkCount,
+      },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
       durationMs: Date.now() - startTime,
@@ -426,6 +468,7 @@ export const documentService = {
 
   /**
    * Restore a deleted document
+   * MySQL operations are wrapped in a transaction for atomicity.
    */
   async restore(documentId: string, userId: string, ctx?: RequestContext): Promise<DocumentInfo> {
     const startTime = Date.now();
@@ -438,7 +481,36 @@ export const documentService = {
       );
     }
 
-    const restored = await documentRepository.restore(documentId);
+    // Idempotency check: already restored
+    if (!document.deletedAt) {
+      return toDocumentInfo(document);
+    }
+
+    // All MySQL operations in a single transaction
+    const restored = await withTransaction(async (tx) => {
+      // 1. Restore document
+      const restoredDoc = await documentRepository.restore(documentId, tx);
+
+      // 2. Reset processing status (chunkCount was already set to 0 on soft delete)
+      await documentRepository.update(
+        documentId,
+        {
+          processingStatus: 'pending',
+          processingError: null,
+        },
+        tx
+      );
+
+      // 3. Increment document count
+      await knowledgeBaseService.incrementDocumentCount(document.knowledgeBaseId, 1, tx);
+
+      return restoredDoc;
+    });
+
+    // 4. Trigger reprocessing (will update totalChunks via delta calculation)
+    processingService.processDocument(documentId, userId).catch((err) => {
+      logger.warn({ documentId, err }, 'Failed to trigger processing after restore');
+    });
 
     // Log operation
     logOperation({
@@ -458,6 +530,8 @@ export const documentService = {
 
   /**
    * Permanently delete a document
+   * MySQL operations are wrapped in a transaction for atomicity.
+   * Storage and Qdrant operations run outside the transaction.
    */
   async permanentDelete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();
@@ -470,8 +544,10 @@ export const documentService = {
       );
     }
 
-    // Delete all version files from storage
+    // Get version list before transaction (needed for storage cleanup)
     const versions = await documentVersionRepository.listByDocumentId(documentId);
+
+    // Delete all version files from storage (outside transaction - not rollbackable)
     for (const version of versions) {
       try {
         await documentStorageService.deleteDocument(version.storageKey);
@@ -480,10 +556,7 @@ export const documentService = {
       }
     }
 
-    // Delete chunks, vectors, versions, then document
-    await documentChunkRepository.deleteByDocumentId(documentId);
-
-    // Determine collection name for vector deletion
+    // Delete vectors from Qdrant (outside transaction - eventual consistency)
     try {
       const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(
         document.knowledgeBaseId
@@ -493,8 +566,12 @@ export const documentService = {
       logger.warn({ documentId, err }, 'Failed to delete vectors from Qdrant');
     }
 
-    await documentVersionRepository.deleteByDocumentId(documentId);
-    await documentRepository.hardDelete(documentId);
+    // All MySQL operations in a single transaction
+    await withTransaction(async (tx) => {
+      await documentChunkRepository.deleteByDocumentId(documentId, tx);
+      await documentVersionRepository.deleteByDocumentId(documentId, tx);
+      await documentRepository.hardDelete(documentId, tx);
+    });
 
     // Log operation
     logOperation({
@@ -519,6 +596,7 @@ export const documentService = {
 
   /**
    * Upload a new version of a document
+   * MySQL operations are wrapped in a transaction for atomicity.
    */
   async uploadNewVersion(
     documentId: string,
@@ -547,7 +625,7 @@ export const documentService = {
       );
     }
 
-    // Upload new file to storage
+    // Upload new file to storage (outside transaction - not rollbackable)
     const { storageKey, fileExtension, documentType, resolvedMimeType } =
       await documentStorageService.uploadDocument(userId, file);
 
@@ -564,34 +642,43 @@ export const documentService = {
 
     const newVersion = document.currentVersion + 1;
 
-    // Create new version record
-    await documentVersionRepository.create({
-      id: uuidv4(),
-      documentId: document.id,
-      version: newVersion,
-      fileName: file.originalname,
-      mimeType: resolvedMimeType,
-      fileSize: file.size,
-      fileExtension,
-      documentType,
-      storageKey,
-      textContent,
-      source: 'upload',
-      changeNote: options?.changeNote ?? null,
-      createdBy: userId,
-    });
+    // MySQL operations in a single transaction
+    const updated = await withTransaction(async (tx) => {
+      // Create new version record
+      await documentVersionRepository.create(
+        {
+          id: uuidv4(),
+          documentId: document.id,
+          version: newVersion,
+          fileName: file.originalname,
+          mimeType: resolvedMimeType,
+          fileSize: file.size,
+          fileExtension,
+          documentType,
+          storageKey,
+          textContent,
+          source: 'upload',
+          changeNote: options?.changeNote ?? null,
+          createdBy: userId,
+        },
+        tx
+      );
 
-    // Update document cached fields
-    const updated = await documentRepository.update(documentId, {
-      currentVersion: newVersion,
-      fileName: file.originalname,
-      mimeType: resolvedMimeType,
-      fileSize: file.size,
-      fileExtension,
-      documentType,
-      processingStatus: 'pending',
-      chunkCount: 0,
-      updatedBy: userId,
+      // Update document cached fields (don't reset chunkCount - let processDocument handle delta)
+      return documentRepository.update(
+        documentId,
+        {
+          currentVersion: newVersion,
+          fileName: file.originalname,
+          mimeType: resolvedMimeType,
+          fileSize: file.size,
+          fileExtension,
+          documentType,
+          processingStatus: 'pending',
+          updatedBy: userId,
+        },
+        tx
+      );
     });
 
     // Log operation
@@ -656,6 +743,7 @@ export const documentService = {
 
   /**
    * Restore document to a specific version
+   * MySQL operations are wrapped in a transaction for atomicity.
    */
   async restoreVersion(
     documentId: string,
@@ -684,34 +772,43 @@ export const documentService = {
 
     const newVersionNumber = document.currentVersion + 1;
 
-    // Create a new version that restores old content
-    await documentVersionRepository.create({
-      id: uuidv4(),
-      documentId: document.id,
-      version: newVersionNumber,
-      fileName: version.fileName,
-      mimeType: version.mimeType,
-      fileSize: version.fileSize,
-      fileExtension: version.fileExtension,
-      documentType: version.documentType,
-      storageKey: version.storageKey,
-      textContent: version.textContent,
-      source: 'restore',
-      changeNote: `Restored from version ${version.version}`,
-      createdBy: userId,
-    });
+    // MySQL operations in a single transaction
+    const updated = await withTransaction(async (tx) => {
+      // Create a new version that restores old content
+      await documentVersionRepository.create(
+        {
+          id: uuidv4(),
+          documentId: document.id,
+          version: newVersionNumber,
+          fileName: version.fileName,
+          mimeType: version.mimeType,
+          fileSize: version.fileSize,
+          fileExtension: version.fileExtension,
+          documentType: version.documentType,
+          storageKey: version.storageKey,
+          textContent: version.textContent,
+          source: 'restore',
+          changeNote: `Restored from version ${version.version}`,
+          createdBy: userId,
+        },
+        tx
+      );
 
-    // Update document cached fields
-    const updated = await documentRepository.update(documentId, {
-      currentVersion: newVersionNumber,
-      fileName: version.fileName,
-      mimeType: version.mimeType,
-      fileSize: version.fileSize,
-      fileExtension: version.fileExtension,
-      documentType: version.documentType,
-      processingStatus: 'pending',
-      chunkCount: 0,
-      updatedBy: userId,
+      // Update document cached fields (don't reset chunkCount - let processDocument handle delta)
+      return documentRepository.update(
+        documentId,
+        {
+          currentVersion: newVersionNumber,
+          fileName: version.fileName,
+          mimeType: version.mimeType,
+          fileSize: version.fileSize,
+          fileExtension: version.fileExtension,
+          documentType: version.documentType,
+          processingStatus: 'pending',
+          updatedBy: userId,
+        },
+        tx
+      );
     });
 
     // Log operation

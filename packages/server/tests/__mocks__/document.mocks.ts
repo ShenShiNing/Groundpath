@@ -1,6 +1,7 @@
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import type { Folder } from '@shared/db/schema/document/folders.schema';
 import type { DocumentVersion } from '@shared/db/schema/document/document-versions.schema';
+import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
 
 // ==================== Shared Test Data ====================
 
@@ -9,6 +10,24 @@ export const mockFolderId = 'folder-456';
 export const mockDocumentId = 'doc-789';
 export const mockVersionId = 'version-101';
 export const mockKnowledgeBaseId = 'kb-123';
+
+export const mockKnowledgeBase: KnowledgeBase = {
+  id: mockKnowledgeBaseId,
+  userId: mockUserId,
+  name: 'Test Knowledge Base',
+  description: 'Test KB description',
+  embeddingProvider: 'openai',
+  embeddingModel: 'text-embedding-3-small',
+  embeddingDimensions: 1536,
+  documentCount: 0,
+  totalChunks: 0,
+  createdBy: mockUserId,
+  createdAt: new Date('2024-01-01'),
+  updatedBy: null,
+  updatedAt: new Date('2024-01-01'),
+  deletedBy: null,
+  deletedAt: null,
+};
 
 export const mockFolder: Folder = {
   id: mockFolderId,

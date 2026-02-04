@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
-import { tokenService } from '@modules/auth/services/token.service';
+import { tokenService } from '@modules/auth';
 import { AppError } from '@shared/errors';
-import type { AccessTokenPayload } from '@modules/auth/types/auth.types';
+import type { AccessTokenPayload } from '@modules/auth';
 
 // ==================== Mocks ====================
 
@@ -25,6 +25,7 @@ vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
     revokeAllForUser: vi.fn(),
     getActiveSessionsForUser: vi.fn(),
     updateLastUsed: vi.fn(),
+    wasUsedWithinSeconds: vi.fn(),
   },
 }));
 
@@ -49,7 +50,7 @@ vi.mock('@shared/db/db.utils', () => ({
 }));
 
 // Import mocked modules
-import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
+import { refreshTokenRepository } from '@modules/auth';
 import { userService } from '@modules/user';
 import {
   generateAccessToken,
