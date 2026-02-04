@@ -77,6 +77,15 @@ function getEmbeddingConfigForProvider(provider: EmbeddingProviderType): {
   }
 }
 
+function assertProviderConfigured(provider: EmbeddingProviderType): void {
+  if (provider === 'openai' && !env.OPENAI_API_KEY) {
+    throw Errors.validation('OPENAI_API_KEY 未配置，无法使用 OpenAI 嵌入模型');
+  }
+  if (provider === 'zhipu' && !env.ZHIPU_API_KEY) {
+    throw Errors.validation('ZHIPU_API_KEY 未配置，无法使用智谱嵌入模型');
+  }
+}
+
 /**
  * Generate Qdrant collection name from provider and dimensions
  */
@@ -134,6 +143,8 @@ export const knowledgeBaseService = {
     ctx?: RequestContext
   ): Promise<KnowledgeBaseInfo> {
     const startTime = Date.now();
+
+    assertProviderConfigured(data.embeddingProvider);
 
     // Get embedding config for provider
     const { model, dimensions } = getEmbeddingConfigForProvider(data.embeddingProvider);

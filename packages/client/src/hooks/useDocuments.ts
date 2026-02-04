@@ -3,9 +3,11 @@ import type {
   DocumentListParams,
   TrashListParams,
   UpdateDocumentRequest,
+  DocumentContentResponse,
 } from '@knowledge-agent/shared/types';
 import { documentsApi } from '@/api';
 import { queryKeys } from '@/lib/queryClient';
+import { useEffect, useMemo } from 'react';
 
 // ==================== Query Hooks ====================
 
@@ -31,6 +33,17 @@ export function useDocument(documentId: string | undefined) {
 }
 
 /**
+ * Fetch document content
+ */
+export function useDocumentContent(documentId: string | undefined) {
+  return useQuery<DocumentContentResponse>({
+    queryKey: queryKeys.documents.content(documentId!),
+    queryFn: () => documentsApi.getContent(documentId!),
+    enabled: !!documentId,
+  });
+}
+
+/**
  * Fetch document version history
  */
 export function useDocumentVersions(documentId: string | undefined) {
@@ -39,6 +52,46 @@ export function useDocumentVersions(documentId: string | undefined) {
     queryFn: () => documentsApi.getVersionHistory(documentId!),
     enabled: !!documentId,
   });
+}
+
+/**
+ * Fetch PDF blob for preview and manage object URL lifecycle
+ */
+export function useDocumentPdf(storageUrl: string | null | undefined) {
+  const query = useQuery({
+    queryKey: queryKeys.documents.pdf(storageUrl ?? ''),
+    queryFn: () => documentsApi.getPdf(storageUrl!),
+    enabled: !!storageUrl,
+    staleTime: 5 * 60 * 1000, // 5 minutes - PDF content doesn't change often
+  });
+
+  // Derive blob URL from query data using useMemo
+  const blobUrl = useMemo(() => {
+    if (!query.data) return null;
+    return URL.createObjectURL(query.data);
+  }, [query.data]);
+
+  // Cleanup blob URL when it changes or on unmount
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
+
+  const errorMessage = useMemo(() => {
+    if (!query.error) return null;
+    if (query.error instanceof Error) return query.error.message;
+    return '加载失败';
+  }, [query.error]);
+
+  return {
+    blobUrl,
+    isLoading: query.isLoading,
+    error: errorMessage,
+    refetch: query.refetch,
+  };
 }
 
 /**

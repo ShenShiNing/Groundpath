@@ -6,3 +6,4 @@ export { DocumentViewer } from './DocumentViewer';
 export { DocumentInfo } from './DocumentInfo';
 export { FolderTree } from './FolderTree';
 export { FolderDialog } from './FolderDialog';
+export { DocumentReader } from './DocumentReader';

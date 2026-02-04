@@ -56,7 +56,7 @@ export const chunkingService = {
         if (overlap > 0 && currentChunk.length > overlap) {
           const overlapText = currentChunk.slice(-overlap);
           currentChunk = overlapText + ' ' + trimmed;
-          currentStart = offset - overlap;
+          currentStart = Math.max(0, offset - overlap);
         } else {
           currentChunk = trimmed;
           currentStart = offset;
@@ -141,7 +141,7 @@ export const chunkingService = {
         if (overlap > 0 && current.length > overlap) {
           const overlapText = current.slice(-overlap);
           current = overlapText + sentence;
-          currentStart = baseOffset + sentenceOffset - overlap;
+          currentStart = Math.max(0, baseOffset + sentenceOffset - overlap);
         } else {
           current = sentence;
           currentStart = baseOffset + sentenceOffset;

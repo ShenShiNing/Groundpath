@@ -6,6 +6,7 @@ import type {
   TrashListParams,
   TrashListResponse,
   VersionListResponse,
+  DocumentContentResponse,
 } from '@knowledge-agent/shared/types';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
@@ -52,6 +53,16 @@ export const documentsApi = {
    */
   async getById(documentId: string): Promise<DocumentInfo> {
     const response = await apiClient.get<ApiResponse<DocumentInfo>>(`/api/documents/${documentId}`);
+    return unwrapResponse(response.data);
+  },
+
+  /**
+   * Get document content
+   */
+  async getContent(documentId: string): Promise<DocumentContentResponse> {
+    const response = await apiClient.get<ApiResponse<DocumentContentResponse>>(
+      `/api/documents/${documentId}/content`
+    );
     return unwrapResponse(response.data);
   },
 
@@ -125,6 +136,17 @@ export const documentsApi = {
       `/api/documents/${documentId}/versions`
     );
     return unwrapResponse(response.data);
+  },
+
+  /**
+   * Fetch PDF binary (for preview)
+   */
+  async getPdf(url: string): Promise<Blob> {
+    const response = await apiClient.get<ArrayBuffer>(url, {
+      responseType: 'arraybuffer',
+      withCredentials: true,
+    });
+    return new Blob([response.data], { type: 'application/pdf' });
   },
 
   /**

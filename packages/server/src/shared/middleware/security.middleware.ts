@@ -38,8 +38,6 @@ export const helmetMiddleware = helmet({
   },
   // Prevent MIME type sniffing
   noSniff: true,
-  // XSS filter
-  xssFilter: true,
   // Referrer Policy
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 });

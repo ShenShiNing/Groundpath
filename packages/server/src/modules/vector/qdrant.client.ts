@@ -43,7 +43,26 @@ export async function ensureCollection(collectionName: string, dimensions: numbe
   try {
     const exists = await qdrant.collectionExists(collectionName);
     if (exists.exists) {
-      logger.info({ collectionName }, 'Qdrant collection already exists');
+      const info = await qdrant.getCollection(collectionName);
+      const collection = (info as { result?: unknown }).result ?? info;
+      const vectorsConfig =
+        (collection as { vectors?: { size?: number } }).vectors ??
+        // fallback for older server shape
+        (collection as { config?: { params?: { vectors?: { size?: number } } } }).config?.params
+          ?.vectors;
+      const existingSize = vectorsConfig?.size;
+
+      if (typeof existingSize === 'number' && existingSize !== dimensions) {
+        throw new Error(
+          `Qdrant collection ${collectionName} has dimensions ${existingSize}, expected ${dimensions}. ` +
+            'Please recreate the collection or align the knowledge base embedding config.'
+        );
+      }
+
+      logger.info(
+        { collectionName, dimensions: existingSize ?? 'unknown' },
+        'Qdrant collection already exists'
+      );
       initializedCollections.add(collectionName);
       return;
     }

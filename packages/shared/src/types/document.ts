@@ -141,6 +141,20 @@ export interface VersionListResponse {
   currentVersion: number;
 }
 
+// ==================== Content Interfaces ====================
+
+export interface DocumentContentResponse {
+  id: string;
+  title: string;
+  fileName: string;
+  documentType: DocumentType;
+  textContent: string | null;
+  currentVersion: number;
+  processingStatus: ProcessingStatus;
+  isEditable: boolean;
+  storageUrl: string | null;
+}
+
 // ==================== Chunk Interfaces ====================
 
 /** Document chunk info */

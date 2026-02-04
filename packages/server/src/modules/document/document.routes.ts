@@ -128,6 +128,9 @@ router.post('/', uploadWithErrorHandling('file'), documentController.upload);
 // List documents
 router.get('/', validateQuery(documentListParamsSchema), documentController.list);
 
+// Get document content
+router.get('/:id/content', documentController.getContent);
+
 // Get document details
 router.get('/:id', documentController.getById);
 
@@ -139,6 +142,8 @@ router.delete('/:id', documentController.delete);
 
 // Download document
 router.get('/:id/download', documentController.download);
+// Preview document (inline)
+router.get('/:id/preview', documentController.preview);
 
 // ==================== Version Routes ====================
 

@@ -3,13 +3,14 @@ import { ArrowLeft, Download } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DocumentViewer, DocumentInfo } from '@/components/documents';
-import { useDocument } from '@/hooks';
+import { DocumentReader, DocumentInfo } from '@/components/documents';
+import { useDocument, useDocumentContent } from '@/hooks';
 import { documentsApi } from '@/api';
 
 export function DocumentDetailPage() {
   const { id } = useParams({ from: '/documents/$id' });
   const { data: document, isLoading } = useDocument(id);
+  const { data: content, isLoading: isContentLoading } = useDocumentContent(id);
 
   const handleDownload = () => {
     if (!document) return;
@@ -29,7 +30,7 @@ export function DocumentDetailPage() {
           </Link>
           <div className="flex-1">
             <h1 className="text-2xl font-bold">
-              {isLoading ? 'Loading...' : (document?.title ?? 'Document')}
+              {isLoading ? 'Loading...' : (content?.title ?? document?.title ?? 'Document')}
             </h1>
           </div>
           {document && (
@@ -51,12 +52,11 @@ export function DocumentDetailPage() {
                   <CardTitle>Preview</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <DocumentViewer
-                    documentType={document.documentType}
-                    textContent={null}
-                    storageUrl={null}
-                    fileName={document.fileName}
-                    isLoading={isLoading}
+                  <DocumentReader
+                    documentType={content?.documentType ?? document.documentType}
+                    textContent={content?.textContent ?? null}
+                    storageUrl={content?.storageUrl ?? null}
+                    isLoading={isLoading || isContentLoading}
                   />
                 </CardContent>
               </Card>

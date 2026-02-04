@@ -43,7 +43,9 @@ export const queryKeys = {
     list: (params: Record<string, unknown>) => [...queryKeys.documents.lists(), params] as const,
     details: () => [...queryKeys.documents.all, 'detail'] as const,
     detail: (id: string) => [...queryKeys.documents.details(), id] as const,
+    content: (id: string) => [...queryKeys.documents.detail(id), 'content'] as const,
     versions: (id: string) => [...queryKeys.documents.detail(id), 'versions'] as const,
+    pdf: (url: string) => [...queryKeys.documents.all, 'pdf', url] as const,
   },
 
   // Trash

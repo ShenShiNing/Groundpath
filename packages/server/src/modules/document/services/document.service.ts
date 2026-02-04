@@ -10,6 +10,7 @@ import type {
   TrashDocumentListItem,
   TrashListResponse,
   VersionListResponse,
+  DocumentContentResponse,
 } from '@knowledge-agent/shared/types';
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { withTransaction } from '@shared/db/db.utils';
@@ -25,6 +26,7 @@ import { logOperation } from '@shared/logger/operation-logger';
 import { processingService } from '@modules/rag';
 import { vectorRepository } from '@modules/vector';
 import { knowledgeBaseService } from '@modules/knowledge-base';
+import { storageProvider } from '@modules/storage';
 
 const logger = createLogger('document.service');
 
@@ -241,6 +243,57 @@ export const documentService = {
       );
     }
     return toDocumentInfo(document);
+  },
+
+  /**
+   * Get current content of a document (with ownership check)
+   */
+  async getContent(documentId: string, userId: string): Promise<DocumentContentResponse> {
+    const document = await documentRepository.findByIdAndUser(documentId, userId);
+    if (!document) {
+      throw Errors.auth(
+        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
+        'Document not found',
+        404
+      );
+    }
+
+    const version = await documentVersionRepository.findByDocumentAndVersion(
+      documentId,
+      document.currentVersion
+    );
+
+    if (!version) {
+      throw Errors.auth(
+        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
+        'Document version not found',
+        404
+      );
+    }
+
+    const isEditable = document.documentType === 'markdown' || document.documentType === 'text';
+    let storageUrl: string | null = null;
+    if (document.documentType === 'pdf') {
+      storageUrl = `/api/documents/${documentId}/preview`;
+    } else if (document.documentType === 'docx') {
+      storageUrl = `/api/documents/${documentId}/download`;
+    } else if (document.documentType === 'markdown' || document.documentType === 'text') {
+      storageUrl = null;
+    } else {
+      storageUrl = storageProvider.getPublicUrl(version.storageKey);
+    }
+
+    return {
+      id: document.id,
+      title: document.title,
+      fileName: version.fileName,
+      documentType: document.documentType,
+      textContent: version.textContent,
+      currentVersion: document.currentVersion,
+      processingStatus: document.processingStatus,
+      isEditable,
+      storageUrl,
+    };
   },
 
   /**

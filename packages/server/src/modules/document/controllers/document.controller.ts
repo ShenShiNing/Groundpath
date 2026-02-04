@@ -96,6 +96,20 @@ export const documentController = {
   }),
 
   /**
+   * GET /api/documents/:id/content
+   */
+  getContent: asyncHandler(async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const documentId = getParamId(req, 'id');
+    if (!documentId) {
+      throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
+    }
+
+    const content = await documentService.getContent(documentId, userId);
+    sendSuccessResponse(res, content);
+  }),
+
+  /**
    * PATCH /api/documents/:id
    */
   update: asyncHandler(async (req: Request, res: Response) => {
@@ -142,9 +156,11 @@ export const documentController = {
 
     // Set download headers
     const encodedFileName = encodeURIComponent(fileName);
+    const isInline = req.query.inline === '1';
+    const dispositionType = isInline ? 'inline' : 'attachment';
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
+      `${dispositionType}; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`
     );
     if (contentType) {
       res.setHeader('Content-Type', contentType);
@@ -158,6 +174,14 @@ export const documentController = {
       res.write(chunk);
     }
     res.end();
+  }),
+
+  /**
+   * GET /api/documents/:id/preview (always inline)
+   */
+  preview: asyncHandler(async (req: Request, res: Response) => {
+    req.query.inline = '1';
+    return documentController.download(req, res);
   }),
 
   // ==================== Trash Operations ====================
