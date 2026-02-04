@@ -4,7 +4,7 @@ import type {
   SessionInfo,
   UpdateProfileRequest,
 } from '@knowledge-agent/shared/types';
-import { apiClient, unwrapResponse } from './client';
+import { apiClient, unwrapResponse } from '@/lib/http';
 
 export const userApi = {
   /** 获取当前用户信息 */

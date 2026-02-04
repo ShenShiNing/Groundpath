@@ -12,13 +12,8 @@ import type {
   UpdateConversationInput,
   SendMessageInput,
 } from '@knowledge-agent/shared/schemas';
-import {
-  apiClient,
-  unwrapResponse,
-  getOrRefreshToken,
-  hasRefreshToken,
-  ensureAccessToken,
-} from './client';
+import { apiClient, unwrapResponse, fetchStreamWithAuth } from '@/lib/http';
+import { parseSSEStream, createSSEDispatcher } from '@/lib/sse';
 
 // Re-export types for convenience
 export type { ConversationInfo, ConversationListItem, MessageInfo, Citation, SSEEvent };
@@ -129,113 +124,34 @@ export function sendMessageWithSSE(
 ): AbortController {
   const abortController = new AbortController();
 
-  const sendRequest = async (isRetry = false) => {
-    try {
-      // Proactively refresh token if missing before first attempt
-      if (!isRetry && hasRefreshToken()) {
-        await ensureAccessToken();
+  const run = async () => {
+    const result = await fetchStreamWithAuth(
+      `/api/chat/conversations/${conversationId}/messages`,
+      { method: 'POST', body: JSON.stringify(data) },
+      { getAccessToken, signal: abortController.signal }
+    );
+
+    if (!result.ok) {
+      if (result.error.code !== 'ABORTED') {
+        handlers.onError(result.error);
       }
-
-      const token = getAccessToken();
-      const response = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify(data),
-        signal: abortController.signal,
-      });
-
-      // Handle 401 - try to refresh token and retry once
-      if (response.status === 401 && !isRetry && hasRefreshToken()) {
-        try {
-          await getOrRefreshToken();
-          // Retry with new token
-          return sendRequest(true);
-        } catch {
-          // Refresh failed, report error
-          handlers.onError({
-            code: 'AUTH_ERROR',
-            message: 'Session expired. Please login again.',
-          });
-          return;
-        }
-      } else if (response.status === 401 && !hasRefreshToken()) {
-        handlers.onError({
-          code: 'AUTH_ERROR',
-          message: 'Session expired. Please login again.',
-        });
-        return;
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        handlers.onError({
-          code: errorData.error?.code || 'REQUEST_FAILED',
-          message: errorData.error?.message || `HTTP ${response.status}`,
-        });
-        return;
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        handlers.onError({ code: 'NO_BODY', message: 'No response body' });
-        return;
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const jsonStr = line.slice(6).trim();
-          if (!jsonStr) continue;
-
-          try {
-            const event = JSON.parse(jsonStr) as SSEEvent;
-            switch (event.type) {
-              case 'chunk':
-                handlers.onChunk(event.data);
-                break;
-              case 'sources':
-                handlers.onSources(event.data);
-                break;
-              case 'done':
-                handlers.onDone(event.data);
-                break;
-              case 'error':
-                handlers.onError(event.data);
-                break;
-              default:
-                // ignore unknown event
-                break;
-            }
-          } catch {
-            // Skip malformed JSON
-          }
-        }
-      }
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        return; // Intentional abort
-      }
-      handlers.onError({
-        code: 'STREAM_ERROR',
-        message: error instanceof Error ? error.message : 'Stream failed',
-      });
+      return;
     }
+
+    const dispatcher = createSSEDispatcher<SSEEvent>(
+      {
+        chunk: handlers.onChunk,
+        sources: handlers.onSources,
+        done: handlers.onDone,
+        error: handlers.onError,
+      },
+      handlers.onError
+    );
+
+    await parseSSEStream(result.reader, dispatcher);
   };
 
-  sendRequest();
+  run();
   return abortController;
 }
 

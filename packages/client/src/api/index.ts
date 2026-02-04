@@ -1,4 +1,4 @@
-export { apiClient, setTokenAccessors, ApiRequestError } from './client';
+export { apiClient, setTokenAccessors, ApiRequestError } from '@/lib/http';
 export { authApi } from './auth';
 export { emailApi } from './email';
 export { userApi } from './user';

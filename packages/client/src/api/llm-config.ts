@@ -10,7 +10,7 @@ import type {
   TestLLMConnectionInput,
   FetchModelsInput,
 } from '@knowledge-agent/shared/schemas';
-import { apiClient, unwrapResponse } from './client';
+import { apiClient, unwrapResponse } from '@/lib/http';
 
 export const llmConfigApi = {
   /**

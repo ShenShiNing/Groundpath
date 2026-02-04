@@ -8,7 +8,7 @@ import type {
   ResetPasswordRequest,
   ResetPasswordResponse,
 } from '@knowledge-agent/shared/types';
-import { apiClient, unwrapResponse } from './client';
+import { apiClient, unwrapResponse } from '@/lib/http';
 import { getDeviceInfo } from '@/lib/device';
 
 export const authApi = {

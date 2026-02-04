@@ -8,7 +8,7 @@ import type {
   VersionListResponse,
 } from '@knowledge-agent/shared/types';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
-import { apiClient, unwrapResponse } from './client';
+import { apiClient, unwrapResponse } from '@/lib/http';
 
 export interface UploadOptions {
   onUploadProgress?: (loaded: number, total: number) => void;

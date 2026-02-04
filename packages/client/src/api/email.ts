@@ -5,7 +5,7 @@ import type {
   VerifyCodeRequest,
   VerifyCodeResponse,
 } from '@knowledge-agent/shared/types';
-import { apiClient, unwrapResponse } from './client';
+import { apiClient, unwrapResponse } from '@/lib/http';
 
 export const emailApi = {
   /** Send verification code */
