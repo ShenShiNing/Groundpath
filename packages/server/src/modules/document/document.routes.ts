@@ -13,6 +13,7 @@ import {
   updateDocumentRequestSchema,
   documentListParamsSchema,
   trashListParamsSchema,
+  saveDocumentContentSchema,
 } from '@knowledge-agent/shared/schemas';
 
 const router = express.Router();
@@ -139,6 +140,13 @@ router.get('/', validateQuery(documentListParamsSchema), documentController.list
 
 // Get document content
 router.get('/:id/content', documentController.getContent);
+// Save document content
+router.put(
+  '/:id/content',
+  createSanitizeMiddleware(['changeNote']),
+  validateBody(saveDocumentContentSchema),
+  documentController.saveContent
+);
 
 // Get document details
 router.get('/:id', documentController.getById);

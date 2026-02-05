@@ -10,6 +10,7 @@ import type {
   TrashListResponse,
   VersionListResponse,
   DocumentContentResponse,
+  SaveDocumentContentRequest,
 } from '@knowledge-agent/shared/types';
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { withTransaction } from '@shared/db/db.utils';
@@ -323,6 +324,143 @@ export const documentService = {
       isTruncated,
       storageUrl,
     };
+  },
+
+  /**
+   * Save document content (markdown/text only)
+   */
+  async saveContent(
+    documentId: string,
+    userId: string,
+    data: SaveDocumentContentRequest,
+    ctx?: RequestContext
+  ): Promise<DocumentInfo> {
+    const startTime = Date.now();
+    const document = await documentRepository.findByIdAndUser(documentId, userId);
+    if (!document) {
+      throw Errors.auth(
+        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
+        'Document not found',
+        404
+      );
+    }
+
+    const isEditable = document.documentType === 'markdown' || document.documentType === 'text';
+    if (!isEditable) {
+      throw Errors.auth(
+        DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
+        'Document type does not support editing',
+        400
+      );
+    }
+
+    const content = data.content ?? '';
+    if (content.length > env.TEXT_CONTENT_MAX_LENGTH) {
+      throw Errors.auth(
+        DOCUMENT_ERROR_CODES.FILE_TOO_LARGE as 'FILE_TOO_LARGE',
+        'Content too large',
+        400
+      );
+    }
+
+    const buffer = Buffer.from(content, 'utf-8');
+    const fallbackExtension = document.documentType === 'markdown' ? 'md' : 'txt';
+    const fileExtension = document.fileExtension || fallbackExtension;
+    const fileName =
+      document.fileName && document.fileName.includes('.')
+        ? document.fileName
+        : `${document.title}.${fileExtension}`;
+    const mimeType =
+      document.mimeType || (document.documentType === 'markdown' ? 'text/markdown' : 'text/plain');
+
+    const {
+      storageKey,
+      fileExtension: resolvedExtension,
+      documentType,
+      resolvedMimeType,
+    } = await documentStorageService.uploadDocument(userId, {
+      buffer,
+      mimetype: mimeType,
+      originalname: fileName,
+    });
+
+    const newVersion = document.currentVersion + 1;
+    const fileSize = buffer.length;
+
+    let updated: Document | undefined;
+    try {
+      updated = await withTransaction(async (tx) => {
+        await documentVersionRepository.create(
+          {
+            id: uuidv4(),
+            documentId: document.id,
+            version: newVersion,
+            fileName,
+            mimeType: resolvedMimeType,
+            fileSize,
+            fileExtension: resolvedExtension,
+            documentType,
+            storageKey,
+            textContent: content,
+            source: 'edit',
+            changeNote: data.changeNote ?? null,
+            createdBy: userId,
+          },
+          tx
+        );
+
+        return documentRepository.update(
+          documentId,
+          {
+            currentVersion: newVersion,
+            fileName,
+            mimeType: resolvedMimeType,
+            fileSize,
+            fileExtension: resolvedExtension,
+            documentType,
+            processingStatus: 'pending',
+            updatedBy: userId,
+          },
+          tx
+        );
+      });
+    } catch (dbError) {
+      logger.warn({ documentId, storageKey }, 'DB transaction failed, cleaning up uploaded file');
+      try {
+        await documentStorageService.deleteDocument(storageKey);
+      } catch (cleanupErr) {
+        logger.error(
+          { documentId, storageKey, err: cleanupErr },
+          'Failed to clean up orphaned storage file after DB error'
+        );
+      }
+      throw dbError;
+    }
+
+    logOperation({
+      userId,
+      resourceType: 'document',
+      resourceId: documentId,
+      resourceName: document.title,
+      action: 'document.update',
+      description: `Edited document content: ${document.title}`,
+      metadata: {
+        previousVersion: document.currentVersion,
+        newVersion,
+        fileName,
+        fileSize,
+        changeNote: data.changeNote ?? null,
+      },
+      ipAddress: ctx?.ipAddress ?? null,
+      userAgent: ctx?.userAgent ?? null,
+      durationMs: Date.now() - startTime,
+    });
+
+    processingService.processDocument(documentId, userId).catch((err) => {
+      logger.warn({ documentId, err }, 'Failed to trigger document processing after edit');
+    });
+
+    return toDocumentInfo(updated!);
   },
 
   /**

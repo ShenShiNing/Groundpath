@@ -7,6 +7,7 @@ import type {
   TrashListResponse,
   VersionListResponse,
   DocumentContentResponse,
+  SaveDocumentContentRequest,
 } from '@knowledge-agent/shared/types';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
@@ -62,6 +63,20 @@ export const documentsApi = {
   async getContent(documentId: string): Promise<DocumentContentResponse> {
     const response = await apiClient.get<ApiResponse<DocumentContentResponse>>(
       `/api/documents/${documentId}/content`
+    );
+    return unwrapResponse(response.data);
+  },
+
+  /**
+   * Save document content
+   */
+  async saveContent(
+    documentId: string,
+    data: SaveDocumentContentRequest
+  ): Promise<{ document: DocumentInfo; message: string }> {
+    const response = await apiClient.put<ApiResponse<{ document: DocumentInfo; message: string }>>(
+      `/api/documents/${documentId}/content`,
+      data
     );
     return unwrapResponse(response.data);
   },

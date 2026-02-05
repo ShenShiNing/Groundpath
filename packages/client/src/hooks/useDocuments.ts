@@ -4,6 +4,7 @@ import type {
   TrashListParams,
   UpdateDocumentRequest,
   DocumentContentResponse,
+  SaveDocumentContentRequest,
 } from '@knowledge-agent/shared/types';
 import { documentsApi } from '@/api';
 import { queryKeys } from '@/lib/queryClient';
@@ -162,6 +163,23 @@ export function useUpdateDocument() {
       // Invalidate specific document and lists
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.lists() });
+    },
+  });
+}
+
+/**
+ * Save document content
+ */
+export function useSaveDocumentContent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: SaveDocumentContentRequest }) =>
+      documentsApi.saveContent(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.detail(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.content(variables.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.documents.versions(variables.id) });
     },
   });
 }

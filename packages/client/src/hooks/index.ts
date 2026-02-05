@@ -8,6 +8,7 @@ export {
   useTrashDocuments,
   useUploadDocument,
   useUpdateDocument,
+  useSaveDocumentContent,
   useDeleteDocument,
   useRestoreDocument,
   usePermanentDeleteDocument,

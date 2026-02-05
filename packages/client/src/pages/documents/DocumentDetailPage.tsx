@@ -1,21 +1,37 @@
+import { useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { ArrowLeft, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DocumentReader, DocumentInfo } from '@/components/documents';
-import { useDocument, useDocumentContent } from '@/hooks';
+import { DocumentReader, DocumentInfo, DocumentEditor } from '@/components/documents';
+import { useDocument, useDocumentContent, useSaveDocumentContent } from '@/hooks';
 import { documentsApi } from '@/api';
 
 export function DocumentDetailPage() {
   const { id } = useParams({ from: '/documents/$id' });
   const { data: document, isLoading } = useDocument(id);
   const { data: content, isLoading: isContentLoading } = useDocumentContent(id);
+  const { mutateAsync: saveContent, isPending: isSaving } = useSaveDocumentContent();
+  const [mode, setMode] = useState<'read' | 'edit'>(() => (isEditable ? 'edit' : 'read'));
+
+  const isEditable = !!content?.isEditable;
+  const editorKey = content ? `${document?.id ?? id}:${content.currentVersion}` : id;
 
   const handleDownload = () => {
     if (!document) return;
     const url = documentsApi.getDownloadUrl(document.id);
     window.open(url, '_blank');
+  };
+
+  const handleSaveContent = async (value: string) => {
+    await saveContent({ id, data: { content: value } });
+    toast.success('文档已保存');
+  };
+
+  const handleSaveError = (error: unknown) => {
+    toast.error(error instanceof Error ? error.message : '保存失败');
   };
 
   return (
@@ -35,6 +51,22 @@ export function DocumentDetailPage() {
           </div>
           {document && (
             <div className="flex items-center gap-2">
+              {isEditable && (
+                <>
+                  <Button
+                    variant={mode === 'read' ? 'default' : 'outline'}
+                    onClick={() => setMode('read')}
+                  >
+                    阅读
+                  </Button>
+                  <Button
+                    variant={mode === 'edit' ? 'default' : 'outline'}
+                    onClick={() => setMode('edit')}
+                  >
+                    编辑
+                  </Button>
+                </>
+              )}
               <Button variant="outline" onClick={handleDownload}>
                 <Download className="h-4 w-4 mr-2" />
                 Download
@@ -49,15 +81,37 @@ export function DocumentDetailPage() {
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Preview</CardTitle>
+                  <CardTitle>{mode === 'edit' ? 'Editor' : 'Preview'}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <DocumentReader
-                    documentType={content?.documentType ?? document.documentType}
-                    textContent={content?.textContent ?? null}
-                    storageUrl={content?.storageUrl ?? null}
-                    isLoading={isLoading || isContentLoading}
-                  />
+                  {mode === 'edit' && isEditable ? (
+                    isLoading || isContentLoading ? (
+                      <DocumentReader
+                        documentType={content?.documentType ?? document.documentType}
+                        textContent={content?.textContent ?? null}
+                        storageUrl={content?.storageUrl ?? null}
+                        isLoading
+                      />
+                    ) : (
+                      <DocumentEditor
+                        key={editorKey}
+                        documentId={document.id}
+                        documentType={content?.documentType ?? document.documentType}
+                        initialContent={content?.textContent ?? ''}
+                        isSaving={isSaving}
+                        isTruncated={content?.isTruncated ?? false}
+                        onSave={handleSaveContent}
+                        onError={handleSaveError}
+                      />
+                    )
+                  ) : (
+                    <DocumentReader
+                      documentType={content?.documentType ?? document.documentType}
+                      textContent={content?.textContent ?? null}
+                      storageUrl={content?.storageUrl ?? null}
+                      isLoading={isLoading || isContentLoading}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </div>

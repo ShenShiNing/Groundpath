@@ -38,6 +38,11 @@ export const updateDocumentRequestSchema = z.object({
   folderId: z.string().uuid().nullable().optional(),
 });
 
+export const saveDocumentContentSchema = z.object({
+  content: z.string().max(500000, 'Content too large'),
+  changeNote: z.string().max(255).optional(),
+});
+
 // ==================== Query Schemas ====================
 
 export const documentListParamsSchema = z.object({
@@ -70,5 +75,6 @@ export const trashListParamsSchema = z.object({
 export type CreateFolderRequest = z.infer<typeof createFolderRequestSchema>;
 export type UpdateFolderRequest = z.infer<typeof updateFolderRequestSchema>;
 export type UpdateDocumentRequest = z.infer<typeof updateDocumentRequestSchema>;
+export type SaveDocumentContentRequest = z.infer<typeof saveDocumentContentSchema>;
 export type DocumentListParams = z.infer<typeof documentListParamsSchema>;
 export type TrashListParams = z.infer<typeof trashListParamsSchema>;

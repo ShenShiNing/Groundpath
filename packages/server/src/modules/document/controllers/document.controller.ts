@@ -6,6 +6,7 @@ import type {
   UpdateDocumentRequest,
   DocumentListParams,
   TrashListParams,
+  SaveDocumentContentRequest,
 } from '@knowledge-agent/shared/types';
 import { documentService } from '../services/document.service';
 import { sendSuccessResponse } from '@shared/errors';
@@ -173,6 +174,26 @@ export const documentController = {
 
     const content = await documentService.getContent(documentId, userId);
     sendSuccessResponse(res, content);
+  }),
+
+  /**
+   * PUT /api/documents/:id/content
+   */
+  saveContent: asyncHandler(async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const documentId = getParamId(req, 'id');
+    if (!documentId) {
+      throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
+    }
+
+    const data = req.body as SaveDocumentContentRequest;
+    const document = await documentService.saveContent(
+      documentId,
+      userId,
+      data,
+      getRequestContext(req)
+    );
+    sendSuccessResponse(res, { document, message: 'Document content saved successfully' });
   }),
 
   /**

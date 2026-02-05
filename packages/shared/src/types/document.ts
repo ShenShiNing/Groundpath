@@ -88,6 +88,7 @@ export type {
   CreateFolderRequest,
   UpdateFolderRequest,
   UpdateDocumentRequest,
+  SaveDocumentContentRequest,
   DocumentListParams,
   TrashListParams,
 } from '../schemas/document';
