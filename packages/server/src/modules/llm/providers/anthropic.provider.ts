@@ -23,14 +23,17 @@ export class AnthropicProvider implements LLMProvider {
         content: m.content,
       }));
 
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: options?.maxTokens ?? 2048,
-      ...(systemMessage && { system: systemMessage.content }),
-      messages: chatMessages,
-      temperature: options?.temperature,
-      top_p: options?.topP,
-    });
+    const response = await this.client.messages.create(
+      {
+        model: this.model,
+        max_tokens: options?.maxTokens ?? 2048,
+        ...(systemMessage && { system: systemMessage.content }),
+        messages: chatMessages,
+        temperature: options?.temperature,
+        top_p: options?.topP,
+      },
+      { signal: options?.signal }
+    );
 
     const textBlock = response.content.find((b) => b.type === 'text');
     return textBlock?.text ?? '';
@@ -48,16 +51,24 @@ export class AnthropicProvider implements LLMProvider {
         content: m.content,
       }));
 
-    const stream = this.client.messages.stream({
-      model: this.model,
-      max_tokens: options?.maxTokens ?? 2048,
-      ...(systemMessage && { system: systemMessage.content }),
-      messages: chatMessages,
-      temperature: options?.temperature,
-      top_p: options?.topP,
-    });
+    const stream = this.client.messages.stream(
+      {
+        model: this.model,
+        max_tokens: options?.maxTokens ?? 2048,
+        ...(systemMessage && { system: systemMessage.content }),
+        messages: chatMessages,
+        temperature: options?.temperature,
+        top_p: options?.topP,
+      },
+      { signal: options?.signal }
+    );
 
     for await (const event of stream) {
+      // Check if aborted before yielding
+      if (options?.signal?.aborted) {
+        stream.abort();
+        return;
+      }
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
         yield event.delta.text;
       }

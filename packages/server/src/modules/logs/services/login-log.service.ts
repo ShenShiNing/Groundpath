@@ -1,6 +1,6 @@
 import type { LoginLog } from '@shared/db/schema/system/login-logs.schema';
-import type { PaginationMeta } from '@shared/utils/pagination';
-import { buildPagination } from '@shared/utils/pagination';
+import type { PaginationMeta } from '@shared/utils';
+import { buildPagination } from '@shared/utils';
 import {
   loginLogRepository,
   type LoginLogListParams,

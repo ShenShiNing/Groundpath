@@ -3,6 +3,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ResetPasswordRequest } from '@knowledge-agent/shared/types';
 import { Errors } from '@shared/errors';
 import { withTransaction } from '@shared/db/db.utils';
+import { normalizeEmail } from '@shared/utils';
 import { userService } from '../../user';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { emailVerificationService } from '../verification/email-verification.service';
@@ -69,7 +70,8 @@ export const passwordService = {
   async resetPassword(
     data: ResetPasswordRequest
   ): Promise<{ message: string; sessionsRevoked?: number }> {
-    const { email, newPassword, verificationToken, logoutAllDevices } = data;
+    const { newPassword, verificationToken, logoutAllDevices } = data;
+    const email = normalizeEmail(data.email);
 
     // Verify the verification token (outside transaction - no DB writes)
     const { email: verifiedEmail } = emailVerificationService.verifyToken(
@@ -77,8 +79,8 @@ export const passwordService = {
       'reset_password'
     );
 
-    // Ensure the email matches
-    if (verifiedEmail !== email.toLowerCase().trim()) {
+    // Ensure the email matches (verifiedEmail is already normalized in token)
+    if (verifiedEmail !== email) {
       throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
         'Verification token does not match the provided email',

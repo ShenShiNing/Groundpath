@@ -40,6 +40,7 @@ export class CustomProvider implements LLMProvider {
         max_tokens: options?.maxTokens,
         top_p: options?.topP,
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -71,6 +72,7 @@ export class CustomProvider implements LLMProvider {
         top_p: options?.topP,
         stream: true,
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -86,6 +88,11 @@ export class CustomProvider implements LLMProvider {
 
     try {
       while (true) {
+        // Check if aborted before reading
+        if (options?.signal?.aborted) {
+          return;
+        }
+
         const { done, value } = await reader.read();
         if (done) break;
 

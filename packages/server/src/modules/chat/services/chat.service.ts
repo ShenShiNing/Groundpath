@@ -40,22 +40,14 @@ function sendSSE(res: Response, event: SSEEvent): void {
 }
 
 /**
- * Enrich search results with document titles
+ * Enrich search results with document titles (single batch query, avoids N+1)
  */
 async function enrichSearchResults(results: SearchResult[]): Promise<EnrichedSearchResult[]> {
-  // Get unique document IDs
-  const docIds = [...new Set(results.map((r) => r.documentId))];
+  if (results.length === 0) return [];
 
-  // Fetch document titles
-  const docTitles = new Map<string, string>();
-  await Promise.all(
-    docIds.map(async (docId) => {
-      const doc = await documentRepository.findById(docId);
-      if (doc) {
-        docTitles.set(docId, doc.title);
-      }
-    })
-  );
+  // Batch-fetch all needed titles in one query
+  const docIds = [...new Set(results.map((r) => r.documentId))];
+  const docTitles = await documentRepository.getTitlesByIds(docIds);
 
   return results.map((r) => ({
     documentId: r.documentId,
@@ -137,16 +129,38 @@ export const chatService = {
       const provider = await llmService.getProviderForUser(userId);
       const genOptions = await llmService.getOptionsForUser(userId);
 
-      // Stream response
+      // Stream response with abort handling
       let fullContent = '';
       const assistantMessageId = uuidv4();
+      const abortController = new AbortController();
+      let clientDisconnected = false;
+
+      // Listen for client disconnect to abort LLM streaming
+      const onClose = () => {
+        clientDisconnected = true;
+        abortController.abort();
+        logger.info({ conversationId }, 'Client disconnected, aborting LLM stream');
+      };
+      res.on('close', onClose);
 
       try {
-        for await (const chunk of provider.streamGenerate(messages, genOptions)) {
+        for await (const chunk of provider.streamGenerate(messages, {
+          ...genOptions,
+          signal: abortController.signal,
+        })) {
+          // Stop if client disconnected
+          if (clientDisconnected) {
+            break;
+          }
           fullContent += chunk;
           sendSSE(res, { type: 'chunk', data: chunk });
         }
       } catch (error) {
+        // Ignore abort errors from client disconnect
+        if (clientDisconnected || (error instanceof Error && error.name === 'AbortError')) {
+          logger.info({ conversationId }, 'LLM stream aborted due to client disconnect');
+          return;
+        }
         logger.error({ error, conversationId }, 'LLM streaming error');
         sendSSE(res, {
           type: 'error',
@@ -157,12 +171,20 @@ export const chatService = {
         });
         res.end();
         return;
+      } finally {
+        res.off('close', onClose);
+      }
+
+      // Don't save or send completion if client disconnected
+      if (clientDisconnected) {
+        return;
       }
 
       // Save assistant message
       const citations =
         searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
       await messageService.create({
+        id: assistantMessageId,
         conversationId,
         role: 'assistant',
         content: fullContent,

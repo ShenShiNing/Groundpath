@@ -4,7 +4,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
-import type { StorageProvider } from '../storage.types';
+import type { SignedUrlOptions, StorageProvider } from '../storage.types';
 import { env } from '@config/env';
 
 export class R2StorageProvider implements StorageProvider {
@@ -84,7 +84,9 @@ export class R2StorageProvider implements StorageProvider {
     return Buffer.concat(chunks);
   }
 
-  getPublicUrl(key: string): string {
+  // R2 uses public bucket URL, no signing needed (handled by Cloudflare)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getPublicUrl(key: string, _options?: SignedUrlOptions): string {
     return `${env.R2_PUBLIC_URL}/${key}`;
   }
 }

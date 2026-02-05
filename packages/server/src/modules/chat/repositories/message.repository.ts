@@ -90,4 +90,46 @@ export const messageRepository = {
   async updateMetadata(id: string, metadata: Message['metadata']): Promise<void> {
     await db.update(messages).set({ metadata }).where(eq(messages.id, id));
   },
+
+  /**
+   * Get message stats (count and last message time) for multiple conversations in one query.
+   * Replaces per-conversation countByConversation + getLastMessageAt to avoid N+1.
+   */
+  async getStatsForConversations(
+    conversationIds: string[]
+  ): Promise<Map<string, { count: number; lastMessageAt: Date | null }>> {
+    if (conversationIds.length === 0) return new Map();
+
+    const result = await db
+      .select({
+        conversationId: messages.conversationId,
+        count: sql<number>`count(*)`,
+        lastMessageAt: sql<Date | null>`max(${messages.createdAt})`,
+      })
+      .from(messages)
+      .where(
+        sql`${messages.conversationId} IN (${sql.join(
+          conversationIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      )
+      .groupBy(messages.conversationId);
+
+    const statsMap = new Map<string, { count: number; lastMessageAt: Date | null }>();
+    for (const row of result) {
+      statsMap.set(row.conversationId, {
+        count: row.count,
+        lastMessageAt: row.lastMessageAt,
+      });
+    }
+
+    // Fill in conversations with no messages
+    for (const id of conversationIds) {
+      if (!statsMap.has(id)) {
+        statsMap.set(id, { count: 0, lastMessageAt: null });
+      }
+    }
+
+    return statsMap;
+  },
 };

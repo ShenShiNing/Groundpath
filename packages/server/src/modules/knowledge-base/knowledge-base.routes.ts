@@ -3,8 +3,12 @@ import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { env } from '@config/env';
 import { knowledgeBaseController } from './controllers/knowledge-base.controller';
-import { authenticate } from '@shared/middleware/auth.middleware';
-import { validateBody, validateQuery } from '@shared/middleware/validation.middleware';
+import {
+  authenticate,
+  validateBody,
+  validateQuery,
+  createSanitizeMiddleware,
+} from '@shared/middleware';
 import {
   createKnowledgeBaseSchema,
   updateKnowledgeBaseSchema,
@@ -15,8 +19,8 @@ import { documentService, folderService } from '@modules/document';
 import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId, getParamId, getClientIp } from '@shared/utils/request.utils';
-import { getValidatedQuery } from '@shared/middleware/validation.middleware';
+import { requireUserId, getParamId, getClientIp } from '@shared/utils';
+import { getValidatedQuery } from '@shared/middleware';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
 import type { DocumentListParams, CreateFolderRequest } from '@knowledge-agent/shared/types';
 
@@ -56,7 +60,10 @@ function handleMulterError(err: Error, _req: Request, res: Response, next: NextF
   next(err);
 }
 
-// Helper to wrap upload middleware with error handling
+// Sanitize middleware for multipart form fields (runs after multer populates req.body)
+const sanitizeMultipartFields = createSanitizeMiddleware();
+
+// Helper to wrap upload middleware with error handling and sanitization
 function uploadWithErrorHandling(fieldName: string) {
   return [
     (req: Request, res: Response, next: NextFunction) => {
@@ -68,6 +75,7 @@ function uploadWithErrorHandling(fieldName: string) {
         }
       });
     },
+    sanitizeMultipartFields,
   ];
 }
 

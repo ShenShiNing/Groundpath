@@ -8,7 +8,7 @@ import type {
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { withTransaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
-import { buildPagination } from '@shared/utils/pagination';
+import { buildPagination } from '@shared/utils';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
@@ -178,31 +178,39 @@ export const documentTrashService = {
     // Get version list before transaction (needed for storage cleanup)
     const versions = await documentVersionRepository.listByDocumentId(documentId);
 
-    // Delete all version files from storage (outside transaction - not rollbackable)
-    for (const version of versions) {
+    // Collect storage keys for cleanup after DB transaction
+    const storageKeys = versions.map((v) => v.storageKey);
+
+    // DB transaction FIRST — removes metadata before external resources
+    // If this fails, storage and vectors remain intact (consistent state)
+    await withTransaction(async (tx) => {
+      await documentChunkRepository.deleteByDocumentId(documentId, tx);
+      await documentVersionRepository.deleteByDocumentId(documentId, tx);
+      await documentRepository.hardDelete(documentId, tx);
+    });
+
+    // AFTER DB success: clean up storage files (best effort)
+    // Orphaned files are acceptable — a background cleanup job can sweep them
+    for (const key of storageKeys) {
       try {
-        await documentStorageService.deleteDocument(version.storageKey);
+        await documentStorageService.deleteDocument(key);
       } catch (err) {
-        logger.warn({ versionId: version.id, err }, 'Failed to delete version from storage');
+        logger.warn(
+          { storageKey: key, documentId, err },
+          'Failed to delete file from storage after DB commit'
+        );
       }
     }
 
-    // Delete vectors from Qdrant (outside transaction - eventual consistency)
+    // AFTER DB success: clean up vectors (best effort)
     try {
       const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(
         document.knowledgeBaseId
       );
       await vectorRepository.deleteByDocumentId(embeddingConfig.collectionName, documentId);
     } catch (err) {
-      logger.warn({ documentId, err }, 'Failed to delete vectors from Qdrant');
+      logger.warn({ documentId, err }, 'Failed to delete vectors from Qdrant after DB commit');
     }
-
-    // All MySQL operations in a single transaction
-    await withTransaction(async (tx) => {
-      await documentChunkRepository.deleteByDocumentId(documentId, tx);
-      await documentVersionRepository.deleteByDocumentId(documentId, tx);
-      await documentRepository.hardDelete(documentId, tx);
-    });
 
     // Log operation
     logOperation({

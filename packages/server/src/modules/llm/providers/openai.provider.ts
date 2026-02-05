@@ -14,13 +14,16 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   async generate(messages: ChatMessage[], options?: GenerateOptions): Promise<string> {
-    const response = await this.client.chat.completions.create({
-      model: this.model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      temperature: options?.temperature,
-      max_tokens: options?.maxTokens,
-      top_p: options?.topP,
-    });
+    const response = await this.client.chat.completions.create(
+      {
+        model: this.model,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        temperature: options?.temperature,
+        max_tokens: options?.maxTokens,
+        top_p: options?.topP,
+      },
+      { signal: options?.signal }
+    );
 
     return response.choices[0]?.message?.content ?? '';
   }
@@ -29,16 +32,23 @@ export class OpenAIProvider implements LLMProvider {
     messages: ChatMessage[],
     options?: GenerateOptions
   ): AsyncGenerator<string, void, unknown> {
-    const stream = await this.client.chat.completions.create({
-      model: this.model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
-      temperature: options?.temperature,
-      max_tokens: options?.maxTokens,
-      top_p: options?.topP,
-      stream: true,
-    });
+    const stream = await this.client.chat.completions.create(
+      {
+        model: this.model,
+        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        temperature: options?.temperature,
+        max_tokens: options?.maxTokens,
+        top_p: options?.topP,
+        stream: true,
+      },
+      { signal: options?.signal }
+    );
 
     for await (const chunk of stream) {
+      // Check if aborted before yielding
+      if (options?.signal?.aborted) {
+        return;
+      }
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
         yield content;

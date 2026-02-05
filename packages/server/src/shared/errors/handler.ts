@@ -1,8 +1,23 @@
 import type { Response } from 'express';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
+import { HTTP_STATUS, ERROR_CODES } from '@knowledge-agent/shared';
+import { ZodError } from '@knowledge-agent/shared/schemas';
 import { logger } from '@shared/logger';
 import { AppError } from './app-error';
 import { sendErrorResponse } from './response';
+
+/**
+ * Format Zod validation errors into a structured object
+ */
+function formatZodErrors(error: ZodError): Record<string, string[]> {
+  const details: Record<string, string[]> = {};
+  for (const issue of error.issues) {
+    const path = issue.path.join('.') || 'root';
+    if (!details[path]) details[path] = [];
+    details[path].push(issue.message);
+  }
+  return details;
+}
 
 /**
  * Handle errors and send appropriate response.
@@ -15,6 +30,20 @@ export function handleError(error: unknown, res: Response, context: string): voi
       error: error.toJSON(),
     };
     res.status(error.statusCode).json(response);
+    return;
+  }
+
+  // Handle Zod validation errors as 400 Bad Request
+  if (error instanceof ZodError) {
+    const response: ApiResponse = {
+      success: false,
+      error: {
+        code: ERROR_CODES.VALIDATION_ERROR,
+        message: 'Validation failed',
+        details: formatZodErrors(error),
+      },
+    };
+    res.status(HTTP_STATUS.BAD_REQUEST).json(response);
     return;
   }
 

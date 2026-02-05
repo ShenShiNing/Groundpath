@@ -15,9 +15,10 @@ export const documentRepository = {
   /**
    * Create a new document
    */
-  async create(data: NewDocument): Promise<Document> {
-    await db.insert(documents).values(data);
-    const result = await db.select().from(documents).where(eq(documents.id, data.id)).limit(1);
+  async create(data: NewDocument, tx?: Transaction): Promise<Document> {
+    const ctx = getDbContext(tx);
+    await ctx.insert(documents).values(data);
+    const result = await ctx.select().from(documents).where(eq(documents.id, data.id)).limit(1);
     return result[0]!;
   },
 
@@ -290,8 +291,10 @@ export const documentRepository = {
     id: string,
     status: Document['processingStatus'],
     error?: string,
-    chunkCount?: number
+    chunkCount?: number,
+    tx?: Transaction
   ): Promise<void> {
+    const ctx = getDbContext(tx);
     const updateData: Partial<Document> = { processingStatus: status };
     if (error !== undefined) {
       updateData.processingError = error;
@@ -299,7 +302,7 @@ export const documentRepository = {
     if (chunkCount !== undefined) {
       updateData.chunkCount = chunkCount;
     }
-    await db.update(documents).set(updateData).where(eq(documents.id, id));
+    await ctx.update(documents).set(updateData).where(eq(documents.id, id));
   },
 
   /**
@@ -322,5 +325,26 @@ export const documentRepository = {
       .from(documents)
       .where(and(eq(documents.knowledgeBaseId, knowledgeBaseId), isNull(documents.deletedAt)));
     return result[0]?.total ?? 0;
+  },
+
+  /**
+   * Get id -> title map for multiple documents in a single query.
+   * Used to batch-enrich search results and avoid N+1 lookups.
+   */
+  async getTitlesByIds(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const result = await db
+      .select({ id: documents.id, title: documents.title })
+      .from(documents)
+      .where(
+        and(
+          sql`${documents.id} IN (${sql.join(
+            ids.map((id) => sql`${id}`),
+            sql`, `
+          )})`,
+          isNull(documents.deletedAt)
+        )
+      );
+    return new Map(result.map((r) => [r.id, r.title]));
   },
 };

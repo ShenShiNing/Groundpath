@@ -2,8 +2,10 @@ import fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
-import type { StorageProvider } from '../storage.types';
+import type { SignedUrlOptions, StorageProvider } from '../storage.types';
 import { env } from '@config/env';
+import { generateSignedUrl } from '@shared/utils';
+import { Errors } from '@shared/errors';
 
 export class LocalStorageProvider implements StorageProvider {
   private basePath: string;
@@ -12,15 +14,31 @@ export class LocalStorageProvider implements StorageProvider {
     this.basePath = path.resolve(env.LOCAL_STORAGE_PATH);
   }
 
+  /**
+   * Resolve key to an absolute path and ensure it stays within basePath.
+   * Prevents directory traversal attacks (e.g. key = "../../etc/passwd").
+   */
+  private resolveSafePath(key: string): string {
+    // Normalize and resolve to absolute path
+    const resolved = path.resolve(this.basePath, key);
+
+    // Ensure the resolved path is within basePath (with separator to avoid prefix false-positives)
+    if (!resolved.startsWith(this.basePath + path.sep) && resolved !== this.basePath) {
+      throw Errors.validation('Invalid file key: path traversal detected');
+    }
+
+    return resolved;
+  }
+
   // contentType is not stored with local files; it's inferred from extension on read
   async upload(key: string, buffer: Buffer): Promise<void> {
-    const filePath = path.join(this.basePath, key);
+    const filePath = this.resolveSafePath(key);
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, buffer);
   }
 
   async delete(key: string): Promise<void> {
-    const filePath = path.join(this.basePath, key);
+    const filePath = this.resolveSafePath(key);
     try {
       await fs.unlink(filePath);
     } catch (err: unknown) {
@@ -33,7 +51,7 @@ export class LocalStorageProvider implements StorageProvider {
     contentType: string | undefined;
     contentLength: number | undefined;
   }> {
-    const filePath = path.join(this.basePath, key);
+    const filePath = this.resolveSafePath(key);
     const stat = await fs.stat(filePath);
     const stream = createReadStream(filePath);
 
@@ -49,12 +67,17 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async getBuffer(key: string): Promise<Buffer> {
-    const filePath = path.join(this.basePath, key);
+    const filePath = this.resolveSafePath(key);
     return fs.readFile(filePath);
   }
 
-  getPublicUrl(key: string): string {
-    return `${env.FRONTEND_URL}/api/uploads/${key}`;
+  getPublicUrl(key: string, options?: SignedUrlOptions): string {
+    // In development with signing disabled, use direct static path (for debugging)
+    if (env.NODE_ENV === 'development' && env.DISABLE_FILE_SIGNING) {
+      return `${env.FRONTEND_URL}/api/uploads/${key}`;
+    }
+    // Use signed URL for secure access
+    return `${env.FRONTEND_URL}${generateSignedUrl({ key, expiresIn: options?.expiresIn })}`;
   }
 }
 

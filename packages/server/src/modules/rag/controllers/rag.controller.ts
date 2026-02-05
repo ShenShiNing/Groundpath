@@ -2,10 +2,11 @@ import type { Request, Response } from 'express';
 import { z } from '@knowledge-agent/shared/schemas';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
 import { sendSuccessResponse, handleError, Errors } from '@shared/errors';
-import { getParamId } from '@shared/utils/request.utils';
+import { getParamId } from '@shared/utils';
 import { searchService } from '../services/search.service';
 import { processingService } from '../services/processing.service';
 import { documentRepository } from '@modules/document';
+import { knowledgeBaseService } from '@modules/knowledge-base';
 
 const searchSchema = z.object({
   query: z.string().min(1).max(1000),
@@ -20,6 +21,9 @@ export const ragController = {
     try {
       const userId = req.user!.sub;
       const parsed = searchSchema.parse(req.body);
+
+      // Validate knowledge base ownership before searching
+      await knowledgeBaseService.validateOwnership(parsed.knowledgeBaseId, userId);
 
       const results = await searchService.searchInKnowledgeBase({
         userId,
@@ -62,8 +66,11 @@ export const ragController = {
         );
       }
 
-      // Trigger async processing
-      processingService.processDocument(documentId, userId);
+      // Trigger async processing (fire-and-forget)
+      // Concurrency control is handled inside processingService
+      processingService.processDocument(documentId, userId).catch(() => {
+        // Error is already logged and status updated inside processDocument
+      });
 
       sendSuccessResponse(res, {
         documentId,

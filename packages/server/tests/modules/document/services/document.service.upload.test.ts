@@ -122,7 +122,10 @@ describe('documentService > upload', () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(folderRepository.findByIdAndUser).mockResolvedValue(mockFolder);
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue('Extracted PDF text');
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: 'Extracted PDF text',
+      truncated: false,
+    });
     vi.mocked(documentRepository.create).mockResolvedValue({
       ...mockDocument,
       id: 'generated-uuid-123',
@@ -157,7 +160,8 @@ describe('documentService > upload', () => {
         title: 'My PDF',
         description: 'A test PDF',
         currentVersion: 1,
-      })
+      }),
+      expect.anything() // transaction
     );
     expect(result.id).toBe('generated-uuid-123');
   });
@@ -167,7 +171,10 @@ describe('documentService > upload', () => {
   it('should upload document to root when no folderId specified', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue(null);
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: null,
+      truncated: false,
+    });
     vi.mocked(documentRepository.create).mockResolvedValue({
       ...mockDocument,
       id: 'generated-uuid-123',
@@ -187,7 +194,8 @@ describe('documentService > upload', () => {
 
     expect(folderRepository.findByIdAndUser).not.toHaveBeenCalled();
     expect(documentRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ folderId: null })
+      expect.objectContaining({ folderId: null }),
+      expect.anything() // transaction
     );
   });
 
@@ -196,7 +204,10 @@ describe('documentService > upload', () => {
   it('should extract title from filename when not provided', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue(null);
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: null,
+      truncated: false,
+    });
     vi.mocked(documentRepository.create).mockResolvedValue({
       ...mockDocument,
       id: 'generated-uuid-123',
@@ -280,7 +291,10 @@ describe('documentService > upload', () => {
   it('should use extractTextContent for PDF files', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue('PDF extracted text');
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: 'PDF extracted text',
+      truncated: false,
+    });
     vi.mocked(documentRepository.create).mockResolvedValue({
       ...mockDocument,
       id: 'generated-uuid-123',
@@ -299,18 +313,21 @@ describe('documentService > upload', () => {
 
     expect(documentStorageService.extractTextContent).toHaveBeenCalledWith(
       mockStorageResult.storageKey,
-      'pdf'
+      'pdf',
+      expect.any(Number) // TEXT_PREVIEW_MAX_LENGTH from env
     );
   });
 
-  // 场景 7：文本内容超过 50000 字符时截断
-  it('should truncate text content exceeding 50000 characters', async () => {
-    const longContent = 'a'.repeat(60000);
+  // 场景 7：文本内容超过 TEXT_CONTENT_MAX_LENGTH 时截断
+  // 默认限制为 500000 字符（可编辑文件）
+  it('should truncate text content exceeding TEXT_CONTENT_MAX_LENGTH', async () => {
+    const maxLength = 500000; // env.TEXT_CONTENT_MAX_LENGTH default
+    const longContent = 'a'.repeat(maxLength + 10000);
     const longTextFile = {
       buffer: Buffer.from(longContent),
       originalname: 'long.txt',
       mimetype: 'text/plain',
-      size: 60000,
+      size: longContent.length,
     };
 
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
@@ -330,12 +347,12 @@ describe('documentService > upload', () => {
 
     const versionCreateCall = vi.mocked(documentVersionRepository.create).mock.calls[0]?.[0];
     logTestInfo(
-      { originalLength: 60000 },
-      { truncatedLength: 50000 },
+      { originalLength: longContent.length },
+      { truncatedLength: maxLength },
       { truncatedLength: versionCreateCall?.textContent?.length }
     );
 
-    expect(versionCreateCall?.textContent?.length).toBe(50000);
+    expect(versionCreateCall?.textContent?.length).toBe(maxLength);
   });
 
   // 场景 8：不支持的文件类型 — validateFile 返回无效
@@ -404,7 +421,10 @@ describe('documentService > upload', () => {
   it('should set initial currentVersion to 1', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue(null);
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: null,
+      truncated: false,
+    });
     vi.mocked(documentVersionRepository.create).mockResolvedValue(mockDocumentVersion);
     vi.mocked(documentRepository.create).mockResolvedValue({
       ...mockDocument,

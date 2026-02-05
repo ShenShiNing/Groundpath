@@ -13,48 +13,56 @@ const HTML_ESCAPE_MAP: Record<string, string> = {
   '>': '&gt;',
   '"': '&quot;',
   "'": '&#x27;',
-  '/': '&#x2F;',
 };
 
 /**
  * Escape HTML special characters to prevent XSS attacks
+ * Note: Does NOT escape '/' as it's commonly used in URLs and paths
  */
 function escapeHtml(str: string): string {
-  return str.replace(/[&<>"'/]/g, (char) => HTML_ESCAPE_MAP[char] ?? char);
+  return str.replace(/[&<>"']/g, (char) => HTML_ESCAPE_MAP[char] ?? char);
 }
 
 /**
- * Fields that should NOT be sanitized (passwords, tokens, URLs, API keys, etc.)
- * These fields contain user credentials or data that must be preserved exactly
+ * Fields that SHOULD be sanitized (displayed directly in UI, potential XSS vectors)
+ * Only these fields will have HTML characters escaped.
+ *
+ * Strategy: Whitelist approach - only sanitize fields that are:
+ * 1. Displayed directly in the UI (titles, names, etc.)
+ * 2. Not expected to contain HTML/Markdown/code
+ * 3. User-controlled and potentially injectable
+ *
+ * Content fields (textContent, message, description, etc.) are intentionally
+ * NOT sanitized because:
+ * 1. They may contain legitimate Markdown, code, or special characters
+ * 2. Double-encoding would corrupt the data (& → &amp; → &amp;amp;)
+ * 3. XSS prevention should happen at OUTPUT (React escapes by default)
  */
-const SKIP_SANITIZE_FIELDS = new Set([
-  'password',
-  'currentPassword',
-  'newPassword',
-  'confirmPassword',
-  'token',
-  'refreshToken',
-  'accessToken',
-  'code',
-  'verificationCode',
-  // API configuration fields
-  'apiKey',
-  'baseUrl',
-  'url',
+const SANITIZE_FIELDS = new Set([
+  // User profile fields (displayed in UI)
+  'username',
+  'displayName',
+  'bio',
+  // Titles and names (displayed prominently)
+  'title',
+  'name',
+  'folderName',
+  // Search queries (reflected in UI)
+  'search',
+  'q',
 ]);
 
 /**
  * Recursively sanitize an object's string values
- * Skips sensitive fields like passwords and tokens
+ * Only sanitizes fields in the SANITIZE_FIELDS whitelist
  */
 function sanitizeValue(value: unknown, key?: string): unknown {
-  // Skip sanitization for sensitive fields
-  if (key && SKIP_SANITIZE_FIELDS.has(key)) {
-    return value;
-  }
-
+  // Only sanitize fields in the whitelist
   if (typeof value === 'string') {
-    return escapeHtml(value);
+    if (key && SANITIZE_FIELDS.has(key)) {
+      return escapeHtml(value);
+    }
+    return value; // Don't sanitize by default
   }
 
   if (Array.isArray(value)) {
@@ -69,7 +77,7 @@ function sanitizeValue(value: unknown, key?: string): unknown {
 }
 
 /**
- * Sanitize all string properties in an object
+ * Sanitize whitelisted string properties in an object
  */
 function sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -83,18 +91,25 @@ function sanitizeObject(obj: Record<string, unknown>): Record<string, unknown> {
 
 /**
  * Input sanitization middleware
- * Escapes HTML special characters in request body to prevent XSS attacks
  *
- * Note: This is a defense-in-depth measure. Output encoding should also
- * be implemented on the frontend when rendering user-generated content.
+ * Uses a WHITELIST approach: only sanitizes specific high-risk fields
+ * that are displayed directly in the UI (titles, usernames, etc.)
+ *
+ * Content fields (textContent, message, description, etc.) are NOT sanitized
+ * to prevent double-encoding and data corruption.
+ *
+ * XSS prevention strategy:
+ * - Input: Minimal sanitization (only UI-displayed fields)
+ * - Output: React escapes text by default, use dangerouslySetInnerHTML carefully
+ * - Storage: Store original data, encode on output
  */
 export function sanitizeMiddleware(req: Request, _res: Response, next: NextFunction): void {
-  // Sanitize request body
+  // Sanitize request body (whitelist fields only)
   if (req.body && typeof req.body === 'object') {
     req.body = sanitizeObject(req.body as Record<string, unknown>);
   }
 
-  // Sanitize query parameters (mutate in place since req.query is read-only in Express 5)
+  // Sanitize query parameters (whitelist fields only)
   if (req.query && typeof req.query === 'object') {
     const sanitizedQuery = sanitizeObject(req.query as Record<string, unknown>);
     for (const key of Object.keys(req.query)) {
@@ -106,19 +121,18 @@ export function sanitizeMiddleware(req: Request, _res: Response, next: NextFunct
 }
 
 /**
- * Create a sanitize middleware with custom skip fields
+ * Create a sanitize middleware with additional fields to sanitize
  */
-export function createSanitizeMiddleware(additionalSkipFields: string[] = []) {
-  const skipFields = new Set([...SKIP_SANITIZE_FIELDS, ...additionalSkipFields]);
+export function createSanitizeMiddleware(additionalSanitizeFields: string[] = []) {
+  const fieldsToSanitize = new Set([...SANITIZE_FIELDS, ...additionalSanitizeFields]);
 
   return (req: Request, _res: Response, next: NextFunction): void => {
     const sanitize = (value: unknown, key?: string): unknown => {
-      if (key && skipFields.has(key)) {
-        return value;
-      }
-
       if (typeof value === 'string') {
-        return escapeHtml(value);
+        if (key && fieldsToSanitize.has(key)) {
+          return escapeHtml(value);
+        }
+        return value;
       }
 
       if (Array.isArray(value)) {

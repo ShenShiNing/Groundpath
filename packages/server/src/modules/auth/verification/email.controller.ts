@@ -6,14 +6,15 @@ import { userService } from '../../user';
 import { sendSuccessResponse } from '@shared/errors';
 import { Errors } from '@shared/errors';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { getClientIp } from '@shared/utils/request.utils';
+import { getClientIp, normalizeEmail } from '@shared/utils';
 
 export const emailController = {
   /**
    * POST /api/auth/email/send-code
    */
   sendCode: asyncHandler(async (req: Request, res: Response) => {
-    const { email, type } = req.body as SendVerificationCodeRequest;
+    const { email: rawEmail, type } = req.body as SendVerificationCodeRequest;
+    const email = normalizeEmail(rawEmail);
     const ipAddress = getClientIp(req);
 
     // For registration, check if email is already registered
@@ -54,7 +55,8 @@ export const emailController = {
    * POST /api/auth/email/verify-code
    */
   verifyCode: asyncHandler(async (req: Request, res: Response) => {
-    const { email, code, type } = req.body as VerifyCodeRequest;
+    const { email: rawEmail, code, type } = req.body as VerifyCodeRequest;
+    const email = normalizeEmail(rawEmail);
 
     const result = await emailVerificationService.verifyCode(email, code, type);
 

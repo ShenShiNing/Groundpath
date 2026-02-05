@@ -26,6 +26,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
 
+  // Proxy settings (for correct client IP detection behind reverse proxy)
+  // Set to 'true' to trust X-Forwarded-* headers, or a specific value like '1' or 'loopback'
+  // See: https://expressjs.com/en/guide/behind-proxies.html
+  TRUST_PROXY: z.string().optional(),
+
   // Database
   DATABASE_URL: z.string(),
 
@@ -70,8 +75,23 @@ const envSchema = z.object({
   STORAGE_TYPE: z.enum(['local', 'r2']).optional(),
   LOCAL_STORAGE_PATH: z.string().default('./uploads'),
 
+  // File signing (for secure local file access)
+  FILE_SIGNING_SECRET: z.string().min(32).optional(), // defaults to ENCRYPTION_KEY
+  FILE_URL_EXPIRES_IN: z.coerce.number().default(3600), // 1 hour
+  AVATAR_URL_EXPIRES_IN: z.coerce.number().default(604800), // 7 days
+  DISABLE_FILE_SIGNING: z
+    .string()
+    .default('false')
+    .transform((v) => v === 'true'),
+
   // Document upload
   MAX_DOCUMENT_SIZE: z.coerce.number().default(22020096), // 21 MiB
+
+  // Text content extraction limits (characters)
+  // For editable files (markdown/text): stored in full for editing
+  // For preview files (pdf/docx): truncated for display, full file available via download
+  TEXT_CONTENT_MAX_LENGTH: z.coerce.number().default(500000), // 500K chars (~500KB) for editable
+  TEXT_PREVIEW_MAX_LENGTH: z.coerce.number().default(50000), // 50K chars for PDF/DOCX preview
 
   // Rate limiting
   DISABLE_RATE_LIMIT: z

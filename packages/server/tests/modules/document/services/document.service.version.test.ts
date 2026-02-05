@@ -113,7 +113,10 @@ describe('documentService > uploadNewVersion', () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentVersionRepository.create).mockResolvedValue(mockDocumentVersion);
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue('New PDF text');
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: 'New PDF text',
+      truncated: false,
+    });
     vi.mocked(documentRepository.update).mockResolvedValue({
       ...mockDocument,
       currentVersion: 2,
@@ -140,7 +143,10 @@ describe('documentService > uploadNewVersion', () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentVersionRepository.create).mockResolvedValue(mockDocumentVersion);
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue(null);
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: null,
+      truncated: false,
+    });
     vi.mocked(documentRepository.update).mockResolvedValue({
       ...mockDocument,
       currentVersion: 2,
@@ -186,7 +192,10 @@ describe('documentService > uploadNewVersion', () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentVersionRepository.create).mockResolvedValue(mockDocumentVersion);
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue(null);
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: null,
+      truncated: false,
+    });
     vi.mocked(documentRepository.update).mockResolvedValue({
       ...mockDocument,
       currentVersion: 2,
@@ -261,7 +270,10 @@ describe('documentService > uploadNewVersion', () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentVersionRepository.create).mockResolvedValue(mockDocumentVersion);
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue('New extracted text');
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: 'New extracted text',
+      truncated: false,
+    });
     vi.mocked(documentRepository.update).mockResolvedValue({
       ...mockDocument,
       currentVersion: 2,

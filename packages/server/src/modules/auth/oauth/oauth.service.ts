@@ -4,7 +4,7 @@ import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
 import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenPayload } from '../types/auth.types';
-import { toUserPublicInfo } from '@shared/utils/user.mappers';
+import { toUserPublicInfo } from '@shared/utils';
 import { Errors } from '@shared/errors';
 import { userService } from '../../user';
 import { userAuthRepository } from '../repositories/user-auth.repository';

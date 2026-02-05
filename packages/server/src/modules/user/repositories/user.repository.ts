@@ -2,6 +2,7 @@ import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
 import { users, type User, type NewUser } from '@shared/db/schema/user/users.schema';
+import { normalizeEmail } from '@shared/utils';
 
 /**
  * User repository for database operations
@@ -11,7 +12,11 @@ export const userRepository = {
    * Create a new user
    */
   async create(data: NewUser): Promise<User> {
-    await db.insert(users).values(data);
+    const normalizedData = {
+      ...data,
+      email: normalizeEmail(data.email),
+    };
+    await db.insert(users).values(normalizedData);
     const result = await db.select().from(users).where(eq(users.id, data.id)).limit(1);
 
     return result[0]!;
@@ -24,7 +29,7 @@ export const userRepository = {
     const result = await db
       .select()
       .from(users)
-      .where(and(eq(users.email, email), isNull(users.deletedAt)))
+      .where(and(eq(users.email, normalizeEmail(email)), isNull(users.deletedAt)))
       .limit(1);
 
     return result[0];
@@ -63,7 +68,7 @@ export const userRepository = {
     const result = await db
       .select({ id: users.id })
       .from(users)
-      .where(and(eq(users.email, email), isNull(users.deletedAt)))
+      .where(and(eq(users.email, normalizeEmail(email)), isNull(users.deletedAt)))
       .limit(1);
 
     return result.length > 0;

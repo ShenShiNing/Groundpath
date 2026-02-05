@@ -13,17 +13,13 @@ import type {
 } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenPayload } from '../types/auth.types';
-import { toUserPublicInfo } from '@shared/utils/user.mappers';
+import { toUserPublicInfo, normalizeEmail, verifyRefreshToken } from '@shared/utils';
 import { Errors } from '@shared/errors';
-import { verifyRefreshToken } from '@shared/utils/jwt.utils';
 import { userService } from '../../user';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from './token.service';
 import { emailVerificationService } from '../verification/email-verification.service';
-import {
-  checkAccountRateLimit,
-  resetAccountRateLimit,
-} from '@shared/middleware/rate-limit.middleware';
+import { checkAccountRateLimit, resetAccountRateLimit } from '@shared/middleware';
 import { detectDevice } from '../../logs/services/device-detection.service';
 import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
 import { createLogger } from '@shared/logger';
@@ -84,7 +80,8 @@ export const authService = {
     ipAddress: string | null,
     userAgent: string | null
   ): Promise<AuthResponse> {
-    const { username, email, password, deviceInfo } = data;
+    const { username, password, deviceInfo } = data;
+    const email = normalizeEmail(data.email);
 
     // Check if email already exists
     const emailExists = await userService.existsByEmail(email);
@@ -146,7 +143,8 @@ export const authService = {
     ipAddress: string | null,
     userAgent: string | null
   ): Promise<AuthResponse> {
-    const { email, password, deviceInfo } = credentials;
+    const { password, deviceInfo } = credentials;
+    const email = normalizeEmail(credentials.email);
 
     // Check account-level rate limit before any database operations
     const rateCheck = checkAccountRateLimit(email);
@@ -273,7 +271,8 @@ export const authService = {
     ipAddress: string | null,
     userAgent: string | null
   ): Promise<AuthResponse> {
-    const { email, username, password, verificationToken, deviceInfo } = data;
+    const { username, password, verificationToken, deviceInfo } = data;
+    const email = normalizeEmail(data.email);
 
     // Verify the verification token
     const { email: verifiedEmail } = emailVerificationService.verifyToken(
@@ -281,8 +280,8 @@ export const authService = {
       'register'
     );
 
-    // Ensure the email matches
-    if (verifiedEmail !== email.toLowerCase().trim()) {
+    // Ensure the email matches (verifiedEmail is already normalized in token)
+    if (verifiedEmail !== email) {
       throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
         'Verification token does not match the provided email',
@@ -318,7 +317,7 @@ export const authService = {
     const user = await userService.create({
       id: userId,
       username,
-      email: email.toLowerCase().trim(),
+      email,
       password: hashedPassword,
       status: 'active',
       emailVerified: true,

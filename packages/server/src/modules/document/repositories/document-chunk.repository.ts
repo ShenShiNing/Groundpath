@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
@@ -27,9 +27,10 @@ export const documentChunkRepository = {
   /**
    * Create multiple chunks at once
    */
-  async createMany(data: NewDocumentChunk[]): Promise<void> {
+  async createMany(data: NewDocumentChunk[], tx?: Transaction): Promise<void> {
     if (data.length === 0) return;
-    await db.insert(documentChunks).values(data);
+    const ctx = getDbContext(tx);
+    await ctx.insert(documentChunks).values(data);
   },
 
   /**
@@ -86,5 +87,25 @@ export const documentChunkRepository = {
       .from(documentChunks)
       .where(and(eq(documentChunks.documentId, documentId), eq(documentChunks.version, version)));
     return result.length;
+  },
+
+  /**
+   * Get all chunk IDs for a document (for cleanup purposes)
+   */
+  async getChunkIdsByDocumentId(documentId: string): Promise<string[]> {
+    const result = await db
+      .select({ id: documentChunks.id })
+      .from(documentChunks)
+      .where(eq(documentChunks.documentId, documentId));
+    return result.map((r) => r.id);
+  },
+
+  /**
+   * Delete chunks by their IDs
+   */
+  async deleteByIds(ids: string[], tx?: Transaction): Promise<void> {
+    if (ids.length === 0) return;
+    const ctx = getDbContext(tx);
+    await ctx.delete(documentChunks).where(inArray(documentChunks.id, ids));
   },
 };

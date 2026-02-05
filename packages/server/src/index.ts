@@ -2,18 +2,32 @@ import express from 'express';
 import { env } from '@config/env';
 import { logger } from '@shared/logger';
 import { requestLogger } from '@shared/logger/request-logger';
-import { errorMiddleware } from '@shared/middleware/error.middleware';
 import {
+  errorMiddleware,
   helmetMiddleware,
   corsMiddleware,
   requestIdMiddleware,
-} from '@shared/middleware/security.middleware';
-import { sanitizeMiddleware } from '@shared/middleware/sanitize.middleware';
+  sanitizeMiddleware,
+} from '@shared/middleware';
 import { systemLogger } from '@shared/logger/system-logger';
 import { initializeScheduler } from '@shared/scheduler';
 import router from './router';
 
 const app = express();
+
+// Trust proxy settings (must be set before other middleware)
+// Required for correct client IP detection behind reverse proxy (nginx, cloudflare, etc.)
+if (env.TRUST_PROXY) {
+  // Support various formats: 'true', '1', 'loopback', 'linklocal', 'uniquelocal', or specific IPs
+  const trustValue =
+    env.TRUST_PROXY === 'true'
+      ? true
+      : /^\d+$/.test(env.TRUST_PROXY)
+        ? parseInt(env.TRUST_PROXY, 10)
+        : env.TRUST_PROXY;
+  app.set('trust proxy', trustValue);
+  logger.info({ trustProxy: trustValue }, 'Trust proxy enabled');
+}
 
 // Security middleware (should be first)
 app.use(helmetMiddleware);

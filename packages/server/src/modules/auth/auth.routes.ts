@@ -1,14 +1,15 @@
 import express from 'express';
 import { authController } from './controllers/auth.controller';
-import { authenticate, authenticateRefreshToken } from '@shared/middleware/auth.middleware';
 import {
+  authenticate,
+  authenticateRefreshToken,
   loginRateLimiter,
   registerRateLimiter,
   refreshRateLimiter,
   generalRateLimiter,
   passwordResetRateLimiter,
-} from '@shared/middleware/rate-limit.middleware';
-import { validateBody } from '@shared/middleware/validation.middleware';
+  validateBody,
+} from '@shared/middleware';
 import {
   loginRequestSchema,
   refreshRequestSchema,

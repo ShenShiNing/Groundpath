@@ -19,13 +19,14 @@ export const messageService = {
    * Create a new message
    */
   async create(data: {
+    id?: string;
     conversationId: string;
     role: MessageRole;
     content: string;
     metadata?: MessageMetadata;
   }): Promise<MessageInfo> {
     const message = await messageRepository.create({
-      id: uuidv4(),
+      id: data.id ?? uuidv4(),
       conversationId: data.conversationId,
       role: data.role,
       content: data.content,

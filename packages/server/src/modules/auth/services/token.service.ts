@@ -4,11 +4,7 @@ import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
 import { AUTH_CONFIG } from '@config/auth.config';
 import type { AccessTokenPayload } from '../types/auth.types';
 import { Errors } from '@shared/errors';
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  verifyRefreshToken,
-} from '@shared/utils/jwt.utils';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@shared/utils';
 import { withTransaction, type Transaction } from '@shared/db/db.utils';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userService } from '../../user';

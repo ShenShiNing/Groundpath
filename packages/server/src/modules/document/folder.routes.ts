@@ -1,7 +1,6 @@
 import express from 'express';
 import { folderController } from './controllers/folder.controller';
-import { authenticate } from '@shared/middleware/auth.middleware';
-import { validateBody } from '@shared/middleware/validation.middleware';
+import { authenticate, validateBody } from '@shared/middleware';
 import {
   createFolderRequestSchema,
   updateFolderRequestSchema,

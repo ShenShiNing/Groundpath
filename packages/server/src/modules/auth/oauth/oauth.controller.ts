@@ -4,7 +4,7 @@ import { createLogger } from '@shared/logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { getClientIp } from '@shared/utils/request.utils';
+import { getClientIp } from '@shared/utils';
 
 const logger = createLogger('oauth');
 const FRONTEND_URL = env.FRONTEND_URL;

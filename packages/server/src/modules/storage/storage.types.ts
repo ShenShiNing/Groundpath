@@ -1,3 +1,7 @@
+export interface SignedUrlOptions {
+  expiresIn?: number; // seconds
+}
+
 export interface StorageProvider {
   upload(key: string, buffer: Buffer, contentType: string): Promise<void>;
   delete(key: string): Promise<void>;
@@ -7,5 +11,5 @@ export interface StorageProvider {
     contentLength: number | undefined;
   }>;
   getBuffer(key: string): Promise<Buffer>;
-  getPublicUrl(key: string): string;
+  getPublicUrl(key: string, options?: SignedUrlOptions): string;
 }

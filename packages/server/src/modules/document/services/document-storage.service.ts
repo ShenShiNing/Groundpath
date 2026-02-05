@@ -208,15 +208,16 @@ export const documentStorageService = {
   /**
    * Extract text content from document for preview and search
    * Supports: markdown, text, pdf, docx
+   * Returns text content and whether it was truncated
    */
   async extractTextContent(
     storageKey: string,
     documentType: DocumentType,
-    maxLength: number = 50000
-  ): Promise<string | null> {
+    maxLength?: number
+  ): Promise<{ text: string | null; truncated: boolean }> {
     // Skip extraction for unsupported types
     if (!['markdown', 'text', 'pdf', 'docx'].includes(documentType)) {
-      return null;
+      return { text: null, truncated: false };
     }
 
     try {
@@ -237,7 +238,7 @@ export const documentStorageService = {
             await pdfParser.destroy();
           } catch (pdfError) {
             logger.error({ err: pdfError }, 'PDF parsing error');
-            return null;
+            return { text: null, truncated: false };
           }
           break;
 
@@ -247,21 +248,26 @@ export const documentStorageService = {
             text = docxResult.value || '';
           } catch (docxError) {
             logger.error({ err: docxError }, 'DOCX parsing error');
-            return null;
+            return { text: null, truncated: false };
           }
           break;
 
         default:
-          return null;
+          return { text: null, truncated: false };
       }
 
       // Normalize whitespace
       text = text.replace(/\s+/g, ' ').trim();
 
-      return text.length > maxLength ? text.substring(0, maxLength) : text;
+      // Apply length limit if specified
+      if (maxLength && text.length > maxLength) {
+        return { text: text.substring(0, maxLength), truncated: true };
+      }
+
+      return { text, truncated: false };
     } catch (error) {
       logger.error({ err: error }, 'Text extraction error');
-      return null;
+      return { text: null, truncated: false };
     }
   },
 };
@@ -305,18 +311,35 @@ export const storageService = {
 
     await storageProvider.upload(key, file.buffer, file.mimetype);
 
-    return storageProvider.getPublicUrl(key);
+    return storageProvider.getPublicUrl(key, { expiresIn: env.AVATAR_URL_EXPIRES_IN });
   },
 
   /**
    * Delete file from storage by URL
+   * Handles both signed URLs (/api/files/) and legacy URLs (/api/uploads/)
    */
   async deleteByUrl(url: string): Promise<void> {
-    // Extract key from URL - try both local and R2 URL patterns
-    const publicUrl = storageProvider.getPublicUrl('');
-    if (!url.startsWith(publicUrl)) return;
+    // Extract key from URL - try both signed and legacy URL patterns
+    const match = url.match(/\/api\/(?:uploads|files)\/([^?]+)/);
+    if (!match) {
+      // Try R2 URL pattern
+      const r2PublicUrl = env.R2_PUBLIC_URL;
+      if (r2PublicUrl && url.startsWith(r2PublicUrl)) {
+        const key = url.replace(r2PublicUrl + '/', '');
+        await storageProvider.delete(key);
+      }
+      return;
+    }
 
-    const key = url.replace(publicUrl, '');
+    const captured = match[1];
+    if (!captured) return;
+
+    let key: string;
+    try {
+      key = decodeURIComponent(captured);
+    } catch {
+      return;
+    }
     await storageProvider.delete(key);
   },
 };

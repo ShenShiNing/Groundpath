@@ -1,6 +1,5 @@
 import express from 'express';
-import { authenticate } from '@shared/middleware/auth.middleware';
-import { validateQuery } from '@shared/middleware/validation.middleware';
+import { authenticate, validateQuery } from '@shared/middleware';
 import { loginLogController } from './controllers/login-log.controller';
 import { operationLogController } from './controllers/operation-log.controller';
 import {

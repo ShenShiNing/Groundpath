@@ -3,8 +3,8 @@ import { operationLogService } from '../services/operation-log.service';
 import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId, getParamId } from '@shared/utils/request.utils';
-import { getValidatedQuery } from '@shared/middleware/validation.middleware';
+import { requireUserId, getParamId } from '@shared/utils';
+import { getValidatedQuery } from '@shared/middleware';
 import type { OperationLogQueryParams, ResourceHistoryParams } from '../schemas/log-query.schemas';
 import type { ResourceType } from '@shared/db/schema/system/operation-logs.schema';
 

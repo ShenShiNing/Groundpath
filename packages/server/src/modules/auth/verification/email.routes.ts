@@ -1,10 +1,6 @@
 import express from 'express';
 import { emailController } from './email.controller';
-import {
-  emailSendRateLimiter,
-  emailVerifyRateLimiter,
-} from '@shared/middleware/rate-limit.middleware';
-import { validateBody } from '@shared/middleware/validation.middleware';
+import { emailSendRateLimiter, emailVerifyRateLimiter, validateBody } from '@shared/middleware';
 import {
   sendVerificationCodeRequestSchema,
   verifyCodeRequestSchema,

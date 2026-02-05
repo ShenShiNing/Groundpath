@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '@shared/middleware/auth.middleware';
+import { authenticate } from '@shared/middleware';
 import { conversationController } from './controllers/conversation.controller';
 import { messageController } from './controllers/message.controller';
 

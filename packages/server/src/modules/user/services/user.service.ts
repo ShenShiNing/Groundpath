@@ -4,7 +4,7 @@ import type { User, NewUser } from '@shared/db/schema/user/users.schema';
 import type { Transaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
 import { userRepository } from '../repositories/user.repository';
-import { toUserPublicInfo } from '@shared/utils/user.mappers';
+import { toUserPublicInfo } from '@shared/utils';
 
 /**
  * User service for profile management and cross-module user operations

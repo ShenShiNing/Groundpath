@@ -1,4 +1,6 @@
 import type { Request, Response } from 'express';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
 import type {
   UpdateDocumentRequest,
@@ -9,8 +11,11 @@ import { documentService } from '../services/document.service';
 import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId, getParamId, getClientIp } from '@shared/utils/request.utils';
-import { getValidatedQuery } from '@shared/middleware/validation.middleware';
+import { requireUserId, getParamId, getClientIp } from '@shared/utils';
+import { getValidatedQuery } from '@shared/middleware';
+import { createLogger } from '@shared/logger';
+
+const logger = createLogger('document.controller');
 
 /**
  * Decode filename from latin1 to UTF-8 (multer encodes non-ASCII filenames as latin1)
@@ -64,11 +69,29 @@ async function streamDownload(req: Request, res: Response): Promise<void> {
     res.setHeader('Content-Length', contentLength);
   }
 
-  // Stream the file to response
-  for await (const chunk of body) {
-    res.write(chunk);
+  // Convert async iterable to Node.js Readable stream
+  const sourceStream = Readable.from(body);
+
+  // Track if client disconnected
+  let clientDisconnected = false;
+  const onClose = () => {
+    clientDisconnected = true;
+    sourceStream.destroy();
+  };
+  res.on('close', onClose);
+
+  try {
+    // Use pipeline for proper backpressure handling and cleanup
+    await pipeline(sourceStream, res);
+  } catch (err) {
+    // Ignore errors from client disconnect (expected behavior)
+    if (!clientDisconnected && !res.writableEnded) {
+      logger.warn({ err, documentId }, 'Stream error during file download');
+      // Don't throw - response may be partially sent
+    }
+  } finally {
+    res.off('close', onClose);
   }
-  res.end();
 }
 
 export const documentController = {
@@ -83,11 +106,16 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
     }
 
-    const { title, description, folderId } = req.body as {
+    const { title, description, folderId, knowledgeBaseId } = req.body as {
       title?: string;
       description?: string;
       folderId?: string;
+      knowledgeBaseId?: string;
     };
+
+    if (!knowledgeBaseId) {
+      throw new AppError('VALIDATION_ERROR', 'Knowledge base ID is required', 400);
+    }
 
     const document = await documentService.upload(
       userId,
@@ -97,7 +125,7 @@ export const documentController = {
         originalname: decodeFilename(file.originalname),
         size: file.size,
       },
-      { title, description, folderId },
+      { title, description, folderId, knowledgeBaseId },
       getRequestContext(req)
     );
 

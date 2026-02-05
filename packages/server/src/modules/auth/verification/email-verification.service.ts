@@ -8,6 +8,7 @@ import { emailVerificationRepository } from '../verification/email-verification.
 import { emailService } from './email.service';
 import { AppError, Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
+import { normalizeEmail } from '@shared/utils';
 
 const logger = createLogger('email-verification');
 
@@ -32,7 +33,7 @@ function generateSecureCode(): string {
  */
 function generateVerificationToken(email: string, type: EmailVerificationCodeType): string {
   const payload: VerificationTokenPayload = {
-    sub: email.toLowerCase().trim(),
+    sub: normalizeEmail(email),
     type,
     purpose: 'email_verified',
   };
@@ -112,7 +113,7 @@ export const emailVerificationService = {
     type: EmailVerificationCodeType,
     ipAddress: string | null
   ): Promise<{ expiresAt: Date }> {
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = normalizeEmail(email);
 
     // Check rate limits - max codes per hour
     const recentCount = await emailVerificationRepository.countRecentCodes(normalizedEmail, type);
@@ -186,7 +187,7 @@ export const emailVerificationService = {
     code: string,
     type: EmailVerificationCodeType
   ): Promise<{ verificationToken: string }> {
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = normalizeEmail(email);
 
     // Find the code
     const verificationCode = await emailVerificationRepository.findValidCode(

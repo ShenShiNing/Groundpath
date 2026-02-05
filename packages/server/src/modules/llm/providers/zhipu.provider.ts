@@ -44,6 +44,7 @@ export class ZhipuProvider implements LLMProvider {
         max_tokens: options?.maxTokens,
         top_p: options?.topP,
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -75,6 +76,7 @@ export class ZhipuProvider implements LLMProvider {
         top_p: options?.topP,
         stream: true,
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -89,6 +91,11 @@ export class ZhipuProvider implements LLMProvider {
 
     try {
       while (true) {
+        // Check if aborted before reading
+        if (options?.signal?.aborted) {
+          return;
+        }
+
         const { done, value } = await reader.read();
         if (done) break;
 

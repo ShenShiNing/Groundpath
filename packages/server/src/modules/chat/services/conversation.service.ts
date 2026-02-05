@@ -56,26 +56,23 @@ export const conversationService = {
   ): Promise<ConversationListItem[]> {
     const conversations = await conversationRepository.listByUser(userId, options);
 
-    // Get message counts and last message times
-    const items: ConversationListItem[] = await Promise.all(
-      conversations.map(async (conv) => {
-        const [messageCount, lastMessageAt] = await Promise.all([
-          messageRepository.countByConversation(conv.id),
-          messageRepository.getLastMessageAt(conv.id),
-        ]);
+    if (conversations.length === 0) return [];
 
-        return {
-          id: conv.id,
-          title: conv.title,
-          knowledgeBaseId: conv.knowledgeBaseId,
-          messageCount,
-          lastMessageAt,
-          createdAt: conv.createdAt,
-        };
-      })
-    );
+    // Batch fetch message stats to avoid N+1 queries
+    const conversationIds = conversations.map((c) => c.id);
+    const statsMap = await messageRepository.getStatsForConversations(conversationIds);
 
-    return items;
+    return conversations.map((conv) => {
+      const stats = statsMap.get(conv.id) ?? { count: 0, lastMessageAt: null };
+      return {
+        id: conv.id,
+        title: conv.title,
+        knowledgeBaseId: conv.knowledgeBaseId,
+        messageCount: stats.count,
+        lastMessageAt: stats.lastMessageAt,
+        createdAt: conv.createdAt,
+      };
+    });
   },
 
   /**

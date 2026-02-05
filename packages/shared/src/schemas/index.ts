@@ -8,5 +8,5 @@ export * from './llm';
 export * from './chat';
 
 // Re-export zod for consumers
-export { z } from 'zod';
-export type { ZodError, ZodType } from 'zod';
+export { z, ZodError } from 'zod';
+export type { ZodType } from 'zod';

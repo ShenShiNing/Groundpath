@@ -9,6 +9,7 @@ export interface GenerateOptions {
   temperature?: number;
   maxTokens?: number;
   topP?: number;
+  signal?: AbortSignal;
 }
 
 export interface ModelInfo {
@@ -28,6 +29,7 @@ export interface LLMProvider {
 
   /**
    * Stream generate response chunks.
+   * Supports AbortSignal via options.signal for cancellation.
    */
   streamGenerate(
     messages: ChatMessage[],

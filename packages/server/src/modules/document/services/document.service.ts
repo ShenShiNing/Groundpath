@@ -14,7 +14,8 @@ import type {
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { withTransaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
-import { buildPagination } from '@shared/utils/pagination';
+import { buildPagination } from '@shared/utils';
+import { env } from '@config/env';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
@@ -104,9 +105,10 @@ export const documentService = {
         400
       );
     }
+    const knowledgeBaseId = options.knowledgeBaseId;
 
     // Validate knowledge base exists and belongs to user
-    await knowledgeBaseService.validateOwnership(options.knowledgeBaseId, userId);
+    await knowledgeBaseService.validateOwnership(knowledgeBaseId, userId);
 
     // Validate file
     const validation = documentStorageService.validateFile(file);
@@ -128,7 +130,7 @@ export const documentService = {
           404
         );
       }
-      if (folder.knowledgeBaseId !== options.knowledgeBaseId) {
+      if (folder.knowledgeBaseId !== knowledgeBaseId) {
         throw Errors.auth(
           DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
           'Folder does not belong to this knowledge base',
@@ -137,60 +139,91 @@ export const documentService = {
       }
     }
 
-    // Upload to storage
+    // Upload to storage (outside transaction - will be cleaned up on failure)
     const { storageKey, fileExtension, documentType, resolvedMimeType } =
       await documentStorageService.uploadDocument(userId, file);
 
     // Extract text content for supported document types
+    // - Editable files (markdown/text): use higher limit for full editing capability
+    // - Preview files (pdf/docx): use lower limit, full content available via download
     let textContent: string | null = null;
     if (['markdown', 'text'].includes(documentType)) {
       textContent = file.buffer.toString('utf-8');
-      if (textContent.length > 50000) {
-        textContent = textContent.substring(0, 50000);
+      if (textContent.length > env.TEXT_CONTENT_MAX_LENGTH) {
+        textContent = textContent.substring(0, env.TEXT_CONTENT_MAX_LENGTH);
       }
     } else if (['pdf', 'docx'].includes(documentType)) {
-      textContent = await documentStorageService.extractTextContent(storageKey, documentType);
+      const extracted = await documentStorageService.extractTextContent(
+        storageKey,
+        documentType,
+        env.TEXT_PREVIEW_MAX_LENGTH
+      );
+      textContent = extracted.text;
     }
 
     const title = options?.title || file.originalname.replace(/\.[^/.]+$/, '');
     const docId = uuidv4();
 
-    // Create first version
-    await documentVersionRepository.create({
-      id: uuidv4(),
-      documentId: docId,
-      version: 1,
-      fileName: file.originalname,
-      mimeType: resolvedMimeType,
-      fileSize: file.size,
-      fileExtension,
-      documentType,
-      storageKey,
-      textContent,
-      source: 'upload',
-      createdBy: userId,
-    });
+    // Wrap all DB operations in a transaction for atomicity
+    // If any step fails, the transaction rolls back and we clean up storage
+    let document: Document;
+    try {
+      document = await withTransaction(async (tx) => {
+        // Create first version
+        await documentVersionRepository.create(
+          {
+            id: uuidv4(),
+            documentId: docId,
+            version: 1,
+            fileName: file.originalname,
+            mimeType: resolvedMimeType,
+            fileSize: file.size,
+            fileExtension,
+            documentType,
+            storageKey,
+            textContent,
+            source: 'upload',
+            createdBy: userId,
+          },
+          tx
+        );
 
-    // Create document with cached fields
-    const document = await documentRepository.create({
-      id: docId,
-      userId,
-      folderId: options?.folderId ?? null,
-      knowledgeBaseId: options.knowledgeBaseId,
-      title,
-      description: options?.description ?? null,
-      currentVersion: 1,
-      fileName: file.originalname,
-      mimeType: resolvedMimeType,
-      fileSize: file.size,
-      fileExtension,
-      documentType,
-      processingStatus: 'pending',
-      createdBy: userId,
-    });
+        // Create document with cached fields
+        const doc = await documentRepository.create(
+          {
+            id: docId,
+            userId,
+            folderId: options?.folderId ?? null,
+            knowledgeBaseId,
+            title,
+            description: options?.description ?? null,
+            currentVersion: 1,
+            fileName: file.originalname,
+            mimeType: resolvedMimeType,
+            fileSize: file.size,
+            fileExtension,
+            documentType,
+            processingStatus: 'pending',
+            createdBy: userId,
+          },
+          tx
+        );
 
-    // Increment knowledge base document count
-    await knowledgeBaseService.incrementDocumentCount(options.knowledgeBaseId, 1);
+        // Increment knowledge base document count
+        await knowledgeBaseService.incrementDocumentCount(knowledgeBaseId, 1, tx);
+
+        return doc;
+      });
+    } catch (err) {
+      // Transaction failed - clean up uploaded file
+      logger.warn({ storageKey, err }, 'Upload transaction failed, cleaning up storage');
+      try {
+        await documentStorageService.deleteDocument(storageKey);
+      } catch (cleanupErr) {
+        logger.error({ storageKey, cleanupErr }, 'Failed to clean up storage after upload failure');
+      }
+      throw err;
+    }
 
     // Log operation
     logOperation({
@@ -206,7 +239,7 @@ export const documentService = {
         mimeType: resolvedMimeType,
         documentType,
         folderId: options?.folderId ?? null,
-        knowledgeBaseId: options.knowledgeBaseId,
+        knowledgeBaseId,
       },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
@@ -274,6 +307,10 @@ export const documentService = {
       storageUrl = storageProvider.getPublicUrl(version.storageKey);
     }
 
+    // Determine if content was truncated based on document type limits
+    const maxLength = isEditable ? env.TEXT_CONTENT_MAX_LENGTH : env.TEXT_PREVIEW_MAX_LENGTH;
+    const isTruncated = version.textContent !== null && version.textContent.length >= maxLength;
+
     return {
       id: document.id,
       title: document.title,
@@ -283,6 +320,7 @@ export const documentService = {
       currentVersion: document.currentVersion,
       processingStatus: document.processingStatus,
       isEditable,
+      isTruncated,
       storageUrl,
     };
   },
@@ -326,6 +364,14 @@ export const documentService = {
           DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
           'Target folder not found',
           404
+        );
+      }
+      // Ensure folder belongs to the same knowledge base as the document
+      if (folder.knowledgeBaseId !== document.knowledgeBaseId) {
+        throw Errors.auth(
+          DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
+          'Folder does not belong to the same knowledge base as the document',
+          400
         );
       }
     }

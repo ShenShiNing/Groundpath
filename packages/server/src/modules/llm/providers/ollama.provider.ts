@@ -31,6 +31,7 @@ export class OllamaProvider implements LLMProvider {
           top_p: options?.topP,
         },
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -58,6 +59,7 @@ export class OllamaProvider implements LLMProvider {
           top_p: options?.topP,
         },
       }),
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -72,6 +74,11 @@ export class OllamaProvider implements LLMProvider {
 
     try {
       while (true) {
+        // Check if aborted before reading
+        if (options?.signal?.aborted) {
+          return;
+        }
+
         const { done, value } = await reader.read();
         if (done) break;
 

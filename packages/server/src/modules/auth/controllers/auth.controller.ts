@@ -12,7 +12,7 @@ import { authService } from '../services/auth.service';
 import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { getClientIp, requireUserId } from '@shared/utils/request.utils';
+import { getClientIp, requireUserId } from '@shared/utils';
 
 /**
  * Auth controller handlers

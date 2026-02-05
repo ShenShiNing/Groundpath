@@ -281,4 +281,52 @@ export const vectorRepository = {
       return 0;
     }
   },
+
+  /**
+   * Delete vectors by their specific IDs from a collection.
+   * Used for cleanup of old vectors after new ones are inserted.
+   */
+  async deleteByIds(collectionName: string, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const qdrant = getQdrantClient();
+
+    // First mark as deleted (soft delete for immediate search exclusion)
+    try {
+      await withTimeout(
+        qdrant.setPayload(collectionName, {
+          payload: { isDeleted: true },
+          points: ids,
+          wait: true,
+        }),
+        QDRANT_TIMEOUT,
+        `Qdrant mark vectors as deleted by IDs`
+      );
+    } catch (error) {
+      logger.warn(
+        { collectionName, idCount: ids.length, error },
+        'Failed to soft-delete vectors by IDs'
+      );
+    }
+
+    // Then physically delete
+    try {
+      await withTimeout(
+        qdrant.delete(collectionName, {
+          wait: true,
+          points: ids,
+        }),
+        QDRANT_TIMEOUT,
+        `Qdrant delete by IDs`
+      );
+
+      logger.debug({ collectionName, count: ids.length }, 'Deleted vectors by IDs');
+    } catch (error) {
+      logger.warn(
+        { collectionName, idCount: ids.length, error },
+        'Physical vector deletion by IDs failed'
+      );
+      // Don't throw - soft delete provides safety net
+    }
+  },
 };

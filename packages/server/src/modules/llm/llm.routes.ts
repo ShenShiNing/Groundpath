@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '@shared/middleware/auth.middleware';
+import { authenticate } from '@shared/middleware';
 import { llmConfigController } from './controllers/llm-config.controller';
 
 const router = Router();

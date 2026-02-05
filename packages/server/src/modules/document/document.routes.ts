@@ -3,8 +3,12 @@ import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { env } from '@config/env';
 import { documentController } from './controllers/document.controller';
-import { authenticate } from '@shared/middleware/auth.middleware';
-import { validateBody, validateQuery } from '@shared/middleware/validation.middleware';
+import {
+  authenticate,
+  validateBody,
+  validateQuery,
+  createSanitizeMiddleware,
+} from '@shared/middleware';
 import {
   updateDocumentRequestSchema,
   documentListParamsSchema,
@@ -91,7 +95,11 @@ function handleMulterError(err: Error, _req: Request, res: Response, next: NextF
   next(err);
 }
 
-// Helper to wrap upload middleware with error handling
+// Sanitize middleware for multipart form fields (runs after multer populates req.body)
+// Sanitizes 'title' (default) and 'changeNote' (displayed in version history UI)
+const sanitizeMultipartFields = createSanitizeMiddleware(['changeNote']);
+
+// Helper to wrap upload middleware with error handling and sanitization
 function uploadWithErrorHandling(fieldName: string) {
   return [
     (req: Request, res: Response, next: NextFunction) => {
@@ -103,6 +111,7 @@ function uploadWithErrorHandling(fieldName: string) {
         }
       });
     },
+    sanitizeMultipartFields,
   ];
 }
 

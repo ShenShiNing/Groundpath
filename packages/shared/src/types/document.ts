@@ -152,6 +152,7 @@ export interface DocumentContentResponse {
   currentVersion: number;
   processingStatus: ProcessingStatus;
   isEditable: boolean;
+  isTruncated: boolean;
   storageUrl: string | null;
 }
 

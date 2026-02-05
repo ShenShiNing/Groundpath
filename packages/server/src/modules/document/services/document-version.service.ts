@@ -4,6 +4,7 @@ import type { DocumentInfo, VersionListResponse } from '@knowledge-agent/shared/
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { withTransaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
+import { env } from '@config/env';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentStorageService } from './document-storage.service';
@@ -79,61 +80,84 @@ export const documentVersionService = {
       );
     }
 
-    // Upload new file to storage (outside transaction - not rollbackable)
+    // Upload new file to storage first (required before DB transaction)
     const { storageKey, fileExtension, documentType, resolvedMimeType } =
       await documentStorageService.uploadDocument(userId, file);
 
     // Extract text content
+    // - Editable files (markdown/text): use higher limit for full editing capability
+    // - Preview files (pdf/docx): use lower limit, full content available via download
     let textContent: string | null = null;
     if (['markdown', 'text'].includes(documentType)) {
       textContent = file.buffer.toString('utf-8');
-      if (textContent.length > 50000) {
-        textContent = textContent.substring(0, 50000);
+      if (textContent.length > env.TEXT_CONTENT_MAX_LENGTH) {
+        textContent = textContent.substring(0, env.TEXT_CONTENT_MAX_LENGTH);
       }
     } else if (['pdf', 'docx'].includes(documentType)) {
-      textContent = await documentStorageService.extractTextContent(storageKey, documentType);
+      const extracted = await documentStorageService.extractTextContent(
+        storageKey,
+        documentType,
+        env.TEXT_PREVIEW_MAX_LENGTH
+      );
+      textContent = extracted.text;
     }
 
     const newVersion = document.currentVersion + 1;
 
     // MySQL operations in a single transaction
-    const updated = await withTransaction(async (tx) => {
-      // Create new version record
-      await documentVersionRepository.create(
-        {
-          id: uuidv4(),
-          documentId: document.id,
-          version: newVersion,
-          fileName: file.originalname,
-          mimeType: resolvedMimeType,
-          fileSize: file.size,
-          fileExtension,
-          documentType,
-          storageKey,
-          textContent,
-          source: 'upload',
-          changeNote: options?.changeNote ?? null,
-          createdBy: userId,
-        },
-        tx
-      );
+    // If DB transaction fails, clean up the uploaded file to prevent orphans
+    let updated: Document | undefined;
+    try {
+      updated = await withTransaction(async (tx) => {
+        // Create new version record
+        await documentVersionRepository.create(
+          {
+            id: uuidv4(),
+            documentId: document.id,
+            version: newVersion,
+            fileName: file.originalname,
+            mimeType: resolvedMimeType,
+            fileSize: file.size,
+            fileExtension,
+            documentType,
+            storageKey,
+            textContent,
+            source: 'upload',
+            changeNote: options?.changeNote ?? null,
+            createdBy: userId,
+          },
+          tx
+        );
 
-      // Update document cached fields (don't reset chunkCount - let processDocument handle delta)
-      return documentRepository.update(
-        documentId,
-        {
-          currentVersion: newVersion,
-          fileName: file.originalname,
-          mimeType: resolvedMimeType,
-          fileSize: file.size,
-          fileExtension,
-          documentType,
-          processingStatus: 'pending',
-          updatedBy: userId,
-        },
-        tx
-      );
-    });
+        // Update document cached fields (don't reset chunkCount - let processDocument handle delta)
+        return documentRepository.update(
+          documentId,
+          {
+            currentVersion: newVersion,
+            fileName: file.originalname,
+            mimeType: resolvedMimeType,
+            fileSize: file.size,
+            fileExtension,
+            documentType,
+            processingStatus: 'pending',
+            updatedBy: userId,
+          },
+          tx
+        );
+      });
+    } catch (dbError) {
+      // DB transaction failed — clean up the already-uploaded storage file
+      logger.warn({ documentId, storageKey }, 'DB transaction failed, cleaning up uploaded file');
+      try {
+        await documentStorageService.deleteDocument(storageKey);
+      } catch (cleanupErr) {
+        logger.error(
+          { documentId, storageKey, err: cleanupErr },
+          'Failed to clean up orphaned storage file after DB error'
+        );
+      }
+      throw dbError;
+    }
 
     // Log operation
     logOperation({

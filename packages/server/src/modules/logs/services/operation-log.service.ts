@@ -1,5 +1,5 @@
 import type { OperationLog } from '@shared/db/schema/system/operation-logs.schema';
-import { buildPagination } from '@shared/utils/pagination';
+import { buildPagination } from '@shared/utils';
 import {
   operationLogRepository,
   type OperationLogListParams,
