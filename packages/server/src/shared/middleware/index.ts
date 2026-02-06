@@ -23,3 +23,4 @@ export {
   getValidatedQuery,
   getValidatedParams,
 } from './validation.middleware';
+export { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
