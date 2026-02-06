@@ -19,12 +19,42 @@ export const logger = pino({
           },
         }
       : undefined,
-  redact: ['req.headers.authorization', '*.password', '*.refreshToken', '*.accessToken'],
+  // 增强脱敏配置
+  redact: {
+    paths: [
+      // 认证相关
+      'req.headers.authorization',
+      'req.headers.cookie',
+      '*.password',
+      '*.oldPassword',
+      '*.newPassword',
+      '*.refreshToken',
+      '*.accessToken',
+      '*.token',
+      // API 密钥
+      '*.apiKey',
+      '*.apiSecret',
+      '*.secret',
+      '*.secretKey',
+      // 敏感个人信息
+      '*.creditCard',
+      '*.ssn',
+      '*.idCard',
+    ],
+    censor: '[REDACTED]',
+  },
 });
 
 /**
- * Create a child logger with a module name
+ * Create a child logger with a module name and optional bindings
  */
-export function createLogger(module: string) {
-  return logger.child({ module });
+export function createLogger(module: string, bindings?: Record<string, unknown>) {
+  return logger.child({ module, ...bindings });
+}
+
+/**
+ * Create a request-scoped logger with requestId
+ */
+export function createRequestLogger(module: string, requestId?: string) {
+  return logger.child({ module, requestId });
 }

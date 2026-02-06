@@ -33,6 +33,8 @@ const envSchema = z.object({
 
   // Database
   DATABASE_URL: z.string(),
+  DB_CONNECTION_LIMIT: z.coerce.number().default(10),
+  DB_QUEUE_LIMIT: z.coerce.number().default(0),
 
   // JWT (required in production, defaults for dev/test)
   JWT_ACCESS_SECRET: z.string().min(1),
@@ -101,6 +103,7 @@ const envSchema = z.object({
 
   // Embedding Provider
   EMBEDDING_PROVIDER: z.enum(['zhipu', 'openai', 'ollama']).default('zhipu'),
+  EMBEDDING_CONCURRENCY: z.coerce.number().default(5),
 
   // 智谱 (default)
   ZHIPU_API_KEY: z.string().optional(),
