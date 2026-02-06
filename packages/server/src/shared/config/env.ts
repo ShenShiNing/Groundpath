@@ -35,11 +35,9 @@ const booleanString = (defaultValue: boolean = false) =>
 const serverSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
-  SERVER_TIMEOUT: z.coerce.number().default(30000), // 30s request timeout
-  SERVER_KEEP_ALIVE_TIMEOUT: z.coerce.number().default(65000), // 65s keep-alive
-  SHUTDOWN_TIMEOUT: z.coerce.number().default(10000), // 10s graceful shutdown
-  // Trust proxy for correct IP detection behind reverse proxy
-  // See: https://expressjs.com/en/guide/behind-proxies.html
+  SERVER_TIMEOUT: z.coerce.number().default(30000),
+  SERVER_KEEP_ALIVE_TIMEOUT: z.coerce.number().default(65000),
+  SHUTDOWN_TIMEOUT: z.coerce.number().default(10000),
   TRUST_PROXY: z.string().optional(),
   FRONTEND_URL: z.string().default('http://localhost:5173'),
 });
@@ -53,10 +51,8 @@ const databaseSchema = z.object({
 
 // -------------------- Authentication --------------------
 const authSchema = z.object({
-  // JWT secrets
   JWT_ACCESS_SECRET: z.string().min(1),
   JWT_REFRESH_SECRET: z.string().min(1),
-  // Encryption for sensitive data (API keys, etc.)
   ENCRYPTION_KEY: z.string().min(32),
 });
 
@@ -74,11 +70,9 @@ const emailSchema = z.object({
 
 // -------------------- OAuth Providers --------------------
 const oauthSchema = z.object({
-  // Google
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/auth/oauth/google/callback'),
-  // GitHub
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_CALLBACK_URL: z.string().default('http://localhost:3000/api/auth/oauth/github/callback'),
@@ -88,26 +82,22 @@ const oauthSchema = z.object({
 const storageSchema = z.object({
   STORAGE_TYPE: z.enum(['local', 'r2']).optional(),
   LOCAL_STORAGE_PATH: z.string().default('./uploads'),
-  // R2/S3 credentials
   R2_ACCOUNT_ID: z.string().default(''),
   R2_ACCESS_KEY_ID: z.string().default(''),
   R2_SECRET_ACCESS_KEY: z.string().default(''),
   R2_BUCKET_NAME: z.string().default(''),
   R2_PUBLIC_URL: z.string().default(''),
-  // File signing for secure access
-  FILE_SIGNING_SECRET: z.string().min(32).optional(), // defaults to ENCRYPTION_KEY
-  FILE_URL_EXPIRES_IN: z.coerce.number().default(3600), // 1 hour
-  AVATAR_URL_EXPIRES_IN: z.coerce.number().default(604800), // 7 days
+  FILE_SIGNING_SECRET: z.string().min(32).optional(),
+  FILE_URL_EXPIRES_IN: z.coerce.number().default(3600),
+  AVATAR_URL_EXPIRES_IN: z.coerce.number().default(604800),
   DISABLE_FILE_SIGNING: booleanString(false),
 });
 
 // -------------------- Document Processing --------------------
 const documentSchema = z.object({
-  MAX_DOCUMENT_SIZE: z.coerce.number().default(22020096), // 21 MiB
-  // Text content limits (characters)
-  TEXT_CONTENT_MAX_LENGTH: z.coerce.number().default(500000), // 500K for editable files
-  TEXT_PREVIEW_MAX_LENGTH: z.coerce.number().default(50000), // 50K for PDF/DOCX preview
-  // Chunking for RAG
+  MAX_DOCUMENT_SIZE: z.coerce.number().default(22020096),
+  TEXT_CONTENT_MAX_LENGTH: z.coerce.number().default(500000),
+  TEXT_PREVIEW_MAX_LENGTH: z.coerce.number().default(50000),
   CHUNK_SIZE: z.coerce.number().default(512),
   CHUNK_OVERLAP: z.coerce.number().default(50),
 });
@@ -116,14 +106,11 @@ const documentSchema = z.object({
 const embeddingSchema = z.object({
   EMBEDDING_PROVIDER: z.enum(['zhipu', 'openai', 'ollama']).default('zhipu'),
   EMBEDDING_CONCURRENCY: z.coerce.number().default(5),
-  // Zhipu AI (default)
   ZHIPU_API_KEY: z.string().optional(),
   ZHIPU_EMBEDDING_MODEL: z.string().default('embedding-3'),
   ZHIPU_EMBEDDING_DIMENSIONS: z.coerce.number().default(1024),
-  // OpenAI
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
-  // Ollama (local)
   OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
   OLLAMA_EMBEDDING_MODEL: z.string().default('nomic-embed-text'),
 });
@@ -136,7 +123,6 @@ const vectorSchema = z.object({
 
 // -------------------- LLM Providers --------------------
 const llmSchema = z.object({
-  // Fallback keys when user hasn't configured their own
   ANTHROPIC_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
@@ -145,11 +131,9 @@ const llmSchema = z.object({
 // -------------------- Logging --------------------
 const loggingSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
-  // Retention (days)
   LOG_RETENTION_LOGIN_DAYS: z.coerce.number().int().min(1).default(90),
   LOG_RETENTION_OPERATION_DAYS: z.coerce.number().int().min(1).default(365),
   LOG_RETENTION_SYSTEM_DAYS: z.coerce.number().int().min(1).default(30),
-  // Cleanup
   LOG_CLEANUP_BATCH_SIZE: z.coerce.number().int().min(100).default(1000),
   LOG_CLEANUP_ENABLED: booleanString(true),
 });
@@ -157,7 +141,7 @@ const loggingSchema = z.object({
 // -------------------- Feature Flags --------------------
 const featureFlagsSchema = z.object({
   DISABLE_RATE_LIMIT: booleanString(false),
-  COUNTER_SYNC_ENABLED: booleanString(false), // Weekly counter sync for consistency
+  COUNTER_SYNC_ENABLED: booleanString(false),
 });
 
 // ==================== Combined Schema ====================
@@ -175,7 +159,7 @@ const envSchema = serverSchema
   .extend(loggingSchema.shape)
   .extend(featureFlagsSchema.shape);
 
-// ==================== Validation & Export ====================
+// ==================== Validation ====================
 
 const result = envSchema.safeParse(process.env);
 
@@ -187,8 +171,148 @@ if (!result.success) {
   process.exit(1);
 }
 
-export const env = result.data;
+const validatedEnv = result.data;
+
+// ==================== Modular Config Exports ====================
+
+/** Raw environment variables (use specific configs below when possible) */
+export const env = validatedEnv;
 export type Env = z.infer<typeof envSchema>;
+
+/** Server configuration */
+export const serverConfig = {
+  nodeEnv: validatedEnv.NODE_ENV,
+  port: validatedEnv.PORT,
+  timeout: validatedEnv.SERVER_TIMEOUT,
+  keepAliveTimeout: validatedEnv.SERVER_KEEP_ALIVE_TIMEOUT,
+  shutdownTimeout: validatedEnv.SHUTDOWN_TIMEOUT,
+  trustProxy: validatedEnv.TRUST_PROXY,
+  frontendUrl: validatedEnv.FRONTEND_URL,
+} as const;
+
+/** Database configuration */
+export const databaseConfig = {
+  url: validatedEnv.DATABASE_URL,
+  connectionLimit: validatedEnv.DB_CONNECTION_LIMIT,
+  queueLimit: validatedEnv.DB_QUEUE_LIMIT,
+} as const;
+
+/** Authentication configuration */
+export const authConfig = {
+  jwtAccessSecret: validatedEnv.JWT_ACCESS_SECRET,
+  jwtRefreshSecret: validatedEnv.JWT_REFRESH_SECRET,
+  encryptionKey: validatedEnv.ENCRYPTION_KEY,
+} as const;
+
+/** Email (SMTP) configuration */
+export const emailConfig = {
+  host: validatedEnv.SMTP_HOST,
+  port: validatedEnv.SMTP_PORT,
+  secure: validatedEnv.SMTP_SECURE,
+  user: validatedEnv.SMTP_USER,
+  pass: validatedEnv.SMTP_PASS,
+  fromName: validatedEnv.EMAIL_FROM_NAME,
+  fromAddress: validatedEnv.EMAIL_FROM_ADDRESS,
+  verificationSecret: validatedEnv.EMAIL_VERIFICATION_SECRET,
+} as const;
+
+/** OAuth providers configuration */
+export const oauthConfig = {
+  google: {
+    clientId: validatedEnv.GOOGLE_CLIENT_ID,
+    clientSecret: validatedEnv.GOOGLE_CLIENT_SECRET,
+    callbackUrl: validatedEnv.GOOGLE_CALLBACK_URL,
+  },
+  github: {
+    clientId: validatedEnv.GITHUB_CLIENT_ID,
+    clientSecret: validatedEnv.GITHUB_CLIENT_SECRET,
+    callbackUrl: validatedEnv.GITHUB_CALLBACK_URL,
+  },
+} as const;
+
+/** Storage configuration */
+export const storageConfig = {
+  type: validatedEnv.STORAGE_TYPE,
+  localPath: validatedEnv.LOCAL_STORAGE_PATH,
+  r2: {
+    accountId: validatedEnv.R2_ACCOUNT_ID,
+    accessKeyId: validatedEnv.R2_ACCESS_KEY_ID,
+    secretAccessKey: validatedEnv.R2_SECRET_ACCESS_KEY,
+    bucketName: validatedEnv.R2_BUCKET_NAME,
+    publicUrl: validatedEnv.R2_PUBLIC_URL,
+  },
+  signing: {
+    secret: validatedEnv.FILE_SIGNING_SECRET ?? validatedEnv.ENCRYPTION_KEY,
+    fileUrlExpiresIn: validatedEnv.FILE_URL_EXPIRES_IN,
+    avatarUrlExpiresIn: validatedEnv.AVATAR_URL_EXPIRES_IN,
+    disabled: validatedEnv.DISABLE_FILE_SIGNING,
+  },
+} as const;
+
+/** Document processing configuration */
+export const documentConfig = {
+  maxSize: validatedEnv.MAX_DOCUMENT_SIZE,
+  textContentMaxLength: validatedEnv.TEXT_CONTENT_MAX_LENGTH,
+  textPreviewMaxLength: validatedEnv.TEXT_PREVIEW_MAX_LENGTH,
+  chunkSize: validatedEnv.CHUNK_SIZE,
+  chunkOverlap: validatedEnv.CHUNK_OVERLAP,
+} as const;
+
+/** Embedding providers configuration */
+export const embeddingConfig = {
+  provider: validatedEnv.EMBEDDING_PROVIDER,
+  concurrency: validatedEnv.EMBEDDING_CONCURRENCY,
+  zhipu: {
+    apiKey: validatedEnv.ZHIPU_API_KEY,
+    model: validatedEnv.ZHIPU_EMBEDDING_MODEL,
+    dimensions: validatedEnv.ZHIPU_EMBEDDING_DIMENSIONS,
+  },
+  openai: {
+    apiKey: validatedEnv.OPENAI_API_KEY,
+    model: validatedEnv.OPENAI_EMBEDDING_MODEL,
+  },
+  ollama: {
+    baseUrl: validatedEnv.OLLAMA_BASE_URL,
+    model: validatedEnv.OLLAMA_EMBEDDING_MODEL,
+  },
+} as const;
+
+/** Vector database (Qdrant) configuration */
+export const vectorConfig = {
+  url: validatedEnv.QDRANT_URL,
+  apiKey: validatedEnv.QDRANT_API_KEY,
+} as const;
+
+/** LLM providers configuration */
+export const llmConfig = {
+  anthropicApiKey: validatedEnv.ANTHROPIC_API_KEY,
+  deepseek: {
+    apiKey: validatedEnv.DEEPSEEK_API_KEY,
+    baseUrl: validatedEnv.DEEPSEEK_BASE_URL,
+  },
+} as const;
+
+/** Logging configuration */
+export const loggingConfig = {
+  level: validatedEnv.LOG_LEVEL,
+  retention: {
+    loginDays: validatedEnv.LOG_RETENTION_LOGIN_DAYS,
+    operationDays: validatedEnv.LOG_RETENTION_OPERATION_DAYS,
+    systemDays: validatedEnv.LOG_RETENTION_SYSTEM_DAYS,
+  },
+  cleanup: {
+    batchSize: validatedEnv.LOG_CLEANUP_BATCH_SIZE,
+    enabled: validatedEnv.LOG_CLEANUP_ENABLED,
+  },
+} as const;
+
+/** Feature flags */
+export const featureFlags = {
+  disableRateLimit: validatedEnv.DISABLE_RATE_LIMIT,
+  counterSyncEnabled: validatedEnv.COUNTER_SYNC_ENABLED,
+} as const;
+
+// ==================== Utilities ====================
 
 /**
  * Check if environment has been loaded via dotenv.
