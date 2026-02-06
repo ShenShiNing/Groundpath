@@ -19,7 +19,7 @@ const dateRangeSchema = z.object({
 /**
  * Login log query params
  */
-export const loginLogQuerySchema = paginationSchema.merge(dateRangeSchema).extend({
+export const loginLogQuerySchema = paginationSchema.extend(dateRangeSchema.shape).extend({
   success: z
     .string()
     .optional()
@@ -32,7 +32,7 @@ export type LoginLogQueryParams = z.infer<typeof loginLogQuerySchema>;
 /**
  * Operation log query params
  */
-export const operationLogQuerySchema = paginationSchema.merge(dateRangeSchema).extend({
+export const operationLogQuerySchema = paginationSchema.extend(dateRangeSchema.shape).extend({
   resourceType: z.enum(['document', 'folder', 'user', 'session']).optional(),
   action: z
     .enum([

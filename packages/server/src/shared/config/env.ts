@@ -163,17 +163,17 @@ const featureFlagsSchema = z.object({
 // ==================== Combined Schema ====================
 
 const envSchema = serverSchema
-  .merge(databaseSchema)
-  .merge(authSchema)
-  .merge(emailSchema)
-  .merge(oauthSchema)
-  .merge(storageSchema)
-  .merge(documentSchema)
-  .merge(embeddingSchema)
-  .merge(vectorSchema)
-  .merge(llmSchema)
-  .merge(loggingSchema)
-  .merge(featureFlagsSchema);
+  .extend(databaseSchema.shape)
+  .extend(authSchema.shape)
+  .extend(emailSchema.shape)
+  .extend(oauthSchema.shape)
+  .extend(storageSchema.shape)
+  .extend(documentSchema.shape)
+  .extend(embeddingSchema.shape)
+  .extend(vectorSchema.shape)
+  .extend(llmSchema.shape)
+  .extend(loggingSchema.shape)
+  .extend(featureFlagsSchema.shape);
 
 // ==================== Validation & Export ====================
 
