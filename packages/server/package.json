@@ -49,6 +49,7 @@
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.13",
     "openai": "^6.17.0",
+    "p-limit": "^7.3.0",
     "pdf-parse": "^2.4.5",
     "pino": "^10.3.0",
     "pino-http": "^11.0.0",
