@@ -1,6 +1,7 @@
 import type { EmbeddingProvider } from '../embedding.types';
 import { env } from '@config/env';
 import { createLogger } from '@shared/logger';
+import pLimit from 'p-limit';
 
 const logger = createLogger('embedding.zhipu');
 
@@ -32,19 +33,10 @@ export class ZhipuProvider implements EmbeddingProvider {
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    const results: number[][] = [];
-
-    // Zhipu API supports single input per request, so we batch sequentially
-    // For better performance, process in parallel with concurrency limit
-    const batchSize = 10;
-    for (let i = 0; i < texts.length; i += batchSize) {
-      const batch = texts.slice(i, i + batchSize);
-      const promises = batch.map((text) => this.callApi(text));
-      const batchResults = await Promise.all(promises);
-      results.push(...batchResults);
-    }
-
-    return results;
+    // Use p-limit to control concurrency and prevent API rate limiting
+    const limit = pLimit(env.EMBEDDING_CONCURRENCY);
+    const promises = texts.map((text) => limit(() => this.callApi(text)));
+    return Promise.all(promises);
   }
 
   getDimensions(): number {

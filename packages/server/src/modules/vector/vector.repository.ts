@@ -88,13 +88,17 @@ export const vectorRepository = {
       must_not: mustNotConditions,
     };
 
-    const results = await qdrant.search(collectionName, {
-      vector,
-      limit,
-      score_threshold: scoreThreshold,
-      filter,
-      with_payload: true,
-    });
+    const results = await withTimeout(
+      qdrant.search(collectionName, {
+        vector,
+        limit,
+        score_threshold: scoreThreshold,
+        filter,
+        with_payload: true,
+      }),
+      QDRANT_TIMEOUT,
+      `Qdrant search in ${collectionName}`
+    );
 
     return results.map((r) => {
       const payload = r.payload as unknown as ChunkPayload;

@@ -1,6 +1,7 @@
 import type { EmbeddingProvider } from '../embedding.types';
 import { env } from '@config/env';
 import { createLogger } from '@shared/logger';
+import pLimit from 'p-limit';
 
 const logger = createLogger('embedding.ollama');
 
@@ -89,12 +90,10 @@ export class OllamaProvider implements EmbeddingProvider {
       clearTimeout(timeoutId);
     }
 
-    // Fallback: sequential embedding
-    const results: number[][] = [];
-    for (const text of texts) {
-      results.push(await this.embed(text));
-    }
-    return results;
+    // Fallback: use p-limit for controlled concurrency
+    const limit = pLimit(env.EMBEDDING_CONCURRENCY);
+    const promises = texts.map((text) => limit(() => this.embed(text)));
+    return Promise.all(promises);
   }
 
   getDimensions(): number {
