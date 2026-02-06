@@ -1,18 +1,24 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from 'zod';
 
-// Common pagination params
+/**
+ * Common pagination schema for log queries (internal)
+ */
 const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-// Date range filter
+/**
+ * Date range filter schema (internal)
+ */
 const dateRangeSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 });
 
-// Login log query params
+/**
+ * Login log query params
+ */
 export const loginLogQuerySchema = paginationSchema.merge(dateRangeSchema).extend({
   success: z
     .string()
@@ -23,7 +29,9 @@ export const loginLogQuerySchema = paginationSchema.merge(dateRangeSchema).exten
 
 export type LoginLogQueryParams = z.infer<typeof loginLogQuerySchema>;
 
-// Operation log query params
+/**
+ * Operation log query params
+ */
 export const operationLogQuerySchema = paginationSchema.merge(dateRangeSchema).extend({
   resourceType: z.enum(['document', 'folder', 'user', 'session']).optional(),
   action: z
@@ -49,7 +57,9 @@ export const operationLogQuerySchema = paginationSchema.merge(dateRangeSchema).e
 
 export type OperationLogQueryParams = z.infer<typeof operationLogQuerySchema>;
 
-// Resource history params
+/**
+ * Resource history params
+ */
 export const resourceHistorySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });

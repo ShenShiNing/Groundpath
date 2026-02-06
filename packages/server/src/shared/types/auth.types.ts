@@ -21,20 +21,3 @@ export interface RefreshTokenContext {
   sub: string; // User ID
   jti: string; // Token ID
 }
-
-// ==================== Express Request Extension ====================
-declare module 'express' {
-  interface Request {
-    user?: AccessTokenPayload;
-    refreshContext?: RefreshTokenContext;
-  }
-
-  interface Locals {
-    /** Validated request data from Zod schemas */
-    validated?: {
-      body?: unknown;
-      query?: unknown;
-      params?: unknown;
-    };
-  }
-}

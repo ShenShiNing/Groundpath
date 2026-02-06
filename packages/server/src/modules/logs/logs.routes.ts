@@ -1,12 +1,12 @@
 import express from 'express';
 import { authenticate, validateQuery } from '@shared/middleware';
-import { loginLogController } from './controllers/login-log.controller';
-import { operationLogController } from './controllers/operation-log.controller';
 import {
   loginLogQuerySchema,
   operationLogQuerySchema,
   resourceHistorySchema,
-} from './schemas/log-query.schemas';
+} from '@knowledge-agent/shared/schemas';
+import { loginLogController } from './controllers/login-log.controller';
+import { operationLogController } from './controllers/operation-log.controller';
 
 const router = express.Router();
 

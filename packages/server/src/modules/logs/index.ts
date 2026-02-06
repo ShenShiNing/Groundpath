@@ -13,8 +13,5 @@ export * from './repositories/system-log.repository';
 export * from './controllers/login-log.controller';
 export * from './controllers/operation-log.controller';
 
-// Schemas
-export * from './schemas/log-query.schemas';
-
 // Routes
 export { default as logsRoutes } from './logs.routes';

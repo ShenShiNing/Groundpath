@@ -13,9 +13,6 @@ export * from './repositories/refresh-token.repository';
 export * from './repositories/user-auth.repository';
 export * from './repositories/login-log.repository';
 
-// Types
-export * from './types/auth.types';
-
 // Verification (sub-module)
 export * from './verification/email.controller';
 export * from './verification/email.service';

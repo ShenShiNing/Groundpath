@@ -12,7 +12,7 @@ import type {
   ResetPasswordRequest,
 } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
-import type { AccessTokenPayload } from '../types/auth.types';
+import type { AccessTokenPayload } from '@shared/types';
 import { toUserPublicInfo, normalizeEmail, verifyRefreshToken } from '@shared/utils';
 import { Errors } from '@shared/errors';
 import { userService } from '../../user';

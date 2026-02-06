@@ -6,6 +6,7 @@ export * from './common';
 export * from './knowledge-base';
 export * from './llm';
 export * from './chat';
+export * from './logs';
 
 // Re-export zod for consumers
 export { z, ZodError } from 'zod';

@@ -3,7 +3,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { tokenService } from '@modules/auth';
 import { AppError } from '@shared/errors';
-import type { AccessTokenPayload } from '@modules/auth';
+import type { AccessTokenPayload } from '@shared/types';
 
 // ==================== Mocks ====================
 

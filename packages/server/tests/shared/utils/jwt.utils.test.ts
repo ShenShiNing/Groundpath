@@ -9,7 +9,7 @@ import {
   extractBearerToken,
 } from '@shared/utils/jwt.utils';
 import { AUTH_CONFIG } from '@config/auth.config';
-import type { AccessTokenPayload, RefreshTokenPayload } from '@modules/auth';
+import type { AccessTokenPayload, RefreshTokenPayload } from '@shared/types';
 import { AppError } from '@shared/errors';
 
 describe('jwtUtils', () => {

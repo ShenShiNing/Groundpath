@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
 import { AUTH_CONFIG } from '@config/auth.config';
-import type { AccessTokenPayload } from '../types/auth.types';
+import type { AccessTokenPayload } from '@shared/types';
 import { Errors } from '@shared/errors';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@shared/utils';
 import { withTransaction, type Transaction } from '@shared/db/db.utils';
