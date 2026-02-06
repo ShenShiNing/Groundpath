@@ -1,5 +1,5 @@
 import type { EmbeddingProvider } from '../embedding.types';
-import { env } from '@config/env';
+import { embeddingConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import pLimit from 'p-limit';
 
@@ -26,8 +26,8 @@ export class OllamaProvider implements EmbeddingProvider {
   private readonly timeout = 60_000; // 60s timeout for local model
 
   constructor() {
-    this.baseUrl = env.OLLAMA_BASE_URL;
-    this.model = env.OLLAMA_EMBEDDING_MODEL;
+    this.baseUrl = embeddingConfig.ollama.baseUrl;
+    this.model = embeddingConfig.ollama.model;
     this.dimensions = DIMENSIONS_MAP[this.model] ?? 768;
     logger.info(
       { model: this.model, baseUrl: this.baseUrl, dimensions: this.dimensions },
@@ -91,7 +91,7 @@ export class OllamaProvider implements EmbeddingProvider {
     }
 
     // Fallback: use p-limit for controlled concurrency
-    const limit = pLimit(env.EMBEDDING_CONCURRENCY);
+    const limit = pLimit(embeddingConfig.concurrency);
     const promises = texts.map((text) => limit(() => this.embed(text)));
     return Promise.all(promises);
   }

@@ -15,6 +15,7 @@ import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenPayload } from '@shared/types';
 import { toUserPublicInfo, normalizeEmail, verifyRefreshToken } from '@shared/utils';
 import { Errors } from '@shared/errors';
+import { authConfig } from '@config/env';
 import { userService } from '../../user';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from './token.service';
@@ -104,7 +105,7 @@ export const authService = {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, authConfig.bcrypt.saltRounds);
 
     // Create user
     const userId = uuidv4();
@@ -310,7 +311,7 @@ export const authService = {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, authConfig.bcrypt.saltRounds);
 
     // Create user with email verified
     const userId = uuidv4();

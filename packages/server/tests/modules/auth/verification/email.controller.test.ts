@@ -26,6 +26,7 @@ vi.mock('@shared/utils/request.utils', () => ({
   getClientIp: vi.fn(() => '192.168.1.1'),
   requireUserId: vi.fn(),
   getParamId: vi.fn(),
+  normalizeEmail: vi.fn((email: string) => email.toLowerCase().trim()),
 }));
 
 // Import after mocks

@@ -1,6 +1,6 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { Errors } from '@shared/errors';
-import { env } from '@config/env';
+import { serverConfig, oauthConfig } from '@config/env';
 import type {
   OAuthProviderConfig,
   OAuthCallbackResult,
@@ -17,8 +17,8 @@ import {
 // ==================== Configuration ====================
 
 function getGoogleConfig(): OAuthProviderConfig {
-  const clientId = env.GOOGLE_CLIENT_ID;
-  const clientSecret = env.GOOGLE_CLIENT_SECRET;
+  const clientId = oauthConfig.google.clientId;
+  const clientSecret = oauthConfig.google.clientSecret;
 
   if (!clientId || !clientSecret) {
     throw Errors.auth(
@@ -31,8 +31,8 @@ function getGoogleConfig(): OAuthProviderConfig {
   return {
     clientId,
     clientSecret,
-    callbackUrl: env.GOOGLE_CALLBACK_URL,
-    frontendUrl: env.FRONTEND_URL,
+    callbackUrl: oauthConfig.google.callbackUrl,
+    frontendUrl: serverConfig.frontendUrl,
   };
 }
 

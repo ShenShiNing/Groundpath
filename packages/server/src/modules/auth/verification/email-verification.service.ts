@@ -3,7 +3,7 @@ import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
-import { EMAIL_CONFIG } from '@config/email.config';
+import { emailConfig } from '@config/env';
 import { emailVerificationRepository } from '../verification/email-verification.repository';
 import { emailService } from './email.service';
 import { AppError, Errors } from '@shared/errors';
@@ -39,11 +39,11 @@ function generateVerificationToken(email: string, type: EmailVerificationCodeTyp
   };
 
   const options: SignOptions = {
-    expiresIn: `${EMAIL_CONFIG.verification.tokenExpiresInMinutes}m`,
+    expiresIn: `${emailConfig.verification.tokenExpiresInMinutes}m`,
     algorithm: 'HS256',
   };
 
-  return jwt.sign(payload, EMAIL_CONFIG.verification.secret, options);
+  return jwt.sign(payload, emailConfig.verification.secret, options);
 }
 
 /**
@@ -54,7 +54,7 @@ function verifyVerificationToken(
   expectedType: EmailVerificationCodeType
 ): VerificationTokenPayload {
   try {
-    const decoded = jwt.verify(token, EMAIL_CONFIG.verification.secret, {
+    const decoded = jwt.verify(token, emailConfig.verification.secret, {
       algorithms: ['HS256'],
     }) as JwtPayload & VerificationTokenPayload;
 
@@ -117,7 +117,7 @@ export const emailVerificationService = {
 
     // Check rate limits - max codes per hour
     const recentCount = await emailVerificationRepository.countRecentCodes(normalizedEmail, type);
-    if (recentCount >= EMAIL_CONFIG.verification.maxCodesPerHour) {
+    if (recentCount >= emailConfig.verification.maxCodesPerHour) {
       throw Errors.auth(
         EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED,
         'Too many verification codes requested. Please try again later.',
@@ -132,7 +132,7 @@ export const emailVerificationService = {
     );
     if (mostRecent) {
       const { secondsSinceCreation } = mostRecent;
-      const cooldownSeconds = EMAIL_CONFIG.verification.resendCooldownSeconds;
+      const cooldownSeconds = emailConfig.verification.resendCooldownSeconds;
 
       if (secondsSinceCreation < cooldownSeconds) {
         const remainingSeconds = cooldownSeconds - secondsSinceCreation;
@@ -173,7 +173,7 @@ export const emailVerificationService = {
 
     // Calculate expiration time
     const expiresAt = new Date(
-      Date.now() + EMAIL_CONFIG.verification.codeExpiresInMinutes * 60 * 1000
+      Date.now() + emailConfig.verification.codeExpiresInMinutes * 60 * 1000
     );
 
     return { expiresAt };

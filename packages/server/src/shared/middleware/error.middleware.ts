@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '@shared/errors/app-error';
 import { logger } from '@shared/logger';
-import { env } from '@config/env';
+import { serverConfig } from '@config/env';
 
 /**
  * Global error handling middleware.
@@ -36,7 +36,7 @@ export function errorMiddleware(
   }
 
   // Unknown errors - protect stack trace in production
-  if (env.NODE_ENV === 'production') {
+  if (serverConfig.nodeEnv === 'production') {
     // Production: log only essential info without full stack trace
     logger.error(
       { requestId, method: req.method, url: req.url, errorMessage: err.message },

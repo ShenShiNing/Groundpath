@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import type { DocumentType } from '@knowledge-agent/shared/types';
-import { env } from '@config/env';
+import { documentConfig, storageConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import { storageProvider } from '../../storage';
 
@@ -45,7 +45,7 @@ const EXTENSION_TO_MIME: Record<string, string> = {
  * Get max file size from config (default 21 MiB)
  */
 function getMaxFileSize(): number {
-  return env.MAX_DOCUMENT_SIZE;
+  return documentConfig.maxSize;
 }
 
 /**
@@ -311,7 +311,9 @@ export const storageService = {
 
     await storageProvider.upload(key, file.buffer, file.mimetype);
 
-    return storageProvider.getPublicUrl(key, { expiresIn: env.AVATAR_URL_EXPIRES_IN });
+    return storageProvider.getPublicUrl(key, {
+      expiresIn: storageConfig.signing.avatarUrlExpiresIn,
+    });
   },
 
   /**
@@ -323,7 +325,7 @@ export const storageService = {
     const match = url.match(/\/api\/(?:uploads|files)\/([^?]+)/);
     if (!match) {
       // Try R2 URL pattern
-      const r2PublicUrl = env.R2_PUBLIC_URL;
+      const r2PublicUrl = storageConfig.r2.publicUrl;
       if (r2PublicUrl && url.startsWith(r2PublicUrl)) {
         const key = url.replace(r2PublicUrl + '/', '');
         await storageProvider.delete(key);

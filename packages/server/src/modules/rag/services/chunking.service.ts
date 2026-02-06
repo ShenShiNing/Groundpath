@@ -1,4 +1,4 @@
-import { env } from '@config/env';
+import { documentConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('chunking.service');
@@ -14,8 +14,8 @@ export interface Chunk {
 
 export const chunkingService = {
   chunkText(text: string): Chunk[] {
-    const chunkSize = env.CHUNK_SIZE;
-    const overlap = env.CHUNK_OVERLAP;
+    const chunkSize = documentConfig.chunkSize;
+    const overlap = documentConfig.chunkOverlap;
 
     if (!text || text.trim().length === 0) {
       return [];

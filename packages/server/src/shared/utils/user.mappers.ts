@@ -1,6 +1,6 @@
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { UserPublicInfo } from '@knowledge-agent/shared/types';
-import { env } from '@config/env';
+import { storageConfig } from '@config/env';
 import { storageProvider } from '@modules/storage';
 
 /**
@@ -35,7 +35,9 @@ function regenerateSignedUrl(url: string | null, expiresIn?: number): string | n
   const key = extractKeyFromUrl(url);
   if (!key) return url;
 
-  return storageProvider.getPublicUrl(key, { expiresIn: expiresIn ?? env.AVATAR_URL_EXPIRES_IN });
+  return storageProvider.getPublicUrl(key, {
+    expiresIn: expiresIn ?? storageConfig.signing.avatarUrlExpiresIn,
+  });
 }
 
 /**

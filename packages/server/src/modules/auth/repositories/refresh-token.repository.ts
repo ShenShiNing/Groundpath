@@ -3,7 +3,7 @@ import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { db } from '@shared/db';
 import { now, addSeconds, getDbContext, type Transaction } from '@shared/db/db.utils';
 import { refreshTokens, type RefreshToken } from '@shared/db/schema/auth/refresh-tokens.schema';
-import { AUTH_CONFIG } from '@config/auth.config';
+import { authConfig } from '@config/env';
 
 /**
  * Refresh token repository for database operations
@@ -28,7 +28,7 @@ export const refreshTokenRepository = {
       ipAddress,
       deviceInfo,
       revoked: false,
-      expiresAt: addSeconds(AUTH_CONFIG.refreshToken.expiresInSeconds),
+      expiresAt: addSeconds(authConfig.refreshToken.expiresInSeconds),
     });
   },
 

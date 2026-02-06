@@ -2,7 +2,7 @@ import type { EmbeddingProvider, EmbeddingProviderType } from './embedding.types
 import { ZhipuProvider } from './providers/zhipu.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { OllamaProvider } from './providers/ollama.provider';
-import { env } from '@config/env';
+import { embeddingConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('embedding.factory');
@@ -38,7 +38,7 @@ export function getEmbeddingProviderByType(type: EmbeddingProviderType): Embeddi
  * Get the default embedding provider (from env config)
  */
 export function getEmbeddingProvider(): EmbeddingProvider {
-  return getEmbeddingProviderByType(env.EMBEDDING_PROVIDER);
+  return getEmbeddingProviderByType(embeddingConfig.provider);
 }
 
 export function resetEmbeddingProvider(): void {

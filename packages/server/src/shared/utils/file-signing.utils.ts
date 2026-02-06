@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import { env } from '@config/env';
+import { storageConfig } from '@config/env';
 
 function getSigningSecret(): string {
-  return env.FILE_SIGNING_SECRET || env.ENCRYPTION_KEY;
+  return storageConfig.signing.secret;
 }
 
 export interface SignedUrlOptions {
@@ -15,7 +15,7 @@ export interface SignedUrlOptions {
  * Format: /api/files/{encodedKey}?sig={signature}&exp={timestamp}
  */
 export function generateSignedUrl(options: SignedUrlOptions): string {
-  const { key, expiresIn = env.FILE_URL_EXPIRES_IN } = options;
+  const { key, expiresIn = storageConfig.signing.fileUrlExpiresIn } = options;
   const exp = Math.floor(Date.now() / 1000) + expiresIn;
 
   const payload = `${key}:${exp}`;

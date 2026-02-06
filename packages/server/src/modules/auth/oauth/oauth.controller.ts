@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { env } from '@config/env';
+import { serverConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
@@ -7,7 +7,7 @@ import { asyncHandler } from '@shared/errors/async-handler';
 import { getClientIp } from '@shared/utils';
 
 const logger = createLogger('oauth');
-const FRONTEND_URL = env.FRONTEND_URL;
+const FRONTEND_URL = serverConfig.frontendUrl;
 
 /**
  * Build callback URL with token data (fragment-based for security)

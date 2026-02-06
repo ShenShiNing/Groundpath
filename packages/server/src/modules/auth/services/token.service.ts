@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
-import { AUTH_CONFIG } from '@config/auth.config';
+import { authConfig } from '@config/env';
 import type { AccessTokenPayload } from '@shared/types';
 import { Errors } from '@shared/errors';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@shared/utils';
@@ -42,8 +42,8 @@ export const tokenService = {
     return {
       accessToken,
       refreshToken: refreshTokenString,
-      expiresIn: AUTH_CONFIG.accessToken.expiresInSeconds,
-      refreshExpiresIn: AUTH_CONFIG.refreshToken.expiresInSeconds,
+      expiresIn: authConfig.accessToken.expiresInSeconds,
+      refreshExpiresIn: authConfig.refreshToken.expiresInSeconds,
     };
   },
 

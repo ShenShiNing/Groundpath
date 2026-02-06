@@ -5,7 +5,7 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import type { SignedUrlOptions, StorageProvider } from '../storage.types';
-import { env } from '@config/env';
+import { storageConfig } from '@config/env';
 
 export class R2StorageProvider implements StorageProvider {
   private client: S3Client;
@@ -13,10 +13,10 @@ export class R2StorageProvider implements StorageProvider {
   constructor() {
     this.client = new S3Client({
       region: 'auto',
-      endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      endpoint: `https://${storageConfig.r2.accountId}.r2.cloudflarestorage.com`,
       credentials: {
-        accessKeyId: env.R2_ACCESS_KEY_ID,
-        secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+        accessKeyId: storageConfig.r2.accessKeyId,
+        secretAccessKey: storageConfig.r2.secretAccessKey,
       },
     });
   }
@@ -24,7 +24,7 @@ export class R2StorageProvider implements StorageProvider {
   async upload(key: string, buffer: Buffer, contentType: string): Promise<void> {
     await this.client.send(
       new PutObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
+        Bucket: storageConfig.r2.bucketName,
         Key: key,
         Body: buffer,
         ContentType: contentType,
@@ -35,7 +35,7 @@ export class R2StorageProvider implements StorageProvider {
   async delete(key: string): Promise<void> {
     await this.client.send(
       new DeleteObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
+        Bucket: storageConfig.r2.bucketName,
         Key: key,
       })
     );
@@ -48,7 +48,7 @@ export class R2StorageProvider implements StorageProvider {
   }> {
     const response = await this.client.send(
       new GetObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
+        Bucket: storageConfig.r2.bucketName,
         Key: key,
       })
     );
@@ -67,7 +67,7 @@ export class R2StorageProvider implements StorageProvider {
   async getBuffer(key: string): Promise<Buffer> {
     const response = await this.client.send(
       new GetObjectCommand({
-        Bucket: env.R2_BUCKET_NAME,
+        Bucket: storageConfig.r2.bucketName,
         Key: key,
       })
     );
@@ -87,6 +87,6 @@ export class R2StorageProvider implements StorageProvider {
   // R2 uses public bucket URL, no signing needed (handled by Cloudflare)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getPublicUrl(key: string, _options?: SignedUrlOptions): string {
-    return `${env.R2_PUBLIC_URL}/${key}`;
+    return `${storageConfig.r2.publicUrl}/${key}`;
   }
 }

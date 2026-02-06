@@ -1,6 +1,6 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { Errors } from '@shared/errors';
-import { env } from '@config/env';
+import { serverConfig, oauthConfig } from '@config/env';
 import type {
   OAuthProviderConfig,
   OAuthCallbackResult,
@@ -18,8 +18,8 @@ import {
 // ==================== Configuration ====================
 
 function getGitHubConfig(): OAuthProviderConfig {
-  const clientId = env.GITHUB_CLIENT_ID;
-  const clientSecret = env.GITHUB_CLIENT_SECRET;
+  const clientId = oauthConfig.github.clientId;
+  const clientSecret = oauthConfig.github.clientSecret;
 
   if (!clientId || !clientSecret) {
     throw Errors.auth(
@@ -32,8 +32,8 @@ function getGitHubConfig(): OAuthProviderConfig {
   return {
     clientId,
     clientSecret,
-    callbackUrl: env.GITHUB_CALLBACK_URL,
-    frontendUrl: env.FRONTEND_URL,
+    callbackUrl: oauthConfig.github.callbackUrl,
+    frontendUrl: serverConfig.frontendUrl,
   };
 }
 

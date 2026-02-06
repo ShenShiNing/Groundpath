@@ -1,4 +1,4 @@
-import { env } from '@shared/config/env';
+import { loggingConfig } from '@shared/config/env';
 import { createLogger } from '@shared/logger';
 import { systemLogger } from '@shared/logger/system-logger';
 import { loginLogRepository } from '../../auth/repositories/login-log.repository';
@@ -48,14 +48,14 @@ export const logCleanupService = {
    */
   async runCleanup(): Promise<CleanupResult> {
     const startTime = Date.now();
-    const batchSize = env.LOG_CLEANUP_BATCH_SIZE;
+    const batchSize = loggingConfig.cleanup.batchSize;
 
     logger.info('Starting log cleanup...');
 
     // Calculate cutoff dates
-    const loginCutoff = getCutoffDate(env.LOG_RETENTION_LOGIN_DAYS);
-    const operationCutoff = getCutoffDate(env.LOG_RETENTION_OPERATION_DAYS);
-    const systemCutoff = getCutoffDate(env.LOG_RETENTION_SYSTEM_DAYS);
+    const loginCutoff = getCutoffDate(loggingConfig.retention.loginDays);
+    const operationCutoff = getCutoffDate(loggingConfig.retention.operationDays);
+    const systemCutoff = getCutoffDate(loggingConfig.retention.systemDays);
 
     // Delete old logs in batches
     const [loginLogsDeleted, operationLogsDeleted, systemLogsDeleted] = await Promise.all([
@@ -93,9 +93,9 @@ export const logCleanupService = {
       operationLogsDeleted,
       systemLogsDeleted,
       retentionDays: {
-        login: env.LOG_RETENTION_LOGIN_DAYS,
-        operation: env.LOG_RETENTION_OPERATION_DAYS,
-        system: env.LOG_RETENTION_SYSTEM_DAYS,
+        login: loggingConfig.retention.loginDays,
+        operation: loggingConfig.retention.operationDays,
+        system: loggingConfig.retention.systemDays,
       },
     });
 

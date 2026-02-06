@@ -8,7 +8,7 @@ import {
   verifyRefreshToken,
   extractBearerToken,
 } from '@shared/utils/jwt.utils';
-import { AUTH_CONFIG } from '@config/auth.config';
+import { authConfig } from '@config/env';
 import type { AccessTokenPayload, RefreshTokenPayload } from '@shared/types';
 import { AppError } from '@shared/errors';
 
@@ -107,7 +107,7 @@ describe('jwtUtils', () => {
 
     it('should throw TOKEN_EXPIRED error for expired token', () => {
       // Create an expired token
-      const expiredToken = jwt.sign(validPayload, AUTH_CONFIG.accessToken.secret, {
+      const expiredToken = jwt.sign(validPayload, authConfig.accessToken.secret, {
         expiresIn: '-1s', // Already expired
         algorithm: 'HS256',
       });
@@ -178,7 +178,7 @@ describe('jwtUtils', () => {
 
     it('should throw TOKEN_INVALID error for token with different algorithm', () => {
       // Create token with HS384 algorithm
-      const tokenWithDiffAlgo = jwt.sign(validPayload, AUTH_CONFIG.accessToken.secret, {
+      const tokenWithDiffAlgo = jwt.sign(validPayload, authConfig.accessToken.secret, {
         expiresIn: '15m',
         algorithm: 'HS384',
       });
@@ -264,7 +264,7 @@ describe('jwtUtils', () => {
     it('should throw TOKEN_EXPIRED error for expired token', () => {
       const expiredToken = jwt.sign(
         { sub: userId, jti: tokenId, type: 'refresh' },
-        AUTH_CONFIG.refreshToken.secret,
+        authConfig.refreshToken.secret,
         { expiresIn: '-1s', algorithm: 'HS256' }
       );
 
@@ -308,7 +308,7 @@ describe('jwtUtils', () => {
     it('should throw TOKEN_INVALID error for wrong token type', () => {
       const tokenWithWrongType = jwt.sign(
         { sub: userId, jti: tokenId, type: 'access' },
-        AUTH_CONFIG.refreshToken.secret,
+        authConfig.refreshToken.secret,
         { expiresIn: '7d', algorithm: 'HS256' }
       );
 
@@ -325,7 +325,7 @@ describe('jwtUtils', () => {
     it('should throw TOKEN_INVALID error for missing type field', () => {
       const tokenWithoutType = jwt.sign(
         { sub: userId, jti: tokenId },
-        AUTH_CONFIG.refreshToken.secret,
+        authConfig.refreshToken.secret,
         { expiresIn: '7d', algorithm: 'HS256' }
       );
 

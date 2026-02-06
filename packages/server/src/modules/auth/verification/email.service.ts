@@ -1,17 +1,17 @@
 import nodemailer from 'nodemailer';
 import type Mail from 'nodemailer/lib/mailer';
 import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
-import { EMAIL_CONFIG } from '@config/email.config';
+import { emailConfig } from '@config/env';
 import { emailTemplates } from '@shared/email/templates/verification.template';
 
 // Create transporter (reusable)
 const transporter = nodemailer.createTransport({
-  host: EMAIL_CONFIG.smtp.host,
-  port: EMAIL_CONFIG.smtp.port,
-  secure: EMAIL_CONFIG.smtp.secure,
+  host: emailConfig.smtp.host,
+  port: emailConfig.smtp.port,
+  secure: emailConfig.smtp.secure,
   auth: {
-    user: EMAIL_CONFIG.smtp.auth.user,
-    pass: EMAIL_CONFIG.smtp.auth.pass,
+    user: emailConfig.smtp.auth.user,
+    pass: emailConfig.smtp.auth.pass,
   },
 });
 
@@ -29,10 +29,10 @@ export const emailService = {
    * Send a verification code email
    */
   async sendVerificationCode({ to, code, type }: SendVerificationCodeOptions): Promise<void> {
-    const { codeExpiresInMinutes } = EMAIL_CONFIG.verification;
+    const { codeExpiresInMinutes } = emailConfig.verification;
 
     const mailOptions: Mail.Options = {
-      from: `"${EMAIL_CONFIG.from.name}" <${EMAIL_CONFIG.from.address}>`,
+      from: `"${emailConfig.from.name}" <${emailConfig.from.address}>`,
       to,
       subject: emailTemplates.getSubject(type),
       text: emailTemplates.generateText({ code, type, expiresInMinutes: codeExpiresInMinutes }),

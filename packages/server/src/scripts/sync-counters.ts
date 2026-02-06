@@ -17,7 +17,7 @@
  */
 
 // Ensure environment is loaded before any imports that depend on it
-import { env, isEnvLoaded } from '@shared/config/env';
+import { databaseConfig, isEnvLoaded } from '@shared/config/env';
 
 // Verify environment loaded successfully
 if (!isEnvLoaded()) {
@@ -26,7 +26,7 @@ if (!isEnvLoaded()) {
 }
 
 // Verify critical environment variables for CLI
-if (!env.DATABASE_URL) {
+if (!databaseConfig.url) {
   console.error('Error: DATABASE_URL not configured.');
   console.error('Make sure .env file exists with DATABASE_URL set.');
   process.exit(1);

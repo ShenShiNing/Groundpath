@@ -12,7 +12,7 @@ import type { Transaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
 import { logOperation } from '@shared/logger/operation-logger';
-import { env } from '@config/env';
+import { embeddingConfig } from '@config/env';
 
 export interface RequestContext {
   ipAddress?: string | null;
@@ -39,12 +39,12 @@ function getEmbeddingConfigForProvider(provider: EmbeddingProviderType): {
   switch (provider) {
     case 'zhipu':
       return {
-        model: env.ZHIPU_EMBEDDING_MODEL,
-        dimensions: env.ZHIPU_EMBEDDING_DIMENSIONS,
+        model: embeddingConfig.zhipu.model,
+        dimensions: embeddingConfig.zhipu.dimensions,
       };
     case 'openai': {
       // OpenAI models have fixed dimensions
-      const model = env.OPENAI_EMBEDDING_MODEL;
+      const model = embeddingConfig.openai.model;
       const dimensionsMap: Record<string, number> = {
         'text-embedding-3-small': 1536,
         'text-embedding-3-large': 3072,
@@ -57,7 +57,7 @@ function getEmbeddingConfigForProvider(provider: EmbeddingProviderType): {
     }
     case 'ollama': {
       // Ollama models have fixed dimensions
-      const model = env.OLLAMA_EMBEDDING_MODEL;
+      const model = embeddingConfig.ollama.model;
       const dimensionsMap: Record<string, number> = {
         'nomic-embed-text': 768,
         'mxbai-embed-large': 1024,
@@ -78,10 +78,10 @@ function getEmbeddingConfigForProvider(provider: EmbeddingProviderType): {
 }
 
 function assertProviderConfigured(provider: EmbeddingProviderType): void {
-  if (provider === 'openai' && !env.OPENAI_API_KEY) {
+  if (provider === 'openai' && !embeddingConfig.openai.apiKey) {
     throw Errors.validation('OPENAI_API_KEY 未配置，无法使用 OpenAI 嵌入模型');
   }
-  if (provider === 'zhipu' && !env.ZHIPU_API_KEY) {
+  if (provider === 'zhipu' && !embeddingConfig.zhipu.apiKey) {
     throw Errors.validation('ZHIPU_API_KEY 未配置，无法使用智谱嵌入模型');
   }
 }

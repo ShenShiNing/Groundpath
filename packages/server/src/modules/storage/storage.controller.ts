@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { Errors } from '@shared/errors';
-import { env } from '@config/env';
+import { serverConfig, storageConfig } from '@config/env';
 import { verifySignature } from '@shared/utils';
 import { storageProvider } from './storage.factory';
 import { createLogger } from '@shared/logger';
@@ -36,7 +36,8 @@ export const storageController = {
     }
 
     // In development with signing disabled, skip verification
-    const skipVerification = env.NODE_ENV === 'development' && env.DISABLE_FILE_SIGNING;
+    const skipVerification =
+      serverConfig.nodeEnv === 'development' && storageConfig.signing.disabled;
 
     if (!skipVerification) {
       const sig = req.query.sig as string | undefined;

@@ -3,7 +3,7 @@ import { createReadStream } from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import type { SignedUrlOptions, StorageProvider } from '../storage.types';
-import { env } from '@config/env';
+import { serverConfig, storageConfig } from '@config/env';
 import { generateSignedUrl } from '@shared/utils';
 import { Errors } from '@shared/errors';
 
@@ -11,7 +11,7 @@ export class LocalStorageProvider implements StorageProvider {
   private basePath: string;
 
   constructor() {
-    this.basePath = path.resolve(env.LOCAL_STORAGE_PATH);
+    this.basePath = path.resolve(storageConfig.localPath);
   }
 
   /**
@@ -73,11 +73,11 @@ export class LocalStorageProvider implements StorageProvider {
 
   getPublicUrl(key: string, options?: SignedUrlOptions): string {
     // In development with signing disabled, use direct static path (for debugging)
-    if (env.NODE_ENV === 'development' && env.DISABLE_FILE_SIGNING) {
-      return `${env.FRONTEND_URL}/api/uploads/${key}`;
+    if (serverConfig.nodeEnv === 'development' && storageConfig.signing.disabled) {
+      return `${serverConfig.frontendUrl}/api/uploads/${key}`;
     }
     // Use signed URL for secure access
-    return `${env.FRONTEND_URL}${generateSignedUrl({ key, expiresIn: options?.expiresIn })}`;
+    return `${serverConfig.frontendUrl}${generateSignedUrl({ key, expiresIn: options?.expiresIn })}`;
   }
 }
 

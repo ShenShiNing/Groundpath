@@ -4,7 +4,7 @@ import type { DocumentInfo } from '@knowledge-agent/shared/types';
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { withTransaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
-import { env } from '@config/env';
+import { documentConfig } from '@config/env';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { folderRepository } from '../repositories/folder.repository';
@@ -134,14 +134,14 @@ export const documentUploadService = {
     let textContent: string | null = null;
     if (['markdown', 'text'].includes(documentType)) {
       textContent = file.buffer.toString('utf-8');
-      if (textContent.length > env.TEXT_CONTENT_MAX_LENGTH) {
-        textContent = textContent.substring(0, env.TEXT_CONTENT_MAX_LENGTH);
+      if (textContent.length > documentConfig.textContentMaxLength) {
+        textContent = textContent.substring(0, documentConfig.textContentMaxLength);
       }
     } else if (['pdf', 'docx'].includes(documentType)) {
       const extracted = await documentStorageService.extractTextContent(
         storageKey,
         documentType,
-        env.TEXT_PREVIEW_MAX_LENGTH
+        documentConfig.textPreviewMaxLength
       );
       textContent = extracted.text;
     }

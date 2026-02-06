@@ -1,6 +1,6 @@
 import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AUTH_CONFIG } from '@config/auth.config';
+import { authConfig } from '@config/env';
 import type { AccessTokenPayload, RefreshTokenPayload } from '../types';
 import { AppError, Errors } from '../errors';
 
@@ -11,11 +11,11 @@ import { AppError, Errors } from '../errors';
  */
 export function generateAccessToken(payload: AccessTokenPayload): string {
   const options: SignOptions = {
-    expiresIn: AUTH_CONFIG.accessToken.expiresIn,
+    expiresIn: authConfig.accessToken.expiresInSeconds,
     algorithm: 'HS256',
   };
 
-  return jwt.sign(payload, AUTH_CONFIG.accessToken.secret, options);
+  return jwt.sign(payload, authConfig.accessToken.secret, options);
 }
 
 /**
@@ -23,7 +23,7 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
  */
 export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
-    const decoded = jwt.verify(token, AUTH_CONFIG.accessToken.secret, {
+    const decoded = jwt.verify(token, authConfig.accessToken.secret, {
       algorithms: ['HS256'],
     }) as JwtPayload & AccessTokenPayload;
 
@@ -58,11 +58,11 @@ export function generateRefreshToken(userId: string, tokenId: string): string {
   };
 
   const options: SignOptions = {
-    expiresIn: AUTH_CONFIG.refreshToken.expiresIn,
+    expiresIn: authConfig.refreshToken.expiresInSeconds,
     algorithm: 'HS256',
   };
 
-  return jwt.sign(payload, AUTH_CONFIG.refreshToken.secret, options);
+  return jwt.sign(payload, authConfig.refreshToken.secret, options);
 }
 
 /**
@@ -70,7 +70,7 @@ export function generateRefreshToken(userId: string, tokenId: string): string {
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
   try {
-    const decoded = jwt.verify(token, AUTH_CONFIG.refreshToken.secret, {
+    const decoded = jwt.verify(token, authConfig.refreshToken.secret, {
       algorithms: ['HS256'],
     }) as JwtPayload & RefreshTokenPayload;
 

@@ -1,7 +1,7 @@
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import { env } from '@config/env';
+import { documentConfig } from '@config/env';
 import { documentController } from './controllers/document.controller';
 import {
   authenticate,
@@ -47,7 +47,7 @@ function getExtension(filename: string): string {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: env.MAX_DOCUMENT_SIZE,
+    fileSize: documentConfig.maxSize,
   },
   fileFilter: (_req, file, cb) => {
     const ext = getExtension(file.originalname);
@@ -63,7 +63,7 @@ const upload = multer({
 function handleMulterError(err: Error, _req: Request, res: Response, next: NextFunction): void {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      const maxMB = Math.round(env.MAX_DOCUMENT_SIZE / (1024 * 1024));
+      const maxMB = Math.round(documentConfig.maxSize / (1024 * 1024));
       res.status(400).json({
         success: false,
         error: {

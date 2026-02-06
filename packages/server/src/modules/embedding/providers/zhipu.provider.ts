@@ -1,5 +1,5 @@
 import type { EmbeddingProvider } from '../embedding.types';
-import { env } from '@config/env';
+import { embeddingConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import pLimit from 'p-limit';
 
@@ -18,12 +18,12 @@ export class ZhipuProvider implements EmbeddingProvider {
   private readonly dimensions: number;
 
   constructor() {
-    if (!env.ZHIPU_API_KEY) {
+    if (!embeddingConfig.zhipu.apiKey) {
       throw new Error('ZHIPU_API_KEY is required when using zhipu embedding provider');
     }
-    this.apiKey = env.ZHIPU_API_KEY;
-    this.model = env.ZHIPU_EMBEDDING_MODEL;
-    this.dimensions = env.ZHIPU_EMBEDDING_DIMENSIONS;
+    this.apiKey = embeddingConfig.zhipu.apiKey;
+    this.model = embeddingConfig.zhipu.model;
+    this.dimensions = embeddingConfig.zhipu.dimensions;
     logger.info({ model: this.model, dimensions: this.dimensions }, 'Zhipu provider initialized');
   }
 
@@ -34,7 +34,7 @@ export class ZhipuProvider implements EmbeddingProvider {
 
   async embedBatch(texts: string[]): Promise<number[][]> {
     // Use p-limit to control concurrency and prevent API rate limiting
-    const limit = pLimit(env.EMBEDDING_CONCURRENCY);
+    const limit = pLimit(embeddingConfig.concurrency);
     const promises = texts.map((text) => limit(() => this.callApi(text)));
     return Promise.all(promises);
   }

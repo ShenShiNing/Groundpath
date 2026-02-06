@@ -6,7 +6,7 @@ import {
   emailVerificationCodes,
   type EmailVerificationCode,
 } from '@shared/db/schema/auth/email-verification-codes.schema';
-import { EMAIL_CONFIG } from '@config/email.config';
+import { emailConfig } from '@config/env';
 
 /**
  * Email verification code repository for database operations
@@ -29,7 +29,7 @@ export const emailVerificationRepository = {
       type,
       ipAddress,
       used: false,
-      expiresAt: addMinutes(EMAIL_CONFIG.verification.codeExpiresInMinutes),
+      expiresAt: addMinutes(emailConfig.verification.codeExpiresInMinutes),
     });
   },
 

@@ -1,4 +1,4 @@
-import { env } from '@shared/config/env';
+import { loggingConfig } from '@shared/config/env';
 import { createLogger } from '@shared/logger';
 import { systemLogger } from '@shared/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
@@ -16,7 +16,7 @@ export const tokenCleanupService = {
    */
   async runCleanup(): Promise<TokenCleanupResult> {
     const startTime = Date.now();
-    const batchSize = env.LOG_CLEANUP_BATCH_SIZE;
+    const batchSize = loggingConfig.cleanup.batchSize;
 
     logger.info('Starting token cleanup...');
 

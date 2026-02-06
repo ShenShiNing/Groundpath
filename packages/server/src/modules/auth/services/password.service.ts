@@ -4,6 +4,7 @@ import type { ResetPasswordRequest } from '@knowledge-agent/shared/types';
 import { Errors } from '@shared/errors';
 import { withTransaction } from '@shared/db/db.utils';
 import { normalizeEmail } from '@shared/utils';
+import { authConfig } from '@config/env';
 import { userService } from '../../user';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { emailVerificationService } from '../verification/email-verification.service';
@@ -39,7 +40,7 @@ export const passwordService = {
     }
 
     // Hash new password (outside transaction - no DB writes)
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const hashedPassword = await bcrypt.hash(newPassword, authConfig.bcrypt.saltRounds);
 
     // Transaction: update password and revoke all tokens atomically
     await withTransaction(async (tx) => {
@@ -95,7 +96,7 @@ export const passwordService = {
     }
 
     // Hash new password (outside transaction - no DB writes)
-    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const hashedPassword = await bcrypt.hash(newPassword, authConfig.bcrypt.saltRounds);
 
     // Transaction: update password and optionally revoke sessions atomically
     const sessionsRevoked = await withTransaction(async (tx) => {

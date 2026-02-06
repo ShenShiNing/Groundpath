@@ -10,14 +10,18 @@ import { ragRoutes } from './modules/rag';
 import { llmRoutes } from './modules/llm';
 import { chatRoutes } from './modules/chat';
 import { storageRoutes } from './modules/storage';
-import { env } from '@config/env';
+import { serverConfig, storageConfig } from '@config/env';
 
 const router = express.Router();
 
 // Serve local uploads when using local storage with signing disabled (dev only)
-const storageType = env.STORAGE_TYPE || (env.NODE_ENV === 'production' ? 'r2' : 'local');
-if (storageType === 'local' && env.NODE_ENV === 'development' && env.DISABLE_FILE_SIGNING) {
-  router.use('/api/uploads', express.static(path.resolve(env.LOCAL_STORAGE_PATH)));
+const storageType = storageConfig.type || (serverConfig.nodeEnv === 'production' ? 'r2' : 'local');
+if (
+  storageType === 'local' &&
+  serverConfig.nodeEnv === 'development' &&
+  storageConfig.signing.disabled
+) {
+  router.use('/api/uploads', express.static(path.resolve(storageConfig.localPath)));
 }
 
 // Signed file access route (handles /api/files/*)

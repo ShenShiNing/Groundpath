@@ -1,12 +1,12 @@
 import crypto from 'crypto';
-import { env } from '@config/env';
+import { authConfig } from '@config/env';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 
 function getKey(): Buffer {
   // Use first 32 bytes of the encryption key (SHA-256 hash if longer)
-  const keyStr = env.ENCRYPTION_KEY;
+  const keyStr = authConfig.encryptionKey;
   if (keyStr.length === 32) {
     return Buffer.from(keyStr, 'utf8');
   }

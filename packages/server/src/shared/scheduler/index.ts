@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { env } from '@shared/config/env';
+import { loggingConfig, featureFlags } from '@shared/config/env';
 import { createLogger } from '@shared/logger';
 import { systemLogger } from '@shared/logger/system-logger';
 import { logCleanupService } from '@modules/logs';
@@ -23,7 +23,7 @@ export function initializeScheduler(): void {
   const scheduledTasks: string[] = [];
 
   // Schedule cleanup daily at 3:00 AM UTC (controlled by LOG_CLEANUP_ENABLED)
-  if (env.LOG_CLEANUP_ENABLED) {
+  if (loggingConfig.cleanup.enabled) {
     cron.schedule(
       '0 3 * * *',
       async () => {
@@ -54,7 +54,7 @@ export function initializeScheduler(): void {
   }
 
   // Optional: Schedule counter sync weekly on Sunday at 4:00 AM UTC
-  if (env.COUNTER_SYNC_ENABLED) {
+  if (featureFlags.counterSyncEnabled) {
     cron.schedule(
       '0 4 * * 0',
       async () => {

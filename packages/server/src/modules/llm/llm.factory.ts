@@ -6,7 +6,7 @@ import { ZhipuProvider } from './providers/zhipu.provider';
 import { DeepSeekProvider } from './providers/deepseek.provider';
 import { OllamaProvider } from './providers/ollama.provider';
 import { CustomProvider } from './providers/custom.provider';
-import { env } from '@config/env';
+import { embeddingConfig, llmConfig } from '@config/env';
 
 export interface LLMProviderConfig {
   apiKey?: string;
@@ -24,27 +24,27 @@ export function createLLMProvider(type: LLMProviderType, config: LLMProviderConf
 
   switch (type) {
     case 'openai': {
-      const key = apiKey ?? env.OPENAI_API_KEY;
+      const key = apiKey ?? embeddingConfig.openai.apiKey;
       if (!key) throw new Error('OpenAI API key is required');
       return new OpenAIProvider(key, model);
     }
     case 'anthropic': {
-      const key = apiKey ?? env.ANTHROPIC_API_KEY;
+      const key = apiKey ?? llmConfig.anthropicApiKey;
       if (!key) throw new Error('Anthropic API key is required');
       return new AnthropicProvider(key, model);
     }
     case 'zhipu': {
-      const key = apiKey ?? env.ZHIPU_API_KEY;
+      const key = apiKey ?? embeddingConfig.zhipu.apiKey;
       if (!key) throw new Error('Zhipu API key is required');
       return new ZhipuProvider(key, model);
     }
     case 'deepseek': {
-      const key = apiKey ?? env.DEEPSEEK_API_KEY;
+      const key = apiKey ?? llmConfig.deepseek.apiKey;
       if (!key) throw new Error('DeepSeek API key is required');
       return new DeepSeekProvider(key, model);
     }
     case 'ollama': {
-      return new OllamaProvider(model, baseUrl ?? env.OLLAMA_BASE_URL);
+      return new OllamaProvider(model, baseUrl ?? embeddingConfig.ollama.baseUrl);
     }
     case 'custom': {
       if (!apiKey) throw new Error('API key is required for custom provider');

@@ -1,7 +1,7 @@
 import helmet from 'helmet';
 import cors from 'cors';
 import type { Request, Response, NextFunction } from 'express';
-import { env } from '@config/env';
+import { serverConfig, storageConfig } from '@config/env';
 
 // ============================================================================
 // Helmet - Security Headers
@@ -18,8 +18,8 @@ export const helmetMiddleware = helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for some UI libs
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'blob:', env.R2_PUBLIC_URL].filter(Boolean),
-      connectSrc: ["'self'", env.FRONTEND_URL],
+      imgSrc: ["'self'", 'data:', 'blob:', storageConfig.r2.publicUrl].filter(Boolean),
+      connectSrc: ["'self'", serverConfig.frontendUrl],
       fontSrc: ["'self'"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
@@ -51,10 +51,10 @@ export const helmetMiddleware = helmet({
  * Supports comma-separated list of origins
  */
 function parseAllowedOrigins(): (string | RegExp)[] {
-  const frontendUrl = env.FRONTEND_URL;
+  const frontendUrl = serverConfig.frontendUrl;
 
   // In development, allow localhost variations
-  if (env.NODE_ENV === 'development') {
+  if (serverConfig.nodeEnv === 'development') {
     return [frontendUrl, /^http:\/\/localhost:\d+$/, /^http:\/\/127\.0\.0\.1:\d+$/];
   }
 

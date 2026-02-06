@@ -54,6 +54,11 @@ const authSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1),
   JWT_REFRESH_SECRET: z.string().min(1),
   ENCRYPTION_KEY: z.string().min(32),
+  // Token expiration (in seconds)
+  ACCESS_TOKEN_EXPIRES_IN: z.coerce.number().default(900), // 15 minutes
+  REFRESH_TOKEN_EXPIRES_IN: z.coerce.number().default(604800), // 7 days
+  // Password hashing
+  BCRYPT_SALT_ROUNDS: z.coerce.number().min(4).max(31).default(12),
 });
 
 // -------------------- Email (SMTP) --------------------
@@ -66,6 +71,12 @@ const emailSchema = z.object({
   EMAIL_FROM_NAME: z.string().default('Knowledge Agent'),
   EMAIL_FROM_ADDRESS: z.string().default('noreply@example.com'),
   EMAIL_VERIFICATION_SECRET: z.string().min(1),
+  // Email verification settings
+  EMAIL_CODE_LENGTH: z.coerce.number().min(4).max(10).default(6),
+  EMAIL_CODE_EXPIRES_MINUTES: z.coerce.number().min(1).default(10),
+  EMAIL_RESEND_COOLDOWN_SECONDS: z.coerce.number().min(10).default(60),
+  EMAIL_MAX_CODES_PER_HOUR: z.coerce.number().min(1).default(5),
+  EMAIL_VERIFICATION_TOKEN_EXPIRES_MINUTES: z.coerce.number().min(1).default(5),
 });
 
 // -------------------- OAuth Providers --------------------
@@ -199,21 +210,43 @@ export const databaseConfig = {
 
 /** Authentication configuration */
 export const authConfig = {
-  jwtAccessSecret: validatedEnv.JWT_ACCESS_SECRET,
-  jwtRefreshSecret: validatedEnv.JWT_REFRESH_SECRET,
+  accessToken: {
+    secret: validatedEnv.JWT_ACCESS_SECRET,
+    expiresInSeconds: validatedEnv.ACCESS_TOKEN_EXPIRES_IN,
+  },
+  refreshToken: {
+    secret: validatedEnv.JWT_REFRESH_SECRET,
+    expiresInSeconds: validatedEnv.REFRESH_TOKEN_EXPIRES_IN,
+  },
+  bcrypt: {
+    saltRounds: validatedEnv.BCRYPT_SALT_ROUNDS,
+  },
   encryptionKey: validatedEnv.ENCRYPTION_KEY,
 } as const;
 
 /** Email (SMTP) configuration */
 export const emailConfig = {
-  host: validatedEnv.SMTP_HOST,
-  port: validatedEnv.SMTP_PORT,
-  secure: validatedEnv.SMTP_SECURE,
-  user: validatedEnv.SMTP_USER,
-  pass: validatedEnv.SMTP_PASS,
-  fromName: validatedEnv.EMAIL_FROM_NAME,
-  fromAddress: validatedEnv.EMAIL_FROM_ADDRESS,
-  verificationSecret: validatedEnv.EMAIL_VERIFICATION_SECRET,
+  smtp: {
+    host: validatedEnv.SMTP_HOST ?? 'smtp.example.com',
+    port: validatedEnv.SMTP_PORT,
+    secure: validatedEnv.SMTP_SECURE,
+    auth: {
+      user: validatedEnv.SMTP_USER,
+      pass: validatedEnv.SMTP_PASS,
+    },
+  },
+  from: {
+    name: validatedEnv.EMAIL_FROM_NAME,
+    address: validatedEnv.EMAIL_FROM_ADDRESS,
+  },
+  verification: {
+    secret: validatedEnv.EMAIL_VERIFICATION_SECRET,
+    codeLength: validatedEnv.EMAIL_CODE_LENGTH,
+    codeExpiresInMinutes: validatedEnv.EMAIL_CODE_EXPIRES_MINUTES,
+    resendCooldownSeconds: validatedEnv.EMAIL_RESEND_COOLDOWN_SECONDS,
+    maxCodesPerHour: validatedEnv.EMAIL_MAX_CODES_PER_HOUR,
+    tokenExpiresInMinutes: validatedEnv.EMAIL_VERIFICATION_TOKEN_EXPIRES_MINUTES,
+  },
 } as const;
 
 /** OAuth providers configuration */

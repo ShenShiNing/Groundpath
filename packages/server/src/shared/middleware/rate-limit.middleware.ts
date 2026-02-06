@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ApiResponse } from '@knowledge-agent/shared';
-import { env } from '@config/env';
+import { serverConfig, featureFlags } from '@config/env';
 import { getClientIp } from '../utils/request.utils';
 
 // ============================================================================
@@ -38,7 +38,7 @@ const cleanupIntervals = new Set<ReturnType<typeof setInterval>>();
  */
 export function createRateLimiter(options: RateLimitOptions) {
   // Skip rate limiting in test environment
-  if (env.NODE_ENV === 'test' || env.DISABLE_RATE_LIMIT) {
+  if (serverConfig.nodeEnv === 'test' || featureFlags.disableRateLimit) {
     return (_req: Request, _res: Response, next: NextFunction): void => {
       next();
     };
@@ -210,7 +210,7 @@ export const passwordResetRateLimiter = createRateLimiter({
 const accountLimitStore = new Map<string, RateLimitEntry>();
 
 // Cleanup account limit store periodically
-if (env.NODE_ENV !== 'test') {
+if (serverConfig.nodeEnv !== 'test') {
   const accountCleanupInterval = setInterval(
     () => {
       const now = Date.now();
@@ -231,7 +231,7 @@ if (env.NODE_ENV !== 'test') {
  * 10 failed attempts per hour per account
  */
 export function checkAccountRateLimit(email: string): AccountRateLimitResult {
-  if (env.NODE_ENV === 'test' || env.DISABLE_RATE_LIMIT) {
+  if (serverConfig.nodeEnv === 'test' || featureFlags.disableRateLimit) {
     return { allowed: true };
   }
 
@@ -271,7 +271,7 @@ export function resetAccountRateLimit(email: string): void {
  * Call this after a failed login attempt
  */
 export function incrementAccountRateLimit(email: string): void {
-  if (env.NODE_ENV === 'test' || env.DISABLE_RATE_LIMIT) {
+  if (serverConfig.nodeEnv === 'test' || featureFlags.disableRateLimit) {
     return;
   }
 

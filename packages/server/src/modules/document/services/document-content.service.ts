@@ -8,7 +8,7 @@ import type {
 import type { Document } from '@shared/db/schema/document/documents.schema';
 import { withTransaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
-import { env } from '@config/env';
+import { documentConfig } from '@config/env';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentStorageService } from './document-storage.service';
@@ -64,7 +64,9 @@ export const documentContentService = {
     }
 
     // Determine if content was truncated based on document type limits
-    const maxLength = isEditable ? env.TEXT_CONTENT_MAX_LENGTH : env.TEXT_PREVIEW_MAX_LENGTH;
+    const maxLength = isEditable
+      ? documentConfig.textContentMaxLength
+      : documentConfig.textPreviewMaxLength;
     const isTruncated = version.textContent !== null && version.textContent.length >= maxLength;
 
     return {
@@ -110,7 +112,7 @@ export const documentContentService = {
     }
 
     const content = data.content ?? '';
-    if (content.length > env.TEXT_CONTENT_MAX_LENGTH) {
+    if (content.length > documentConfig.textContentMaxLength) {
       throw Errors.auth(
         DOCUMENT_ERROR_CODES.FILE_TOO_LARGE as 'FILE_TOO_LARGE',
         'Content too large',
