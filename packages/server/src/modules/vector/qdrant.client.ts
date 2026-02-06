@@ -103,15 +103,6 @@ export async function ensureCollection(collectionName: string, dimensions: numbe
 }
 
 /**
- * @deprecated Use ensureCollection(collectionName, dimensions) instead
- * Ensure the default collection exists (for backwards compatibility)
- */
-export async function ensureDefaultCollection(dimensions: number): Promise<void> {
-  const collectionName = env.QDRANT_COLLECTION_NAME;
-  await ensureCollection(collectionName, dimensions);
-}
-
-/**
  * Reset the initialized collections cache (for testing)
  */
 export function resetCollectionCache(): void {

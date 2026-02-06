@@ -2,7 +2,6 @@ export type { VectorPoint, ChunkPayload, SearchOptions, SearchResult } from './v
 export {
   getQdrantClient,
   ensureCollection,
-  ensureDefaultCollection,
   getCollectionName,
   resetCollectionCache,
 } from './qdrant.client';
