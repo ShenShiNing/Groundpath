@@ -1,7 +1,8 @@
 // Import Express type augmentations (must be imported for side effects)
 import '@shared/types';
 
-import express from 'express';
+import express, { type Express } from 'express';
+import { createServer, type Server } from 'http';
 import { env } from '@config/env';
 import { logger } from '@shared/logger';
 import { requestLogger } from '@shared/logger/request-logger';
@@ -15,15 +16,17 @@ import {
 } from '@shared/middleware';
 import { systemLogger } from '@shared/logger/system-logger';
 import { initializeScheduler } from '@shared/scheduler';
-import { createServer } from 'http';
 import { closeDatabase } from '@shared/db';
 import router from './router';
 
-const app = express();
+// ==================== App Setup ====================
 
-// Trust proxy settings (must be set before other middleware)
-// Required for correct client IP detection behind reverse proxy (nginx, cloudflare, etc.)
-if (env.TRUST_PROXY) {
+/**
+ * Configure trust proxy settings for reverse proxy environments
+ */
+function configureTrustProxy(app: Express): void {
+  if (!env.TRUST_PROXY) return;
+
   // Support various formats: 'true', '1', 'loopback', 'linklocal', 'uniquelocal', or specific IPs
   const trustValue =
     env.TRUST_PROXY === 'true'
@@ -31,49 +34,59 @@ if (env.TRUST_PROXY) {
       : /^\d+$/.test(env.TRUST_PROXY)
         ? parseInt(env.TRUST_PROXY, 10)
         : env.TRUST_PROXY;
+
   app.set('trust proxy', trustValue);
   logger.info({ trustProxy: trustValue }, 'Trust proxy enabled');
 }
 
-// Security middleware (should be first)
-app.use(helmetMiddleware);
-app.use(corsMiddleware);
-app.use(requestIdMiddleware);
-app.use(requestLoggerMiddleware);
+/**
+ * Register all middleware in correct order
+ */
+function setupMiddleware(app: Express): void {
+  // Security middleware (should be first)
+  app.use(helmetMiddleware);
+  app.use(corsMiddleware);
+  app.use(requestIdMiddleware);
+  app.use(requestLoggerMiddleware);
 
-// Logging and parsing
-app.use(requestLogger);
-app.use(express.json());
+  // Logging and parsing
+  app.use(requestLogger);
+  app.use(express.json());
 
-// Input sanitization (after JSON parsing)
-app.use(sanitizeMiddleware);
+  // Input sanitization (after JSON parsing)
+  app.use(sanitizeMiddleware);
 
-// Routes
-app.use(router);
+  // Routes
+  app.use(router);
 
-// 404 handler for undefined routes (must be after all routes)
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: {
-      code: 'NOT_FOUND',
-      message: `Route ${req.method} ${req.url} not found`,
-      requestId: req.requestId,
-    },
-  });
-});
+  // Error handling (should be last)
+  app.use(errorMiddleware);
+}
 
-// Error handling (should be last)
-app.use(errorMiddleware);
+/**
+ * Create and configure Express application
+ */
+function createApp(): Express {
+  const app = express();
+  configureTrustProxy(app);
+  setupMiddleware(app);
+  return app;
+}
 
-// 创建 HTTP 服务器
-const server = createServer(app);
+// ==================== Server Lifecycle ====================
 
-// 配置超时 (任务 9)
-server.timeout = 30000; // 30 秒请求超时
-server.keepAliveTimeout = 65000; // Keep-alive 超时
+/**
+ * Configure HTTP server timeouts
+ */
+function configureServer(server: Server): void {
+  server.timeout = 30_000; // 30s request timeout
+  server.keepAliveTimeout = 65_000; // 65s keep-alive timeout
+}
 
-server.listen(env.PORT, () => {
+/**
+ * Handle server startup tasks
+ */
+function onServerStart(): void {
   logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Server started');
 
   // Log startup event to database
@@ -85,39 +98,58 @@ server.listen(env.PORT, () => {
 
   // Initialize scheduled tasks
   initializeScheduler();
+}
 
-  // Note: Qdrant collections are now created on-demand per knowledge base
-  // when documents are uploaded or processed. See knowledge-base.service.ts
-});
+/**
+ * Graceful shutdown handler
+ */
+function createShutdownHandler(server: Server): (signal: string) => void {
+  return (signal: string) => {
+    logger.info({ signal }, 'Received shutdown signal, closing server gracefully');
 
-// Graceful Shutdown
-const shutdown = (signal: string) => {
-  logger.info({ signal }, 'Received shutdown signal, closing server gracefully');
+    server.close(async (err) => {
+      if (err) {
+        logger.error({ err }, 'Error during server shutdown');
+        process.exit(1);
+      }
 
-  server.close(async (err) => {
-    if (err) {
-      logger.error({ err }, 'Error during server shutdown');
+      // Close database connection pool
+      try {
+        await closeDatabase();
+        logger.info('Database connections closed');
+      } catch (dbErr) {
+        logger.error({ err: dbErr }, 'Error closing database connections');
+      }
+
+      logger.info('Server closed successfully');
+      process.exit(0);
+    });
+
+    // Force exit after timeout
+    setTimeout(() => {
+      logger.warn('Forced shutdown due to timeout');
       process.exit(1);
-    }
+    }, 10_000);
+  };
+}
 
-    // Close database connection pool
-    try {
-      await closeDatabase();
-      logger.info('Database connections closed');
-    } catch (dbErr) {
-      logger.error({ err: dbErr }, 'Error closing database connections');
-    }
+/**
+ * Start the HTTP server
+ */
+function startServer(): void {
+  const app = createApp();
+  const server = createServer(app);
 
-    logger.info('Server closed successfully');
-    process.exit(0);
-  });
+  configureServer(server);
 
-  // Force exit timeout
-  setTimeout(() => {
-    logger.warn('Forced shutdown due to timeout');
-    process.exit(1);
-  }, 10000);
-};
+  server.listen(env.PORT, onServerStart);
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+  // Register shutdown handlers
+  const shutdown = createShutdownHandler(server);
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+// ==================== Entry Point ====================
+
+startServer();

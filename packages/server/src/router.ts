@@ -61,4 +61,16 @@ router.use('/api/llm', llmRoutes);
 // Chat routes
 router.use('/api/chat', chatRoutes);
 
+// 404 handler for undefined routes (must be last)
+router.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: {
+      code: 'NOT_FOUND',
+      message: `Route ${req.method} ${req.originalUrl} not found`,
+      requestId: req.requestId,
+    },
+  });
+});
+
 export default router;
