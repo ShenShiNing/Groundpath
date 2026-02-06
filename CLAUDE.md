@@ -31,13 +31,21 @@ pnpm format           # Format code with Prettier
 pnpm format:check     # Check formatting without writing
 ```
 
-### Testing (Server)
+### Testing
 
 ```bash
-cd packages/server
+# Root level (runs all tests via vitest)
 pnpm test             # Run all tests once
 pnpm test:watch       # Run tests in watch mode
 pnpm test:coverage    # Run tests with coverage report
+pnpm test:ui          # Open Vitest UI
+
+# Run a single test file
+pnpm test path/to/file.test.ts
+
+# Package-specific tests
+pnpm test:server      # Run only server tests
+pnpm test:shared      # Run only shared tests
 ```
 
 ### Database (Drizzle ORM)
@@ -48,6 +56,7 @@ pnpm db:generate      # Generate migration files from schema changes
 pnpm db:migrate       # Run pending migrations
 pnpm db:push          # Push schema directly (dev only)
 pnpm db:studio        # Open Drizzle Studio GUI
+pnpm db:sync-counters # Sync document/folder counters from actual DB state
 ```
 
 ### Package-specific commands
@@ -105,6 +114,8 @@ packages/server/src/
 │   ├── embedding/      # Embedding providers (OpenAI, Zhipu, Ollama)
 │   ├── vector/         # Qdrant vector operations
 │   ├── rag/            # Document processing, chunking, search
+│   ├── llm/            # LLM providers (OpenAI, Anthropic, Ollama)
+│   ├── chat/           # Chat sessions and message history
 │   ├── storage/        # File storage (local, R2)
 │   └── logs/           # Operation and login logs
 ├── shared/
