@@ -75,6 +75,13 @@ vi.mock('@modules/knowledge-base', () => ({
   },
 }));
 
+// Mock db utils - execute callback immediately for testing
+vi.mock('@shared/db/db.utils', () => ({
+  withTransaction: vi.fn((callback) => callback({})),
+  getDbContext: vi.fn((tx) => tx ?? {}),
+  now: vi.fn(() => new Date()),
+}));
+
 // Import after mocks
 import { folderService } from '@modules/document';
 import { folderRepository } from '@modules/document';
@@ -625,16 +632,18 @@ describe('folderService > delete', () => {
       }
     );
 
-    // 文档移到根目录
+    // 文档移到根目录 (with transaction)
     expect(documentRepository.moveAllFromFolderToRoot).toHaveBeenCalledWith(
       mockFolderId,
-      mockUserId
+      mockUserId,
+      expect.anything()
     );
 
-    // 子文件夹移到根目录
+    // 子文件夹移到根目录 (with transaction)
     expect(folderRepository.update).toHaveBeenCalledWith(
       'folder-child-1',
-      expect.objectContaining({ parentId: null, path: '/', updatedBy: mockUserId })
+      expect.objectContaining({ parentId: null, path: '/', updatedBy: mockUserId }),
+      expect.anything()
     );
 
     // 更新子文件夹的后代路径
@@ -643,8 +652,12 @@ describe('folderService > delete', () => {
       mockUserId
     );
 
-    // 最终软删除
-    expect(folderRepository.softDelete).toHaveBeenCalledWith(mockFolderId, mockUserId);
+    // 最终软删除 (with transaction)
+    expect(folderRepository.softDelete).toHaveBeenCalledWith(
+      mockFolderId,
+      mockUserId,
+      expect.anything()
+    );
   });
 
   // 场景 4：仅有文档（无子文件夹）

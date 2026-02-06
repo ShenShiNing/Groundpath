@@ -8,11 +8,12 @@ import type {
   UpdateFolderRequest,
 } from '@knowledge-agent/shared/types';
 import type { Folder } from '@shared/db/schema/document/folders.schema';
+import { withTransaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
 import { folderRepository } from '../repositories/folder.repository';
 import { documentRepository } from '../repositories/document.repository';
 import { logOperation } from '@shared/logger/operation-logger';
-import type { RequestContext } from './document.service';
+import type { RequestContext } from './document-upload.service';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
 /**
@@ -329,16 +330,35 @@ export const folderService = {
 
     if (documentCount > 0 || childCount > 0) {
       if (options?.moveContentsToRoot) {
-        await documentRepository.moveAllFromFolderToRoot(folderId, userId);
+        // Use transaction to ensure atomicity of folder deletion operations
+        await withTransaction(async (tx) => {
+          // Move documents to root
+          await documentRepository.moveAllFromFolderToRoot(folderId, userId, tx);
 
-        const children = await folderRepository.listByParent(userId, folderId);
+          // Move child folders to root and update their paths
+          const children = await folderRepository.listByParent(userId, folderId);
+          for (const child of children) {
+            await folderRepository.update(
+              child.id,
+              {
+                parentId: null,
+                path: '/',
+                updatedBy: userId,
+              },
+              tx
+            );
+          }
+
+          // Soft delete the folder
+          await folderRepository.softDelete(folderId, userId, tx);
+        });
+
+        // Update descendant paths outside transaction (non-critical)
+        const children = await folderRepository.listByParent(userId, null);
         for (const child of children) {
-          await folderRepository.update(child.id, {
-            parentId: null,
-            path: '/',
-            updatedBy: userId,
-          });
-          await folderRepository.updateDescendantPaths(child.id, userId);
+          if (child.path !== '/') {
+            await folderRepository.updateDescendantPaths(child.id, userId);
+          }
         }
       } else {
         throw Errors.auth(
@@ -347,9 +367,10 @@ export const folderService = {
           400
         );
       }
+    } else {
+      // Empty folder - just soft delete
+      await folderRepository.softDelete(folderId, userId);
     }
-
-    await folderRepository.softDelete(folderId, userId);
 
     // Log operation
     logOperation({

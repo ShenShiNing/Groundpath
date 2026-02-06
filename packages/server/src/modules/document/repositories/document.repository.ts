@@ -190,8 +190,9 @@ export const documentRepository = {
   /**
    * Move all documents from one folder to root
    */
-  async moveAllFromFolderToRoot(folderId: string, userId: string): Promise<void> {
-    await db
+  async moveAllFromFolderToRoot(folderId: string, userId: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(documents)
       .set({ folderId: null })
       .where(

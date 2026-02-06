@@ -1,6 +1,6 @@
 import { eq, and, isNull, count, like, sql } from 'drizzle-orm';
 import { db } from '@shared/db';
-import { now } from '@shared/db/db.utils';
+import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
 import { folders, type Folder, type NewFolder } from '@shared/db/schema/document/folders.schema';
 import { documents } from '@shared/db/schema/document/documents.schema';
 
@@ -93,17 +93,25 @@ export const folderRepository = {
    */
   async update(
     id: string,
-    data: Partial<Pick<Folder, 'name' | 'parentId' | 'path' | 'updatedBy'>>
+    data: Partial<Pick<Folder, 'name' | 'parentId' | 'path' | 'updatedBy'>>,
+    tx?: Transaction
   ): Promise<Folder | undefined> {
-    await db.update(folders).set(data).where(eq(folders.id, id));
-    return this.findById(id);
+    const ctx = getDbContext(tx);
+    await ctx.update(folders).set(data).where(eq(folders.id, id));
+    const result = await ctx
+      .select()
+      .from(folders)
+      .where(and(eq(folders.id, id), isNull(folders.deletedAt)))
+      .limit(1);
+    return result[0];
   },
 
   /**
    * Soft delete folder
    */
-  async softDelete(id: string, deletedBy: string): Promise<void> {
-    await db
+  async softDelete(id: string, deletedBy: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(folders)
       .set({
         deletedAt: now(),
