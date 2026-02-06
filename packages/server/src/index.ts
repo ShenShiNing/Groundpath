@@ -79,8 +79,8 @@ function createApp(): Express {
  * Configure HTTP server timeouts
  */
 function configureServer(server: Server): void {
-  server.timeout = 30_000; // 30s request timeout
-  server.keepAliveTimeout = 65_000; // 65s keep-alive timeout
+  server.timeout = env.SERVER_TIMEOUT;
+  server.keepAliveTimeout = env.SERVER_KEEP_ALIVE_TIMEOUT;
 }
 
 /**
@@ -129,7 +129,7 @@ function createShutdownHandler(server: Server): (signal: string) => void {
     setTimeout(() => {
       logger.warn('Forced shutdown due to timeout');
       process.exit(1);
-    }, 10_000);
+    }, env.SHUTDOWN_TIMEOUT);
   };
 }
 

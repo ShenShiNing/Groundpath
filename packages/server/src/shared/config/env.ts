@@ -25,6 +25,9 @@ const envSchema = z.object({
   // Server
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3000),
+  SERVER_TIMEOUT: z.coerce.number().default(30000), // 30s request timeout
+  SERVER_KEEP_ALIVE_TIMEOUT: z.coerce.number().default(65000), // 65s keep-alive timeout
+  SHUTDOWN_TIMEOUT: z.coerce.number().default(10000), // 10s graceful shutdown timeout
 
   // Proxy settings (for correct client IP detection behind reverse proxy)
   // Set to 'true' to trust X-Forwarded-* headers, or a specific value like '1' or 'loopback'
