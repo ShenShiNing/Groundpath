@@ -1,14 +1,14 @@
 import { drizzle } from 'drizzle-orm/mysql2';
 import mysql from 'mysql2/promise';
-import { env } from '@config/env';
+import { databaseConfig } from '@config/env';
 import * as schema from './schema';
 
 // Create connection pool with proper configuration
 const poolConnection = mysql.createPool({
-  uri: env.DATABASE_URL,
+  uri: databaseConfig.url,
   waitForConnections: true,
-  connectionLimit: env.DB_CONNECTION_LIMIT,
-  queueLimit: env.DB_QUEUE_LIMIT,
+  connectionLimit: databaseConfig.connectionLimit,
+  queueLimit: databaseConfig.queueLimit,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
 });

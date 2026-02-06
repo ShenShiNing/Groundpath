@@ -3,7 +3,7 @@ import '@shared/types';
 
 import express, { type Express } from 'express';
 import { createServer, type Server } from 'http';
-import { env } from '@config/env';
+import { serverConfig } from '@config/env';
 import { logger } from '@shared/logger';
 import { requestLogger } from '@shared/logger/request-logger';
 import {
@@ -25,15 +25,15 @@ import router from './router';
  * Configure trust proxy settings for reverse proxy environments
  */
 function configureTrustProxy(app: Express): void {
-  if (!env.TRUST_PROXY) return;
+  if (!serverConfig.trustProxy) return;
 
   // Support various formats: 'true', '1', 'loopback', 'linklocal', 'uniquelocal', or specific IPs
   const trustValue =
-    env.TRUST_PROXY === 'true'
+    serverConfig.trustProxy === 'true'
       ? true
-      : /^\d+$/.test(env.TRUST_PROXY)
-        ? parseInt(env.TRUST_PROXY, 10)
-        : env.TRUST_PROXY;
+      : /^\d+$/.test(serverConfig.trustProxy)
+        ? parseInt(serverConfig.trustProxy, 10)
+        : serverConfig.trustProxy;
 
   app.set('trust proxy', trustValue);
   logger.info({ trustProxy: trustValue }, 'Trust proxy enabled');
@@ -79,20 +79,20 @@ function createApp(): Express {
  * Configure HTTP server timeouts
  */
 function configureServer(server: Server): void {
-  server.timeout = env.SERVER_TIMEOUT;
-  server.keepAliveTimeout = env.SERVER_KEEP_ALIVE_TIMEOUT;
+  server.timeout = serverConfig.timeout;
+  server.keepAliveTimeout = serverConfig.keepAliveTimeout;
 }
 
 /**
  * Handle server startup tasks
  */
 function onServerStart(): void {
-  logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Server started');
+  logger.info({ port: serverConfig.port, env: serverConfig.nodeEnv }, 'Server started');
 
   // Log startup event to database
-  systemLogger.startup(`Server started on port ${env.PORT}`, {
-    port: env.PORT,
-    environment: env.NODE_ENV,
+  systemLogger.startup(`Server started on port ${serverConfig.port}`, {
+    port: serverConfig.port,
+    environment: serverConfig.nodeEnv,
     nodeVersion: process.version,
   });
 
@@ -129,7 +129,7 @@ function createShutdownHandler(server: Server): (signal: string) => void {
     setTimeout(() => {
       logger.warn('Forced shutdown due to timeout');
       process.exit(1);
-    }, env.SHUTDOWN_TIMEOUT);
+    }, serverConfig.shutdownTimeout);
   };
 }
 
@@ -142,7 +142,7 @@ function startServer(): void {
 
   configureServer(server);
 
-  server.listen(env.PORT, onServerStart);
+  server.listen(serverConfig.port, onServerStart);
 
   // Register shutdown handlers
   const shutdown = createShutdownHandler(server);

@@ -1,5 +1,5 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
-import { env } from '@config/env';
+import { vectorConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
 
@@ -13,10 +13,10 @@ const initializedCollections = new Set<string>();
 export function getQdrantClient(): QdrantClient {
   if (!client) {
     client = new QdrantClient({
-      url: env.QDRANT_URL,
-      ...(env.QDRANT_API_KEY && { apiKey: env.QDRANT_API_KEY }),
+      url: vectorConfig.url,
+      ...(vectorConfig.apiKey && { apiKey: vectorConfig.apiKey }),
     });
-    logger.info({ url: env.QDRANT_URL }, 'Qdrant client created');
+    logger.info({ url: vectorConfig.url }, 'Qdrant client created');
   }
   return client;
 }

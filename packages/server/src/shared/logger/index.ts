@@ -1,15 +1,15 @@
 import pino from 'pino';
-import { env } from '@config/env';
+import { serverConfig, loggingConfig } from '@config/env';
 
 const logLevel =
-  env.NODE_ENV === 'test'
+  serverConfig.nodeEnv === 'test'
     ? 'silent'
-    : (env.LOG_LEVEL ?? (env.NODE_ENV === 'development' ? 'debug' : 'info'));
+    : (loggingConfig.level ?? (serverConfig.nodeEnv === 'development' ? 'debug' : 'info'));
 
 export const logger = pino({
   level: logLevel,
   transport:
-    env.NODE_ENV === 'development'
+    serverConfig.nodeEnv === 'development'
       ? {
           target: 'pino-pretty',
           options: {
