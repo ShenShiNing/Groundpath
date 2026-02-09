@@ -10,6 +10,7 @@ import { ragRoutes } from './modules/rag';
 import { llmRoutes } from './modules/llm';
 import { chatRoutes } from './modules/chat';
 import { storageRoutes } from './modules/storage';
+import { documentAiRoutes } from './modules/document-ai';
 import { serverConfig, storageConfig } from '@config/env';
 
 const router = express.Router();
@@ -65,8 +66,11 @@ router.use('/api/llm', llmRoutes);
 // Chat routes
 router.use('/api/chat', chatRoutes);
 
+// Document AI routes
+router.use('/api/document-ai', documentAiRoutes);
+
 // 404 handler for undefined routes (must be last)
-router.use('/api/*', (req, res) => {
+router.use('/api/{*path}', (req, res) => {
   res.status(404).json({
     success: false,
     error: {

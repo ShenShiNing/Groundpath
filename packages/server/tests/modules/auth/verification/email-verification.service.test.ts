@@ -38,18 +38,23 @@ vi.mock('@modules/auth/verification/email.service', () => ({
   },
 }));
 
-vi.mock('@config/email.config', () => ({
-  EMAIL_CONFIG: {
-    verification: {
-      secret: 'test-verification-secret',
-      codeLength: 6,
-      codeExpiresInMinutes: 10,
-      resendCooldownSeconds: 60,
-      maxCodesPerHour: 5,
-      tokenExpiresInMinutes: 5,
+vi.mock('@config/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@config/env')>();
+  return {
+    ...actual,
+    emailConfig: {
+      ...actual.emailConfig,
+      verification: {
+        secret: 'test-verification-secret',
+        codeLength: 6,
+        codeExpiresInMinutes: 10,
+        resendCooldownSeconds: 60,
+        maxCodesPerHour: 5,
+        tokenExpiresInMinutes: 5,
+      },
     },
-  },
-}));
+  };
+});
 
 // Import after mocks
 import { emailVerificationService } from '@modules/auth';

@@ -45,7 +45,6 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.documents.details(), id] as const,
     content: (id: string) => [...queryKeys.documents.detail(id), 'content'] as const,
     versions: (id: string) => [...queryKeys.documents.detail(id), 'versions'] as const,
-    pdf: (url: string) => [...queryKeys.documents.all, 'pdf', url] as const,
   },
 
   // Trash

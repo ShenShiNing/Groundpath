@@ -7,6 +7,7 @@ export * from './knowledge-base';
 export * from './llm';
 export * from './chat';
 export * from './logs';
+export * from './document-ai';
 
 // Re-export zod for consumers
 export { z, ZodError } from 'zod';

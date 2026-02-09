@@ -3,7 +3,6 @@ export {
   useDocuments,
   useDocument,
   useDocumentContent,
-  useDocumentPdf,
   useDocumentVersions,
   useTrashDocuments,
   useUploadDocument,

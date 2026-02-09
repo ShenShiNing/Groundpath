@@ -11,6 +11,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    // Exclude pdfjs-dist from optimization to avoid version conflicts
+    exclude: ['pdfjs-dist'],
+  },
   server: {
     proxy: {
       '/api': {

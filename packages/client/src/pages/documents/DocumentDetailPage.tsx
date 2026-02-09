@@ -9,15 +9,24 @@ import { DocumentReader, DocumentInfo, DocumentEditor } from '@/components/docum
 import { useDocument, useDocumentContent, useSaveDocumentContent } from '@/hooks';
 import { documentsApi } from '@/api';
 
+type ViewMode = 'read' | 'edit';
+
 export function DocumentDetailPage() {
   const { id } = useParams({ from: '/documents/$id' });
   const { data: document, isLoading } = useDocument(id);
   const { data: content, isLoading: isContentLoading } = useDocumentContent(id);
   const { mutateAsync: saveContent, isPending: isSaving } = useSaveDocumentContent();
-  const [mode, setMode] = useState<'read' | 'edit'>(() => (isEditable ? 'edit' : 'read'));
 
   const isEditable = !!content?.isEditable;
   const editorKey = content ? `${document?.id ?? id}:${content.currentVersion}` : id;
+
+  // Determine initial mode based on document type and editability
+  const getInitialMode = (): ViewMode => {
+    if (isEditable) return 'edit';
+    return 'read';
+  };
+
+  const [mode, setMode] = useState<ViewMode>(getInitialMode);
 
   const handleDownload = () => {
     if (!document) return;
@@ -34,9 +43,47 @@ export function DocumentDetailPage() {
     toast.error(error instanceof Error ? error.message : '保存失败');
   };
 
+  // Render content area based on mode
+  const renderContent = () => {
+    if (mode === 'edit' && isEditable) {
+      if (isLoading || isContentLoading) {
+        return (
+          <DocumentReader
+            documentType={content?.documentType ?? document!.documentType}
+            textContent={content?.textContent ?? null}
+            storageUrl={content?.storageUrl ?? null}
+            isLoading
+          />
+        );
+      }
+      return (
+        <DocumentEditor
+          key={editorKey}
+          documentId={document!.id}
+          documentType={content?.documentType ?? document!.documentType}
+          initialContent={content?.textContent ?? ''}
+          isSaving={isSaving}
+          isTruncated={content?.isTruncated ?? false}
+          onSave={handleSaveContent}
+          onError={handleSaveError}
+        />
+      );
+    }
+
+    // Default: read mode
+    return (
+      <DocumentReader
+        documentType={content?.documentType ?? document!.documentType}
+        textContent={content?.textContent ?? null}
+        storageUrl={content?.storageUrl ?? null}
+        isLoading={isLoading || isContentLoading}
+      />
+    );
+  };
+
   return (
     <AppLayout>
-      <div className="container max-w-5xl py-6">
+      <div className="container max-w-6xl py-6">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Link to="/knowledge-bases">
@@ -51,22 +98,23 @@ export function DocumentDetailPage() {
           </div>
           {document && (
             <div className="flex items-center gap-2">
+              {/* Mode toggle buttons */}
+              <Button
+                variant={mode === 'read' ? 'default' : 'outline'}
+                onClick={() => setMode('read')}
+              >
+                阅读
+              </Button>
+
               {isEditable && (
-                <>
-                  <Button
-                    variant={mode === 'read' ? 'default' : 'outline'}
-                    onClick={() => setMode('read')}
-                  >
-                    阅读
-                  </Button>
-                  <Button
-                    variant={mode === 'edit' ? 'default' : 'outline'}
-                    onClick={() => setMode('edit')}
-                  >
-                    编辑
-                  </Button>
-                </>
+                <Button
+                  variant={mode === 'edit' ? 'default' : 'outline'}
+                  onClick={() => setMode('edit')}
+                >
+                  编辑
+                </Button>
               )}
+
               <Button variant="outline" onClick={handleDownload}>
                 <Download className="h-4 w-4 mr-2" />
                 Download
@@ -77,46 +125,17 @@ export function DocumentDetailPage() {
 
         {document && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Preview */}
+            {/* Preview / Editor */}
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
                   <CardTitle>{mode === 'edit' ? 'Editor' : 'Preview'}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {mode === 'edit' && isEditable ? (
-                    isLoading || isContentLoading ? (
-                      <DocumentReader
-                        documentType={content?.documentType ?? document.documentType}
-                        textContent={content?.textContent ?? null}
-                        storageUrl={content?.storageUrl ?? null}
-                        isLoading
-                      />
-                    ) : (
-                      <DocumentEditor
-                        key={editorKey}
-                        documentId={document.id}
-                        documentType={content?.documentType ?? document.documentType}
-                        initialContent={content?.textContent ?? ''}
-                        isSaving={isSaving}
-                        isTruncated={content?.isTruncated ?? false}
-                        onSave={handleSaveContent}
-                        onError={handleSaveError}
-                      />
-                    )
-                  ) : (
-                    <DocumentReader
-                      documentType={content?.documentType ?? document.documentType}
-                      textContent={content?.textContent ?? null}
-                      storageUrl={content?.storageUrl ?? null}
-                      isLoading={isLoading || isContentLoading}
-                    />
-                  )}
-                </CardContent>
+                <CardContent>{renderContent()}</CardContent>
               </Card>
             </div>
 
-            {/* Document Info Sidebar */}
+            {/* Sidebar */}
             <div>
               <Card>
                 <CardHeader>

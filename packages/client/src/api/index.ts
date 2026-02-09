@@ -19,3 +19,13 @@ export {
   type Citation,
   type SSEEvent,
 } from './chat';
+export {
+  documentAiApi,
+  summaryApi,
+  analysisApi,
+  generationApi,
+  streamSummary,
+  streamGenerate,
+  streamExpand,
+  type DocumentAISSEHandlers,
+} from './document-ai';

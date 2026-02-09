@@ -1,14 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { Loader2, FileWarning } from 'lucide-react';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { cn } from '@/lib/utils';
-import { Document as PdfDocument, Page, pdfjs } from 'react-pdf';
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-import { useDocumentPdf } from '@/hooks';
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface DocumentReaderProps {
   documentType: DocumentType;
@@ -211,45 +204,10 @@ export function DocumentReader({
   isLoading,
   className,
 }: DocumentReaderProps) {
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [renderError, setRenderError] = useState<string | null>(null);
-  const [pageWidth, setPageWidth] = useState<number | undefined>(undefined);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
   const rendered = useMemo(
     () => (textContent ? renderMarkdownSafe(textContent) : null),
     [textContent]
   );
-
-  const {
-    blobUrl: pdfBlobUrl,
-    isLoading: pdfLoading,
-    error: pdfError,
-  } = useDocumentPdf(storageUrl);
-
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-
-    const updateWidth = () => {
-      const width = containerRef.current?.clientWidth;
-      if (width) {
-        setPageWidth(width);
-      }
-    };
-
-    const debouncedUpdate = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(updateWidth, 150);
-    };
-
-    updateWidth();
-    window.addEventListener('resize', debouncedUpdate);
-
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', debouncedUpdate);
-    };
-  }, []);
 
   if (isLoading) {
     return (
@@ -259,46 +217,23 @@ export function DocumentReader({
     );
   }
 
-  // PDF viewer
-  if (documentType === 'pdf' && storageUrl) {
-    const previewClasses =
-      'w-full min-h-100 max-h-150 overflow-auto border rounded-lg bg-muted/20 p-4';
+  // PDF - 显示下载提示
+  if (documentType === 'pdf') {
     return (
-      <div ref={containerRef} className={cn(previewClasses, className)}>
-        {(pdfError || renderError) && (
-          <div className="text-sm text-destructive mb-3">
-            PDF 预览失败：{pdfError ?? renderError}
-          </div>
-        )}
-        {pdfLoading && !pdfBlobUrl && (
-          <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-            <Loader2 aria-label="正在加载 PDF" className="h-4 w-4 animate-spin mr-2" />
-            正在加载 PDF...
-          </div>
-        )}
-        {pdfBlobUrl && (
-          <PdfDocument
-            file={pdfBlobUrl}
-            onLoadSuccess={({ numPages: pages }) => {
-              setNumPages(pages);
-            }}
-            onLoadError={(err) => {
-              setRenderError(err?.message ?? '未知错误');
-            }}
-            loading={null}
-            className="space-y-6"
+      <div className={cn('text-center py-12 border rounded-lg bg-muted/30 space-y-3', className)}>
+        <p className="text-muted-foreground flex items-center justify-center gap-2">
+          <FileWarning className="h-4 w-4" aria-hidden="true" />
+          PDF 文档暂不支持在线预览
+        </p>
+        {storageUrl && (
+          <a
+            className="text-primary underline"
+            href={storageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            {Array.from(new Array(numPages || 0), (_, index) => (
-              <Page
-                key={`page_${index + 1}`}
-                pageNumber={index + 1}
-                width={pageWidth ? Math.min(pageWidth - 24, 960) : undefined}
-                loading={null}
-                renderTextLayer
-                renderAnnotationLayer
-              />
-            ))}
-          </PdfDocument>
+            点击下载查看
+          </a>
         )}
       </div>
     );
@@ -310,7 +245,7 @@ export function DocumentReader({
       <div className={cn('text-center py-12 border rounded-lg bg-muted/30 space-y-3', className)}>
         <p className="text-muted-foreground flex items-center justify-center gap-2">
           <FileWarning className="h-4 w-4" aria-hidden="true" />
-          Word 文档暂不支持在线预览。
+          Word 文档暂不支持在线预览
         </p>
         {storageUrl && (
           <a

@@ -143,3 +143,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* PDF Annotator overrides - ensure proper containment */
+.PdfHighlighter {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Ensure tip container stays within bounds */
+.Tip__compact,
+.Tip__card {
+  z-index: 50;
+}
+
+/* Ensure mouse selection doesn't create full-page overlays */
+.PdfHighlighter__mouse-selection {
+  position: absolute !important;
+}
