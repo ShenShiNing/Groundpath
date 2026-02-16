@@ -1,11 +1,10 @@
-import { createRoute } from '@tanstack/react-router';
+import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 import { rootRoute } from '../__root';
 import { requireGuest } from '../guards/auth.guard';
-import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 
 export const forgotPasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/forgot-password',
   beforeLoad: requireGuest,
-  component: ForgotPasswordPage,
+  component: lazyRouteComponent(() => import('@/pages/auth/ForgotPasswordPage')),
 });

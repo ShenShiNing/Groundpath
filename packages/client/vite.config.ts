@@ -28,13 +28,22 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react')) return 'react';
-            if (id.includes('@tanstack')) return 'tanstack';
-            if (id.includes('@radix-ui')) return 'radix';
-            if (id.includes('lucide-react') || id.includes('sonner') || id.includes('cmdk')) {
-              return 'ui';
-            }
+          if (!id.includes('node_modules')) return;
+
+          // Order matters: more specific patterns first
+          if (id.includes('@tanstack')) return 'tanstack';
+          if (id.includes('@radix-ui')) return 'radix';
+          if (id.includes('lucide-react') || id.includes('sonner') || id.includes('cmdk')) {
+            return 'ui';
+          }
+          if (id.includes('pdfjs-dist')) return 'pdfjs';
+          if (id.includes('@uiw') || id.includes('rehype') || id.includes('remark')) {
+            return 'md-editor';
+          }
+
+          // React core (react, react-dom, scheduler) — after specific UI libs
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {
+            return 'react';
           }
         },
       },

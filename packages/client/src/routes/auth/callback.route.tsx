@@ -1,10 +1,9 @@
-import { createRoute } from '@tanstack/react-router';
+import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 import { rootRoute } from '../__root';
-import OAuthCallbackPage from '@/pages/auth/OAuthCallbackPage';
 
 export const callbackRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/callback',
-  component: OAuthCallbackPage,
+  component: lazyRouteComponent(() => import('@/pages/auth/OAuthCallbackPage')),
   validateSearch: (search: Record<string, unknown>) => search,
 });
