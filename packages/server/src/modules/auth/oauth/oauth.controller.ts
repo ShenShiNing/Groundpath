@@ -4,29 +4,25 @@ import { createLogger } from '@shared/logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { getClientIp } from '@shared/utils';
+import { getClientIp, setRefreshTokenCookie } from '@shared/utils';
 
 const logger = createLogger('oauth');
 const FRONTEND_URL = serverConfig.frontendUrl;
 
 /**
- * Build callback URL with token data (fragment-based for security)
+ * Build callback URL with token data (refresh token sent via cookie, not URL)
  */
 function buildCallbackUrl(
   returnUrl: string,
   data: {
     accessToken: string;
-    refreshToken: string;
     expiresIn: number;
-    refreshExpiresIn: number;
     user: string; // JSON stringified
   }
 ): string {
   const params = new URLSearchParams({
     accessToken: data.accessToken,
-    refreshToken: data.refreshToken,
     expiresIn: String(data.expiresIn),
-    refreshExpiresIn: String(data.refreshExpiresIn),
     user: data.user,
     returnUrl,
   });
@@ -88,12 +84,12 @@ export const oauthController = {
         userAgent
       );
 
-      // Redirect to frontend with tokens
+      // Redirect to frontend with access token (refresh token sent via cookie)
+      setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
+
       const callbackUrl = buildCallbackUrl(returnUrl, {
         accessToken: authResponse.tokens.accessToken,
-        refreshToken: authResponse.tokens.refreshToken,
         expiresIn: authResponse.tokens.expiresIn,
-        refreshExpiresIn: authResponse.tokens.refreshExpiresIn,
         user: JSON.stringify(authResponse.user),
       });
 
@@ -146,12 +142,12 @@ export const oauthController = {
         userAgent
       );
 
-      // Redirect to frontend with tokens
+      // Redirect to frontend with access token (refresh token sent via cookie)
+      setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
+
       const callbackUrl = buildCallbackUrl(returnUrl, {
         accessToken: authResponse.tokens.accessToken,
-        refreshToken: authResponse.tokens.refreshToken,
         expiresIn: authResponse.tokens.expiresIn,
-        refreshExpiresIn: authResponse.tokens.refreshExpiresIn,
         user: JSON.stringify(authResponse.user),
       });
 

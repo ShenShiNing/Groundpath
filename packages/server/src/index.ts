@@ -2,6 +2,7 @@
 import '@shared/types';
 
 import express, { type Express } from 'express';
+import cookieParser from 'cookie-parser';
 import { createServer, type Server } from 'http';
 import { serverConfig } from '@config/env';
 import { logger } from '@shared/logger';
@@ -52,6 +53,7 @@ function setupMiddleware(app: Express): void {
   // Logging and parsing
   app.use(requestLogger);
   app.use(express.json());
+  app.use(cookieParser());
 
   // Input sanitization (after JSON parsing)
   app.use(sanitizeMiddleware);

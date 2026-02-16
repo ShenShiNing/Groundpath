@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   UserPublicInfo,
-  TokenPair,
   RegisterRequest,
   RegisterWithCodeRequest,
 } from '@knowledge-agent/shared/types';
@@ -12,7 +11,6 @@ interface AuthState {
   // 状态
   user: UserPublicInfo | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
 
@@ -22,7 +20,7 @@ interface AuthState {
   registerWithCode: (data: Omit<RegisterWithCodeRequest, 'deviceInfo'>) => Promise<void>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
-  setTokens: (tokens: TokenPair) => void;
+  setTokens: (tokens: { accessToken: string }) => void;
   setUser: (user: UserPublicInfo) => void;
   clearAuth: () => void;
 }
@@ -33,7 +31,6 @@ export const useAuthStore = create<AuthState>()(
       // 初始状态
       user: null,
       accessToken: null,
-      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
@@ -46,7 +43,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: response.user,
             accessToken: response.tokens.accessToken,
-            refreshToken: response.tokens.refreshToken,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -65,7 +61,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: response.user,
             accessToken: response.tokens.accessToken,
-            refreshToken: response.tokens.refreshToken,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -84,7 +79,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: response.user,
             accessToken: response.tokens.accessToken,
-            refreshToken: response.tokens.refreshToken,
             isAuthenticated: true,
             isLoading: false,
           });
@@ -96,12 +90,12 @@ export const useAuthStore = create<AuthState>()(
 
       // 登出当前设备
       logout: async () => {
-        const { refreshToken } = get();
+        const { isAuthenticated } = get();
         set({ isLoading: true });
 
         try {
-          if (refreshToken) {
-            await authApi.logout(refreshToken);
+          if (isAuthenticated) {
+            await authApi.logout();
           }
         } catch (error) {
           // 登出失败也要继续清除本地状态
@@ -110,7 +104,6 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             accessToken: null,
-            refreshToken: null,
             isAuthenticated: false,
             isLoading: false,
           });
@@ -130,18 +123,16 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             accessToken: null,
-            refreshToken: null,
             isAuthenticated: false,
             isLoading: false,
           });
         }
       },
 
-      // 设置 token（供 token 刷新时使用）
-      setTokens: (tokens: TokenPair) => {
+      // 设置 token（供 token 刷新和 OAuth 回调使用）
+      setTokens: (tokens: { accessToken: string }) => {
         set({
           accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
           isAuthenticated: true,
         });
       },
@@ -156,18 +147,24 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           accessToken: null,
-          refreshToken: null,
           isAuthenticated: false,
         });
       },
     }),
     {
       name: 'auth-storage',
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<AuthState> | undefined;
+        // Security hardening: ensure legacy persisted accessToken is dropped.
+        return {
+          ...state,
+          accessToken: null,
+        } as Partial<AuthState>;
+      },
       // 只持久化必要的认证状态
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
     }
@@ -181,13 +178,10 @@ export const useAuthStore = create<AuthState>()(
 
 setTokenAccessors({
   getAccessToken: () => useAuthStore.getState().accessToken,
-  getRefreshToken: () => useAuthStore.getState().refreshToken,
-  onTokenRefreshed: (tokens) => {
-    console.log('[Auth] Tokens refreshed automatically');
-    useAuthStore.setState({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
+  isAuthenticated: () => useAuthStore.getState().isAuthenticated,
+  onTokenRefreshed: (accessToken) => {
+    console.log('[Auth] Token refreshed automatically');
+    useAuthStore.setState({ accessToken });
   },
   onAuthError: () => {
     console.warn('[Auth] Authentication error, clearing session');

@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { refreshRequestSchema } from '@knowledge-agent/shared/schemas';
 import { Errors, handleError } from '../errors';
 import { extractBearerToken, verifyAccessToken, verifyRefreshToken } from '../utils/jwt.utils';
+import { getRefreshTokenFromRequest } from '../utils/cookie.utils';
 import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
 
 /**
@@ -68,11 +68,10 @@ export async function authenticateRefreshToken(
   next: NextFunction
 ): Promise<void> {
   try {
-    const result = refreshRequestSchema.safeParse(req.body);
-    if (!result.success) {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
       throw Errors.auth(AUTH_ERROR_CODES.MISSING_TOKEN, 'Refresh token required');
     }
-    const { refreshToken } = result.data;
 
     // Verify JWT signature
     const payload = verifyRefreshToken(refreshToken);

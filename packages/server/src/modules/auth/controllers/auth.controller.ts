@@ -1,18 +1,46 @@
 import type { Request, Response } from 'express';
-import { HTTP_STATUS } from '@knowledge-agent/shared';
+import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type {
   LoginRequest,
-  RefreshRequest,
   RegisterRequest,
   ChangePasswordRequest,
   RegisterWithCodeRequest,
   ResetPasswordRequest,
+  AuthResponse,
 } from '@knowledge-agent/shared';
 import { authService } from '../services/auth.service';
-import { sendSuccessResponse } from '@shared/errors';
+import { sendSuccessResponse, Errors } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { getClientIp, requireUserId } from '@shared/utils';
+import {
+  getClientIp,
+  requireUserId,
+  setRefreshTokenCookie,
+  clearRefreshTokenCookie,
+  getRefreshTokenFromRequest,
+} from '@shared/utils';
+
+/**
+ * Set refresh token as HttpOnly cookie and strip it from the JSON response
+ */
+function sendAuthResponse(
+  res: Response,
+  authResponse: AuthResponse,
+  statusCode: number = HTTP_STATUS.OK
+): void {
+  setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
+
+  const sanitized: AuthResponse = {
+    ...authResponse,
+    tokens: {
+      ...authResponse.tokens,
+      refreshToken: '',
+      refreshExpiresIn: 0,
+    },
+  };
+
+  sendSuccessResponse(res, sanitized, statusCode);
+}
 
 /**
  * Auth controller handlers
@@ -27,7 +55,7 @@ export const authController = {
     const userAgent = req.headers['user-agent'] ?? null;
 
     const result = await authService.register(registerRequest, ipAddress, userAgent);
-    sendSuccessResponse(res, result, HTTP_STATUS.CREATED);
+    sendAuthResponse(res, result, HTTP_STATUS.CREATED);
   }),
 
   /**
@@ -52,19 +80,23 @@ export const authController = {
     const userAgent = req.headers['user-agent'] ?? null;
 
     const result = await authService.login(loginRequest, ipAddress, userAgent);
-    sendSuccessResponse(res, result);
+    sendAuthResponse(res, result);
   }),
 
   /**
    * POST /api/auth/refresh
    */
   refresh: asyncHandler(async (req: Request, res: Response) => {
-    const { refreshToken } = req.body as RefreshRequest;
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      throw Errors.auth(AUTH_ERROR_CODES.MISSING_TOKEN, 'Refresh token required');
+    }
+
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
     const result = await authService.refresh(refreshToken, ipAddress, userAgent);
-    sendSuccessResponse(res, result);
+    sendAuthResponse(res, result);
   }),
 
   /**
@@ -76,11 +108,12 @@ export const authController = {
       throw new AppError('VALIDATION_ERROR', 'Token ID not found', 400);
     }
 
-    const userId = req.user?.sub;
+    const userId = req.refreshContext?.sub;
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
     await authService.logout(tokenJti, userId, ipAddress, userAgent);
+    clearRefreshTokenCookie(res);
     sendSuccessResponse(res, { message: 'Successfully logged out' });
   }),
 
@@ -93,6 +126,7 @@ export const authController = {
     const userAgent = req.headers['user-agent'] ?? null;
 
     const revokedCount = await authService.logoutAll(userId, ipAddress, userAgent);
+    clearRefreshTokenCookie(res);
     sendSuccessResponse(res, {
       message: 'Successfully logged out from all devices',
       revokedSessions: revokedCount,
@@ -145,7 +179,7 @@ export const authController = {
     const userAgent = req.headers['user-agent'] ?? null;
 
     const result = await authService.registerWithCode(registerRequest, ipAddress, userAgent);
-    sendSuccessResponse(res, result, HTTP_STATUS.CREATED);
+    sendAuthResponse(res, result, HTTP_STATUS.CREATED);
   }),
 
   /**

@@ -12,7 +12,6 @@ import {
 } from '@shared/middleware';
 import {
   loginRequestSchema,
-  refreshRequestSchema,
   registerRequestSchema,
   changePasswordRequestSchema,
   registerWithCodeRequestSchema,
@@ -43,12 +42,7 @@ router.post(
 router.post('/login', loginRateLimiter, validateBody(loginRequestSchema), authController.login);
 
 // Refresh access token
-router.post(
-  '/refresh',
-  refreshRateLimiter,
-  validateBody(refreshRequestSchema),
-  authController.refresh
-);
+router.post('/refresh', refreshRateLimiter, authController.refresh);
 
 // Reset password with verified email
 router.post(

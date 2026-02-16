@@ -14,8 +14,8 @@ import { buildHeaders } from './headers';
 
 export interface TokenAccessors {
   getAccessToken: () => string | null;
-  getRefreshToken: () => string | null;
-  onTokenRefreshed: (tokens: AuthResponse['tokens']) => void;
+  isAuthenticated: () => boolean;
+  onTokenRefreshed: (accessToken: string) => void;
   onAuthError: () => void;
 }
 
@@ -30,7 +30,7 @@ export function getAccessToken(): string | null {
 }
 
 export function hasRefreshToken(): boolean {
-  return !!tokenAccessors?.getRefreshToken();
+  return tokenAccessors?.isAuthenticated() ?? false;
 }
 
 // ============================================================================
@@ -42,17 +42,16 @@ let refreshPromise: Promise<string> | null = null;
 
 /** 执行 token 刷新请求（使用原生 fetch，避免与 apiClient 循环依赖） */
 async function executeRefresh(): Promise<string> {
-  const refreshToken = tokenAccessors?.getRefreshToken();
-
-  if (!refreshToken) {
-    throw new ApiRequestError('AUTH_ERROR', 'No refresh token available');
+  if (!tokenAccessors?.isAuthenticated()) {
+    throw new ApiRequestError('AUTH_ERROR', 'No active session');
   }
 
   try {
     const response = await fetch('/api/auth/refresh', {
       method: 'POST',
       headers: buildHeaders(),
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include',
+      body: JSON.stringify({}),
     });
 
     if (!response.ok) {
@@ -63,7 +62,7 @@ async function executeRefresh(): Promise<string> {
     const authResponse = unwrapResponse(data);
     const { accessToken } = authResponse.tokens;
 
-    tokenAccessors?.onTokenRefreshed(authResponse.tokens);
+    tokenAccessors?.onTokenRefreshed(accessToken);
 
     return accessToken;
   } catch (error) {

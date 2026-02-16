@@ -19,15 +19,7 @@ export function OAuthCallbackPage() {
 
   useEffect(() => {
     const processCallback = () => {
-      const {
-        accessToken,
-        refreshToken,
-        expiresIn,
-        refreshExpiresIn,
-        user,
-        error,
-        returnUrl: r,
-      } = search;
+      const { accessToken, expiresIn, user, error, returnUrl: r } = search;
       const returnUrl = (r as string) || '/dashboard';
 
       // Handle error case
@@ -38,7 +30,7 @@ export function OAuthCallbackPage() {
       }
 
       // Validate tokens
-      if (!accessToken || !refreshToken || !user || !expiresIn || !refreshExpiresIn) {
+      if (!accessToken || !user || !expiresIn) {
         setStatus('error');
         setErrorMessage('Missing authentication data');
         return;
@@ -51,9 +43,6 @@ export function OAuthCallbackPage() {
         // Store tokens and user in auth store
         setTokens({
           accessToken: accessToken as string,
-          refreshToken: refreshToken as string,
-          expiresIn: Number(expiresIn),
-          refreshExpiresIn: Number(refreshExpiresIn),
         });
         setUser(parsedUser);
 

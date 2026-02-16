@@ -344,21 +344,21 @@ function Sidebar({
 
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const router = useRouter();
-  const { accessToken, refreshToken, clearAuth } = useAuthStore();
+  const { accessToken, isAuthenticated: storeIsAuthenticated, clearAuth } = useAuthStore();
   const isAuthenticated = !!accessToken;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleLogout = useCallback(async () => {
     try {
-      if (refreshToken) {
-        await authApi.logout(refreshToken);
+      if (storeIsAuthenticated) {
+        await authApi.logout();
       }
     } finally {
       clearAuth();
       await router.navigate({ to: '/auth/login' });
     }
-  }, [refreshToken, clearAuth, router]);
+  }, [storeIsAuthenticated, clearAuth, router]);
 
   const handleToggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => !prev);

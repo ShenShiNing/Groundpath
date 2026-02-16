@@ -51,19 +51,9 @@ export const authApi = {
     return unwrapResponse(response.data);
   },
 
-  /** 刷新 token */
-  async refresh(refreshToken: string): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/auth/refresh', {
-      refreshToken,
-    });
-    return unwrapResponse(response.data);
-  },
-
-  /** 登出当前设备 */
-  async logout(refreshToken: string): Promise<void> {
-    const response = await apiClient.post<ApiResponse<{ message: string }>>('/api/auth/logout', {
-      refreshToken,
-    });
+  /** 登出当前设备（refresh token 通过 cookie 自动发送） */
+  async logout(): Promise<void> {
+    const response = await apiClient.post<ApiResponse<{ message: string }>>('/api/auth/logout', {});
     unwrapResponse(response.data);
   },
 

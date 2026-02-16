@@ -43,6 +43,7 @@ export async function fetchStreamWithAuth(
     const response = await fetch(url, {
       ...init,
       headers: buildHeaders(token),
+      credentials: 'include',
       signal,
     });
 

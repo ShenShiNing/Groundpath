@@ -2,7 +2,7 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    projects: ['packages/server', 'packages/shared'],
+    projects: ['packages/server', 'packages/shared', 'packages/client'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -11,7 +11,7 @@ export default defineConfig({
         'packages/*/src/**/*.d.ts',
         'packages/*/src/test/**',
         'packages/server/src/index.ts',
-        'packages/server/src/db/schema/**',
+        'packages/server/src/shared/db/schema/**',
       ],
     },
   },
