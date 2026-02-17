@@ -30,6 +30,7 @@ import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useAuthStore, useChatPanelStore } from '@/stores';
 import type { Citation } from '@/stores/chatPanelStore';
+import { toast } from 'sonner';
 
 export function ChatPage() {
   const navigate = useNavigate();
@@ -67,6 +68,25 @@ export function ChatPage() {
   } = useChatPanelStore();
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
+  const searchableDocuments = useMemo(
+    () => documents.filter((doc) => doc.processingStatus === 'completed'),
+    [documents]
+  );
+  const processingDocumentCount = useMemo(
+    () =>
+      documents.filter(
+        (doc) => doc.processingStatus === 'pending' || doc.processingStatus === 'processing'
+      ).length,
+    [documents]
+  );
+  const preferredKnowledgeBaseId = useMemo(() => {
+    if (knowledgeBases.length === 0) return undefined;
+
+    const sortedByUpdated = [...knowledgeBases].sort(
+      (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+    return sortedByUpdated.find((kb) => kb.documentCount > 0)?.id ?? sortedByUpdated[0]!.id;
+  }, [knowledgeBases]);
   const selectedKnowledgeBase = useMemo(
     () => knowledgeBases.find((kb) => kb.id === selectedKnowledgeBaseId),
     [knowledgeBases, selectedKnowledgeBaseId]
@@ -82,15 +102,24 @@ export function ChatPage() {
       !selectedKnowledgeBaseId ||
       !knowledgeBases.some((kb) => kb.id === selectedKnowledgeBaseId)
     ) {
-      setSelectedKnowledgeBaseId(knowledgeBases[0]!.id);
+      setSelectedKnowledgeBaseId(preferredKnowledgeBaseId);
     }
-  }, [knowledgeBases, selectedKnowledgeBaseId]);
+  }, [knowledgeBases, preferredKnowledgeBaseId, selectedKnowledgeBaseId]);
 
   useEffect(() => {
     if (selectedKnowledgeBaseId && selectedKnowledgeBaseId !== knowledgeBaseId) {
       open(selectedKnowledgeBaseId);
     }
   }, [knowledgeBaseId, open, selectedKnowledgeBaseId]);
+
+  useEffect(() => {
+    if (selectedDocumentIds.length === 0) return;
+    const searchableIds = new Set(searchableDocuments.map((doc) => doc.id));
+    const nextSelected = selectedDocumentIds.filter((id) => searchableIds.has(id));
+    if (nextSelected.length !== selectedDocumentIds.length) {
+      setDocumentScope(nextSelected);
+    }
+  }, [searchableDocuments, selectedDocumentIds, setDocumentScope]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -101,12 +130,24 @@ export function ChatPage() {
   const handleSendMessage = useCallback(
     (content: string) => {
       if (!selectedKnowledgeBaseId) return;
+      if (!docsLoading && searchableDocuments.length === 0) {
+        toast.warning('当前知识库暂无可检索文档，请先上传并等待处理完成');
+        return;
+      }
       if (knowledgeBaseId !== selectedKnowledgeBaseId) {
         open(selectedKnowledgeBaseId);
       }
       void sendMessage(content, getAccessToken);
     },
-    [getAccessToken, knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage]
+    [
+      docsLoading,
+      getAccessToken,
+      knowledgeBaseId,
+      open,
+      searchableDocuments.length,
+      selectedKnowledgeBaseId,
+      sendMessage,
+    ]
   );
 
   const handleCitationClick = useCallback((citation: Citation) => {
@@ -242,6 +283,9 @@ export function ChatPage() {
                 {selectedKnowledgeBase?.documentCount ?? 0} 份文档
               </span>
               <span>{messages.length} 条消息</span>
+              {selectedKnowledgeBase && selectedKnowledgeBase.documentCount === 0 && (
+                <span className="text-amber-600">当前知识库暂无文档，AI无法命中文档内容</span>
+              )}
               {selectedKnowledgeBaseId && (
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" asChild>
                   <Link to={`/knowledge-bases/${selectedKnowledgeBaseId}` as string}>
@@ -256,12 +300,18 @@ export function ChatPage() {
             <div className="flex h-full min-h-88 flex-col">
               <div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-3">
                 <DocumentScopeSelector
-                  documents={documents}
+                  documents={searchableDocuments}
                   selectedIds={selectedDocumentIds}
                   onChange={setDocumentScope}
                 />
-                <span className="text-xs text-muted-foreground">
-                  {docsLoading ? '文档加载中...' : `当前可检索 ${documents.length} 份文档`}
+                <span
+                  className={`text-xs ${searchableDocuments.length === 0 ? 'text-amber-600' : 'text-muted-foreground'}`}
+                >
+                  {docsLoading
+                    ? '文档加载中...'
+                    : processingDocumentCount > 0
+                      ? `当前可检索 ${searchableDocuments.length} 份文档，另有 ${processingDocumentCount} 份处理中`
+                      : `当前可检索 ${searchableDocuments.length} 份文档`}
                 </span>
 
                 <div className="ml-auto flex items-center gap-1">

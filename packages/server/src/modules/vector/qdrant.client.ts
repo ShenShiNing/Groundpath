@@ -10,6 +10,46 @@ let client: QdrantClient | null = null;
 // Track which collections have been initialized
 const initializedCollections = new Set<string>();
 
+const PAYLOAD_INDEXES = [
+  { field_name: 'userId', field_schema: 'keyword' as const },
+  { field_name: 'documentId', field_schema: 'keyword' as const },
+  { field_name: 'knowledgeBaseId', field_schema: 'keyword' as const },
+  { field_name: 'isDeleted', field_schema: 'bool' as const },
+];
+
+function getErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return '';
+  const details = error as Error & {
+    data?: { status?: { error?: string } };
+    message?: string;
+  };
+  return details.data?.status?.error ?? details.message ?? '';
+}
+
+function isIndexAlreadyExistsError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  return (
+    message.includes('already exists') ||
+    message.includes('index exists') ||
+    message.includes('field is already indexed')
+  );
+}
+
+async function ensurePayloadIndexes(qdrant: QdrantClient, collectionName: string): Promise<void> {
+  for (const index of PAYLOAD_INDEXES) {
+    try {
+      await qdrant.createPayloadIndex(collectionName, {
+        ...index,
+        wait: true,
+      });
+    } catch (error) {
+      if (!isIndexAlreadyExistsError(error)) {
+        throw error;
+      }
+    }
+  }
+}
+
 export function getQdrantClient(): QdrantClient {
   if (!client) {
     client = new QdrantClient({
@@ -40,34 +80,41 @@ export async function ensureCollection(collectionName: string, dimensions: numbe
 
   const qdrant = getQdrantClient();
 
+  let collectionExists = false;
   try {
     const exists = await qdrant.collectionExists(collectionName);
-    if (exists.exists) {
-      const info = await qdrant.getCollection(collectionName);
-      const collection = (info as { result?: unknown }).result ?? info;
-      const vectorsConfig =
-        (collection as { vectors?: { size?: number } }).vectors ??
-        // fallback for older server shape
-        (collection as { config?: { params?: { vectors?: { size?: number } } } }).config?.params
-          ?.vectors;
-      const existingSize = vectorsConfig?.size;
+    collectionExists = exists.exists;
+  } catch (error) {
+    logger.warn(
+      { collectionName, error: getErrorMessage(error) || error },
+      'Failed to check Qdrant collection existence'
+    );
+  }
 
-      if (typeof existingSize === 'number' && existingSize !== dimensions) {
-        throw new Error(
-          `Qdrant collection ${collectionName} has dimensions ${existingSize}, expected ${dimensions}. ` +
-            'Please recreate the collection or align the knowledge base embedding config.'
-        );
-      }
+  if (collectionExists) {
+    const info = await qdrant.getCollection(collectionName);
+    const collection = (info as { result?: unknown }).result ?? info;
+    const vectorsConfig =
+      (collection as { vectors?: { size?: number } }).vectors ??
+      // fallback for older server shape
+      (collection as { config?: { params?: { vectors?: { size?: number } } } }).config?.params
+        ?.vectors;
+    const existingSize = vectorsConfig?.size;
 
-      logger.info(
-        { collectionName, dimensions: existingSize ?? 'unknown' },
-        'Qdrant collection already exists'
+    if (typeof existingSize === 'number' && existingSize !== dimensions) {
+      throw new Error(
+        `Qdrant collection ${collectionName} has dimensions ${existingSize}, expected ${dimensions}. ` +
+          'Please recreate the collection or align the knowledge base embedding config.'
       );
-      initializedCollections.add(collectionName);
-      return;
     }
-  } catch {
-    // Collection doesn't exist, create it
+
+    logger.info(
+      { collectionName, dimensions: existingSize ?? 'unknown' },
+      'Qdrant collection already exists'
+    );
+    await ensurePayloadIndexes(qdrant, collectionName);
+    initializedCollections.add(collectionName);
+    return;
   }
 
   await qdrant.createCollection(collectionName, {
@@ -80,23 +127,7 @@ export async function ensureCollection(collectionName: string, dimensions: numbe
     },
   });
 
-  // Create payload indexes for filtering
-  await qdrant.createPayloadIndex(collectionName, {
-    field_name: 'userId',
-    field_schema: 'keyword',
-  });
-  await qdrant.createPayloadIndex(collectionName, {
-    field_name: 'documentId',
-    field_schema: 'keyword',
-  });
-  await qdrant.createPayloadIndex(collectionName, {
-    field_name: 'knowledgeBaseId',
-    field_schema: 'keyword',
-  });
-  await qdrant.createPayloadIndex(collectionName, {
-    field_name: 'isDeleted',
-    field_schema: 'bool',
-  });
+  await ensurePayloadIndexes(qdrant, collectionName);
 
   initializedCollections.add(collectionName);
   logger.info({ collectionName, dimensions }, 'Qdrant collection created');
