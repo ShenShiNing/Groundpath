@@ -64,6 +64,7 @@ export const refreshTokenRepository = {
       .where(
         and(
           eq(refreshTokens.id, tokenId),
+          gt(refreshTokens.lastUsedAt, refreshTokens.createdAt),
           gt(refreshTokens.lastUsedAt, sql`DATE_SUB(NOW(), INTERVAL ${seconds} SECOND)`)
         )
       )
