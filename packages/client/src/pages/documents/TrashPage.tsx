@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
-import { Trash2, RotateCcw, Trash } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { ArrowUpRight, CalendarClock, RotateCcw, Search, Trash, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TrashDocumentListItem } from '@knowledge-agent/shared/types';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,25 +24,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { useTrashDocuments, useRestoreDocument, usePermanentDeleteDocument } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { formatBytes } from '@/lib/utils';
 
 export function TrashPage() {
-  // Filters state
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'deletedAt' | 'title' | 'fileSize'>('deletedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Dialog states
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<TrashDocumentListItem | null>(null);
 
-  // Debounce search
   const debouncedSearch = useDebouncedValue(search, 300);
 
-  // Build query params
   const queryParams = useMemo(
     () => ({
       page: 1,
@@ -53,13 +58,13 @@ export function TrashPage() {
     [debouncedSearch, sortBy, sortOrder]
   );
 
-  // TanStack Query hooks
   const { data: trashData, isLoading } = useTrashDocuments(queryParams);
   const restoreMutation = useRestoreDocument();
   const permanentDeleteMutation = usePermanentDeleteDocument();
 
   const trashDocuments = trashData?.documents ?? [];
   const pagination = trashData?.pagination ?? { page: 1, pageSize: 20, total: 0, totalPages: 0 };
+  const currentPageSize = trashDocuments.reduce((sum, doc) => sum + doc.fileSize, 0);
 
   const handleRestore = (document: TrashDocumentListItem) => {
     setSelectedDocument(document);
@@ -70,9 +75,9 @@ export function TrashPage() {
     if (!selectedDocument) return;
     try {
       await restoreMutation.mutateAsync(selectedDocument.id);
-      toast.success('Document restored successfully');
+      toast.success('文档已恢复');
     } catch {
-      toast.error('Failed to restore document');
+      toast.error('恢复文档失败');
     }
     setRestoreDialogOpen(false);
     setSelectedDocument(null);
@@ -87,9 +92,9 @@ export function TrashPage() {
     if (!selectedDocument) return;
     try {
       await permanentDeleteMutation.mutateAsync(selectedDocument.id);
-      toast.success('Document permanently deleted');
+      toast.success('文档已永久删除');
     } catch {
-      toast.error('Failed to delete document');
+      toast.error('删除文档失败');
     }
     setDeleteDialogOpen(false);
     setSelectedDocument(null);
@@ -103,157 +108,209 @@ export function TrashPage() {
 
   return (
     <AppLayout>
-      <div className="container py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Trash2 className="h-6 w-6" />
-              Trash
-            </h1>
-            <p className="text-muted-foreground">Restore or permanently delete documents</p>
-          </div>
+      <div className="relative flex-1 overflow-y-auto bg-background px-6 py-8 md:py-10">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute left-1/2 top-0 h-72 w-152 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
         </div>
 
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Search */}
-              <div className="flex-1">
+        <div className="mx-auto w-full max-w-6xl space-y-6">
+          <section className="rounded-2xl border bg-card/70 p-6 md:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+                  回收站
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  管理已删除文档，你可以恢复文档或执行永久删除。
+                </p>
+              </div>
+              <Button variant="outline" className="cursor-pointer" asChild>
+                <Link to="/knowledge-bases">
+                  返回知识库
+                  <ArrowUpRight className="ml-1 size-4" />
+                </Link>
+              </Button>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border bg-background/80 p-4">
+                <p className="text-xs text-muted-foreground">回收站文档总数</p>
+                <p className="mt-2 font-display text-2xl font-semibold">{pagination.total}</p>
+              </div>
+              <div className="rounded-xl border bg-background/80 p-4">
+                <p className="text-xs text-muted-foreground">当前页文档数</p>
+                <p className="mt-2 font-display text-2xl font-semibold">{trashDocuments.length}</p>
+              </div>
+              <div className="rounded-xl border bg-background/80 p-4">
+                <p className="text-xs text-muted-foreground">当前页占用大小</p>
+                <p className="mt-2 font-display text-2xl font-semibold">
+                  {formatBytes(currentPageSize)}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border bg-card p-4 sm:p-5">
+            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Search by title..."
+                  className="h-10 bg-background pl-9"
+                  placeholder="搜索文档标题..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
-              {/* Sort By */}
-              <Select
-                value={sortBy}
-                onValueChange={(value: 'deletedAt' | 'title' | 'fileSize') => setSortBy(value)}
-              >
-                <SelectTrigger className="w-full sm:w-45">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="deletedAt">Deleted Date</SelectItem>
-                  <SelectItem value="title">Title</SelectItem>
-                  <SelectItem value="fileSize">File Size</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-auto">
+                <Select
+                  value={sortBy}
+                  onValueChange={(value: 'deletedAt' | 'title' | 'fileSize') => setSortBy(value)}
+                >
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="排序字段" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="deletedAt">删除时间</SelectItem>
+                    <SelectItem value="title">标题</SelectItem>
+                    <SelectItem value="fileSize">文件大小</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {/* Sort Order */}
-              <Select
-                value={sortOrder}
-                onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}
-              >
-                <SelectTrigger className="w-full sm:w-35">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Descending</SelectItem>
-                  <SelectItem value="asc">Ascending</SelectItem>
-                </SelectContent>
-              </Select>
+                <Select
+                  value={sortOrder}
+                  onValueChange={(value: 'asc' | 'desc') => setSortOrder(value)}
+                >
+                  <SelectTrigger className="w-full sm:w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">降序</SelectItem>
+                    <SelectItem value="asc">升序</SelectItem>
+                  </SelectContent>
+                </Select>
 
-              {/* Clear Filters */}
-              <Button variant="outline" onClick={handleClearFilters}>
-                Clear
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Document List */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">Loading...</div>
-            ) : trashDocuments.length === 0 ? (
-              <div className="p-8 text-center">
-                <Trash2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-                <p className="text-lg font-medium mb-1">Trash is empty</p>
-                <p className="text-muted-foreground">Deleted documents will appear here</p>
+                <Button variant="outline" className="cursor-pointer" onClick={handleClearFilters}>
+                  清空筛选
+                </Button>
               </div>
-            ) : (
-              <div className="divide-y">
-                {trashDocuments.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="p-4 hover:bg-muted/50 transition-colors flex items-center justify-between gap-4"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium truncate">{doc.title}</h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <span className="capitalize">{doc.documentType}</span>
-                        <span>{formatBytes(doc.fileSize)}</span>
-                        <span>Deleted {new Date(doc.deletedAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
+            </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleRestore(doc)}>
-                        <RotateCcw className="h-4 w-4 mr-1" />
-                        Restore
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handlePermanentDelete(doc)}
-                      >
-                        <Trash className="h-4 w-4 mr-1" />
-                        Delete Forever
-                      </Button>
-                    </div>
+            <div className="rounded-xl border bg-background">
+              {isLoading ? (
+                <div className="space-y-2 p-4">
+                  {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 rounded-lg" />
+                  ))}
+                </div>
+              ) : trashDocuments.length === 0 ? (
+                <div className="px-6 py-16 text-center">
+                  <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
+                    <Trash2 className="size-6 text-muted-foreground" />
                   </div>
-                ))}
+                  <p className="mb-1 text-lg font-semibold">回收站为空</p>
+                  <p className="text-sm text-muted-foreground">被删除的文档会显示在这里</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="font-medium">文档名称</TableHead>
+                      <TableHead className="w-28 font-medium">类型</TableHead>
+                      <TableHead className="w-32 font-medium">文件大小</TableHead>
+                      <TableHead className="w-40 font-medium">删除时间</TableHead>
+                      <TableHead className="w-48 text-right font-medium">操作</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {trashDocuments.map((doc) => (
+                      <TableRow key={doc.id} className="hover:bg-muted/40">
+                        <TableCell>
+                          <p className="truncate font-medium">{doc.title}</p>
+                        </TableCell>
+                        <TableCell className="capitalize text-muted-foreground">
+                          {doc.documentType}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatBytes(doc.fileSize)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          <span className="inline-flex items-center gap-1.5">
+                            <CalendarClock className="size-3.5" />
+                            {new Date(doc.deletedAt).toLocaleDateString()}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="cursor-pointer"
+                              onClick={() => handleRestore(doc)}
+                            >
+                              <RotateCcw className="size-4 mr-1" />
+                              恢复
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="cursor-pointer"
+                              onClick={() => handlePermanentDelete(doc)}
+                            >
+                              <Trash className="size-4 mr-1" />
+                              永久删除
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+
+            {pagination.total > 0 && (
+              <div className="mt-4 text-center text-sm text-muted-foreground">
+                当前显示 {trashDocuments.length} / {pagination.total} 份文档
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Pagination info */}
-        {pagination.total > 0 && (
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            Showing {trashDocuments.length} of {pagination.total} documents
-          </div>
-        )}
+          </section>
+        </div>
       </div>
 
-      {/* Restore Confirmation Dialog */}
       <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Restore Document</AlertDialogTitle>
+            <AlertDialogTitle>恢复文档</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to restore "{selectedDocument?.title}"? It will be moved back to
-              its original location.
+              确认恢复“{selectedDocument?.title}”吗？恢复后会回到原始目录。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmRestore}>Restore</AlertDialogAction>
+            <AlertDialogCancel className="cursor-pointer">取消</AlertDialogCancel>
+            <AlertDialogAction className="cursor-pointer" onClick={confirmRestore}>
+              恢复
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Permanent Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Permanently Delete Document</AlertDialogTitle>
+            <AlertDialogTitle>永久删除文档</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to permanently delete "{selectedDocument?.title}"? This action
-              cannot be undone and the file will be removed from storage.
+              确认永久删除“{selectedDocument?.title}”吗？该操作不可撤销，文件将从存储中移除。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">取消</AlertDialogCancel>
             <AlertDialogAction
+              className="cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmPermanentDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete Forever
+              永久删除
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

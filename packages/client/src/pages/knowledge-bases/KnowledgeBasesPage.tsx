@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
-  Plus,
-  Search,
-  LayoutGrid,
-  List,
+  ArrowUpRight,
+  CalendarClock,
+  ChevronRight,
+  CirclePlus,
   Database,
   FileText,
-  ChevronRight,
-  MoreHorizontal,
   Layers,
+  LayoutGrid,
+  List,
+  Plus,
+  Search,
+  MoreHorizontal,
+  Sparkles,
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -59,24 +63,17 @@ function formatTimeAgo(date: Date): string {
   return dateObj.toLocaleDateString();
 }
 
-// Icon color variants based on ID
 const iconColorVariants = [
-  { bg: 'bg-blue-50 dark:bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
-  { bg: 'bg-purple-50 dark:bg-purple-500/10', text: 'text-purple-600 dark:text-purple-400' },
-  { bg: 'bg-orange-50 dark:bg-orange-500/10', text: 'text-orange-600 dark:text-orange-400' },
-  { bg: 'bg-teal-50 dark:bg-teal-500/10', text: 'text-teal-600 dark:text-teal-400' },
-  { bg: 'bg-rose-50 dark:bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400' },
-  { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400' },
+  { bg: 'bg-primary/10', text: 'text-primary' },
+  { bg: 'bg-secondary', text: 'text-secondary-foreground' },
+  { bg: 'bg-muted', text: 'text-foreground' },
+  { bg: 'bg-accent', text: 'text-accent-foreground' },
 ];
 
 function getIconColors(id: string) {
   const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return iconColorVariants[hash % iconColorVariants.length]!;
 }
-
-// ============================================================================
-// KnowledgeBase Card Component (Grid View)
-// ============================================================================
 
 function KnowledgeBaseGridCard({
   knowledgeBase,
@@ -91,13 +88,14 @@ function KnowledgeBaseGridCard({
 
   return (
     <Link
-      to={`/knowledge-bases/${knowledgeBase.id}`}
+      to="/knowledge-bases/$id"
+      params={{ id: knowledgeBase.id }}
       className={cn(
-        'group flex flex-col p-4 rounded-lg border bg-card',
-        'hover:bg-accent/50 transition-colors cursor-pointer'
+        'group flex min-h-44 flex-col rounded-2xl border bg-card/80 p-5',
+        'transition-colors duration-200 hover:bg-accent/40 cursor-pointer'
       )}
     >
-      <div className="flex items-start justify-between mb-3">
+      <div className="mb-4 flex items-start justify-between">
         <div className={cn('size-10 rounded-lg flex items-center justify-center', iconColors.bg)}>
           <Layers className={cn('size-5', iconColors.text)} />
         </div>
@@ -106,7 +104,7 @@ function KnowledgeBaseGridCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-8 w-8 cursor-pointer opacity-0 transition-opacity group-hover:opacity-100"
               onClick={(e) => e.preventDefault()}
             >
               <MoreHorizontal className="size-4" />
@@ -114,48 +112,55 @@ function KnowledgeBaseGridCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
+              className="cursor-pointer"
               onClick={(e) => {
                 e.preventDefault();
                 onEdit();
               }}
             >
-              Edit
+              编辑
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
+              className="cursor-pointer"
               onClick={(e) => {
                 e.preventDefault();
                 onDelete();
               }}
             >
-              Delete
+              删除
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
-      <h3 className="font-medium text-sm mb-1 truncate">{knowledgeBase.name}</h3>
+      <h3 className="mb-1 truncate text-base font-semibold">{knowledgeBase.name}</h3>
       {knowledgeBase.description && (
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+        <p className="mb-4 line-clamp-2 text-sm text-muted-foreground">
           {knowledgeBase.description}
         </p>
       )}
 
-      <div className="mt-auto flex items-center gap-3 text-xs text-muted-foreground">
+      <div className="mt-auto flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1">
+            <FileText className="size-3.5" />
+            {knowledgeBase.documentCount}
+          </span>
+          <span className="flex items-center gap-1">
+            <Layers className="size-3.5" />
+            {knowledgeBase.totalChunks}
+          </span>
+        </div>
         <span className="flex items-center gap-1">
-          <FileText className="size-3" />
-          {knowledgeBase.documentCount}
+          {formatTimeAgo(knowledgeBase.updatedAt)}
+          <ArrowUpRight className="size-3.5 opacity-0 transition-opacity group-hover:opacity-100" />
         </span>
-        <span>{formatTimeAgo(knowledgeBase.updatedAt)}</span>
       </div>
     </Link>
   );
 }
-
-// ============================================================================
-// KnowledgeBase Table Row Component (Table View)
-// ============================================================================
 
 function KnowledgeBaseTableRow({
   knowledgeBase,
@@ -169,11 +174,12 @@ function KnowledgeBaseTableRow({
   const iconColors = getIconColors(knowledgeBase.id);
 
   return (
-    <TableRow className="group">
+    <TableRow className="group hover:bg-muted/40">
       <TableCell className="py-3">
         <Link
-          to={`/knowledge-bases/${knowledgeBase.id}`}
-          className="flex items-center gap-3 hover:underline"
+          to="/knowledge-bases/$id"
+          params={{ id: knowledgeBase.id }}
+          className="flex items-center gap-3 hover:underline cursor-pointer"
         >
           <div
             className={cn(
@@ -204,16 +210,18 @@ function KnowledgeBaseTableRow({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-8 w-8 cursor-pointer opacity-0 transition-opacity group-hover:opacity-100"
             >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={onEdit}>
+              编辑
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={onDelete}>
-              Delete
+            <DropdownMenuItem variant="destructive" className="cursor-pointer" onClick={onDelete}>
+              删除
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -222,50 +230,55 @@ function KnowledgeBaseTableRow({
   );
 }
 
-// ============================================================================
-// Empty State Component
-// ============================================================================
-
 function EmptyState({ onCreateNew }: { onCreateNew: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="size-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+    <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-16 text-center">
+      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
         <Database className="size-6 text-muted-foreground" />
       </div>
-      <h3 className="font-medium mb-1">No knowledge bases yet</h3>
-      <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-        Create your first knowledge base to start uploading documents and using RAG.
+      <h3 className="mb-1 text-lg font-semibold">还没有知识库</h3>
+      <p className="mx-auto mb-5 max-w-sm text-sm text-muted-foreground">
+        创建第一个知识库后，就可以导入文档并开始可引用问答。
       </p>
-      <Button onClick={onCreateNew}>
+      <Button className="cursor-pointer" onClick={onCreateNew}>
         <Plus className="size-4 mr-2" />
-        Create Knowledge Base
+        创建知识库
       </Button>
     </div>
   );
 }
-
-// ============================================================================
-// No Results State Component
-// ============================================================================
 
 function NoResultsState({ search, onClear }: { search: string; onClear: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="size-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+    <div className="rounded-2xl border bg-card/50 px-6 py-16 text-center">
+      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
         <Search className="size-6 text-muted-foreground" />
       </div>
-      <h3 className="font-medium mb-1">No results found</h3>
-      <p className="text-sm text-muted-foreground mb-4">No knowledge bases match "{search}".</p>
-      <Button variant="outline" onClick={onClear}>
-        Clear search
+      <h3 className="mb-1 text-lg font-semibold">未找到匹配结果</h3>
+      <p className="mb-5 text-sm text-muted-foreground">没有知识库匹配 “{search}”。</p>
+      <Button variant="outline" className="cursor-pointer" onClick={onClear}>
+        清空搜索
       </Button>
     </div>
   );
 }
 
-// ============================================================================
-// Main Component
-// ============================================================================
+function CreateKnowledgeBaseCard({ onCreate }: { onCreate: () => void }) {
+  return (
+    <button
+      onClick={onCreate}
+      className={cn(
+        'flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed bg-card/60',
+        'cursor-pointer transition-colors duration-200 hover:border-primary hover:bg-accent/40'
+      )}
+    >
+      <div className="flex size-11 items-center justify-center rounded-xl bg-muted">
+        <CirclePlus className="size-5 text-muted-foreground" />
+      </div>
+      <span className="text-sm font-medium">新建知识库</span>
+    </button>
+  );
+}
 
 export default function KnowledgeBasesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -273,18 +286,20 @@ export default function KnowledgeBasesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
 
-  const { data: knowledgeBases, isLoading } = useKnowledgeBases();
+  const { data: knowledgeBases = [], isLoading } = useKnowledgeBases();
   const deleteMutation = useDeleteKnowledgeBase();
+  const normalizedSearch = search.trim().toLowerCase();
 
-  // Filter knowledge bases
-  const filteredKBs = knowledgeBases?.filter((kb) => {
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
+  const filteredKBs = knowledgeBases.filter((kb) => {
+    if (!normalizedSearch) return true;
     return (
-      kb.name.toLowerCase().includes(searchLower) ||
-      kb.description?.toLowerCase().includes(searchLower)
+      kb.name.toLowerCase().includes(normalizedSearch) ||
+      kb.description?.toLowerCase().includes(normalizedSearch)
     );
   });
+  const totalDocuments = knowledgeBases.reduce((sum, kb) => sum + kb.documentCount, 0);
+  const totalChunks = knowledgeBases.reduce((sum, kb) => sum + kb.totalChunks, 0);
+  const hasSearch = normalizedSearch.length > 0;
 
   const handleEdit = (kb: KnowledgeBaseListItem) => {
     setEditingKB(kb);
@@ -294,10 +309,15 @@ export default function KnowledgeBasesPage() {
   const handleDelete = async (kb: KnowledgeBaseListItem) => {
     try {
       await deleteMutation.mutateAsync(kb.id);
-      toast.success('Knowledge base deleted');
+      toast.success('知识库已删除');
     } catch {
-      toast.error('Failed to delete knowledge base');
+      toast.error('删除知识库失败');
     }
+  };
+
+  const handleCreateNew = () => {
+    setEditingKB(undefined);
+    setDialogOpen(true);
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -307,141 +327,174 @@ export default function KnowledgeBasesPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 overflow-y-auto">
-        {/* Page Header */}
-        <div className="border-b bg-background">
-          <div className="px-6 py-4">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
-              <span>Home</span>
-              <ChevronRight className="size-4" />
-              <span className="text-foreground">Knowledge Bases</span>
-            </div>
-
-            {/* Title & Actions */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-semibold">Knowledge Bases</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Manage and organize your AI knowledge repositories.
-                </p>
-              </div>
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="size-4 mr-2" />
-                New
-              </Button>
-            </div>
+      <div className="flex-1 overflow-y-auto bg-background">
+        <div className="relative px-6 py-8 md:py-10">
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+            <div className="absolute left-1/2 top-0 h-72 w-160 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
           </div>
 
-          {/* Toolbar */}
-          <div className="flex items-center justify-between px-6 py-2 border-t bg-muted/30">
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                className="pl-9 h-8 text-sm bg-background"
-                placeholder="Search..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center border rounded-md p-0.5 bg-background">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn('h-7 w-7 rounded-sm', viewMode === 'grid' && 'bg-muted')}
-                  onClick={() => setViewMode('grid')}
-                >
-                  <LayoutGrid className="size-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn('h-7 w-7 rounded-sm', viewMode === 'table' && 'bg-muted')}
-                  onClick={() => setViewMode('table')}
-                >
-                  <List className="size-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {isLoading ? (
-            viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {[...Array(8)].map((_, i) => (
-                  <Skeleton key={i} className="h-36 rounded-lg" />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {[...Array(6)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-lg" />
-                ))}
-              </div>
-            )
-          ) : filteredKBs && filteredKBs.length > 0 ? (
-            viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {/* Create New Card */}
-                <button
-                  onClick={() => setDialogOpen(true)}
-                  className={cn(
-                    'flex flex-col items-center justify-center gap-2 p-4 rounded-lg',
-                    'border-2 border-dashed',
-                    'hover:border-primary hover:bg-accent/50 transition-colors cursor-pointer',
-                    'min-h-36'
-                  )}
-                >
-                  <div className="size-10 rounded-lg bg-muted flex items-center justify-center">
-                    <Plus className="size-5 text-muted-foreground" />
+          <div className="mx-auto max-w-6xl space-y-6">
+            <section className="rounded-2xl border bg-card/70 p-6 md:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
+                    <span>Workspace</span>
+                    <ChevronRight className="size-4" />
+                    <span className="text-foreground">Knowledge Bases</span>
                   </div>
-                  <span className="text-sm font-medium">New Knowledge Base</span>
-                </button>
-
-                {filteredKBs.map((kb) => (
-                  <KnowledgeBaseGridCard
-                    key={kb.id}
-                    knowledgeBase={kb}
-                    onEdit={() => handleEdit(kb)}
-                    onDelete={() => handleDelete(kb)}
-                  />
-                ))}
+                  <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+                    知识库管理
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                    统一组织你的知识资产，支持按卡片或表格视图管理内容与更新状态。
+                  </p>
+                </div>
+                <Button className="cursor-pointer" onClick={handleCreateNew}>
+                  <Plus className="size-4 mr-2" />
+                  新建知识库
+                </Button>
               </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="font-medium">Name</TableHead>
-                      <TableHead className="font-medium w-28">Documents</TableHead>
-                      <TableHead className="font-medium w-28">Chunks</TableHead>
-                      <TableHead className="font-medium w-32">Updated</TableHead>
-                      <TableHead className="w-12"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border bg-background/80 p-4">
+                  <p className="text-xs text-muted-foreground">知识库总数</p>
+                  <p className="mt-2 font-display text-2xl font-semibold">
+                    {knowledgeBases.length}
+                  </p>
+                </div>
+                <div className="rounded-xl border bg-background/80 p-4">
+                  <p className="text-xs text-muted-foreground">文档总量</p>
+                  <p className="mt-2 font-display text-2xl font-semibold">{totalDocuments}</p>
+                </div>
+                <div className="rounded-xl border bg-background/80 p-4">
+                  <p className="text-xs text-muted-foreground">Chunk 总量</p>
+                  <p className="mt-2 font-display text-2xl font-semibold">{totalChunks}</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border bg-card p-4 sm:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="relative w-full sm:max-w-sm">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    className="h-10 bg-background pl-9"
+                    placeholder="搜索知识库名称或描述"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="rounded-md border bg-background p-0.5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-8 w-8 cursor-pointer rounded-sm',
+                        viewMode === 'grid' && 'bg-muted'
+                      )}
+                      onClick={() => setViewMode('grid')}
+                      aria-label="Grid view"
+                    >
+                      <LayoutGrid className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-8 w-8 cursor-pointer rounded-sm',
+                        viewMode === 'table' && 'bg-muted'
+                      )}
+                      onClick={() => setViewMode('table')}
+                      aria-label="Table view"
+                    >
+                      <List className="size-4" />
+                    </Button>
+                  </div>
+                  <Button variant="outline" className="cursor-pointer" asChild>
+                    <Link to="/dashboard">
+                      <Sparkles className="size-4 mr-2" />
+                      返回工作台
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <Database className="size-3.5" />
+                  {filteredKBs.length} 个结果
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <FileText className="size-3.5" />
+                  {totalDocuments} 份文档
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <CalendarClock className="size-3.5" />
+                  最近更新自动同步
+                </span>
+              </div>
+
+              {isLoading ? (
+                viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {[...Array(6)].map((_, i) => (
+                      <Skeleton key={i} className="h-44 rounded-2xl" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {[...Array(6)].map((_, i) => (
+                      <Skeleton key={i} className="h-14 rounded-lg" />
+                    ))}
+                  </div>
+                )
+              ) : filteredKBs.length > 0 ? (
+                viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    <CreateKnowledgeBaseCard onCreate={handleCreateNew} />
                     {filteredKBs.map((kb) => (
-                      <KnowledgeBaseTableRow
+                      <KnowledgeBaseGridCard
                         key={kb.id}
                         knowledgeBase={kb}
                         onEdit={() => handleEdit(kb)}
                         onDelete={() => handleDelete(kb)}
                       />
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )
-          ) : knowledgeBases && knowledgeBases.length > 0 && search ? (
-            <NoResultsState search={search} onClear={() => setSearch('')} />
-          ) : (
-            <EmptyState onCreateNew={() => setDialogOpen(true)} />
-          )}
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40 hover:bg-muted/40">
+                          <TableHead className="font-medium">名称</TableHead>
+                          <TableHead className="w-28 font-medium">文档</TableHead>
+                          <TableHead className="w-28 font-medium">Chunks</TableHead>
+                          <TableHead className="w-32 font-medium">更新时间</TableHead>
+                          <TableHead className="w-12" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredKBs.map((kb) => (
+                          <KnowledgeBaseTableRow
+                            key={kb.id}
+                            knowledgeBase={kb}
+                            onEdit={() => handleEdit(kb)}
+                            onDelete={() => handleDelete(kb)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : hasSearch && knowledgeBases.length > 0 ? (
+                <NoResultsState search={search} onClear={() => setSearch('')} />
+              ) : (
+                <EmptyState onCreateNew={handleCreateNew} />
+              )}
+            </section>
+          </div>
         </div>
       </div>
 
