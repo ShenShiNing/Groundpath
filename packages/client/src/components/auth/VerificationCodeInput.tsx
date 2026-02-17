@@ -34,7 +34,10 @@ export function VerificationCodeInput({
           <InputOTPSlot
             key={index}
             index={index}
-            className={cn('h-12 w-12 text-xl font-semibold', error && 'border-destructive')}
+            className={cn(
+              'h-11 w-10 text-lg font-semibold sm:h-12 sm:w-12 sm:text-xl',
+              error && 'border-destructive'
+            )}
           />
         ))}
       </InputOTPGroup>

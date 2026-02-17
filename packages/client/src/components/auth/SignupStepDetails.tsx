@@ -35,9 +35,7 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
         await onSubmit(value);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(
-          axiosError.response?.data?.error?.message || 'Registration failed. Please try again.'
-        );
+        setError(axiosError.response?.data?.error?.message || '注册失败，请稍后重试');
       }
     },
   });
@@ -53,7 +51,7 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
     >
       <div className="text-center space-y-1">
         <p className="text-sm text-muted-foreground">
-          Complete your account for <span className="font-medium text-foreground">{email}</span>
+          为 <span className="font-medium text-foreground">{email}</span> 完成账号设置
         </p>
       </div>
 
@@ -71,9 +69,9 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
         {(field) => (
           <FormField
             name={field.name}
-            label="Username"
+            label="用户名"
             type="text"
-            placeholder="johndoe"
+            placeholder="zhangsan"
             icon={User}
             value={field.state.value}
             onChange={field.handleChange}
@@ -99,7 +97,7 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
         {(field) => (
           <FormField
             name={field.name}
-            label="Password"
+            label="密码"
             placeholder="••••••••"
             icon={Lock}
             value={field.state.value}
@@ -108,7 +106,7 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
             disabled={form.state.isSubmitting}
             required
             errors={field.state.meta.errors as string[]}
-            hint="At least 8 characters with letters and numbers"
+            hint="至少 8 位，且包含字母和数字"
             showPasswordToggle
             showPassword={showPassword}
             onTogglePassword={() => setShowPassword(!showPassword)}
@@ -123,7 +121,7 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
           onBlur: ({ value, fieldApi }) => {
             if (!value) return undefined;
             const password = fieldApi.form.getFieldValue('password');
-            if (value !== password) return 'Passwords do not match';
+            if (value !== password) return '两次输入的密码不一致';
             return undefined;
           },
         }}
@@ -131,7 +129,7 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
         {(field) => (
           <FormField
             name={field.name}
-            label="Confirm Password"
+            label="确认密码"
             placeholder="••••••••"
             icon={Lock}
             value={field.state.value}
@@ -152,15 +150,21 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
       <div className="space-y-3">
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating account...' : 'Create Account'}
+            <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+              {isSubmitting ? '创建中...' : '创建账号'}
             </Button>
           )}
         </form.Subscribe>
 
         <div className="flex items-center">
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            Back
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            onClick={onBack}
+          >
+            返回
           </Button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import type { UserPublicInfo } from '@knowledge-agent/shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,25 +22,21 @@ export function OAuthCallbackPage() {
       const { accessToken, expiresIn, user, error, returnUrl: r } = search;
       const returnUrl = (r as string) || '/dashboard';
 
-      // Handle error case
       if (error) {
         setStatus('error');
         setErrorMessage(error as string);
         return;
       }
 
-      // Validate tokens
       if (!accessToken || !user || !expiresIn) {
         setStatus('error');
-        setErrorMessage('Missing authentication data');
+        setErrorMessage('缺少认证数据');
         return;
       }
 
       try {
-        // Parse user info (may be string or already-parsed object)
         const parsedUser = (typeof user === 'string' ? JSON.parse(user) : user) as UserPublicInfo;
 
-        // Store tokens and user in auth store
         setTokens({
           accessToken: accessToken as string,
         });
@@ -48,13 +44,12 @@ export function OAuthCallbackPage() {
 
         setStatus('success');
 
-        // Redirect after short delay
         setTimeout(() => {
           navigate({ to: returnUrl });
         }, 1000);
       } catch {
         setStatus('error');
-        setErrorMessage('Failed to process authentication response');
+        setErrorMessage('认证响应解析失败');
       }
     };
 
@@ -62,28 +57,30 @@ export function OAuthCallbackPage() {
   }, [search, setTokens, setUser, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-0 h-80 w-2xl -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      </div>
+
+      <Card className="w-full max-w-md bg-card/85">
         <CardHeader className="text-center">
           {status === 'processing' && (
             <>
               <div className="mb-4 flex justify-center">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
               </div>
-              <CardTitle>Processing Login</CardTitle>
-              <CardDescription>
-                Please wait while we complete your authentication...
-              </CardDescription>
+              <CardTitle>正在处理登录</CardTitle>
+              <CardDescription>请稍候，系统正在完成身份验证...</CardDescription>
             </>
           )}
 
           {status === 'success' && (
             <>
               <div className="mb-4 flex justify-center">
-                <CheckCircle className="h-12 w-12 text-green-500" />
+                <CheckCircle className="h-12 w-12 text-emerald-500" />
               </div>
-              <CardTitle>Login Successful</CardTitle>
-              <CardDescription>Redirecting you to your destination...</CardDescription>
+              <CardTitle>登录成功</CardTitle>
+              <CardDescription>正在跳转到你的工作区...</CardDescription>
             </>
           )}
 
@@ -92,19 +89,26 @@ export function OAuthCallbackPage() {
               <div className="mb-4 flex justify-center">
                 <AlertCircle className="h-12 w-12 text-destructive" />
               </div>
-              <CardTitle>Authentication Failed</CardTitle>
-              <CardDescription>{errorMessage || 'An error occurred during login'}</CardDescription>
+              <CardTitle>认证失败</CardTitle>
+              <CardDescription>{errorMessage || '登录过程中出现异常'}</CardDescription>
             </>
           )}
         </CardHeader>
 
         {status === 'error' && (
           <CardContent className="flex flex-col gap-3">
-            <Button onClick={() => navigate({ to: '/auth/login' })} className="w-full">
-              Return to Login
+            <Button
+              className="w-full cursor-pointer"
+              onClick={() => navigate({ to: '/auth/login' })}
+            >
+              返回登录
             </Button>
-            <Button variant="outline" onClick={() => navigate({ to: '/' })} className="w-full">
-              Go to Home
+            <Button
+              variant="outline"
+              className="w-full cursor-pointer"
+              onClick={() => navigate({ to: '/' })}
+            >
+              返回首页
             </Button>
           </CardContent>
         )}

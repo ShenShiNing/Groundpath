@@ -50,22 +50,22 @@ function StepIndicator({ currentStep }: { currentStep: ResetStep }) {
 function getStepTitle(step: ResetStep): string {
   switch (step) {
     case 'email':
-      return 'Reset password';
+      return '重置密码';
     case 'code':
-      return 'Verify your email';
+      return '验证邮箱';
     case 'password':
-      return 'Create new password';
+      return '设置新密码';
   }
 }
 
 function getStepDescription(step: ResetStep): string {
   switch (step) {
     case 'email':
-      return "Enter your email and we'll send you a code";
+      return '输入邮箱后我们会发送验证码';
     case 'code':
-      return 'Enter the code we sent you';
+      return '输入你收到的验证码';
     case 'password':
-      return 'Choose a new secure password';
+      return '设置一个新的安全密码';
   }
 }
 
@@ -85,7 +85,7 @@ function EmailStep({
       setError(null);
       const result = emailSchema.safeParse(value.email);
       if (!result.success) {
-        setError(result.error.issues[0]?.message || 'Invalid email');
+        setError(result.error.issues[0]?.message || '邮箱格式不正确');
         return;
       }
 
@@ -94,7 +94,7 @@ function EmailStep({
         onNext(value.email);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || 'Failed to send verification code');
+        setError(axiosError.response?.data?.error?.message || '验证码发送失败');
       }
     },
   });
@@ -119,9 +119,9 @@ function EmailStep({
         {(field) => (
           <FormField
             name={field.name}
-            label="Email"
+            label="邮箱"
             type="email"
-            placeholder="m@example.com"
+            placeholder="name@example.com"
             icon={Mail}
             value={field.state.value}
             onChange={field.handleChange}
@@ -137,8 +137,8 @@ function EmailStep({
 
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending code...' : 'Send Reset Code'}
+          <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+            {isSubmitting ? '发送中...' : '发送重置验证码'}
           </Button>
         )}
       </form.Subscribe>
@@ -174,7 +174,7 @@ function CodeStep({
   const handleVerify = useCallback(
     async (codeToVerify: string) => {
       if (codeToVerify.length !== 6) {
-        setError('Please enter the 6-digit code');
+        setError('请输入 6 位验证码');
         return;
       }
 
@@ -190,7 +190,7 @@ function CodeStep({
         onNext(result.verificationToken);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || 'Invalid verification code');
+        setError(axiosError.response?.data?.error?.message || '验证码无效');
         // Reset auto-verify flag on error so user can try again
         hasAutoVerified.current = false;
       } finally {
@@ -226,7 +226,7 @@ function CodeStep({
       hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || 'Failed to resend code');
+      setError(axiosError.response?.data?.error?.message || '验证码重发失败');
     } finally {
       setIsResending(false);
     }
@@ -235,7 +235,7 @@ function CodeStep({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <p className="text-sm text-muted-foreground">We've sent a code to</p>
+        <p className="text-sm text-muted-foreground">验证码已发送至</p>
         <p className="font-medium">{email}</p>
       </div>
 
@@ -253,29 +253,36 @@ function CodeStep({
       <div className="space-y-3">
         <Button
           type="button"
-          className="w-full"
+          className="w-full cursor-pointer"
           onClick={() => handleVerify(code)}
           disabled={code.length !== 6 || isVerifying}
         >
-          {isVerifying ? 'Verifying...' : 'Verify Code'}
+          {isVerifying ? '验证中...' : '验证验证码'}
         </Button>
 
         <div className="flex items-center justify-between">
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            Back
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            onClick={onBack}
+          >
+            返回
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="sm"
+            className="cursor-pointer"
             onClick={handleResend}
             disabled={resendCooldown > 0 || isResending}
           >
             {isResending
-              ? 'Sending...'
+              ? '发送中...'
               : resendCooldown > 0
-                ? `Resend in ${resendCooldown}s`
-                : 'Resend code'}
+                ? `${resendCooldown}s 后可重发`
+                : '重新发送'}
           </Button>
         </div>
       </div>
@@ -317,7 +324,7 @@ function PasswordStep({
         await router.navigate({ to: '/auth/login' });
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || 'Failed to reset password');
+        setError(axiosError.response?.data?.error?.message || '重置密码失败');
       }
     },
   });
@@ -342,7 +349,7 @@ function PasswordStep({
         {(field) => (
           <FormField
             name={field.name}
-            label="New Password"
+            label="新密码"
             placeholder="••••••••"
             icon={Lock}
             value={field.state.value}
@@ -351,7 +358,7 @@ function PasswordStep({
             disabled={form.state.isSubmitting}
             required
             errors={field.state.meta.errors as string[]}
-            hint="At least 8 characters with letters and numbers"
+            hint="至少 8 位，且包含字母和数字"
             showPasswordToggle
             showPassword={showPassword}
             onTogglePassword={() => setShowPassword(!showPassword)}
@@ -364,9 +371,9 @@ function PasswordStep({
         validators={{
           onChangeListenTo: ['newPassword'],
           onChange: ({ value, fieldApi }) => {
-            if (!value) return 'Please confirm your password';
+            if (!value) return '请再次输入密码';
             const password = fieldApi.form.getFieldValue('newPassword');
-            if (value !== password) return 'Passwords do not match';
+            if (value !== password) return '两次输入的密码不一致';
             return undefined;
           },
         }}
@@ -374,7 +381,7 @@ function PasswordStep({
         {(field) => (
           <FormField
             name={field.name}
-            label="Confirm New Password"
+            label="确认新密码"
             placeholder="••••••••"
             icon={Lock}
             value={field.state.value}
@@ -395,15 +402,21 @@ function PasswordStep({
       <div className="space-y-3">
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Resetting...' : 'Reset Password'}
+            <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+              {isSubmitting ? '重置中...' : '重置密码'}
             </Button>
           )}
         </form.Subscribe>
 
         <div className="flex items-center">
-          <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-            Back
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer"
+            onClick={onBack}
+          >
+            返回
           </Button>
         </div>
       </div>
@@ -442,10 +455,10 @@ export function ForgotPasswordForm() {
             <div className="mt-4 text-center">
               <Link
                 to="/auth/login"
-                className="inline-flex items-center text-sm text-muted-foreground hover:text-primary"
+                className="inline-flex items-center text-sm text-muted-foreground hover:text-primary cursor-pointer"
               >
                 <ArrowLeft className="mr-1 h-4 w-4" />
-                Back to login
+                返回登录
               </Link>
             </div>
           </>

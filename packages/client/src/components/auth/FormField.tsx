@@ -33,7 +33,7 @@ function PasswordToggleButton({
   return (
     <button
       type="button"
-      className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground transition-colors"
+      className="absolute right-3 top-2.5 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
       onClick={onToggle}
       tabIndex={-1}
     >

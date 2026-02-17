@@ -25,7 +25,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
 
       const result = emailSchema.safeParse(value.email);
       if (!result.success) {
-        setError(result.error.issues[0]?.message || 'Invalid email');
+        setError(result.error.issues[0]?.message || '邮箱格式不正确');
         return;
       }
 
@@ -34,7 +34,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
         onNext(value.email);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || 'Failed to send verification code');
+        setError(axiosError.response?.data?.error?.message || '验证码发送失败');
       }
     },
   });
@@ -50,7 +50,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
     >
       <div className="text-center space-y-1">
         <p className="text-sm text-muted-foreground">
-          Enter your email address and we'll send you a verification code.
+          输入你的邮箱地址，我们会发送验证码到该邮箱。
         </p>
       </div>
 
@@ -66,9 +66,9 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
         {(field) => (
           <FormField
             name={field.name}
-            label="Email"
+            label="邮箱"
             type="email"
-            placeholder="m@example.com"
+            placeholder="name@example.com"
             icon={Mail}
             value={field.state.value}
             onChange={field.handleChange}
@@ -84,8 +84,8 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
 
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending code...' : 'Send Verification Code'}
+          <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+            {isSubmitting ? '发送中...' : '发送验证码'}
           </Button>
         )}
       </form.Subscribe>

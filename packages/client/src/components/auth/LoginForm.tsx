@@ -31,7 +31,7 @@ export function LoginForm() {
       const validationResult = loginRequestSchema.safeParse(value);
       if (!validationResult.success) {
         const firstError = validationResult.error.issues[0];
-        setError(firstError?.message || 'Validation failed');
+        setError(firstError?.message || '表单校验失败');
         return;
       }
 
@@ -41,8 +41,7 @@ export function LoginForm() {
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
         const errorMessage =
-          axiosError.response?.data?.error?.message ||
-          'Login failed. Please check your credentials.';
+          axiosError.response?.data?.error?.message || '登录失败，请检查邮箱和密码。';
         setError(errorMessage);
       }
     },
@@ -51,8 +50,8 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Welcome back</CardTitle>
-        <CardDescription>Login with your email or social account</CardDescription>
+        <CardTitle className="text-xl">欢迎回来</CardTitle>
+        <CardDescription>使用邮箱或社交账号登录</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -76,9 +75,9 @@ export function LoginForm() {
             {(field) => (
               <FormField
                 name={field.name}
-                label="Email"
+                label="邮箱"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="name@example.com"
                 icon={Mail}
                 value={field.state.value}
                 onChange={field.handleChange}
@@ -94,13 +93,13 @@ export function LoginForm() {
           <form.Field
             name="password"
             validators={{
-              onBlur: ({ value }) => (!value ? 'Password is required' : undefined),
+              onBlur: ({ value }) => (!value ? '请输入密码' : undefined),
             }}
           >
             {(field) => (
               <FormField
                 name={field.name}
-                label="Password"
+                label="密码"
                 placeholder="••••••••"
                 icon={Lock}
                 value={field.state.value}
@@ -120,9 +119,9 @@ export function LoginForm() {
           <div className="flex justify-end">
             <Link
               to="/auth/forgot-password"
-              className="text-sm text-muted-foreground hover:text-primary"
+              className="text-sm text-muted-foreground hover:text-primary cursor-pointer"
             >
-              Forgot password?
+              忘记密码？
             </Link>
           </div>
 
@@ -133,8 +132,8 @@ export function LoginForm() {
           <form.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
               <>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? 'Signing in...' : 'Sign In'}
+                <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+                  {isSubmitting ? '登录中...' : '登录'}
                 </Button>
 
                 {/* Divider */}
@@ -143,15 +142,16 @@ export function LoginForm() {
                     <Separator />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                    <span className="bg-card px-2 text-muted-foreground">或使用以下方式继续</span>
                   </div>
                 </div>
 
                 {/* Social Login Buttons */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Button
                     type="button"
                     variant="outline"
+                    className="cursor-pointer"
                     disabled={isSubmitting}
                     onClick={() => initiateGitHubLogin()}
                   >
@@ -161,6 +161,7 @@ export function LoginForm() {
                   <Button
                     type="button"
                     variant="outline"
+                    className="cursor-pointer"
                     disabled={isSubmitting}
                     onClick={() => initiateGoogleLogin()}
                   >

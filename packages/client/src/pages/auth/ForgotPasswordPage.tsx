@@ -3,11 +3,9 @@ import { ForgotPasswordForm, AuthPageLayout, AuthFooterLink } from '@/components
 export function ForgotPasswordPage() {
   return (
     <AuthPageLayout
-      title="Forgot your password?"
-      description="No worries, we'll help you reset it"
-      footer={
-        <AuthFooterLink text="Remember your password?" linkText="Sign In" linkTo="/auth/login" />
-      }
+      title="忘记密码"
+      description="通过邮箱验证码安全重置你的账号密码"
+      footer={<AuthFooterLink text="已经想起来了？" linkText="返回登录" linkTo="/auth/login" />}
     >
       <ForgotPasswordForm />
     </AuthPageLayout>

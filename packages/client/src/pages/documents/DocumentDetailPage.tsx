@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, Eye, FileText, PencilLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ export function DocumentDetailPage() {
   const isEditable = !!content?.isEditable;
   const editorKey = content ? `${document?.id ?? id}:${content.currentVersion}` : id;
 
-  // Determine initial mode based on document type and editability
   const getInitialMode = (): ViewMode => {
     if (isEditable) return 'edit';
     return 'read';
@@ -43,7 +42,6 @@ export function DocumentDetailPage() {
     toast.error(error instanceof Error ? error.message : '保存失败');
   };
 
-  // Render content area based on mode
   const renderContent = () => {
     if (mode === 'edit' && isEditable) {
       if (isLoading || isContentLoading) {
@@ -70,7 +68,6 @@ export function DocumentDetailPage() {
       );
     }
 
-    // Default: read mode
     return (
       <DocumentReader
         documentType={content?.documentType ?? document!.documentType}
@@ -83,82 +80,97 @@ export function DocumentDetailPage() {
 
   return (
     <AppLayout>
-      <div className="container max-w-6xl py-6">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Link to="/knowledge-bases">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold">
-              {isLoading ? 'Loading...' : (content?.title ?? document?.title ?? 'Document')}
-            </h1>
-          </div>
-          {document && (
-            <div className="flex items-center gap-2">
-              {/* Mode toggle buttons */}
-              <Button
-                variant={mode === 'read' ? 'default' : 'outline'}
-                onClick={() => setMode('read')}
-              >
-                阅读
-              </Button>
-
-              {isEditable && (
-                <Button
-                  variant={mode === 'edit' ? 'default' : 'outline'}
-                  onClick={() => setMode('edit')}
-                >
-                  编辑
-                </Button>
-              )}
-
-              <Button variant="outline" onClick={handleDownload}>
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            </div>
-          )}
+      <div className="relative flex-1 overflow-y-auto bg-background px-6 py-8 md:py-10">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute left-1/2 top-0 h-72 w-152 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
         </div>
 
-        {document && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Preview / Editor */}
-            <div className="lg:col-span-2">
-              <Card>
+        <div className="mx-auto w-full max-w-7xl space-y-6">
+          <section className="rounded-2xl border bg-card/70 p-6 md:p-8">
+            <div className="flex flex-wrap items-start gap-3">
+              <Button variant="ghost" size="icon" className="size-8 cursor-pointer" asChild>
+                <Link to="/knowledge-bases">
+                  <ArrowLeft className="size-4" />
+                </Link>
+              </Button>
+
+              <div className="min-w-0 flex-1">
+                <h1 className="font-display truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {isLoading ? '文档加载中...' : (content?.title ?? document?.title ?? '文档详情')}
+                </h1>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <FileText className="size-3.5" />
+                    {document?.documentType?.toUpperCase() ?? 'DOCUMENT'}
+                  </span>
+                  <span>支持阅读与在线编辑</span>
+                </div>
+              </div>
+
+              {document && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={mode === 'read' ? 'default' : 'outline'}
+                    className="cursor-pointer"
+                    onClick={() => setMode('read')}
+                  >
+                    <Eye className="size-4 mr-1.5" />
+                    阅读
+                  </Button>
+
+                  {isEditable && (
+                    <Button
+                      variant={mode === 'edit' ? 'default' : 'outline'}
+                      className="cursor-pointer"
+                      onClick={() => setMode('edit')}
+                    >
+                      <PencilLine className="size-4 mr-1.5" />
+                      编辑
+                    </Button>
+                  )}
+
+                  <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
+                    <Download className="size-4 mr-1.5" />
+                    下载
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {document && (
+            <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <Card className="lg:col-span-2 bg-card/80">
                 <CardHeader>
-                  <CardTitle>{mode === 'edit' ? 'Editor' : 'Preview'}</CardTitle>
+                  <CardTitle>{mode === 'edit' ? '文档编辑器' : '文档预览'}</CardTitle>
                 </CardHeader>
                 <CardContent>{renderContent()}</CardContent>
               </Card>
-            </div>
 
-            {/* Sidebar */}
-            <div>
-              <Card>
+              <Card className="bg-card/80">
                 <CardHeader>
-                  <CardTitle>Details</CardTitle>
+                  <CardTitle>文档信息</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <DocumentInfo document={document} />
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        )}
+            </section>
+          )}
 
-        {!isLoading && !document && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Document not found</p>
-              <Link to="/knowledge-bases" className="mt-4 inline-block">
-                <Button variant="outline">Back to Knowledge Bases</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
+          {!isLoading && !document && (
+            <Card className="bg-card/80">
+              <CardContent className="py-14 text-center">
+                <p className="text-muted-foreground">文档不存在或无访问权限</p>
+                <Link to="/knowledge-bases" className="mt-4 inline-block">
+                  <Button variant="outline" className="cursor-pointer">
+                    返回知识库列表
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

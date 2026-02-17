@@ -3,11 +3,9 @@ import { LoginForm, AuthPageLayout, AuthFooterLink } from '@/components/auth';
 export function LoginPage() {
   return (
     <AuthPageLayout
-      title="Sign in to KnowledgeAgent"
-      description="Enter your email below to access your account"
-      footer={
-        <AuthFooterLink text="Don't have an account?" linkText="Sign Up" linkTo="/auth/signup" />
-      }
+      title="登录 KnowledgeAgent"
+      description="使用邮箱登录并继续你的知识工作流"
+      footer={<AuthFooterLink text="还没有账号？" linkText="立即注册" linkTo="/auth/signup" />}
     >
       <LoginForm />
     </AuthPageLayout>

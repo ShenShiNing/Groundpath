@@ -4,21 +4,27 @@ import { SignupForm, AuthPageLayout, AuthFooterLink } from '@/components/auth';
 export function SignupPage() {
   return (
     <AuthPageLayout
-      title="Create your account"
-      description="Enter your details below to get started"
+      title="创建你的账号"
+      description="开始搭建你的知识库 Agent 工作空间"
       footer={
         <>
-          <AuthFooterLink text="Already have an account?" linkText="Sign In" linkTo="/auth/login" />
+          <AuthFooterLink text="已经有账号？" linkText="去登录" linkTo="/auth/login" />
           <p className="text-center text-xs text-muted-foreground mt-4">
-            By signing up, you agree to our{' '}
-            <Link to="/" className="underline underline-offset-4 hover:text-foreground">
-              Terms of Service
+            注册即代表你同意我们的{' '}
+            <Link
+              to="/about"
+              className="underline underline-offset-4 hover:text-foreground cursor-pointer"
+            >
+              服务条款
             </Link>{' '}
-            and{' '}
-            <Link to="/" className="underline underline-offset-4 hover:text-foreground">
-              Privacy Policy
+            与{' '}
+            <Link
+              to="/about"
+              className="underline underline-offset-4 hover:text-foreground cursor-pointer"
+            >
+              隐私政策
             </Link>
-            .
+            。
           </p>
         </>
       }

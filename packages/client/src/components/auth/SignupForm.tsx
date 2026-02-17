@@ -46,22 +46,22 @@ function StepIndicator({ currentStep }: { currentStep: SignupStep }) {
 function getStepTitle(step: SignupStep): string {
   switch (step) {
     case 'email':
-      return 'Get started';
+      return '开始创建账号';
     case 'code':
-      return 'Verify your email';
+      return '验证邮箱';
     case 'details':
-      return 'Complete your profile';
+      return '完善资料';
   }
 }
 
 function getStepDescription(step: SignupStep): string {
   switch (step) {
     case 'email':
-      return 'Sign up with your email';
+      return '先输入邮箱并获取验证码';
     case 'code':
-      return 'Enter the code we sent you';
+      return '输入邮箱收到的验证码';
     case 'details':
-      return 'Choose your username and password';
+      return '设置用户名和密码';
   }
 }
 
@@ -126,16 +126,26 @@ export function SignupForm() {
                   <Separator />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                  <span className="bg-card px-2 text-muted-foreground">或使用以下方式继续</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
-                <Button type="button" variant="outline" onClick={() => initiateGitHubLogin()}>
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="cursor-pointer"
+                  onClick={() => initiateGitHubLogin()}
+                >
                   <GitHubIcon className="mr-2 h-4 w-4" />
                   GitHub
                 </Button>
-                <Button type="button" variant="outline" onClick={() => initiateGoogleLogin()}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="cursor-pointer"
+                  onClick={() => initiateGoogleLogin()}
+                >
                   <GoogleIcon className="mr-2 h-4 w-4" />
                   Google
                 </Button>

@@ -35,7 +35,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
   const handleVerify = useCallback(
     async (codeToVerify: string) => {
       if (codeToVerify.length !== 6) {
-        setError('Please enter the 6-digit code');
+        setError('请输入 6 位验证码');
         return;
       }
 
@@ -47,7 +47,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
         onNext(result.verificationToken);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || 'Invalid verification code');
+        setError(axiosError.response?.data?.error?.message || '验证码无效');
         // Reset auto-verify flag on error so user can try again
         hasAutoVerified.current = false;
       } finally {
@@ -84,7 +84,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
       hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || 'Failed to resend code');
+      setError(axiosError.response?.data?.error?.message || '验证码重发失败');
     } finally {
       setIsResending(false);
     }
@@ -93,7 +93,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <p className="text-sm text-muted-foreground">We've sent a verification code to</p>
+        <p className="text-sm text-muted-foreground">验证码已发送至</p>
         <p className="font-medium">{email}</p>
       </div>
 
@@ -110,22 +110,23 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
       </div>
 
       <div className="flex items-center justify-between">
-        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
-          Back
+        <Button type="button" variant="ghost" size="sm" className="cursor-pointer" onClick={onBack}>
+          返回
         </Button>
 
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          className="cursor-pointer"
           onClick={handleResend}
           disabled={resendCooldown > 0 || isResending}
         >
           {isResending
-            ? 'Sending...'
+            ? '发送中...'
             : resendCooldown > 0
-              ? `Resend in ${resendCooldown}s`
-              : 'Resend code'}
+              ? `${resendCooldown}s 后可重发`
+              : '重新发送'}
         </Button>
       </div>
     </div>
