@@ -28,21 +28,36 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes('node_modules')) return;
+          const normalizedId = id.replaceAll('\\', '/');
+          if (!normalizedId.includes('/node_modules/')) return;
 
           // Order matters: more specific patterns first
-          if (id.includes('@tanstack')) return 'tanstack';
-          if (id.includes('@radix-ui')) return 'radix';
-          if (id.includes('lucide-react') || id.includes('sonner') || id.includes('cmdk')) {
+          if (normalizedId.includes('/node_modules/@tanstack/')) return 'tanstack';
+          if (normalizedId.includes('/node_modules/@radix-ui/')) return 'radix';
+          if (normalizedId.includes('/node_modules/@base-ui/')) return 'base-ui';
+          if (normalizedId.includes('/node_modules/@floating-ui/')) return 'radix';
+          if (
+            normalizedId.includes('/node_modules/lucide-react/') ||
+            normalizedId.includes('/node_modules/sonner/') ||
+            normalizedId.includes('/node_modules/cmdk/')
+          ) {
             return 'ui';
           }
-          if (id.includes('pdfjs-dist')) return 'pdfjs';
-          if (id.includes('@uiw') || id.includes('rehype') || id.includes('remark')) {
+          if (normalizedId.includes('/node_modules/pdfjs-dist/')) return 'pdfjs';
+          if (
+            normalizedId.includes('/node_modules/@uiw/') ||
+            normalizedId.includes('/node_modules/rehype') ||
+            normalizedId.includes('/node_modules/remark')
+          ) {
             return 'md-editor';
           }
 
-          // React core (react, react-dom, scheduler) — after specific UI libs
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/scheduler/')) {
+          // React core only (avoid matching packages like @base-ui/react)
+          if (
+            normalizedId.includes('/node_modules/react/') ||
+            normalizedId.includes('/node_modules/react-dom/') ||
+            normalizedId.includes('/node_modules/scheduler/')
+          ) {
             return 'react';
           }
         },

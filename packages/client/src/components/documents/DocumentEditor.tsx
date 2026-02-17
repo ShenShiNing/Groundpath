@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DocumentType } from '@knowledge-agent/shared/types';
-import MDEditor from '@uiw/react-md-editor';
+import MDEditor from '@uiw/react-md-editor/nohighlight';
 import { Save, RotateCcw } from 'lucide-react';
 import { useTheme } from '@/components/theme/theme-provider';
 import { Button } from '@/components/ui/button';

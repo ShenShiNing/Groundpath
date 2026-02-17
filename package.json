@@ -15,13 +15,13 @@
     "test:shared": "pnpm -F @knowledge-agent/shared test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "eslint . --cache --cache-location .cache/eslint/.eslintcache",
+    "lint:fix": "eslint . --fix --cache --cache-location .cache/eslint/.eslintcache",
     "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "eslint --fix --cache",
+      "eslint --fix --cache --cache-location .cache/eslint/.eslintcache",
       "prettier --write"
     ],
     "*.{json,css,md}": [

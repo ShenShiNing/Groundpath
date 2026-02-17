@@ -29,7 +29,7 @@ vi.mock('@shared/errors', async (importOriginal) => {
     sendSuccessResponse: vi.fn((res, data) => {
       res.status(200).json({ success: true, data });
     }),
-    handleError: vi.fn((error, res, _context) => {
+    handleError: vi.fn((error, res) => {
       const statusCode = error instanceof AppError ? error.statusCode : 500;
       const code = error instanceof AppError ? error.code : 'INTERNAL_ERROR';
       res.status(statusCode).json({ success: false, error: { code, message: error.message } });
