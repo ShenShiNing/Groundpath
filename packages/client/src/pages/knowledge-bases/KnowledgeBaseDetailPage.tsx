@@ -57,7 +57,7 @@ import {
 } from '@/components/ui/table';
 import { useKnowledgeBase, useKBFolderTree, useKBDocuments, useDeleteDocument } from '@/hooks';
 import { KnowledgeBaseDialog, ChatPanel } from '@/components/knowledge-bases';
-import { ProcessingStatusBadge } from '@/components/knowledge-bases/documents/ProcessingStatusBadge';
+import { ProcessingStatusBadge } from '@/components/documents/ProcessingStatusBadge';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { FolderDialog } from '@/components/documents/FolderDialog';
 import { queryKeys } from '@/lib/query';

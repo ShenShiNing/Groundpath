@@ -1,5 +1,4 @@
-import { Plus, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConversationItem } from './ConversationItem';
 import { useConversations, useDeleteConversation } from '@/hooks';
@@ -51,19 +50,6 @@ export function ConversationList({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* New conversation button */}
-      <div className="p-2 border-b shrink-0">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start gap-2"
-          onClick={onNewConversation}
-        >
-          <Plus className="size-4" />
-          New Chat
-        </Button>
-      </div>
-
       {/* Conversation list */}
       <div className="flex-1 min-h-0">
         <ScrollArea className="h-full">

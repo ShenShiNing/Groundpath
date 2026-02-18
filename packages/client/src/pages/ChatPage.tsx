@@ -347,20 +347,20 @@ export function ChatPage() {
               </div>
 
               <div className="min-h-0 flex-1">
-                <ScrollArea className="h-full">
-                  {messages.length === 0 ? (
-                    <div className="flex h-full min-h-96 items-center justify-center px-4 py-5 md:px-6">
-                      <div className="mx-auto flex max-w-md flex-col items-center text-center">
-                        <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary/10">
-                          <Sparkles className="size-6 text-primary" />
-                        </div>
-                        <h3 className="text-base font-semibold">开始你的第一条提问</h3>
-                        <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                          你可以先点击“上传文件”，然后询问摘要、结论、出处对比等问题。
-                        </p>
+                {messages.length === 0 ? (
+                  <div className="flex h-full items-center justify-center px-4 py-5 md:px-6">
+                    <div className="mx-auto flex max-w-md flex-col items-center text-center">
+                      <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary/10">
+                        <Sparkles className="size-6 text-primary" />
                       </div>
+                      <h3 className="text-base font-semibold">开始你的第一条提问</h3>
+                      <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                        你可以先点击“上传文件”，然后询问摘要、结论、出处对比等问题。
+                      </p>
                     </div>
-                  ) : (
+                  </div>
+                ) : (
+                  <ScrollArea className="h-full">
                     <div className="mx-auto max-w-4xl px-4 py-5 md:px-6">
                       <>
                         {messages.map((message) => (
@@ -374,8 +374,8 @@ export function ChatPage() {
                         <div ref={messagesEndRef} />
                       </>
                     </div>
-                  )}
-                </ScrollArea>
+                  </ScrollArea>
+                )}
               </div>
 
               <div className="shrink-0 border-t bg-background/80">
