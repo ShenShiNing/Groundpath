@@ -18,8 +18,13 @@ import type {
   ExpandResponse,
   DocumentAISSEEvent,
 } from '@knowledge-agent/shared/types';
-import { apiClient, unwrapResponse, fetchStreamWithAuth } from '@/lib/http';
-import { parseSSEStream, createSSEDispatcher } from '@/lib/sse';
+import {
+  apiClient,
+  unwrapResponse,
+  fetchStreamWithAuth,
+  parseSSEStream,
+  createSSEDispatcher,
+} from '@/lib/http';
 
 // ============================================================================
 // Summary API

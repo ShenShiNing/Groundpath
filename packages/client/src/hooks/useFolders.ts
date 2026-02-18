@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CreateFolderRequest, UpdateFolderRequest } from '@knowledge-agent/shared/types';
 import { foldersApi } from '@/api';
-import { queryKeys } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/query';
 
 // ==================== Query Hooks ====================
 

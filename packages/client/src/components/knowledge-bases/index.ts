@@ -7,4 +7,4 @@ export { EmbeddingProviderBadge } from './EmbeddingProviderBadge';
 export * from './documents';
 
 // Chat components
-export * from './chat';
+export * from '../chat';

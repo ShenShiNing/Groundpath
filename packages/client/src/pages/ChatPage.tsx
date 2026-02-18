@@ -25,7 +25,8 @@ import {
   CitationPreview,
   ConversationList,
   DocumentScopeSelector,
-} from '@/components/knowledge-bases/chat';
+} from '@/components/chat';
+import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useAuthStore, useChatPanelStore } from '@/stores';
@@ -155,8 +156,13 @@ export function ChatPage() {
     setPreviewOpen(true);
   }, []);
 
-  const handleCopyMessage = useCallback((content: string) => {
-    void navigator.clipboard.writeText(content);
+  const handleCopyMessage = useCallback(async (content: string, format: CopyFormat) => {
+    try {
+      await copyMessageToClipboard(content, format);
+      toast.success(format === 'plain' ? '已复制纯文本' : '已复制 Markdown');
+    } catch {
+      toast.error('复制失败，请重试');
+    }
   }, []);
 
   const handleOpenDocumentFromCitation = useCallback(
@@ -362,7 +368,7 @@ export function ChatPage() {
                             key={message.id}
                             message={message}
                             onCitationClick={handleCitationClick}
-                            onCopy={() => handleCopyMessage(message.content)}
+                            onCopy={(format) => handleCopyMessage(message.content, format)}
                           />
                         ))}
                         <div ref={messagesEndRef} />

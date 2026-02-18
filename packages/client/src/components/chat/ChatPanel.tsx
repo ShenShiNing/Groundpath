@@ -19,6 +19,8 @@ import { ConversationList } from './ConversationList';
 import { useChatPanelStore, type Citation } from '@/stores/chatPanelStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
+import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
+import { toast } from 'sonner';
 
 // ============================================================================
 // Types
@@ -77,8 +79,13 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
     setPreviewOpen(true);
   };
 
-  const handleCopyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
+  const handleCopyMessage = async (content: string, format: CopyFormat) => {
+    try {
+      await copyMessageToClipboard(content, format);
+      toast.success(format === 'plain' ? '已复制纯文本' : '已复制 Markdown');
+    } catch {
+      toast.error('复制失败，请重试');
+    }
   };
 
   return (
@@ -195,7 +202,7 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
                         key={message.id}
                         message={message}
                         onCitationClick={handleCitationClick}
-                        onCopy={() => handleCopyMessage(message.content)}
+                        onCopy={(format) => handleCopyMessage(message.content, format)}
                       />
                     ))}
                     <div ref={messagesEndRef} />

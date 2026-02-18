@@ -12,8 +12,13 @@ import type {
   UpdateConversationInput,
   SendMessageInput,
 } from '@knowledge-agent/shared/schemas';
-import { apiClient, unwrapResponse, fetchStreamWithAuth } from '@/lib/http';
-import { parseSSEStream, createSSEDispatcher } from '@/lib/sse';
+import {
+  apiClient,
+  unwrapResponse,
+  fetchStreamWithAuth,
+  parseSSEStream,
+  createSSEDispatcher,
+} from '@/lib/http';
 
 // Re-export types for convenience
 export type { ConversationInfo, ConversationListItem, MessageInfo, Citation, SSEEvent };

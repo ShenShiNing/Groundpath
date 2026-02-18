@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores';
 import { userApi } from '@/api';
-import { queryKeys } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/query';
 import { SessionCard } from './SessionCard';
 
 export function SessionList() {

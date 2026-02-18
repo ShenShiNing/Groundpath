@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConversationItem } from './ConversationItem';
 import { useConversations, useDeleteConversation } from '@/hooks';
-import { queryKeys } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 
 // ============================================================================

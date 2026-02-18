@@ -7,7 +7,7 @@ import { cn, formatBytes } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useUploadQueue } from '@/hooks';
-import { queryKeys } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/query';
 
 interface DocumentUploadProps {
   knowledgeBaseId?: string;

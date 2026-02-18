@@ -60,7 +60,7 @@ import { KnowledgeBaseDialog, ChatPanel } from '@/components/knowledge-bases';
 import { ProcessingStatusBadge } from '@/components/knowledge-bases/documents/ProcessingStatusBadge';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { FolderDialog } from '@/components/documents/FolderDialog';
-import { queryKeys } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/query';
 import { formatBytes, cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChatPanelStore } from '@/stores';

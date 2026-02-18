@@ -1,9 +1,25 @@
-import type { ReactNode } from 'react';
-import { Bot, Copy, RefreshCw, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Bot,
+  Copy,
+  RefreshCw,
+  Loader2,
+  Check,
+  ChevronDown,
+  AlignLeft,
+  FileCode2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { CitationSources } from './CitationSources';
-import { CitationInline } from './CitationInline';
+import { ChatMarkdown } from './ChatMarkdown';
 import type { ChatMessage as ChatMessageType, Citation } from '@/stores/chatPanelStore';
+import type { CopyFormat } from '@/lib/chat';
 
 // ============================================================================
 // Types
@@ -12,88 +28,16 @@ import type { ChatMessage as ChatMessageType, Citation } from '@/stores/chatPane
 export interface ChatMessageProps {
   message: ChatMessageType;
   onCitationClick: (citation: Citation) => void;
-  onCopy?: () => void;
+  onCopy?: (format: CopyFormat) => void | Promise<void>;
   onRegenerate?: () => void;
 }
 
-interface ParsedSegment {
-  type: 'text' | 'citation';
-  content: string;
-  citationIndex?: number;
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
+const PURE_CODE_BLOCK_PATTERN = /^\s*(?:```[\s\S]*?```|~~~[\s\S]*?~~~)\s*$/;
 
 function formatTime(date: Date): string {
   return new Date(date).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
-  });
-}
-
-function parseContent(content: string): ParsedSegment[] {
-  const segments: ParsedSegment[] = [];
-  const regex = /\[(\d+)\]/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(content)) !== null) {
-    // Add text before the citation
-    if (match.index > lastIndex) {
-      segments.push({
-        type: 'text',
-        content: content.slice(lastIndex, match.index),
-      });
-    }
-
-    // Add the citation
-    segments.push({
-      type: 'citation',
-      content: match[0],
-      citationIndex: parseInt(match[1], 10),
-    });
-
-    lastIndex = regex.lastIndex;
-  }
-
-  // Add remaining text
-  if (lastIndex < content.length) {
-    segments.push({
-      type: 'text',
-      content: content.slice(lastIndex),
-    });
-  }
-
-  return segments;
-}
-
-function renderContent(
-  content: string,
-  citations: Citation[] | undefined,
-  onCitationClick: (citation: Citation) => void
-): ReactNode {
-  const segments = parseContent(content);
-
-  return segments.map((segment, index) => {
-    if (segment.type === 'text') {
-      return <span key={index}>{segment.content}</span>;
-    }
-
-    const citation = citations?.[segment.citationIndex! - 1];
-    if (!citation) {
-      return <span key={index}>{segment.content}</span>;
-    }
-
-    return (
-      <CitationInline
-        key={index}
-        index={segment.citationIndex!}
-        citation={citation}
-        onClick={() => onCitationClick(citation)}
-      />
-    );
   });
 }
 
@@ -103,6 +47,34 @@ function renderContent(
 
 export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: ChatMessageProps) {
   const isUser = message.role === 'user';
+  const isPureCodeBlock = !isUser && PURE_CODE_BLOCK_PATTERN.test(message.content);
+  const [copiedFormat, setCopiedFormat] = useState<CopyFormat | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = useCallback(
+    async (format: CopyFormat) => {
+      if (!onCopy) return;
+      try {
+        await onCopy(format);
+        setCopiedFormat(format);
+        if (copyTimerRef.current !== null) {
+          window.clearTimeout(copyTimerRef.current);
+        }
+        copyTimerRef.current = window.setTimeout(() => setCopiedFormat(null), 1500);
+      } catch {
+        setCopiedFormat(null);
+      }
+    },
+    [onCopy]
+  );
 
   // User message
   if (isUser) {
@@ -142,8 +114,12 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
         <Bot className="size-4 text-primary-foreground" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm leading-relaxed [&_p]:mb-2 [&_p:last-child]:mb-0">
-          {renderContent(message.content, message.citations, onCitationClick)}
+        <div className="text-sm">
+          <ChatMarkdown
+            content={message.content}
+            citations={message.citations}
+            onCitationClick={onCitationClick}
+          />
           {message.isLoading && (
             <Loader2 className="inline-block size-3.5 ml-1 text-muted-foreground animate-spin align-text-bottom" />
           )}
@@ -157,22 +133,47 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
         {/* Actions */}
         {!message.isLoading && (
           <div className="flex items-center gap-1 mt-2">
-            {onCopy && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-[10px] text-muted-foreground"
-                onClick={onCopy}
-              >
-                <Copy className="size-3 mr-1" />
-                Copy
-              </Button>
+            {onCopy && !isPureCodeBlock && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 cursor-pointer gap-1.5 px-2 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+                    aria-label={copiedFormat ? '已复制消息' : '复制消息'}
+                  >
+                    {copiedFormat ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                    <span>{copiedFormat ? '已复制' : '复制'}</span>
+                    <ChevronDown className="size-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" sideOffset={6} className="w-36">
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onSelect={() => {
+                      void handleCopy('plain');
+                    }}
+                  >
+                    <AlignLeft className="size-3.5" />
+                    复制纯文本
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onSelect={() => {
+                      void handleCopy('markdown');
+                    }}
+                  >
+                    <FileCode2 className="size-3.5" />
+                    复制 Markdown
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {onRegenerate && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 text-[10px] text-muted-foreground"
+                className="h-7 text-[10px] text-muted-foreground cursor-pointer"
                 onClick={onRegenerate}
               >
                 <RefreshCw className="size-3 mr-1" />

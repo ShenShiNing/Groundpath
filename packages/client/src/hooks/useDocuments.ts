@@ -7,7 +7,7 @@ import type {
   SaveDocumentContentRequest,
 } from '@knowledge-agent/shared/types';
 import { documentsApi } from '@/api';
-import { queryKeys } from '@/lib/queryClient';
+import { queryKeys } from '@/lib/query';
 
 // ==================== Query Hooks ====================
 

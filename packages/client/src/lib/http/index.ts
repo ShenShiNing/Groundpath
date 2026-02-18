@@ -32,3 +32,9 @@ export {
   type StreamFetchConfig,
   type StreamFetchResult,
 } from './stream-client';
+export {
+  parseSSEStream,
+  createSSEDispatcher,
+  type SSEEventHandlers,
+  type SSEParserOptions,
+} from './sse';
