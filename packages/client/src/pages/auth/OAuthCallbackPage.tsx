@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import type { UserPublicInfo } from '@knowledge-agent/shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { exchangeOAuthCode } from '@/api';
 import { useAuthStore } from '@/stores';
 
 type CallbackStatus = 'processing' | 'success' | 'error';
@@ -18,8 +18,8 @@ export function OAuthCallbackPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const processCallback = () => {
-      const { accessToken, expiresIn, user, error, returnUrl: r } = search;
+    const processCallback = async () => {
+      const { code, error, returnUrl: r } = search;
       const returnUrl = (r as string) || '/dashboard';
 
       if (error) {
@@ -28,19 +28,19 @@ export function OAuthCallbackPage() {
         return;
       }
 
-      if (!accessToken || !user || !expiresIn) {
+      if (!code || typeof code !== 'string') {
         setStatus('error');
-        setErrorMessage('缺少认证数据');
+        setErrorMessage('缺少认证参数');
         return;
       }
 
       try {
-        const parsedUser = (typeof user === 'string' ? JSON.parse(user) : user) as UserPublicInfo;
+        const authResponse = await exchangeOAuthCode(code);
 
         setTokens({
-          accessToken: accessToken as string,
+          accessToken: authResponse.tokens.accessToken,
         });
-        setUser(parsedUser);
+        setUser(authResponse.user);
 
         setStatus('success');
 
@@ -49,11 +49,11 @@ export function OAuthCallbackPage() {
         }, 1000);
       } catch {
         setStatus('error');
-        setErrorMessage('认证响应解析失败');
+        setErrorMessage('认证交换失败，请重新登录');
       }
     };
 
-    processCallback();
+    void processCallback();
   }, [search, setTokens, setUser, navigate]);
 
   return (

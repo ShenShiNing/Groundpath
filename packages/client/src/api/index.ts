@@ -2,7 +2,7 @@ export { apiClient, setTokenAccessors, ApiRequestError } from '@/lib/http';
 export { authApi } from './auth';
 export { emailApi } from './email';
 export { userApi } from './user';
-export { initiateGitHubLogin, initiateGoogleLogin } from './oauth';
+export { initiateGitHubLogin, initiateGoogleLogin, exchangeOAuthCode } from './oauth';
 export { documentsApi } from './documents';
 export { foldersApi } from './folders';
 export { knowledgeBasesApi } from './knowledge-bases';

@@ -21,6 +21,7 @@ const logger = createLogger('oauth.service');
 
 // In-memory state store (for production, use Redis)
 const stateStore = new Map<string, OAuthStateData>();
+const exchangeCodeStore = new Map<string, { authResponse: AuthResponse; expiresAt: number }>();
 
 /**
  * Generate a state token and store it with the return URL
@@ -64,6 +65,42 @@ function cleanupExpiredStates(): void {
       stateStore.delete(key);
     }
   }
+}
+
+function cleanupExpiredExchangeCodes(): void {
+  const now = Date.now();
+  for (const [key, value] of exchangeCodeStore.entries()) {
+    if (value.expiresAt < now) {
+      exchangeCodeStore.delete(key);
+    }
+  }
+}
+
+/**
+ * Generate one-time exchange code for frontend callback.
+ * The frontend exchanges this code for auth payload via API.
+ */
+export function createOAuthExchangeCode(authResponse: AuthResponse): string {
+  const code = uuidv4();
+  exchangeCodeStore.set(code, {
+    authResponse,
+    expiresAt: Date.now() + 60 * 1000,
+  });
+  cleanupExpiredExchangeCodes();
+  return code;
+}
+
+/**
+ * Consume one-time OAuth exchange code.
+ */
+export function consumeOAuthExchangeCode(code: string): AuthResponse | null {
+  const stored = exchangeCodeStore.get(code);
+  if (!stored || stored.expiresAt < Date.now()) {
+    exchangeCodeStore.delete(code);
+    return null;
+  }
+  exchangeCodeStore.delete(code);
+  return stored.authResponse;
 }
 
 // ==================== Auth Response ====================

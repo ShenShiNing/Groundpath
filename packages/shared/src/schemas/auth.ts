@@ -37,6 +37,10 @@ export const refreshRequestSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+export const oauthExchangeRequestSchema = z.object({
+  code: z.string().min(1, 'OAuth exchange code is required'),
+});
+
 export const registerRequestSchema = z
   .object({
     username: usernameSchema,
@@ -65,6 +69,7 @@ export const changePasswordRequestSchema = z
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
+export type OAuthExchangeRequest = z.infer<typeof oauthExchangeRequestSchema>;
 export type DeviceInfo = z.infer<typeof deviceInfoSchema>;
 export type RegisterRequest = z.infer<typeof registerRequestSchema>;
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;

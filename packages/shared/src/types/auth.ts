@@ -37,6 +37,7 @@ export interface AuthResponse {
 export type {
   LoginRequest,
   RefreshRequest,
+  OAuthExchangeRequest,
   DeviceInfo,
   RegisterRequest,
   ChangePasswordRequest,
