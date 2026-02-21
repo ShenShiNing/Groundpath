@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
 import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
@@ -6,11 +7,13 @@ import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenPayload } from '@shared/types';
 import { toUserPublicInfo } from '@shared/utils';
 import { Errors } from '@shared/errors';
+import { authConfig, oauthConfig } from '@config/env';
 import { userService } from '../../user';
 import { userAuthRepository } from '../repositories/user-auth.repository';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from '../services/token.service';
-import type { OAuthStateData, OAuthProviderType, OAuthUserData } from './oauth.types';
+import { oauthExchangeCodeRepository } from '../repositories/oauth-exchange-code.repository';
+import type { OAuthProviderType, OAuthUserData } from './oauth.types';
 import { detectDevice } from '../../logs/services/device-detection.service';
 import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
 import { createLogger } from '@shared/logger';
@@ -19,60 +22,45 @@ const logger = createLogger('oauth.service');
 
 // ==================== State Store ====================
 
-// In-memory state store (for production, use Redis)
-const stateStore = new Map<string, OAuthStateData>();
-const exchangeCodeStore = new Map<string, { authResponse: AuthResponse; expiresAt: number }>();
+interface OAuthStateTokenPayload {
+  returnUrl: string;
+  purpose: 'oauth_state';
+}
 
 /**
- * Generate a state token and store it with the return URL
+ * Generate a signed state token (stateless, multi-instance safe)
  */
 export function generateState(returnUrl: string = '/'): string {
-  const state = uuidv4();
-
-  // Store state with expiration (5 minutes)
-  stateStore.set(state, {
+  const payload: OAuthStateTokenPayload = {
     returnUrl,
-    expiresAt: Date.now() + 5 * 60 * 1000,
-  });
-
-  // Clean up expired states
-  cleanupExpiredStates();
-
-  return state;
+    purpose: 'oauth_state',
+  };
+  const options: SignOptions = {
+    expiresIn: '5m',
+    algorithm: 'HS256',
+    issuer: authConfig.jwtClaims.issuer,
+    audience: authConfig.jwtClaims.audience,
+  };
+  return jwt.sign(payload, oauthConfig.stateSecret, options);
 }
 
 /**
  * Validate state parameter and return stored data
  */
 export function validateState(state: string): { returnUrl: string } | null {
-  const stored = stateStore.get(state);
-  if (!stored || stored.expiresAt < Date.now()) {
-    stateStore.delete(state);
+  try {
+    const decoded = jwt.verify(state, oauthConfig.stateSecret, {
+      algorithms: ['HS256'],
+      issuer: authConfig.jwtClaims.issuer,
+      audience: authConfig.jwtClaims.audience,
+    }) as JwtPayload & OAuthStateTokenPayload;
+
+    if (decoded.purpose !== 'oauth_state' || typeof decoded.returnUrl !== 'string') {
+      return null;
+    }
+    return { returnUrl: decoded.returnUrl };
+  } catch {
     return null;
-  }
-
-  stateStore.delete(state);
-  return { returnUrl: stored.returnUrl };
-}
-
-/**
- * Clean up expired state entries
- */
-function cleanupExpiredStates(): void {
-  const now = Date.now();
-  for (const [key, value] of stateStore.entries()) {
-    if (value.expiresAt < now) {
-      stateStore.delete(key);
-    }
-  }
-}
-
-function cleanupExpiredExchangeCodes(): void {
-  const now = Date.now();
-  for (const [key, value] of exchangeCodeStore.entries()) {
-    if (value.expiresAt < now) {
-      exchangeCodeStore.delete(key);
-    }
   }
 }
 
@@ -80,27 +68,17 @@ function cleanupExpiredExchangeCodes(): void {
  * Generate one-time exchange code for frontend callback.
  * The frontend exchanges this code for auth payload via API.
  */
-export function createOAuthExchangeCode(authResponse: AuthResponse): string {
+export async function createOAuthExchangeCode(authResponse: AuthResponse): Promise<string> {
   const code = uuidv4();
-  exchangeCodeStore.set(code, {
-    authResponse,
-    expiresAt: Date.now() + 60 * 1000,
-  });
-  cleanupExpiredExchangeCodes();
+  await oauthExchangeCodeRepository.create(code, authResponse, 60);
   return code;
 }
 
 /**
  * Consume one-time OAuth exchange code.
  */
-export function consumeOAuthExchangeCode(code: string): AuthResponse | null {
-  const stored = exchangeCodeStore.get(code);
-  if (!stored || stored.expiresAt < Date.now()) {
-    exchangeCodeStore.delete(code);
-    return null;
-  }
-  exchangeCodeStore.delete(code);
-  return stored.authResponse;
+export function consumeOAuthExchangeCode(code: string): Promise<AuthResponse | null> {
+  return oauthExchangeCodeRepository.consume(code);
 }
 
 // ==================== Auth Response ====================

@@ -12,6 +12,7 @@ export * from './services/token-cleanup.service';
 export * from './repositories/refresh-token.repository';
 export * from './repositories/user-auth.repository';
 export * from './repositories/login-log.repository';
+export * from './repositories/oauth-exchange-code.repository';
 
 // Verification (sub-module)
 export * from './verification/email.controller';

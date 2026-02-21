@@ -68,7 +68,11 @@ export const llmService = {
     const start = Date.now();
 
     try {
-      if (overrides?.provider || overrides?.apiKey) {
+      const hasOverrides =
+        overrides !== undefined &&
+        Object.values(overrides).some((value) => value !== undefined && value !== null);
+
+      if (hasOverrides) {
         // Test with provided overrides
         const config = await llmConfigService.getFullConfig(userId);
         const finalProvider = overrides.provider ?? config?.provider ?? 'openai';

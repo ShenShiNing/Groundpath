@@ -136,8 +136,8 @@ export function AISettingsForm() {
     store.setTestResult('testing', '测试连接中...');
     testMutation.mutate(
       {
+        ...(effectiveModel && { model: effectiveModel }),
         ...(values.provider !== config?.provider && { provider: values.provider }),
-        ...(effectiveModel !== config?.model && { model: effectiveModel }),
         ...(values.apiKey && { apiKey: values.apiKey }),
         ...(values.baseUrl && { baseUrl: values.baseUrl }),
       },

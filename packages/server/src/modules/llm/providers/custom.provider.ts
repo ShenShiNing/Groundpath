@@ -23,7 +23,7 @@ export class CustomProvider implements LLMProvider {
     if (!baseUrl) throw new Error('Base URL is required for custom provider');
     this.apiKey = apiKey;
     this.model = model;
-    this.baseUrl = baseUrl.replace(/\/$/, '');
+    this.baseUrl = normalizeCustomBaseUrl(baseUrl);
   }
 
   async generate(messages: ChatMessage[], options?: GenerateOptions): Promise<string> {
@@ -123,25 +123,46 @@ export class CustomProvider implements LLMProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const result = await this.generate([{ role: 'user', content: 'hi' }], { maxTokens: 5 });
-      return !!result;
-    } catch (error) {
-      const errorObj = error as { status?: number };
-      // If we got an HTTP response, the connection is valid
-      if (errorObj.status !== undefined) {
-        logger.info(
-          { status: errorObj.status, provider: 'custom' },
-          'Health check passed (API reachable)'
+      const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [{ role: 'user', content: 'hi' }],
+          max_tokens: 5,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Custom API error: ${response.status}${errorText ? ` - ${errorText.slice(0, 300)}` : ''}`
         );
-        return true;
       }
+
+      return true;
+    } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const cause = error instanceof Error && error.cause ? String(error.cause) : undefined;
       logger.warn(
         { errorMessage, cause, baseUrl: this.baseUrl, provider: 'custom' },
         'Health check failed'
       );
-      return false;
+      throw new Error(errorMessage);
     }
   }
+}
+
+function normalizeCustomBaseUrl(baseUrl: string): string {
+  return baseUrl
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/v1\/chat\/completions$/i, '')
+    .replace(/\/chat\/completions$/i, '')
+    .replace(/\/v1\/models$/i, '')
+    .replace(/\/models$/i, '')
+    .replace(/\/v1$/i, '');
 }

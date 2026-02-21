@@ -98,7 +98,7 @@ export const oauthController = {
 
       // Redirect to frontend with one-time code (refresh token sent via cookie)
       setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
-      const exchangeCode = createOAuthExchangeCode(authResponse);
+      const exchangeCode = await createOAuthExchangeCode(authResponse);
 
       const callbackUrl = buildCallbackUrl(returnUrl, {
         code: exchangeCode,
@@ -155,7 +155,7 @@ export const oauthController = {
 
       // Redirect to frontend with one-time code (refresh token sent via cookie)
       setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
-      const exchangeCode = createOAuthExchangeCode(authResponse);
+      const exchangeCode = await createOAuthExchangeCode(authResponse);
 
       const callbackUrl = buildCallbackUrl(returnUrl, {
         code: exchangeCode,
@@ -178,7 +178,7 @@ export const oauthController = {
       throw Errors.validation('OAuth exchange code is required');
     }
 
-    const authResponse = consumeOAuthExchangeCode(code);
+    const authResponse = await consumeOAuthExchangeCode(code);
     if (!authResponse) {
       systemLogger.securityEvent(
         'auth.oauth.exchange.invalid_code',

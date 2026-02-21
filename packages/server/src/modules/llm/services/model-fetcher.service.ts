@@ -233,7 +233,7 @@ export const modelFetcherService = {
       return [];
     }
 
-    const baseUrl = options.baseUrl.replace(/\/$/, '');
+    const baseUrl = normalizeCustomBaseUrl(options.baseUrl);
 
     const response = await fetch(`${baseUrl}/v1/models`, {
       method: 'GET',
@@ -261,3 +261,14 @@ export const modelFetcherService = {
     }));
   },
 };
+
+function normalizeCustomBaseUrl(baseUrl: string): string {
+  return baseUrl
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/v1\/chat\/completions$/i, '')
+    .replace(/\/chat\/completions$/i, '')
+    .replace(/\/v1\/models$/i, '')
+    .replace(/\/models$/i, '')
+    .replace(/\/v1$/i, '');
+}
