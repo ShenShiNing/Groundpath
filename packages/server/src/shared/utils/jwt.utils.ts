@@ -6,6 +6,54 @@ import { AppError, Errors } from '../errors';
 
 // ==================== Access Token ====================
 
+interface KeyCandidate {
+  keyId?: string;
+  secret: string;
+}
+
+function getTokenKid(token: string): string | undefined {
+  const decoded = jwt.decode(token, { complete: true }) as
+    | (jwt.Jwt & { header: { kid?: string } })
+    | null;
+  return decoded?.header?.kid;
+}
+
+function dedupeCandidates(candidates: KeyCandidate[]): KeyCandidate[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = `${candidate.keyId ?? ''}:${candidate.secret}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function resolveVerificationCandidates(
+  token: string,
+  current: { keyId: string; secret: string },
+  previousKeys: Array<{ keyId: string; secret: string }>,
+  previousSecrets: string[]
+): KeyCandidate[] {
+  const tokenKid = getTokenKid(token);
+  if (tokenKid) {
+    if (tokenKid === current.keyId) {
+      return [{ keyId: current.keyId, secret: current.secret }];
+    }
+    const matchedLegacyKey = previousKeys.find((key) => key.keyId === tokenKid);
+    if (matchedLegacyKey) {
+      return [{ keyId: matchedLegacyKey.keyId, secret: matchedLegacyKey.secret }];
+    }
+  }
+
+  return dedupeCandidates([
+    { keyId: current.keyId, secret: current.secret },
+    ...previousKeys.map((key) => ({ keyId: key.keyId, secret: key.secret })),
+    ...previousSecrets.map((secret) => ({ secret })),
+  ]);
+}
+
 function verifyWithRotatingSecrets<T extends JwtPayload>(token: string, secrets: string[]): T {
   let lastJwtError: jwt.JsonWebTokenError | null = null;
 
@@ -55,10 +103,19 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
  */
 export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
-    const decoded = verifyWithRotatingSecrets<JwtPayload & AccessTokenPayload>(token, [
-      authConfig.accessToken.secret,
-      ...authConfig.accessToken.previousSecrets,
-    ]);
+    const candidates = resolveVerificationCandidates(
+      token,
+      {
+        keyId: authConfig.accessToken.keyId,
+        secret: authConfig.accessToken.secret,
+      },
+      authConfig.accessToken.previousKeys,
+      authConfig.accessToken.previousSecrets
+    );
+    const decoded = verifyWithRotatingSecrets<JwtPayload & AccessTokenPayload>(
+      token,
+      candidates.map((candidate) => candidate.secret)
+    );
 
     return {
       sub: decoded.sub!,
@@ -106,10 +163,19 @@ export function generateRefreshToken(userId: string, tokenId: string): string {
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
   try {
-    const decoded = verifyWithRotatingSecrets<JwtPayload & RefreshTokenPayload>(token, [
-      authConfig.refreshToken.secret,
-      ...authConfig.refreshToken.previousSecrets,
-    ]);
+    const candidates = resolveVerificationCandidates(
+      token,
+      {
+        keyId: authConfig.refreshToken.keyId,
+        secret: authConfig.refreshToken.secret,
+      },
+      authConfig.refreshToken.previousKeys,
+      authConfig.refreshToken.previousSecrets
+    );
+    const decoded = verifyWithRotatingSecrets<JwtPayload & RefreshTokenPayload>(
+      token,
+      candidates.map((candidate) => candidate.secret)
+    );
 
     if (decoded.type !== 'refresh') {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token type');

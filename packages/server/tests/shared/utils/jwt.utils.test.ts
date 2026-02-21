@@ -137,6 +137,31 @@ describe('jwtUtils', () => {
       }
     });
 
+    it('should verify token signed with previous access key matched by kid', () => {
+      const previousKeys = authConfig.accessToken.previousKeys as unknown as Array<{
+        keyId: string;
+        secret: string;
+      }>;
+      const originalKeys = [...previousKeys];
+      try {
+        previousKeys.push({ keyId: 'access-v0', secret: 'legacy-access-key-secret' });
+
+        const legacyToken = jwt.sign(validPayload, 'legacy-access-key-secret', {
+          expiresIn: '15m',
+          algorithm: 'HS256',
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
+          keyid: 'access-v0',
+        });
+
+        const result = verifyAccessToken(legacyToken);
+        expect(result.sub).toBe(validPayload.sub);
+      } finally {
+        previousKeys.length = 0;
+        previousKeys.push(...originalKeys);
+      }
+    });
+
     it('should throw TOKEN_EXPIRED error for expired token', () => {
       // Create an expired token
       const expiredToken = jwt.sign(validPayload, authConfig.accessToken.secret, {
@@ -350,6 +375,35 @@ describe('jwtUtils', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(AppError);
         expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
+      }
+    });
+
+    it('should verify refresh token signed with previous key matched by kid', () => {
+      const previousKeys = authConfig.refreshToken.previousKeys as unknown as Array<{
+        keyId: string;
+        secret: string;
+      }>;
+      const originalKeys = [...previousKeys];
+      try {
+        previousKeys.push({ keyId: 'refresh-v0', secret: 'legacy-refresh-key-secret' });
+
+        const legacyToken = jwt.sign(
+          { sub: userId, jti: tokenId, type: 'refresh' },
+          'legacy-refresh-key-secret',
+          {
+            expiresIn: '7d',
+            algorithm: 'HS256',
+            issuer: authConfig.jwtClaims.issuer,
+            audience: authConfig.jwtClaims.audience,
+            keyid: 'refresh-v0',
+          }
+        );
+
+        const result = verifyRefreshToken(legacyToken);
+        expect(result.sub).toBe(userId);
+      } finally {
+        previousKeys.length = 0;
+        previousKeys.push(...originalKeys);
       }
     });
 

@@ -57,6 +57,8 @@ const authSchema = z.object({
   JWT_REFRESH_KEY_ID: z.string().default('refresh-v1'),
   JWT_ACCESS_PREVIOUS_SECRETS: z.string().default(''),
   JWT_REFRESH_PREVIOUS_SECRETS: z.string().default(''),
+  JWT_ACCESS_PREVIOUS_KEYS: z.string().default(''),
+  JWT_REFRESH_PREVIOUS_KEYS: z.string().default(''),
   JWT_ISSUER: z.string().default('knowledge-agent'),
   JWT_AUDIENCE: z.string().default('knowledge-agent-client'),
   ENCRYPTION_KEY: z.string().min(32),
@@ -198,6 +200,31 @@ function parseSecretList(value: string): string[] {
     .filter(Boolean);
 }
 
+interface JwtKeySecret {
+  keyId: string;
+  secret: string;
+}
+
+function parseKeySecretList(value: string): JwtKeySecret[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const separatorIndex = entry.indexOf(':');
+      if (separatorIndex <= 0 || separatorIndex === entry.length - 1) {
+        return null;
+      }
+      const keyId = entry.slice(0, separatorIndex).trim();
+      const secret = entry.slice(separatorIndex + 1).trim();
+      if (!keyId || !secret) {
+        return null;
+      }
+      return { keyId, secret };
+    })
+    .filter((item): item is JwtKeySecret => item !== null);
+}
+
 // ==================== Modular Config Exports ====================
 
 /** Raw environment variables (use specific configs below when possible) */
@@ -229,12 +256,14 @@ export const authConfig = {
     expiresInSeconds: validatedEnv.ACCESS_TOKEN_EXPIRES_IN,
     keyId: validatedEnv.JWT_ACCESS_KEY_ID,
     previousSecrets: parseSecretList(validatedEnv.JWT_ACCESS_PREVIOUS_SECRETS),
+    previousKeys: parseKeySecretList(validatedEnv.JWT_ACCESS_PREVIOUS_KEYS),
   },
   refreshToken: {
     secret: validatedEnv.JWT_REFRESH_SECRET,
     expiresInSeconds: validatedEnv.REFRESH_TOKEN_EXPIRES_IN,
     keyId: validatedEnv.JWT_REFRESH_KEY_ID,
     previousSecrets: parseSecretList(validatedEnv.JWT_REFRESH_PREVIOUS_SECRETS),
+    previousKeys: parseKeySecretList(validatedEnv.JWT_REFRESH_PREVIOUS_KEYS),
   },
   bcrypt: {
     saltRounds: validatedEnv.BCRYPT_SALT_ROUNDS,

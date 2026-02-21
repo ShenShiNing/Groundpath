@@ -16,7 +16,7 @@
 - [x] 阶段 0：建立实施文档与基线
 - [x] 阶段 1：OAuth 临时态存储改造（移除内存 Map）
 - [x] 阶段 2：refresh 原子消费（替代 5 秒窗口检测）
-- [ ] 阶段 3：kid 精确验签 + keyring 配置
+- [x] 阶段 3：kid 精确验签 + keyring 配置
 - [ ] 阶段 4：access token 即时失效机制
 - [ ] 阶段 5：cookie 策略配置化
 - [ ] 阶段 6：refresh 读路径缓存与降级容错
@@ -45,4 +45,18 @@
   - `already_revoked`：阻断并记录重放事件（不再误触发全量吊销）
   - `expired/not_found`：按过期/已撤销处理
 - 更新 token service 单测 mock 与断言，匹配原子消费语义。
+- 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
+
+### 阶段 3
+
+- 配置层新增 keyring 支持：
+  - `JWT_ACCESS_PREVIOUS_KEYS`
+  - `JWT_REFRESH_PREVIOUS_KEYS`
+  - 格式：`kid:secret,kid:secret`
+- `jwt.utils` 新增 `kid` 读取与候选密钥解析逻辑：
+  - 若 token header 带 `kid` 且命中当前或历史 key，则仅使用对应 secret 验签。
+  - 若缺失或未知 `kid`，回退到当前 secret + 历史 key + 历史 secret 的兼容链路。
+- 新增单测覆盖：
+  - access token 使用历史 `kid` 验签成功
+  - refresh token 使用历史 `kid` 验签成功
 - 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
