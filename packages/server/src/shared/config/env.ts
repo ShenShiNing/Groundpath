@@ -67,6 +67,8 @@ const authSchema = z.object({
   REFRESH_TOKEN_EXPIRES_IN: z.coerce.number().default(604800), // 7 days
   // Password hashing
   BCRYPT_SALT_ROUNDS: z.coerce.number().min(4).max(31).default(12),
+  AUTH_COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
+  AUTH_COOKIE_DOMAIN: z.string().default(''),
 });
 
 // -------------------- Email (SMTP) --------------------
@@ -273,6 +275,10 @@ export const authConfig = {
     audience: validatedEnv.JWT_AUDIENCE,
   },
   encryptionKey: validatedEnv.ENCRYPTION_KEY,
+  cookie: {
+    sameSite: validatedEnv.AUTH_COOKIE_SAMESITE,
+    domain: validatedEnv.AUTH_COOKIE_DOMAIN || undefined,
+  },
 } as const;
 
 /** Email (SMTP) configuration */

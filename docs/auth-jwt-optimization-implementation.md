@@ -18,7 +18,7 @@
 - [x] 阶段 2：refresh 原子消费（替代 5 秒窗口检测）
 - [x] 阶段 3：kid 精确验签 + keyring 配置
 - [x] 阶段 4：access token 即时失效机制
-- [ ] 阶段 5：cookie 策略配置化
+- [x] 阶段 5：cookie 策略配置化
 - [ ] 阶段 6：refresh 读路径缓存与降级容错
 
 ## 阶段日志
@@ -72,4 +72,13 @@
   - 全端登出
   - 修改密码 / 重置密码并登出全部设备
   - refresh token mismatch 全会话吊销场景
+- 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
+
+### 阶段 5
+
+- 新增 cookie 配置项：
+  - `AUTH_COOKIE_SAMESITE`（`strict | lax | none`）
+  - `AUTH_COOKIE_DOMAIN`（可选）
+- `cookie.utils` 统一通过配置构建 cookie 选项，`set/clear` 保持一致。
+- 兼容处理：当 `SameSite=None` 时自动强制 `Secure=true`（即便非生产环境），避免浏览器拒收。
 - 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
