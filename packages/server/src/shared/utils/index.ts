@@ -21,3 +21,9 @@ export {
   clearRefreshTokenCookie,
   getRefreshTokenFromRequest,
 } from './cookie.utils';
+
+export {
+  hashRefreshToken,
+  safeCompareTokenHash,
+  isStoredRefreshTokenMatch,
+} from './refresh-token.utils';

@@ -4,6 +4,7 @@ import { db } from '@shared/db';
 import { now, addSeconds, getDbContext, type Transaction } from '@shared/db/db.utils';
 import { refreshTokens, type RefreshToken } from '@shared/db/schema/auth/refresh-tokens.schema';
 import { authConfig } from '@config/env';
+import { hashRefreshToken } from '@shared/utils/refresh-token.utils';
 
 /**
  * Refresh token repository for database operations
@@ -21,10 +22,11 @@ export const refreshTokenRepository = {
     tx?: Transaction
   ): Promise<void> {
     const ctx = getDbContext(tx);
+    const tokenHash = hashRefreshToken(token);
     await ctx.insert(refreshTokens).values({
       id: tokenId,
       userId,
-      token,
+      token: tokenHash,
       ipAddress,
       deviceInfo,
       revoked: false,
@@ -77,10 +79,11 @@ export const refreshTokenRepository = {
    * Find refresh token by token string
    */
   async findByToken(token: string): Promise<RefreshToken | undefined> {
+    const tokenHash = hashRefreshToken(token);
     const result = await db
       .select()
       .from(refreshTokens)
-      .where(eq(refreshTokens.token, token))
+      .where(or(eq(refreshTokens.token, tokenHash), eq(refreshTokens.token, token)))
       .limit(1);
 
     return result[0];

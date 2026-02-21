@@ -5,6 +5,7 @@ import { authConfig } from '@config/env';
 import type { AccessTokenPayload } from '@shared/types';
 import { Errors } from '@shared/errors';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@shared/utils';
+import { isStoredRefreshTokenMatch } from '@shared/utils/refresh-token.utils';
 import { withTransaction, type Transaction } from '@shared/db/db.utils';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userService } from '../../user';
@@ -68,7 +69,7 @@ export const tokenService = {
       }
 
       // Verify token string matches (extra security)
-      if (storedToken.token !== refreshToken) {
+      if (!isStoredRefreshTokenMatch(storedToken.token, refreshToken)) {
         // Token mismatch - possible token reuse attack
         // Revoke all tokens for this user as a security measure
         await refreshTokenRepository.revokeAllForUser(payload.sub, tx);

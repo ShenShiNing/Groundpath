@@ -3,6 +3,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { Errors, handleError } from '../errors';
 import { extractBearerToken, verifyAccessToken, verifyRefreshToken } from '../utils/jwt.utils';
 import { getRefreshTokenFromRequest } from '../utils/cookie.utils';
+import { isStoredRefreshTokenMatch } from '../utils/refresh-token.utils';
 import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
 
 /**
@@ -78,7 +79,7 @@ export async function authenticateRefreshToken(
 
     // Verify token exists in database and is valid
     const storedToken = await refreshTokenRepository.findValidById(payload.jti);
-    if (!storedToken || storedToken.token !== refreshToken) {
+    if (!storedToken || !isStoredRefreshTokenMatch(storedToken.token, refreshToken)) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
     }
 
