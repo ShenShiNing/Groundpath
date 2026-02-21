@@ -53,6 +53,12 @@ const databaseSchema = z.object({
 const authSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1),
   JWT_REFRESH_SECRET: z.string().min(1),
+  JWT_ACCESS_KEY_ID: z.string().default('access-v1'),
+  JWT_REFRESH_KEY_ID: z.string().default('refresh-v1'),
+  JWT_ACCESS_PREVIOUS_SECRETS: z.string().default(''),
+  JWT_REFRESH_PREVIOUS_SECRETS: z.string().default(''),
+  JWT_ISSUER: z.string().default('knowledge-agent'),
+  JWT_AUDIENCE: z.string().default('knowledge-agent-client'),
   ENCRYPTION_KEY: z.string().min(32),
   // Token expiration (in seconds)
   ACCESS_TOKEN_EXPIRES_IN: z.coerce.number().default(900), // 15 minutes
@@ -184,6 +190,13 @@ if (!result.success) {
 
 const validatedEnv = result.data;
 
+function parseSecretList(value: string): string[] {
+  return value
+    .split(',')
+    .map((secret) => secret.trim())
+    .filter(Boolean);
+}
+
 // ==================== Modular Config Exports ====================
 
 /** Raw environment variables (use specific configs below when possible) */
@@ -213,13 +226,21 @@ export const authConfig = {
   accessToken: {
     secret: validatedEnv.JWT_ACCESS_SECRET,
     expiresInSeconds: validatedEnv.ACCESS_TOKEN_EXPIRES_IN,
+    keyId: validatedEnv.JWT_ACCESS_KEY_ID,
+    previousSecrets: parseSecretList(validatedEnv.JWT_ACCESS_PREVIOUS_SECRETS),
   },
   refreshToken: {
     secret: validatedEnv.JWT_REFRESH_SECRET,
     expiresInSeconds: validatedEnv.REFRESH_TOKEN_EXPIRES_IN,
+    keyId: validatedEnv.JWT_REFRESH_KEY_ID,
+    previousSecrets: parseSecretList(validatedEnv.JWT_REFRESH_PREVIOUS_SECRETS),
   },
   bcrypt: {
     saltRounds: validatedEnv.BCRYPT_SALT_ROUNDS,
+  },
+  jwtClaims: {
+    issuer: validatedEnv.JWT_ISSUER,
+    audience: validatedEnv.JWT_AUDIENCE,
   },
   encryptionKey: validatedEnv.ENCRYPTION_KEY,
 } as const;

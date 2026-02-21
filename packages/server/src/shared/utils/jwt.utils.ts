@@ -6,6 +6,35 @@ import { AppError, Errors } from '../errors';
 
 // ==================== Access Token ====================
 
+function verifyWithRotatingSecrets<T extends JwtPayload>(token: string, secrets: string[]): T {
+  let lastJwtError: jwt.JsonWebTokenError | null = null;
+
+  for (const secret of secrets) {
+    try {
+      return jwt.verify(token, secret, {
+        algorithms: ['HS256'],
+        issuer: authConfig.jwtClaims.issuer,
+        audience: authConfig.jwtClaims.audience,
+      }) as T;
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw error;
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        lastJwtError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (lastJwtError) {
+    throw lastJwtError;
+  }
+
+  throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token');
+}
+
 /**
  * Generate an access token containing user information
  */
@@ -13,6 +42,9 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
   const options: SignOptions = {
     expiresIn: authConfig.accessToken.expiresInSeconds,
     algorithm: 'HS256',
+    issuer: authConfig.jwtClaims.issuer,
+    audience: authConfig.jwtClaims.audience,
+    keyid: authConfig.accessToken.keyId,
   };
 
   return jwt.sign(payload, authConfig.accessToken.secret, options);
@@ -23,9 +55,10 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
  */
 export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
-    const decoded = jwt.verify(token, authConfig.accessToken.secret, {
-      algorithms: ['HS256'],
-    }) as JwtPayload & AccessTokenPayload;
+    const decoded = verifyWithRotatingSecrets<JwtPayload & AccessTokenPayload>(token, [
+      authConfig.accessToken.secret,
+      ...authConfig.accessToken.previousSecrets,
+    ]);
 
     return {
       sub: decoded.sub!,
@@ -60,6 +93,9 @@ export function generateRefreshToken(userId: string, tokenId: string): string {
   const options: SignOptions = {
     expiresIn: authConfig.refreshToken.expiresInSeconds,
     algorithm: 'HS256',
+    issuer: authConfig.jwtClaims.issuer,
+    audience: authConfig.jwtClaims.audience,
+    keyid: authConfig.refreshToken.keyId,
   };
 
   return jwt.sign(payload, authConfig.refreshToken.secret, options);
@@ -70,9 +106,10 @@ export function generateRefreshToken(userId: string, tokenId: string): string {
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
   try {
-    const decoded = jwt.verify(token, authConfig.refreshToken.secret, {
-      algorithms: ['HS256'],
-    }) as JwtPayload & RefreshTokenPayload;
+    const decoded = verifyWithRotatingSecrets<JwtPayload & RefreshTokenPayload>(token, [
+      authConfig.refreshToken.secret,
+      ...authConfig.refreshToken.previousSecrets,
+    ]);
 
     if (decoded.type !== 'refresh') {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token type');

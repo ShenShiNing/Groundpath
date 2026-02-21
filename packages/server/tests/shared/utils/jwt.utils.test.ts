@@ -105,11 +105,45 @@ describe('jwtUtils', () => {
       expect(result.emailVerified).toBe(validPayload.emailVerified);
     });
 
+    it('should include issuer, audience and key id claims', () => {
+      const token = generateAccessToken(validPayload);
+      const decoded = jwt.decode(token, { complete: true }) as jwt.Jwt & {
+        payload: jwt.JwtPayload;
+      };
+
+      expect(decoded.header.kid).toBe(authConfig.accessToken.keyId);
+      expect(decoded.payload.iss).toBe(authConfig.jwtClaims.issuer);
+      expect(decoded.payload.aud).toBe(authConfig.jwtClaims.audience);
+    });
+
+    it('should verify token signed with previous access secret', () => {
+      const previousSecrets = authConfig.accessToken.previousSecrets as unknown as string[];
+      const originalSecrets = [...previousSecrets];
+      try {
+        previousSecrets.push('legacy-access-secret');
+
+        const legacyToken = jwt.sign(validPayload, 'legacy-access-secret', {
+          expiresIn: '15m',
+          algorithm: 'HS256',
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
+        });
+
+        const result = verifyAccessToken(legacyToken);
+        expect(result.sub).toBe(validPayload.sub);
+      } finally {
+        previousSecrets.length = 0;
+        previousSecrets.push(...originalSecrets);
+      }
+    });
+
     it('should throw TOKEN_EXPIRED error for expired token', () => {
       // Create an expired token
       const expiredToken = jwt.sign(validPayload, authConfig.accessToken.secret, {
         expiresIn: '-1s', // Already expired
         algorithm: 'HS256',
+        issuer: authConfig.jwtClaims.issuer,
+        audience: authConfig.jwtClaims.audience,
       });
 
       expect(() => verifyAccessToken(expiredToken)).toThrow(AppError);
@@ -139,6 +173,8 @@ describe('jwtUtils', () => {
       const tokenWithWrongSecret = jwt.sign(validPayload, 'wrong-secret', {
         expiresIn: '15m',
         algorithm: 'HS256',
+        issuer: authConfig.jwtClaims.issuer,
+        audience: authConfig.jwtClaims.audience,
       });
 
       expect(() => verifyAccessToken(tokenWithWrongSecret)).toThrow(AppError);
@@ -181,6 +217,8 @@ describe('jwtUtils', () => {
       const tokenWithDiffAlgo = jwt.sign(validPayload, authConfig.accessToken.secret, {
         expiresIn: '15m',
         algorithm: 'HS384',
+        issuer: authConfig.jwtClaims.issuer,
+        audience: authConfig.jwtClaims.audience,
       });
 
       expect(() => verifyAccessToken(tokenWithDiffAlgo)).toThrow(AppError);
@@ -265,7 +303,12 @@ describe('jwtUtils', () => {
       const expiredToken = jwt.sign(
         { sub: userId, jti: tokenId, type: 'refresh' },
         authConfig.refreshToken.secret,
-        { expiresIn: '-1s', algorithm: 'HS256' }
+        {
+          expiresIn: '-1s',
+          algorithm: 'HS256',
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
+        }
       );
 
       expect(() => verifyRefreshToken(expiredToken)).toThrow(AppError);
@@ -293,7 +336,12 @@ describe('jwtUtils', () => {
       const tokenWithWrongSecret = jwt.sign(
         { sub: userId, jti: tokenId, type: 'refresh' },
         'wrong-secret',
-        { expiresIn: '7d', algorithm: 'HS256' }
+        {
+          expiresIn: '7d',
+          algorithm: 'HS256',
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
+        }
       );
 
       expect(() => verifyRefreshToken(tokenWithWrongSecret)).toThrow(AppError);
@@ -309,7 +357,12 @@ describe('jwtUtils', () => {
       const tokenWithWrongType = jwt.sign(
         { sub: userId, jti: tokenId, type: 'access' },
         authConfig.refreshToken.secret,
-        { expiresIn: '7d', algorithm: 'HS256' }
+        {
+          expiresIn: '7d',
+          algorithm: 'HS256',
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
+        }
       );
 
       expect(() => verifyRefreshToken(tokenWithWrongType)).toThrow(AppError);
@@ -326,7 +379,12 @@ describe('jwtUtils', () => {
       const tokenWithoutType = jwt.sign(
         { sub: userId, jti: tokenId },
         authConfig.refreshToken.secret,
-        { expiresIn: '7d', algorithm: 'HS256' }
+        {
+          expiresIn: '7d',
+          algorithm: 'HS256',
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
+        }
       );
 
       expect(() => verifyRefreshToken(tokenWithoutType)).toThrow(AppError);
