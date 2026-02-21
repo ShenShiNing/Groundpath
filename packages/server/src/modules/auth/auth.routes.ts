@@ -54,7 +54,7 @@ router.post(
 
 // ==================== Protected Routes (Refresh Token Auth) ====================
 
-// Logout current device - requires refresh token in body
+// Logout current device - requires refresh token cookie
 router.post('/logout', authenticateRefreshToken, authController.logout);
 
 // ==================== Protected Routes (Access Token Auth) ====================

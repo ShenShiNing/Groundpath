@@ -60,7 +60,7 @@ export async function optionalAuthenticate(
 }
 
 /**
- * Middleware to authenticate using refresh token from body
+ * Middleware to authenticate using refresh token from HttpOnly cookie
  * Used for refresh and logout endpoints
  */
 export async function authenticateRefreshToken(

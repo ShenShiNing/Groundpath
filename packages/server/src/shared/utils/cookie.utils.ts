@@ -29,8 +29,8 @@ export function clearRefreshTokenCookie(res: Response): void {
 }
 
 /**
- * Read refresh token from cookie, falling back to request body
+ * Read refresh token from HttpOnly cookie only.
  */
 export function getRefreshTokenFromRequest(req: Request): string | undefined {
-  return (req.cookies?.[COOKIE_NAME] as string | undefined) || req.body?.refreshToken;
+  return req.cookies?.[COOKIE_NAME] as string | undefined;
 }
