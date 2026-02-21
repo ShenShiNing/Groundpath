@@ -7,6 +7,7 @@ import { Errors } from '@shared/errors';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@shared/utils';
 import { isStoredRefreshTokenMatch } from '@shared/utils/refresh-token.utils';
 import { withTransaction, type Transaction } from '@shared/db/db.utils';
+import { systemLogger } from '@shared/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userService } from '../../user';
 
@@ -73,6 +74,16 @@ export const tokenService = {
         // Token mismatch - possible token reuse attack
         // Revoke all tokens for this user as a security measure
         await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
+        systemLogger.securityEvent(
+          'auth.refresh.token_mismatch',
+          'Refresh token mismatch detected, revoked all user sessions',
+          {
+            userId: payload.sub,
+            tokenId: payload.jti,
+            ipAddress,
+            deviceInfo,
+          }
+        );
         throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
       }
 
@@ -89,6 +100,16 @@ export const tokenService = {
       if (wasRecentlyUsed) {
         // Possible replay attack - revoke all tokens for this user
         await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
+        systemLogger.securityEvent(
+          'auth.refresh.replay_detected',
+          'Refresh token replay detected, revoked all user sessions',
+          {
+            userId: payload.sub,
+            tokenId: payload.jti,
+            ipAddress,
+            deviceInfo,
+          }
+        );
         throw Errors.auth(
           AUTH_ERROR_CODES.TOKEN_INVALID,
           'Suspicious token activity detected. All sessions have been revoked.'

@@ -4,6 +4,7 @@ import type { OAuthExchangeRequest, AuthResponse } from '@knowledge-agent/shared
 import { serverConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import { sendSuccessResponse, Errors } from '@shared/errors';
+import { systemLogger } from '@shared/logger/system-logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
 import { asyncHandler } from '@shared/errors/async-handler';
@@ -179,6 +180,11 @@ export const oauthController = {
 
     const authResponse = consumeOAuthExchangeCode(code);
     if (!authResponse) {
+      systemLogger.securityEvent(
+        'auth.oauth.exchange.invalid_code',
+        'Invalid or expired OAuth exchange code used',
+        { codeLength: code.length, ipAddress: getClientIp(req) }
+      );
       throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
         'OAuth exchange code is invalid or expired',
