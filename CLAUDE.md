@@ -177,6 +177,9 @@ Import from `@knowledge-agent/shared`:
 ## Answer
 
 - When answering the question, please use Chinese.
+- 每次修改完成一个阶段性功能时，必须自动执行 Git 提交并推送到远程仓库。
+- 提交信息必须严格遵守 Git 最佳实践（推荐 Conventional Commits + 清晰正文）。
+- 提交信息中禁止包含任何类似“该提交由 Claude Code/Codex 编写”的描述。
 
 ## Code Quality & Architecture Guardrails (for Claude Code)
 

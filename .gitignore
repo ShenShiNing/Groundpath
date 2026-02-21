@@ -79,6 +79,7 @@ Desktop.ini
 .claude/
 Agent.md
 agent.md
+/.codex/skills/ui-ux-pro-max/
 
 # TanStack Router
 routeTree.gen.ts
