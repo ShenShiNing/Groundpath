@@ -203,6 +203,18 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 // ==================== Utility Functions ====================
 
 /**
+ * Read token issue time (iat, seconds since epoch) from token payload.
+ * Returns null when token cannot be decoded or iat is missing.
+ */
+export function getTokenIssuedAt(token: string): number | null {
+  const decoded = jwt.decode(token) as JwtPayload | null;
+  if (!decoded || typeof decoded.iat !== 'number') {
+    return null;
+  }
+  return decoded.iat;
+}
+
+/**
  * Extract token from Authorization header
  * Supports: "Bearer <token>" format
  */

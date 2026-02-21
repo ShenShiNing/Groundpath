@@ -4,6 +4,11 @@ import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
 import { users, type User, type NewUser } from '@shared/db/schema/user/users.schema';
 import { normalizeEmail } from '@shared/utils';
 
+export interface UserAuthState {
+  id: string;
+  status: User['status'];
+}
+
 /**
  * User repository for database operations
  */
@@ -113,6 +118,21 @@ export const userRepository = {
         password: hashedPassword,
       })
       .where(eq(users.id, userId));
+  },
+
+  /**
+   * Fetch minimal auth state used by auth middleware.
+   */
+  async findAuthStateById(userId: string): Promise<UserAuthState | undefined> {
+    const result = await db
+      .select({
+        id: users.id,
+        status: users.status,
+      })
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .limit(1);
+    return result[0];
   },
 
   /**

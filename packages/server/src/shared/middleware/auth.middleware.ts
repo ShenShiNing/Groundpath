@@ -1,10 +1,24 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { Errors, handleError } from '../errors';
-import { extractBearerToken, verifyAccessToken, verifyRefreshToken } from '../utils/jwt.utils';
+import {
+  extractBearerToken,
+  getTokenIssuedAt,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from '../utils/jwt.utils';
 import { getRefreshTokenFromRequest } from '../utils/cookie.utils';
 import { isStoredRefreshTokenMatch } from '../utils/refresh-token.utils';
 import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
+import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';
+import { userRepository } from '@modules/user/repositories/user.repository';
+
+function isTokenRevokedByTimestamp(tokenIatSeconds: number, tokenValidAfter: Date | null): boolean {
+  if (!tokenValidAfter) {
+    return false;
+  }
+  return tokenIatSeconds * 1000 <= tokenValidAfter.getTime();
+}
 
 /**
  * Middleware to authenticate requests using JWT access token
@@ -20,10 +34,22 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     // Verify and decode access token
     const payload = verifyAccessToken(token);
+    const tokenIat = getTokenIssuedAt(token);
+    if (!tokenIat) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
+    }
 
-    // Check if user is banned
-    if (payload.status === 'banned') {
+    const authState = await userRepository.findAuthStateById(payload.sub);
+    if (!authState) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+    }
+    const tokenValidAfter = await userTokenStateRepository.getTokenValidAfter(payload.sub);
+
+    if (authState.status === 'banned') {
       throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'Your account has been banned', 403);
+    }
+    if (isTokenRevokedByTimestamp(tokenIat, tokenValidAfter)) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Access token has been revoked');
     }
 
     // Attach user to request
@@ -48,7 +74,16 @@ export async function optionalAuthenticate(
 
     if (token) {
       const payload = verifyAccessToken(token);
-      if (payload.status !== 'banned') {
+      const tokenIat = getTokenIssuedAt(token);
+      const authState = tokenIat ? await userRepository.findAuthStateById(payload.sub) : undefined;
+      const tokenValidAfter =
+        tokenIat && authState ? await userTokenStateRepository.getTokenValidAfter(payload.sub) : null;
+      if (
+        tokenIat &&
+        authState &&
+        authState.status !== 'banned' &&
+        !isTokenRevokedByTimestamp(tokenIat, tokenValidAfter)
+      ) {
         req.user = payload;
       }
     }

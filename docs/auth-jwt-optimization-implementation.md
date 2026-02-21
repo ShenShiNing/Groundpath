@@ -17,7 +17,7 @@
 - [x] 阶段 1：OAuth 临时态存储改造（移除内存 Map）
 - [x] 阶段 2：refresh 原子消费（替代 5 秒窗口检测）
 - [x] 阶段 3：kid 精确验签 + keyring 配置
-- [ ] 阶段 4：access token 即时失效机制
+- [x] 阶段 4：access token 即时失效机制
 - [ ] 阶段 5：cookie 策略配置化
 - [ ] 阶段 6：refresh 读路径缓存与降级容错
 
@@ -59,4 +59,17 @@
 - 新增单测覆盖：
   - access token 使用历史 `kid` 验签成功
   - refresh token 使用历史 `kid` 验签成功
+- 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
+
+### 阶段 4
+
+- 新增 `user_token_states` 表，记录用户级 `token_valid_after`（不侵入 `users` 表结构，避免大面积类型联动）。
+- `auth.middleware` 在 access token 验签通过后，额外校验：
+  - 用户当前状态（实时 `banned`）
+  - token `iat` 是否早于 `token_valid_after`（若早于则判定为已撤销）
+- 新增 `getTokenIssuedAt` 工具用于安全读取 JWT `iat`。
+- 在高风险操作中触发 access token 即时失效：
+  - 全端登出
+  - 修改密码 / 重置密码并登出全部设备
+  - refresh token mismatch 全会话吊销场景
 - 构建验证：`pnpm -F @knowledge-agent/server build` 通过。

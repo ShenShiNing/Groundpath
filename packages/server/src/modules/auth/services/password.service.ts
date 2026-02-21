@@ -7,6 +7,7 @@ import { normalizeEmail } from '@shared/utils';
 import { authConfig } from '@config/env';
 import { userService } from '../../user';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
+import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 import { emailVerificationService } from '../verification/email-verification.service';
 import { logOperation } from '@shared/logger/operation-logger';
 
@@ -49,6 +50,7 @@ export const passwordService = {
 
       // Revoke all refresh tokens for security (force re-login on all devices)
       await refreshTokenRepository.revokeAllForUser(userId, tx);
+      await userTokenStateRepository.bumpTokenValidAfter(userId, tx);
     });
 
     // Log the operation (outside transaction - non-critical)
@@ -105,7 +107,9 @@ export const passwordService = {
 
       // Optionally revoke all sessions
       if (logoutAllDevices !== false) {
-        return refreshTokenRepository.revokeAllForUser(user.id, tx);
+        const revoked = await refreshTokenRepository.revokeAllForUser(user.id, tx);
+        await userTokenStateRepository.bumpTokenValidAfter(user.id, tx);
+        return revoked;
       }
       return undefined;
     });

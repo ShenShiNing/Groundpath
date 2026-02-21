@@ -6,6 +6,7 @@ export * from './auth/user-auths.schema';
 export * from './auth/email-verification-codes.schema';
 export * from './auth/refresh-tokens.schema';
 export * from './auth/oauth-exchange-codes.schema';
+export * from './auth/user-token-states.schema';
 
 // System schemas
 export * from './system/login-logs.schema';

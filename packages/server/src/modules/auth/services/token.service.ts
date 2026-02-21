@@ -8,6 +8,7 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@
 import { withTransaction, type Transaction } from '@shared/db/db.utils';
 import { systemLogger } from '@shared/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
+import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 import { userService } from '../../user';
 
 /**
@@ -66,6 +67,7 @@ export const tokenService = {
       const consumeResult = await refreshTokenRepository.consumeIfValid(payload.jti, refreshToken, tx);
       if (consumeResult === 'token_mismatch') {
         await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
+        await userTokenStateRepository.bumpTokenValidAfter(payload.sub, tx);
         systemLogger.securityEvent(
           'auth.refresh.token_mismatch',
           'Refresh token mismatch detected, revoked all user sessions',
@@ -107,6 +109,7 @@ export const tokenService = {
       // Check user status
       if (user.status === 'banned') {
         await refreshTokenRepository.revokeAllForUser(user.id, tx);
+        await userTokenStateRepository.bumpTokenValidAfter(user.id, tx);
         throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
       }
 

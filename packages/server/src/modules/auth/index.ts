@@ -13,6 +13,7 @@ export * from './repositories/refresh-token.repository';
 export * from './repositories/user-auth.repository';
 export * from './repositories/login-log.repository';
 export * from './repositories/oauth-exchange-code.repository';
+export * from './repositories/user-token-state.repository';
 
 // Verification (sub-module)
 export * from './verification/email.controller';

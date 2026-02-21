@@ -6,6 +6,7 @@ export {
   verifyAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
+  getTokenIssuedAt,
   extractBearerToken,
 } from './jwt.utils';
 

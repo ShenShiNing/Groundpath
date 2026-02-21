@@ -2,6 +2,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { Errors } from '@shared/errors';
 import { tokenService } from './token.service';
 import { logOperation } from '@shared/logger/operation-logger';
+import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 
 /**
  * Session service for managing user sessions
@@ -44,6 +45,7 @@ export const sessionService = {
   ): Promise<number> {
     const startTime = Date.now();
     const count = await tokenService.revokeAllUserTokens(userId);
+    await userTokenStateRepository.bumpTokenValidAfter(userId);
 
     // Log the operation
     logOperation({
