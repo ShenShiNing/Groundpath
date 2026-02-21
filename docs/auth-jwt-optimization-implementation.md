@@ -15,7 +15,7 @@
 
 - [x] 阶段 0：建立实施文档与基线
 - [x] 阶段 1：OAuth 临时态存储改造（移除内存 Map）
-- [ ] 阶段 2：refresh 原子消费（替代 5 秒窗口检测）
+- [x] 阶段 2：refresh 原子消费（替代 5 秒窗口检测）
 - [ ] 阶段 3：kid 精确验签 + keyring 配置
 - [ ] 阶段 4：access token 即时失效机制
 - [ ] 阶段 5：cookie 策略配置化
@@ -34,4 +34,15 @@
 - OAuth `exchange code` 从内存 Map 改为数据库持久化表 `oauth_exchange_codes`，并实现原子单次消费。
 - `oauth.controller` 改为异步创建/消费 exchange code。
 - 更新配置：新增 `OAUTH_STATE_SECRET`（未配置时回退 `ENCRYPTION_KEY`）。
+- 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
+
+### 阶段 2
+
+- `refreshTokenRepository` 新增 `consumeIfValid`，通过单条原子更新实现 refresh token 单次消费（消费即吊销）。
+- `tokenService.refreshTokens` 移除 5 秒时间窗重放检测与 `updateLastUsed + revoke` 两步流程，改为消费结果分支处理：
+  - `consumed`：继续签发新 token 对
+  - `token_mismatch`：安全日志 + 吊销用户全部会话
+  - `already_revoked`：阻断并记录重放事件（不再误触发全量吊销）
+  - `expired/not_found`：按过期/已撤销处理
+- 更新 token service 单测 mock 与断言，匹配原子消费语义。
 - 构建验证：`pnpm -F @knowledge-agent/server build` 通过。

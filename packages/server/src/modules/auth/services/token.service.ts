@@ -5,7 +5,6 @@ import { authConfig } from '@config/env';
 import type { AccessTokenPayload } from '@shared/types';
 import { Errors } from '@shared/errors';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@shared/utils';
-import { isStoredRefreshTokenMatch } from '@shared/utils/refresh-token.utils';
 import { withTransaction, type Transaction } from '@shared/db/db.utils';
 import { systemLogger } from '@shared/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
@@ -63,16 +62,9 @@ export const tokenService = {
     const payload = verifyRefreshToken(refreshToken);
 
     return withTransaction(async (tx) => {
-      // Check if token exists and is valid in database
-      const storedToken = await refreshTokenRepository.findValidById(payload.jti, tx);
-      if (!storedToken) {
-        throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
-      }
-
-      // Verify token string matches (extra security)
-      if (!isStoredRefreshTokenMatch(storedToken.token, refreshToken)) {
-        // Token mismatch - possible token reuse attack
-        // Revoke all tokens for this user as a security measure
+      // Atomically consume the refresh token once.
+      const consumeResult = await refreshTokenRepository.consumeIfValid(payload.jti, refreshToken, tx);
+      if (consumeResult === 'token_mismatch') {
         await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
         systemLogger.securityEvent(
           'auth.refresh.token_mismatch',
@@ -86,23 +78,10 @@ export const tokenService = {
         );
         throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
       }
-
-      // Token replay detection: if lastUsedAt was updated very recently,
-      // this token may have been stolen and replayed by an attacker.
-      // A legitimate client would not refresh the same token twice in quick succession.
-      const TOKEN_REPLAY_WINDOW_SECONDS = 5;
-      const wasRecentlyUsed = await refreshTokenRepository.wasUsedWithinSeconds(
-        payload.jti,
-        TOKEN_REPLAY_WINDOW_SECONDS,
-        tx
-      );
-
-      if (wasRecentlyUsed) {
-        // Possible replay attack - revoke all tokens for this user
-        await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
+      if (consumeResult === 'already_revoked') {
         systemLogger.securityEvent(
-          'auth.refresh.replay_detected',
-          'Refresh token replay detected, revoked all user sessions',
+          'auth.refresh.replay_blocked',
+          'Replay attempt blocked by atomic refresh token consumption',
           {
             userId: payload.sub,
             tokenId: payload.jti,
@@ -110,19 +89,18 @@ export const tokenService = {
             deviceInfo,
           }
         );
-        throw Errors.auth(
-          AUTH_ERROR_CODES.TOKEN_INVALID,
-          'Suspicious token activity detected. All sessions have been revoked.'
-        );
+        throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has already been used');
       }
-
-      // Mark token as used before revoking
-      await refreshTokenRepository.updateLastUsed(payload.jti, tx);
+      if (consumeResult === 'expired') {
+        throw Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Refresh token has expired');
+      }
+      if (consumeResult === 'not_found') {
+        throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
+      }
 
       // Get user to check status
       const user = await userService.findById(payload.sub);
       if (!user) {
-        await refreshTokenRepository.revoke(payload.jti, tx);
         throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
       }
 
@@ -131,9 +109,6 @@ export const tokenService = {
         await refreshTokenRepository.revokeAllForUser(user.id, tx);
         throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
       }
-
-      // Revoke old refresh token (token rotation)
-      await refreshTokenRepository.revoke(payload.jti, tx);
 
       // Generate new token pair
       const accessPayload: AccessTokenPayload = {

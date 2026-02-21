@@ -5,6 +5,14 @@ import { now, addSeconds, getDbContext, type Transaction } from '@shared/db/db.u
 import { refreshTokens, type RefreshToken } from '@shared/db/schema/auth/refresh-tokens.schema';
 import { authConfig } from '@config/env';
 import { hashRefreshToken } from '@shared/utils/refresh-token.utils';
+import { isStoredRefreshTokenMatch } from '@shared/utils/refresh-token.utils';
+
+export type ConsumeRefreshTokenResult =
+  | 'consumed'
+  | 'not_found'
+  | 'token_mismatch'
+  | 'expired'
+  | 'already_revoked';
 
 /**
  * Refresh token repository for database operations
@@ -52,6 +60,68 @@ export const refreshTokenRepository = {
       .limit(1);
 
     return result[0];
+  },
+
+  /**
+   * Find refresh token by ID regardless of status.
+   */
+  async findById(tokenId: string, tx?: Transaction): Promise<RefreshToken | undefined> {
+    const ctx = getDbContext(tx);
+    const result = await ctx
+      .select()
+      .from(refreshTokens)
+      .where(eq(refreshTokens.id, tokenId))
+      .limit(1);
+
+    return result[0];
+  },
+
+  /**
+   * Atomically consume a refresh token exactly once.
+   * Success means the token is revoked and cannot be reused.
+   */
+  async consumeIfValid(
+    tokenId: string,
+    token: string,
+    tx?: Transaction
+  ): Promise<ConsumeRefreshTokenResult> {
+    const ctx = getDbContext(tx);
+    const tokenHash = hashRefreshToken(token);
+
+    const updateResult = await ctx
+      .update(refreshTokens)
+      .set({
+        revoked: true,
+        revokedAt: now(),
+        lastUsedAt: now(),
+      })
+      .where(
+        and(
+          eq(refreshTokens.id, tokenId),
+          eq(refreshTokens.revoked, false),
+          gt(refreshTokens.expiresAt, now()),
+          or(eq(refreshTokens.token, tokenHash), eq(refreshTokens.token, token))
+        )
+      );
+
+    if ((updateResult[0]?.affectedRows ?? 0) > 0) {
+      return 'consumed';
+    }
+
+    const existing = await this.findById(tokenId, tx);
+    if (!existing) {
+      return 'not_found';
+    }
+    if (!isStoredRefreshTokenMatch(existing.token, token)) {
+      return 'token_mismatch';
+    }
+    if (existing.expiresAt <= new Date()) {
+      return 'expired';
+    }
+    if (existing.revoked) {
+      return 'already_revoked';
+    }
+    return 'not_found';
   },
 
   /**

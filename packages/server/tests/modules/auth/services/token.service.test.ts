@@ -21,6 +21,8 @@ vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
   refreshTokenRepository: {
     create: vi.fn(),
     findValidById: vi.fn(),
+    findById: vi.fn(),
+    consumeIfValid: vi.fn(),
     revoke: vi.fn(),
     revokeAllForUser: vi.fn(),
     getActiveSessionsForUser: vi.fn(),
@@ -229,19 +231,6 @@ describe('tokenService', () => {
       type: 'refresh' as const,
     };
 
-    const mockStoredToken = {
-      id: 'token-id-456',
-      userId: 'user-123',
-      token: 'valid-refresh-token',
-      expiresAt: new Date('2024-01-30'),
-      revoked: false,
-      revokedAt: null,
-      ipAddress: '192.168.1.1',
-      deviceInfo: null,
-      createdAt: new Date(),
-      lastUsedAt: new Date(Date.now() - 60000), // 60 seconds ago - outside replay window
-    };
-
     const mockUser = {
       id: 'user-123',
       email: 'test@example.com',
@@ -266,11 +255,9 @@ describe('tokenService', () => {
     // 应吊销旧 token 并返回全新的令牌对
     it('should refresh tokens successfully', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
-      vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
       vi.mocked(userService.findById).mockResolvedValue(mockUser);
-      vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
-      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       const result = await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
 
@@ -289,11 +276,9 @@ describe('tokenService', () => {
     // 确保 verifyRefreshToken 被调用以验证传入的 refresh token
     it('should verify the refresh token JWT', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
-      vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
       vi.mocked(userService.findById).mockResolvedValue(mockUser);
-      vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
-      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
 
@@ -311,7 +296,7 @@ describe('tokenService', () => {
     // JWT 验证通过但数据库中找不到有效记录 → 抛出 TOKEN_REVOKED
     it('should throw TOKEN_REVOKED if token not found in database', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
-      vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(undefined);
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('not_found');
 
       let actual: { code: string; message: string } | null = null;
       try {
@@ -333,16 +318,9 @@ describe('tokenService', () => {
     // JWT 解码的 jti 在数据库中存在，但 token 字符串不匹配（说明旧 token 被重用）
     // 安全措施：吊销该用户的所有 token → 抛出 TOKEN_INVALID
     it('should revoke all tokens on token mismatch (reuse attack)', async () => {
-      const storedTokenWithDifferentString = {
-        ...mockStoredToken,
-        token: 'different-token-string',
-      };
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
-      vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(
-        storedTokenWithDifferentString
-      );
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('token_mismatch');
       vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
-      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       let actual: { code: string; revokedAll: boolean } | null = null;
       try {
@@ -355,11 +333,7 @@ describe('tokenService', () => {
       }
 
       const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID, revokedAll: true };
-      logTestInfo(
-        { inputToken: mockRefreshToken, storedToken: 'different-token-string' },
-        expected,
-        actual
-      );
+      logTestInfo({ inputToken: mockRefreshToken, consumeResult: 'token_mismatch' }, expected, actual);
 
       expect(actual?.revokedAll).toBe(true);
       expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
@@ -369,10 +343,8 @@ describe('tokenService', () => {
     // token 在数据库中有效，但对应的用户已不存在 → 吊销该 token → 抛出 TOKEN_INVALID
     it('should throw TOKEN_INVALID if user not found', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
-      vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
       vi.mocked(userService.findById).mockResolvedValue(undefined);
-      vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
-      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       let actual: { code: string } | null = null;
       try {
@@ -392,10 +364,9 @@ describe('tokenService', () => {
     it('should revoke all tokens and throw USER_BANNED if user is banned', async () => {
       const bannedUser = { ...mockUser, status: 'banned' as const };
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
-      vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
       vi.mocked(userService.findById).mockResolvedValue(bannedUser);
       vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(2);
-      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       let actual: { code: string; statusCode: number; revokedAll: boolean } | null = null;
       try {
@@ -416,26 +387,28 @@ describe('tokenService', () => {
       expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
     });
 
-    // 场景 7：令牌轮换 — 旧 token 被吊销
-    // 刷新成功后，旧的 refresh token 必须被吊销，防止重放攻击
-    it('should revoke old token (token rotation)', async () => {
+    // 场景 7：令牌轮换 — 旧 token 原子消费
+    // 刷新成功后，旧 token 应通过 consumeIfValid 被一次性消费
+    it('should consume old token atomically during rotation', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
-      vi.mocked(refreshTokenRepository.findValidById).mockResolvedValue(mockStoredToken);
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
       vi.mocked(userService.findById).mockResolvedValue(mockUser);
-      vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
       vi.mocked(refreshTokenRepository.create).mockResolvedValue({} as never);
-      vi.mocked(refreshTokenRepository.updateLastUsed).mockResolvedValue(undefined);
 
       await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
 
-      const revokedTokenId = vi.mocked(refreshTokenRepository.revoke).mock.calls[0]?.[0];
+      const consumedCall = vi.mocked(refreshTokenRepository.consumeIfValid).mock.calls[0];
       logTestInfo(
         { oldTokenJti: 'token-id-456' },
-        { revokedTokenId: 'token-id-456' },
-        { revokedTokenId }
+        { consumeCalledWith: ['token-id-456', mockRefreshToken, {}] },
+        { consumeCalledWith: consumedCall }
       );
 
-      expect(refreshTokenRepository.revoke).toHaveBeenCalledWith('token-id-456', {});
+      expect(refreshTokenRepository.consumeIfValid).toHaveBeenCalledWith(
+        'token-id-456',
+        mockRefreshToken,
+        {}
+      );
     });
   });
 
