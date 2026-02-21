@@ -4,6 +4,7 @@ import { db } from '@shared/db';
 import { now, addSeconds, getDbContext, type Transaction } from '@shared/db/db.utils';
 import { refreshTokens, type RefreshToken } from '@shared/db/schema/auth/refresh-tokens.schema';
 import { authConfig } from '@config/env';
+import { cacheService } from '@shared/cache';
 import { hashRefreshToken } from '@shared/utils/refresh-token.utils';
 import { isStoredRefreshTokenMatch } from '@shared/utils/refresh-token.utils';
 
@@ -13,6 +14,17 @@ export type ConsumeRefreshTokenResult =
   | 'token_mismatch'
   | 'expired'
   | 'already_revoked';
+
+const REFRESH_TOKEN_CACHE_TTL_SECONDS = 120;
+const REFRESH_TOKEN_CACHE_PREFIX = 'auth:refresh:id:';
+
+function getRefreshTokenCacheKey(tokenId: string): string {
+  return `${REFRESH_TOKEN_CACHE_PREFIX}${tokenId}`;
+}
+
+function isRefreshTokenUsable(token: RefreshToken): boolean {
+  return !token.revoked && token.expiresAt > new Date();
+}
 
 /**
  * Refresh token repository for database operations
@@ -31,6 +43,7 @@ export const refreshTokenRepository = {
   ): Promise<void> {
     const ctx = getDbContext(tx);
     const tokenHash = hashRefreshToken(token);
+    const expiresAt = addSeconds(authConfig.refreshToken.expiresInSeconds);
     await ctx.insert(refreshTokens).values({
       id: tokenId,
       userId,
@@ -38,14 +51,42 @@ export const refreshTokenRepository = {
       ipAddress,
       deviceInfo,
       revoked: false,
-      expiresAt: addSeconds(authConfig.refreshToken.expiresInSeconds),
+      expiresAt,
     });
+
+    // Cache the fresh token for hot-path lookups.
+    cacheService.set(
+      getRefreshTokenCacheKey(tokenId),
+      {
+        id: tokenId,
+        userId,
+        token: tokenHash,
+        ipAddress,
+        deviceInfo,
+        revoked: false,
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + authConfig.refreshToken.expiresInSeconds * 1000),
+        createdAt: new Date(),
+        lastUsedAt: new Date(),
+      } satisfies RefreshToken,
+      REFRESH_TOKEN_CACHE_TTL_SECONDS
+    );
   },
 
   /**
    * Find a valid (non-revoked, non-expired) refresh token by ID
    */
   async findValidById(tokenId: string, tx?: Transaction): Promise<RefreshToken | undefined> {
+    const cacheKey = getRefreshTokenCacheKey(tokenId);
+    const cached = cacheService.get<RefreshToken>(cacheKey);
+    if (cached) {
+      if (isRefreshTokenUsable(cached)) {
+        return cached;
+      }
+      cacheService.delete(cacheKey);
+      return undefined;
+    }
+
     const ctx = getDbContext(tx);
     const result = await ctx
       .select()
@@ -58,22 +99,34 @@ export const refreshTokenRepository = {
         )
       )
       .limit(1);
-
-    return result[0];
+    const token = result[0];
+    if (token) {
+      cacheService.set(cacheKey, token, REFRESH_TOKEN_CACHE_TTL_SECONDS);
+    }
+    return token;
   },
 
   /**
    * Find refresh token by ID regardless of status.
    */
   async findById(tokenId: string, tx?: Transaction): Promise<RefreshToken | undefined> {
+    const cacheKey = getRefreshTokenCacheKey(tokenId);
+    const cached = cacheService.get<RefreshToken>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const ctx = getDbContext(tx);
     const result = await ctx
       .select()
       .from(refreshTokens)
       .where(eq(refreshTokens.id, tokenId))
       .limit(1);
-
-    return result[0];
+    const token = result[0];
+    if (token) {
+      cacheService.set(cacheKey, token, REFRESH_TOKEN_CACHE_TTL_SECONDS);
+    }
+    return token;
   },
 
   /**
@@ -105,6 +158,7 @@ export const refreshTokenRepository = {
       );
 
     if ((updateResult[0]?.affectedRows ?? 0) > 0) {
+      cacheService.delete(getRefreshTokenCacheKey(tokenId));
       return 'consumed';
     }
 
@@ -165,6 +219,7 @@ export const refreshTokenRepository = {
   async updateLastUsed(tokenId: string, tx?: Transaction): Promise<void> {
     const ctx = getDbContext(tx);
     await ctx.update(refreshTokens).set({ lastUsedAt: now() }).where(eq(refreshTokens.id, tokenId));
+    cacheService.delete(getRefreshTokenCacheKey(tokenId));
   },
 
   /**
@@ -179,6 +234,7 @@ export const refreshTokenRepository = {
         revokedAt: now(),
       })
       .where(eq(refreshTokens.id, tokenId));
+    cacheService.delete(getRefreshTokenCacheKey(tokenId));
   },
 
   /**
@@ -193,6 +249,9 @@ export const refreshTokenRepository = {
         revokedAt: now(),
       })
       .where(and(eq(refreshTokens.userId, userId), eq(refreshTokens.revoked, false)));
+
+    // Conservative invalidation to prevent stale positive hits.
+    cacheService.deleteByPrefix(REFRESH_TOKEN_CACHE_PREFIX);
 
     return result[0]?.affectedRows ?? 0;
   },

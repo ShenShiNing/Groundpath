@@ -19,7 +19,7 @@
 - [x] 阶段 3：kid 精确验签 + keyring 配置
 - [x] 阶段 4：access token 即时失效机制
 - [x] 阶段 5：cookie 策略配置化
-- [ ] 阶段 6：refresh 读路径缓存与降级容错
+- [x] 阶段 6：refresh 读路径缓存与降级容错
 
 ## 阶段日志
 
@@ -81,4 +81,14 @@
   - `AUTH_COOKIE_DOMAIN`（可选）
 - `cookie.utils` 统一通过配置构建 cookie 选项，`set/clear` 保持一致。
 - 兼容处理：当 `SameSite=None` 时自动强制 `Secure=true`（即便非生产环境），避免浏览器拒收。
+- 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
+
+### 阶段 6
+
+- `refreshTokenRepository` 增加短 TTL 热缓存（`auth:refresh:id:*`）：
+  - `findValidById` / `findById` 优先读缓存，回源后写回
+  - `create` 时预热缓存
+  - `consume/revoke/updateLastUsed` 时定点失效
+  - `revokeAllForUser` 时做前缀级保守清空，避免陈旧命中
+- 目标：降低 refresh 读路径数据库压力，并在高频刷新场景中减小抖动影响。
 - 构建验证：`pnpm -F @knowledge-agent/server build` 通过。
