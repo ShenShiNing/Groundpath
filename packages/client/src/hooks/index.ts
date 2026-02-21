@@ -49,6 +49,7 @@ export { useConversations, useDeleteConversation, useUpdateConversation } from '
 
 // Utility hooks
 export { useDebouncedValue } from './useDebouncedValue';
+export { useOAuthCallback } from './useOAuthCallback';
 
 // Upload hooks
 export { useUploadQueue } from './useUploadQueue';

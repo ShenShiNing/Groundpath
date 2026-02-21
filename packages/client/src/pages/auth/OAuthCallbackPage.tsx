@@ -1,60 +1,16 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { exchangeOAuthCode } from '@/api';
-import { useAuthStore } from '@/stores';
-
-type CallbackStatus = 'processing' | 'success' | 'error';
+import { useOAuthCallback } from '@/hooks';
 
 export function OAuthCallbackPage() {
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
-  const setTokens = useAuthStore((state) => state.setTokens);
-  const setUser = useAuthStore((state) => state.setUser);
-
-  const [status, setStatus] = useState<CallbackStatus>('processing');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const processCallback = async () => {
-      const { code, error, returnUrl: r } = search;
-      const returnUrl = (r as string) || '/dashboard';
-
-      if (error) {
-        setStatus('error');
-        setErrorMessage(error as string);
-        return;
-      }
-
-      if (!code || typeof code !== 'string') {
-        setStatus('error');
-        setErrorMessage('缺少认证参数');
-        return;
-      }
-
-      try {
-        const authResponse = await exchangeOAuthCode(code);
-
-        setTokens({
-          accessToken: authResponse.tokens.accessToken,
-        });
-        setUser(authResponse.user);
-
-        setStatus('success');
-
-        setTimeout(() => {
-          navigate({ to: returnUrl });
-        }, 1000);
-      } catch {
-        setStatus('error');
-        setErrorMessage('认证交换失败，请重新登录');
-      }
-    };
-
-    void processCallback();
-  }, [search, setTokens, setUser, navigate]);
+  const { status, errorMessage } = useOAuthCallback({
+    search,
+    navigateTo: (returnUrl) => navigate({ to: returnUrl }),
+  });
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
