@@ -77,6 +77,8 @@ Desktop.ini
 
 # Claude Code
 .claude/
+Agent.md
+agent.md
 
 # TanStack Router
 routeTree.gen.ts
