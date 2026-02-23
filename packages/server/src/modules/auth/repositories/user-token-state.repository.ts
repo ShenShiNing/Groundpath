@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { getDbContext, now, type Transaction } from '@shared/db/db.utils';
 import { userTokenStates } from '@shared/db/schema/auth/user-token-states.schema';
+import { userRepository } from '@modules/user/repositories/user.repository';
 
 export const userTokenStateRepository = {
   async getTokenValidAfter(userId: string): Promise<Date | null> {
@@ -27,5 +28,7 @@ export const userTokenStateRepository = {
           updatedAt: now(),
         },
       });
+
+    await userRepository.invalidateAccessAuthStateCache(userId);
   },
 };

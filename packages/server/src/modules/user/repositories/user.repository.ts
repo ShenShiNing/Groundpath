@@ -1,12 +1,58 @@
 import { eq, and, isNull, ne } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
+import { userTokenStates } from '@shared/db/schema/auth/user-token-states.schema';
 import { users, type User, type NewUser } from '@shared/db/schema/user/users.schema';
+import { cacheService } from '@shared/cache';
 import { normalizeEmail } from '@shared/utils';
 
 export interface UserAuthState {
   id: string;
   status: User['status'];
+}
+
+export interface UserAccessAuthState extends UserAuthState {
+  tokenValidAfter: Date | null;
+}
+
+interface CachedUserAccessAuthState {
+  id: string;
+  status: User['status'];
+  tokenValidAfter: string | null;
+}
+
+const ACCESS_AUTH_STATE_CACHE_PREFIX = 'auth:access-state:';
+const ACCESS_AUTH_STATE_CACHE_TTL_SECONDS = 45;
+
+function getAccessAuthStateCacheKey(userId: string): string {
+  return `${ACCESS_AUTH_STATE_CACHE_PREFIX}${userId}`;
+}
+
+function toCachedAccessAuthState(state: UserAccessAuthState): CachedUserAccessAuthState {
+  return {
+    id: state.id,
+    status: state.status,
+    tokenValidAfter: state.tokenValidAfter ? state.tokenValidAfter.toISOString() : null,
+  };
+}
+
+function fromCachedAccessAuthState(
+  cached: CachedUserAccessAuthState
+): UserAccessAuthState | undefined {
+  if (!cached.id || !cached.status) {
+    return undefined;
+  }
+
+  const tokenValidAfter = cached.tokenValidAfter ? new Date(cached.tokenValidAfter) : null;
+  if (tokenValidAfter && Number.isNaN(tokenValidAfter.getTime())) {
+    return undefined;
+  }
+
+  return {
+    id: cached.id,
+    status: cached.status,
+    tokenValidAfter,
+  };
 }
 
 /**
@@ -124,15 +170,69 @@ export const userRepository = {
    * Fetch minimal auth state used by auth middleware.
    */
   async findAuthStateById(userId: string): Promise<UserAuthState | undefined> {
+    const accessState = await this.findAccessAuthStateById(userId);
+    if (!accessState) {
+      return undefined;
+    }
+
+    return {
+      id: accessState.id,
+      status: accessState.status,
+    };
+  },
+
+  /**
+   * Fetch access-token auth state in one query with short-lived cache.
+   */
+  async findAccessAuthStateById(userId: string): Promise<UserAccessAuthState | undefined> {
+    const cacheKey = getAccessAuthStateCacheKey(userId);
+    const cached = await cacheService.get<CachedUserAccessAuthState>(cacheKey);
+    if (cached) {
+      const restored = fromCachedAccessAuthState(cached);
+      if (restored) {
+        return restored;
+      }
+      await cacheService.delete(cacheKey);
+    }
+
     const result = await db
       .select({
         id: users.id,
         status: users.status,
+        tokenValidAfter: userTokenStates.tokenValidAfter,
       })
       .from(users)
+      .leftJoin(userTokenStates, eq(userTokenStates.userId, users.id))
       .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .limit(1);
-    return result[0];
+    const row = result[0];
+    if (!row) {
+      return undefined;
+    }
+
+    const accessState: UserAccessAuthState = {
+      id: row.id,
+      status: row.status,
+      tokenValidAfter: row.tokenValidAfter ?? null,
+    };
+
+    await cacheService.set(
+      cacheKey,
+      toCachedAccessAuthState(accessState),
+      ACCESS_AUTH_STATE_CACHE_TTL_SECONDS
+    );
+
+    return accessState;
+  },
+
+  async invalidateAccessAuthStateCache(userId: string): Promise<void> {
+    await cacheService.delete(getAccessAuthStateCacheKey(userId));
+  },
+
+  async updateStatus(userId: string, status: User['status'], tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx.update(users).set({ status }).where(eq(users.id, userId));
+    await this.invalidateAccessAuthStateCache(userId);
   },
 
   /**
