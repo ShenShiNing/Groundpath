@@ -22,6 +22,43 @@ function getRefreshTokenCacheKey(tokenId: string): string {
   return `${REFRESH_TOKEN_CACHE_PREFIX}${tokenId}`;
 }
 
+interface CachedRefreshToken extends Omit<RefreshToken, 'expiresAt' | 'createdAt' | 'lastUsedAt' | 'revokedAt'> {
+  expiresAt: string | Date;
+  createdAt: string | Date;
+  lastUsedAt: string | Date;
+  revokedAt: string | Date | null;
+}
+
+function parseCachedDate(value: string | Date | null): Date | null {
+  if (value === null) {
+    return null;
+  }
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function fromCachedRefreshToken(cached: CachedRefreshToken): RefreshToken | undefined {
+  const expiresAt = parseCachedDate(cached.expiresAt);
+  const createdAt = parseCachedDate(cached.createdAt);
+  const lastUsedAt = parseCachedDate(cached.lastUsedAt);
+  const revokedAt = parseCachedDate(cached.revokedAt);
+
+  if (!expiresAt || !createdAt || !lastUsedAt) {
+    return undefined;
+  }
+
+  return {
+    ...cached,
+    expiresAt,
+    createdAt,
+    lastUsedAt,
+    revokedAt,
+  };
+}
+
 function isRefreshTokenUsable(token: RefreshToken): boolean {
   return !token.revoked && token.expiresAt > new Date();
 }
@@ -78,13 +115,13 @@ export const refreshTokenRepository = {
    */
   async findValidById(tokenId: string, tx?: Transaction): Promise<RefreshToken | undefined> {
     const cacheKey = getRefreshTokenCacheKey(tokenId);
-    const cached = await cacheService.get<RefreshToken>(cacheKey);
+    const cached = await cacheService.get<CachedRefreshToken>(cacheKey);
     if (cached) {
-      if (isRefreshTokenUsable(cached)) {
-        return cached;
+      const restored = fromCachedRefreshToken(cached);
+      if (restored && isRefreshTokenUsable(restored)) {
+        return restored;
       }
       await cacheService.delete(cacheKey);
-      return undefined;
     }
 
     const ctx = getDbContext(tx);
@@ -111,9 +148,13 @@ export const refreshTokenRepository = {
    */
   async findById(tokenId: string, tx?: Transaction): Promise<RefreshToken | undefined> {
     const cacheKey = getRefreshTokenCacheKey(tokenId);
-    const cached = await cacheService.get<RefreshToken>(cacheKey);
+    const cached = await cacheService.get<CachedRefreshToken>(cacheKey);
     if (cached) {
-      return cached;
+      const restored = fromCachedRefreshToken(cached);
+      if (restored) {
+        return restored;
+      }
+      await cacheService.delete(cacheKey);
     }
 
     const ctx = getDbContext(tx);
@@ -153,7 +194,7 @@ export const refreshTokenRepository = {
           eq(refreshTokens.id, tokenId),
           eq(refreshTokens.revoked, false),
           gt(refreshTokens.expiresAt, now()),
-          or(eq(refreshTokens.token, tokenHash), eq(refreshTokens.token, token))
+          eq(refreshTokens.token, tokenHash)
         )
       );
 
@@ -207,7 +248,7 @@ export const refreshTokenRepository = {
     const result = await db
       .select()
       .from(refreshTokens)
-      .where(or(eq(refreshTokens.token, tokenHash), eq(refreshTokens.token, token)))
+      .where(eq(refreshTokens.token, tokenHash))
       .limit(1);
 
     return result[0];
@@ -242,6 +283,11 @@ export const refreshTokenRepository = {
    */
   async revokeAllForUser(userId: string, tx?: Transaction): Promise<number> {
     const ctx = getDbContext(tx);
+    const activeTokenRows = await ctx
+      .select({ id: refreshTokens.id })
+      .from(refreshTokens)
+      .where(and(eq(refreshTokens.userId, userId), eq(refreshTokens.revoked, false)));
+
     const result = await ctx
       .update(refreshTokens)
       .set({
@@ -250,8 +296,9 @@ export const refreshTokenRepository = {
       })
       .where(and(eq(refreshTokens.userId, userId), eq(refreshTokens.revoked, false)));
 
-    // Conservative invalidation to prevent stale positive hits.
-    await cacheService.deleteByPrefix(REFRESH_TOKEN_CACHE_PREFIX);
+    for (const tokenRow of activeTokenRows) {
+      await cacheService.delete(getRefreshTokenCacheKey(tokenRow.id));
+    }
 
     return result[0]?.affectedRows ?? 0;
   },

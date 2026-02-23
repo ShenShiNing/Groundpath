@@ -1,14 +1,17 @@
 import { randomInt } from 'crypto';
-import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
-import { authConfig, emailConfig } from '@config/env';
+import { emailConfig } from '@config/env';
 import { emailVerificationRepository } from '../verification/email-verification.repository';
 import { emailService } from './email.service';
 import { AppError, Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
-import { normalizeEmail } from '@shared/utils';
+import {
+  generateEmailVerificationToken,
+  normalizeEmail,
+  verifyEmailVerificationToken,
+} from '@shared/utils';
 
 const logger = createLogger('email-verification');
 
@@ -38,15 +41,7 @@ function generateVerificationToken(email: string, type: EmailVerificationCodeTyp
     purpose: 'email_verified',
   };
 
-  const options: SignOptions = {
-    expiresIn: `${emailConfig.verification.tokenExpiresInMinutes}m`,
-    algorithm: authConfig.jwt.algorithm,
-    issuer: authConfig.jwtClaims.issuer,
-    audience: authConfig.jwtClaims.audience,
-    keyid: authConfig.accessToken.keyId,
-  };
-
-  return jwt.sign(payload, authConfig.accessToken.privateKey, options);
+  return generateEmailVerificationToken(payload, `${emailConfig.verification.tokenExpiresInMinutes}m`);
 }
 
 /**
@@ -57,11 +52,7 @@ function verifyVerificationToken(
   expectedType: EmailVerificationCodeType
 ): VerificationTokenPayload {
   try {
-    const decoded = jwt.verify(token, authConfig.accessToken.publicKey, {
-      algorithms: [authConfig.jwt.algorithm],
-      issuer: authConfig.jwtClaims.issuer,
-      audience: authConfig.jwtClaims.audience,
-    }) as JwtPayload & VerificationTokenPayload;
+    const decoded = verifyEmailVerificationToken(token);
 
     if (decoded.purpose !== 'email_verified') {
       throw Errors.auth(
@@ -81,26 +72,26 @@ function verifyVerificationToken(
 
     return {
       sub: decoded.sub!,
-      type: decoded.type,
+      type: expectedType,
       purpose: decoded.purpose,
     };
   } catch (error) {
-    if (error instanceof AppError) {
-      throw error;
-    }
-    if (error instanceof jwt.TokenExpiredError) {
+    if (error instanceof AppError && error.code === AUTH_ERROR_CODES.TOKEN_EXPIRED) {
       throw Errors.auth(
         EMAIL_ERROR_CODES.VERIFICATION_TOKEN_EXPIRED,
         'Verification token has expired. Please verify your email again.',
         400
       );
     }
-    if (error instanceof jwt.JsonWebTokenError) {
+    if (error instanceof AppError && error.code === AUTH_ERROR_CODES.TOKEN_INVALID) {
       throw Errors.auth(
         EMAIL_ERROR_CODES.VERIFICATION_TOKEN_INVALID,
         'Invalid verification token',
         400
       );
+    }
+    if (error instanceof AppError) {
+      throw error;
     }
     throw error;
   }

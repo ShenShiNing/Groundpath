@@ -11,6 +11,11 @@ import { refreshTokenRepository } from '../repositories/refresh-token.repository
 import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 import { userService } from '../../user';
 
+export interface RefreshTokensResult {
+  tokens: TokenPair;
+  userId: string;
+}
+
 /**
  * Token service for managing JWT token lifecycle
  */
@@ -59,7 +64,7 @@ export const tokenService = {
     refreshToken: string,
     ipAddress: string | null,
     deviceInfo: DeviceInfo | null
-  ): Promise<TokenPair> {
+  ): Promise<RefreshTokensResult> {
     // Verify the JWT signature and structure (outside transaction - no DB involved)
     const payload = verifyRefreshToken(refreshToken);
 
@@ -127,7 +132,11 @@ export const tokenService = {
         emailVerified: user.emailVerified,
       };
 
-      return this.generateTokenPair(accessPayload, ipAddress, deviceInfo, tx);
+      const tokens = await this.generateTokenPair(accessPayload, ipAddress, deviceInfo, tx);
+      return {
+        tokens,
+        userId: user.id,
+      };
     });
   },
 

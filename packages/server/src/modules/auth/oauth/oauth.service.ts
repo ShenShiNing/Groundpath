@@ -1,13 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
 import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@shared/types';
-import { toUserPublicInfo } from '@shared/utils';
+import { generateOAuthStateToken, toUserPublicInfo, verifyOAuthStateToken } from '@shared/utils';
 import { Errors } from '@shared/errors';
-import { authConfig } from '@config/env';
 import { userService } from '../../user';
 import { userAuthRepository } from '../repositories/user-auth.repository';
 import { loginLogRepository } from '../repositories/login-log.repository';
@@ -23,27 +21,11 @@ const logger = createLogger('oauth.service');
 
 // ==================== State Store ====================
 
-interface OAuthStateTokenPayload {
-  returnUrl: string;
-  purpose: 'oauth_state';
-}
-
 /**
  * Generate a signed state token (stateless, multi-instance safe)
  */
 export function generateState(returnUrl: string = '/'): string {
-  const payload: OAuthStateTokenPayload = {
-    returnUrl,
-    purpose: 'oauth_state',
-  };
-  const options: SignOptions = {
-    expiresIn: '5m',
-    algorithm: authConfig.jwt.algorithm,
-    issuer: authConfig.jwtClaims.issuer,
-    audience: authConfig.jwtClaims.audience,
-    keyid: authConfig.accessToken.keyId,
-  };
-  return jwt.sign(payload, authConfig.accessToken.privateKey, options);
+  return generateOAuthStateToken(returnUrl, '5m');
 }
 
 /**
@@ -51,12 +33,7 @@ export function generateState(returnUrl: string = '/'): string {
  */
 export function validateState(state: string): { returnUrl: string } | null {
   try {
-    const decoded = jwt.verify(state, authConfig.accessToken.publicKey, {
-      algorithms: [authConfig.jwt.algorithm],
-      issuer: authConfig.jwtClaims.issuer,
-      audience: authConfig.jwtClaims.audience,
-    }) as JwtPayload & OAuthStateTokenPayload;
-
+    const decoded = verifyOAuthStateToken(state);
     if (decoded.purpose !== 'oauth_state' || typeof decoded.returnUrl !== 'string') {
       return null;
     }

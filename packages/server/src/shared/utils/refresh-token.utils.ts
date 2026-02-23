@@ -24,13 +24,9 @@ export function safeCompareTokenHash(storedHash: string, candidateHash: string):
 
 /**
  * Verify incoming refresh token against stored value.
- * Supports legacy plaintext tokens for backward compatibility during migration.
+ * Stored value must be a HMAC-SHA256 hash.
  */
 export function isStoredRefreshTokenMatch(storedValue: string, refreshToken: string): boolean {
-  if (storedValue === refreshToken) {
-    return true;
-  }
-
   const hash = hashRefreshToken(refreshToken);
   return safeCompareTokenHash(storedValue, hash);
 }

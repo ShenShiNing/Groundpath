@@ -6,6 +6,10 @@ export {
   verifyAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
+  generateOAuthStateToken,
+  verifyOAuthStateToken,
+  generateEmailVerificationToken,
+  verifyEmailVerificationToken,
   getTokenIssuedAt,
   extractBearerToken,
 } from './jwt.utils';

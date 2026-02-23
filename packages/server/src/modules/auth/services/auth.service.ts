@@ -13,7 +13,7 @@ import type {
 } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@shared/types';
-import { toUserPublicInfo, normalizeEmail, verifyRefreshToken } from '@shared/utils';
+import { toUserPublicInfo, normalizeEmail } from '@shared/utils';
 import { Errors } from '@shared/errors';
 import { authConfig } from '@config/env';
 import { userService } from '../../user';
@@ -248,11 +248,8 @@ export const authService = {
     userAgent: string | null
   ): Promise<AuthResponse> {
     const deviceInfo = parseDeviceInfo(userAgent);
-    const tokens = await tokenService.refreshTokens(refreshToken, ipAddress, deviceInfo);
-
-    // Get user info for response - decode the new refresh token to get user ID
-    const { sub } = verifyRefreshToken(tokens.refreshToken);
-    const user = await userService.findById(sub);
+    const refreshed = await tokenService.refreshTokens(refreshToken, ipAddress, deviceInfo);
+    const user = await userService.findById(refreshed.userId);
 
     if (!user) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
@@ -260,7 +257,7 @@ export const authService = {
 
     return {
       user: toUserPublicInfo(user),
-      tokens,
+      tokens: refreshed.tokens,
     };
   },
 
