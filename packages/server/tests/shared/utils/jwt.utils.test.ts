@@ -21,6 +21,7 @@ describe('jwtUtils', () => {
       username: 'testuser',
       status: 'active',
       emailVerified: true,
+      sid: 'session-123',
     };
 
     it('should generate a valid JWT token', () => {
@@ -92,6 +93,7 @@ describe('jwtUtils', () => {
       username: 'testuser',
       status: 'active',
       emailVerified: true,
+      sid: 'session-123',
     };
 
     it('should verify and return payload for valid token', () => {
@@ -282,6 +284,7 @@ describe('jwtUtils', () => {
       const decoded = jwt.decode(token) as jwt.JwtPayload & RefreshTokenPayload;
 
       expect(decoded.sub).toBe(userId);
+      expect(decoded.sid).toBe(tokenId);
       expect(decoded.jti).toBe(tokenId);
       expect(decoded.type).toBe('refresh');
     });
@@ -320,13 +323,14 @@ describe('jwtUtils', () => {
       const result = verifyRefreshToken(token);
 
       expect(result.sub).toBe(userId);
+      expect(result.sid).toBe(tokenId);
       expect(result.jti).toBe(tokenId);
       expect(result.type).toBe('refresh');
     });
 
     it('should throw TOKEN_EXPIRED error for expired token', () => {
       const expiredToken = jwt.sign(
-        { sub: userId, jti: tokenId, type: 'refresh' },
+        { sub: userId, sid: tokenId, jti: tokenId, type: 'refresh' },
         authConfig.refreshToken.secret,
         {
           expiresIn: '-1s',
@@ -359,7 +363,7 @@ describe('jwtUtils', () => {
 
     it('should throw TOKEN_INVALID error for token signed with wrong secret', () => {
       const tokenWithWrongSecret = jwt.sign(
-        { sub: userId, jti: tokenId, type: 'refresh' },
+        { sub: userId, sid: tokenId, jti: tokenId, type: 'refresh' },
         'wrong-secret',
         {
           expiresIn: '7d',
@@ -388,7 +392,7 @@ describe('jwtUtils', () => {
         previousKeys.push({ keyId: 'refresh-v0', secret: 'legacy-refresh-key-secret' });
 
         const legacyToken = jwt.sign(
-          { sub: userId, jti: tokenId, type: 'refresh' },
+          { sub: userId, sid: tokenId, jti: tokenId, type: 'refresh' },
           'legacy-refresh-key-secret',
           {
             expiresIn: '7d',
@@ -409,7 +413,7 @@ describe('jwtUtils', () => {
 
     it('should throw TOKEN_INVALID error for wrong token type', () => {
       const tokenWithWrongType = jwt.sign(
-        { sub: userId, jti: tokenId, type: 'access' },
+        { sub: userId, sid: tokenId, jti: tokenId, type: 'access' },
         authConfig.refreshToken.secret,
         {
           expiresIn: '7d',
@@ -568,6 +572,7 @@ describe('jwtUtils', () => {
         username: 'integrationuser',
         status: 'active',
         emailVerified: true,
+        sid: 'session-integration',
       };
 
       const token = generateAccessToken(payload);
@@ -586,6 +591,7 @@ describe('jwtUtils', () => {
       const verified = verifyRefreshToken(token);
 
       expect(verified.sub).toBe(userId);
+      expect(verified.sid).toBe(tokenId);
       expect(verified.jti).toBe(tokenId);
       expect(verified.type).toBe('refresh');
     });
@@ -605,6 +611,7 @@ describe('jwtUtils', () => {
         username: 'test',
         status: 'active',
         emailVerified: true,
+        sid: 'session-1',
       });
 
       expect(() => verifyRefreshToken(accessToken)).toThrow(AppError);

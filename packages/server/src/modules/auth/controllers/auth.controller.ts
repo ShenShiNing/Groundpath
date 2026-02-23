@@ -103,16 +103,16 @@ export const authController = {
    * POST /api/auth/logout
    */
   logout: asyncHandler(async (req: Request, res: Response) => {
-    const tokenJti = req.refreshContext?.jti;
-    if (!tokenJti) {
-      throw new AppError('VALIDATION_ERROR', 'Token ID not found', 400);
+    const sessionId = req.refreshContext?.sid;
+    if (!sessionId) {
+      throw new AppError('VALIDATION_ERROR', 'Session ID not found', 400);
     }
 
     const userId = req.refreshContext?.sub;
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
-    await authService.logout(tokenJti, userId, ipAddress, userAgent);
+    await authService.logout(sessionId, userId, ipAddress, userAgent);
     clearRefreshTokenCookie(res);
     sendSuccessResponse(res, { message: 'Successfully logged out' });
   }),
@@ -147,7 +147,8 @@ export const authController = {
    */
   sessions: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const sessions = await authService.getSessions(userId);
+    const currentSessionId = req.user?.sid;
+    const sessions = await authService.getSessions(userId, currentSessionId);
     sendSuccessResponse(res, sessions);
   }),
 

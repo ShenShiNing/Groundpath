@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
 import { authConfig } from '@config/env';
-import type { AccessTokenPayload } from '@shared/types';
+import type { AccessTokenSubject } from '@shared/types';
 import { Errors } from '@shared/errors';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@shared/utils';
 import { withTransaction, type Transaction } from '@shared/db/db.utils';
@@ -19,21 +19,22 @@ export const tokenService = {
    * Generate a new token pair (access + refresh)
    */
   async generateTokenPair(
-    user: AccessTokenPayload,
+    user: AccessTokenSubject,
     ipAddress: string | null,
     deviceInfo: DeviceInfo | null,
     tx?: Transaction
   ): Promise<TokenPair> {
-    // Generate access token
-    const accessToken = generateAccessToken(user);
-
-    // Generate refresh token with unique ID
-    const tokenId = uuidv4();
-    const refreshTokenString = generateRefreshToken(user.sub, tokenId);
+    // Generate a session id and bind both access/refresh tokens to it.
+    const sessionId = uuidv4();
+    const accessToken = generateAccessToken({
+      ...user,
+      sid: sessionId,
+    });
+    const refreshTokenString = generateRefreshToken(user.sub, sessionId);
 
     // Store refresh token in database (时间由 MySQL 服务端计算)
     await refreshTokenRepository.create(
-      tokenId,
+      sessionId,
       user.sub,
       refreshTokenString,
       ipAddress,
@@ -64,7 +65,11 @@ export const tokenService = {
 
     return withTransaction(async (tx) => {
       // Atomically consume the refresh token once.
-      const consumeResult = await refreshTokenRepository.consumeIfValid(payload.jti, refreshToken, tx);
+      const consumeResult = await refreshTokenRepository.consumeIfValid(
+        payload.sid,
+        refreshToken,
+        tx
+      );
       if (consumeResult === 'token_mismatch') {
         await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
         await userTokenStateRepository.bumpTokenValidAfter(payload.sub, tx);
@@ -73,7 +78,7 @@ export const tokenService = {
           'Refresh token mismatch detected, revoked all user sessions',
           {
             userId: payload.sub,
-            tokenId: payload.jti,
+            tokenId: payload.sid,
             ipAddress,
             deviceInfo,
           }
@@ -86,7 +91,7 @@ export const tokenService = {
           'Replay attempt blocked by atomic refresh token consumption',
           {
             userId: payload.sub,
-            tokenId: payload.jti,
+            tokenId: payload.sid,
             ipAddress,
             deviceInfo,
           }
@@ -114,7 +119,7 @@ export const tokenService = {
       }
 
       // Generate new token pair
-      const accessPayload: AccessTokenPayload = {
+      const accessPayload: AccessTokenSubject = {
         sub: user.id,
         email: user.email,
         username: user.username,

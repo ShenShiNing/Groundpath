@@ -19,6 +19,14 @@ function isTokenRevokedByTimestamp(tokenIatSeconds: number, tokenValidAfter: Dat
   return tokenIatSeconds * 1000 <= tokenValidAfter.getTime();
 }
 
+async function isSessionActiveForUser(sessionId: string, userId: string): Promise<boolean> {
+  const session = await refreshTokenRepository.findValidById(sessionId);
+  if (!session) {
+    return false;
+  }
+  return session.userId === userId;
+}
+
 /**
  * Middleware to authenticate requests using JWT access token
  * Attaches user payload to request if valid
@@ -49,6 +57,9 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     if (isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfter)) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Access token has been revoked');
     }
+    if (!(await isSessionActiveForUser(payload.sid, payload.sub))) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Session has been revoked');
+    }
 
     // Attach user to request
     req.user = payload;
@@ -78,7 +89,8 @@ export async function optionalAuthenticate(
         tokenIat &&
         authState &&
         authState.status !== 'banned' &&
-        !isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfter)
+        !isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfter) &&
+        (await isSessionActiveForUser(payload.sid, payload.sub))
       ) {
         req.user = payload;
       }
@@ -109,14 +121,18 @@ export async function authenticateRefreshToken(
     const payload = verifyRefreshToken(refreshToken);
 
     // Verify token exists in database and is valid
-    const storedToken = await refreshTokenRepository.findValidById(payload.jti);
+    const storedToken = await refreshTokenRepository.findValidById(payload.sid);
     if (!storedToken || !isStoredRefreshTokenMatch(storedToken.token, refreshToken)) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
+    }
+    if (storedToken.userId !== payload.sub) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Refresh token user mismatch');
     }
 
     // Attach refresh context to request
     req.refreshContext = {
       sub: payload.sub,
+      sid: payload.sid,
       jti: payload.jti,
     };
     next();

@@ -3,7 +3,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { tokenService } from '@modules/auth';
 import { AppError } from '@shared/errors';
-import type { AccessTokenPayload } from '@shared/types';
+import type { AccessTokenSubject } from '@shared/types';
 
 // ==================== Mocks ====================
 
@@ -31,6 +31,12 @@ vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
   },
 }));
 
+vi.mock('@modules/auth/repositories/user-token-state.repository', () => ({
+  userTokenStateRepository: {
+    bumpTokenValidAfter: vi.fn(),
+  },
+}));
+
 // Mock userService (not userRepository) - tokenService uses userService.findById
 vi.mock('@modules/user', () => ({
   userService: {
@@ -53,6 +59,7 @@ vi.mock('@shared/db/db.utils', () => ({
 
 // Import mocked modules
 import { refreshTokenRepository } from '@modules/auth';
+import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';
 import { userService } from '@modules/user';
 import {
   generateAccessToken,
@@ -77,7 +84,7 @@ describe('tokenService', () => {
   // 场景：为已认证用户生成 access + refresh 令牌对
   // 职责：调用 JWT 工具生成令牌、将 refresh token 存入数据库、返回完整的 TokenPair
   describe('generateTokenPair', () => {
-    const validUser: AccessTokenPayload = {
+    const validUser: AccessTokenSubject = {
       sub: 'user-123',
       email: 'test@example.com',
       username: 'testuser',
@@ -118,9 +125,10 @@ describe('tokenService', () => {
       await tokenService.generateTokenPair(validUser, ipAddress, deviceInfo);
 
       const calledWith = vi.mocked(generateAccessToken).mock.calls[0]?.[0];
-      logTestInfo({ user: validUser }, { calledWith: validUser }, { calledWith });
+      const expectedPayload = { ...validUser, sid: 'mock-uuid-token-id' };
+      logTestInfo({ user: validUser }, { calledWith: expectedPayload }, { calledWith });
 
-      expect(generateAccessToken).toHaveBeenCalledWith(validUser);
+      expect(generateAccessToken).toHaveBeenCalledWith(expectedPayload);
     });
 
     // 场景 3：验证 generateRefreshToken 接收正确的 userId 和 tokenId
@@ -227,6 +235,7 @@ describe('tokenService', () => {
 
     const mockPayload = {
       sub: 'user-123',
+      sid: 'token-id-456',
       jti: 'token-id-456',
       type: 'refresh' as const,
     };
@@ -321,6 +330,7 @@ describe('tokenService', () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('token_mismatch');
       vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
+      vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mockResolvedValue(undefined);
 
       let actual: { code: string; revokedAll: boolean } | null = null;
       try {
@@ -336,6 +346,7 @@ describe('tokenService', () => {
       logTestInfo({ inputToken: mockRefreshToken, consumeResult: 'token_mismatch' }, expected, actual);
 
       expect(actual?.revokedAll).toBe(true);
+      expect(actual?.code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
       expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
     });
 
@@ -367,6 +378,7 @@ describe('tokenService', () => {
       vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
       vi.mocked(userService.findById).mockResolvedValue(bannedUser);
       vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(2);
+      vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mockResolvedValue(undefined);
 
       let actual: { code: string; statusCode: number; revokedAll: boolean } | null = null;
       try {

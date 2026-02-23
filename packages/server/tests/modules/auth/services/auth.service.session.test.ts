@@ -45,6 +45,12 @@ vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
   },
 }));
 
+vi.mock('@modules/auth/repositories/user-token-state.repository', () => ({
+  userTokenStateRepository: {
+    bumpTokenValidAfter: vi.fn(),
+  },
+}));
+
 vi.mock('@modules/auth/services/token.service', () => ({
   tokenService: {
     generateTokenPair: vi.fn(),
@@ -92,6 +98,7 @@ describe('authService > session management', () => {
       vi.mocked(tokenService.refreshTokens).mockResolvedValue(mockTokenPair);
       vi.mocked(verifyRefreshToken).mockReturnValue({
         sub: 'user-123',
+        sid: 'token-id',
         jti: 'token-id',
         type: 'refresh',
       });
@@ -118,6 +125,7 @@ describe('authService > session management', () => {
       vi.mocked(tokenService.refreshTokens).mockResolvedValue(mockTokenPair);
       vi.mocked(verifyRefreshToken).mockReturnValue({
         sub: 'user-123',
+        sid: 'token-id',
         jti: 'token-id',
         type: 'refresh',
       });
@@ -145,6 +153,7 @@ describe('authService > session management', () => {
       vi.mocked(tokenService.refreshTokens).mockResolvedValue(mockTokenPair);
       vi.mocked(verifyRefreshToken).mockReturnValue({
         sub: 'deleted-user',
+        sid: 'token-id',
         jti: 'token-id',
         type: 'refresh',
       });

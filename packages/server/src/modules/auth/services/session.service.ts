@@ -12,20 +12,20 @@ export const sessionService = {
    * Logout current device (revoke current refresh token)
    */
   async logout(
-    tokenId: string,
+    sessionId: string,
     userId?: string,
     ipAddress?: string | null,
     userAgent?: string | null
   ): Promise<void> {
     const startTime = Date.now();
-    await tokenService.revokeToken(tokenId);
+    await tokenService.revokeToken(sessionId);
 
     // Log the operation if userId is provided
     if (userId) {
       logOperation({
         userId,
         resourceType: 'session',
-        resourceId: tokenId,
+        resourceId: sessionId,
         action: 'session.logout',
         description: 'User logged out from current session',
         ipAddress: ipAddress ?? null,
@@ -65,8 +65,8 @@ export const sessionService = {
   /**
    * Get active sessions for current user
    */
-  async getSessions(userId: string, currentTokenId?: string) {
-    return tokenService.getUserSessions(userId, currentTokenId);
+  async getSessions(userId: string, currentSessionId?: string) {
+    return tokenService.getUserSessions(userId, currentSessionId);
   },
 
   /**

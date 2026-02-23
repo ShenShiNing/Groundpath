@@ -117,12 +117,17 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
       candidates.map((candidate) => candidate.secret)
     );
 
+    if (typeof decoded.sid !== 'string' || decoded.sid.length === 0) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
+    }
+
     return {
       sub: decoded.sub!,
       email: decoded.email,
       username: decoded.username,
       status: decoded.status,
       emailVerified: decoded.emailVerified,
+      sid: decoded.sid,
     };
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -140,10 +145,11 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
 /**
  * Generate a refresh token with minimal payload
  */
-export function generateRefreshToken(userId: string, tokenId: string): string {
+export function generateRefreshToken(userId: string, sessionId: string): string {
   const payload: RefreshTokenPayload = {
     sub: userId,
-    jti: tokenId,
+    sid: sessionId,
+    jti: sessionId,
     type: 'refresh',
   };
 
@@ -180,9 +186,19 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
     if (decoded.type !== 'refresh') {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token type');
     }
+    if (typeof decoded.sid !== 'string' || decoded.sid.length === 0) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token session');
+    }
+    if (typeof decoded.jti !== 'string' || decoded.jti.length === 0) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token id');
+    }
+    if (decoded.sid !== decoded.jti) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Refresh token session mismatch');
+    }
 
     return {
       sub: decoded.sub!,
+      sid: decoded.sid,
       jti: decoded.jti!,
       type: decoded.type,
     };

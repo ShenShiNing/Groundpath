@@ -1,7 +1,7 @@
 // ==================== Token Payloads (Server Only) ====================
 
-/** Access Token payload - contains user info for API authorization */
-export interface AccessTokenPayload {
+/** Shared user claims used to build session-bound tokens */
+export interface AccessTokenSubject {
   sub: string; // User ID
   email: string;
   username: string;
@@ -9,9 +9,15 @@ export interface AccessTokenPayload {
   emailVerified: boolean;
 }
 
-/** Refresh Token payload - minimal, actual data stored in DB */
+/** Access token payload - session-bound user claims */
+export interface AccessTokenPayload extends AccessTokenSubject {
+  sid: string; // Session ID (refresh_tokens.id)
+}
+
+/** Refresh Token payload - minimal, session-bound */
 export interface RefreshTokenPayload {
   sub: string; // User ID
+  sid: string; // Session ID (refresh_tokens.id)
   jti: string; // Token ID (maps to refresh_tokens.id)
   type: 'refresh';
 }
@@ -19,5 +25,6 @@ export interface RefreshTokenPayload {
 /** Context attached when authenticating with refresh token */
 export interface RefreshTokenContext {
   sub: string; // User ID
+  sid: string; // Session ID
   jti: string; // Token ID
 }

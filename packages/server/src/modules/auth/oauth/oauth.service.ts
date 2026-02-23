@@ -4,7 +4,7 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
 import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
-import type { AccessTokenPayload } from '@shared/types';
+import type { AccessTokenSubject } from '@shared/types';
 import { toUserPublicInfo } from '@shared/utils';
 import { Errors } from '@shared/errors';
 import { authConfig, oauthConfig } from '@config/env';
@@ -91,7 +91,7 @@ export async function buildAuthResponse(
   ipAddress: string | null,
   deviceInfo: DeviceInfo | null
 ): Promise<AuthResponse> {
-  const accessPayload: AccessTokenPayload = {
+  const accessPayload: AccessTokenSubject = {
     sub: user.id,
     email: user.email,
     username: user.username,

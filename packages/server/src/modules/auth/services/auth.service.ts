@@ -12,7 +12,7 @@ import type {
   ResetPasswordRequest,
 } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
-import type { AccessTokenPayload } from '@shared/types';
+import type { AccessTokenSubject } from '@shared/types';
 import { toUserPublicInfo, normalizeEmail, verifyRefreshToken } from '@shared/utils';
 import { Errors } from '@shared/errors';
 import { authConfig } from '@config/env';
@@ -37,7 +37,7 @@ async function buildAuthResponse(
   ipAddress: string | null,
   deviceInfo: DeviceInfo | null
 ): Promise<AuthResponse> {
-  const accessPayload: AccessTokenPayload = {
+  const accessPayload: AccessTokenSubject = {
     sub: user.id,
     email: user.email,
     username: user.username,
@@ -378,8 +378,8 @@ export const authService = {
   /**
    * Get active sessions for current user
    */
-  getSessions(userId: string, currentTokenId?: string) {
-    return sessionService.getSessions(userId, currentTokenId);
+  getSessions(userId: string, currentSessionId?: string) {
+    return sessionService.getSessions(userId, currentSessionId);
   },
 
   /**
