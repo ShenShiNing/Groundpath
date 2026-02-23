@@ -261,7 +261,7 @@ describe('tokenService', () => {
     };
 
     // 场景 1：正常刷新 — JWT 有效、数据库中存在、token 匹配、用户状态正常
-    // 应吊销旧 token 并返回全新的令牌对
+    // 应吊销旧 token 并返回全新的令牌对及 userId
     it('should refresh tokens successfully', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
@@ -271,10 +271,13 @@ describe('tokenService', () => {
       const result = await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
 
       const expected = {
-        accessToken: 'mock-access-token',
-        refreshToken: 'mock-refresh-token',
-        expiresIn: 900,
-        refreshExpiresIn: 604800,
+        tokens: {
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token',
+          expiresIn: 900,
+          refreshExpiresIn: 604800,
+        },
+        userId: 'user-123',
       };
       logTestInfo({ refreshToken: mockRefreshToken }, expected, result);
 

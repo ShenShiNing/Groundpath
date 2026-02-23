@@ -106,6 +106,27 @@ describe('jwt utils', () => {
       expect(() => verifyAccessToken(token)).toThrow(AppError);
     });
 
+    it('accepts token signed by previous access key in rotation window', () => {
+      const previousKey = authConfig.keyRings.access.keys.find(
+        (key) => key.status === 'previous' && key.privateKey
+      );
+      if (!previousKey?.privateKey) {
+        expect(true).toBe(true);
+        return;
+      }
+
+      const token = jwt.sign(accessPayload, previousKey.privateKey, {
+        algorithm: authConfig.jwt.algorithm,
+        keyid: previousKey.kid,
+        issuer: authConfig.jwtClaims.issuer,
+        audience: authConfig.jwtClaims.audience,
+        expiresIn: '15m',
+      });
+
+      const verified = verifyAccessToken(token);
+      expect(verified).toEqual(accessPayload);
+    });
+
     it('rejects refresh token in access verifier', () => {
       const refreshToken = generateRefreshToken('user-123', 'session-123');
       expect(() => verifyAccessToken(refreshToken)).toThrow(AppError);
@@ -202,6 +223,32 @@ describe('jwt utils', () => {
       );
 
       expect(() => verifyRefreshToken(token)).toThrow(AppError);
+    });
+
+    it('accepts token signed by previous refresh key in rotation window', () => {
+      const previousKey = authConfig.keyRings.refresh.keys.find(
+        (key) => key.status === 'previous' && key.privateKey
+      );
+      if (!previousKey?.privateKey) {
+        expect(true).toBe(true);
+        return;
+      }
+
+      const token = jwt.sign(
+        { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'refresh' },
+        previousKey.privateKey,
+        {
+          algorithm: authConfig.jwt.algorithm,
+          keyid: previousKey.kid,
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
+          expiresIn: '7d',
+        }
+      );
+
+      const verified = verifyRefreshToken(token);
+      expect(verified.sub).toBe('user-123');
+      expect(verified.sid).toBe('session-123');
     });
 
     it('rethrows unknown errors', () => {

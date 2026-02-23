@@ -16,10 +16,6 @@ vi.mock('bcryptjs', () => ({
   },
 }));
 
-vi.mock('@shared/utils/jwt.utils', () => ({
-  verifyRefreshToken: vi.fn(),
-}));
-
 vi.mock('@modules/user/repositories/user.repository', () => ({
   userRepository: {
     findByEmail: vi.fn(),
@@ -76,7 +72,6 @@ vi.mock('@shared/middleware/rate-limit.middleware', () => ({
 // Import after mocks
 import { authService, tokenService } from '@modules/auth';
 import { userRepository } from '@modules/user';
-import { verifyRefreshToken } from '@shared/utils/jwt.utils';
 
 // ==================== Session Management ====================
 describe('authService > session management', () => {
@@ -95,12 +90,9 @@ describe('authService > session management', () => {
     // 场景 1：正常刷新
     // tokenService 成功刷新 → 查询用户信息 → 返回用户和新令牌
     it('should refresh tokens successfully', async () => {
-      vi.mocked(tokenService.refreshTokens).mockResolvedValue(mockTokenPair);
-      vi.mocked(verifyRefreshToken).mockReturnValue({
-        sub: 'user-123',
-        sid: 'token-id',
-        jti: 'token-id',
-        type: 'refresh',
+      vi.mocked(tokenService.refreshTokens).mockResolvedValue({
+        tokens: mockTokenPair,
+        userId: 'user-123',
       });
       vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
 
@@ -122,12 +114,9 @@ describe('authService > session management', () => {
     // 场景 2：验证委托调用
     // 确保 tokenService.refreshTokens 被正确调用
     it('should call tokenService.refreshTokens', async () => {
-      vi.mocked(tokenService.refreshTokens).mockResolvedValue(mockTokenPair);
-      vi.mocked(verifyRefreshToken).mockReturnValue({
-        sub: 'user-123',
-        sid: 'token-id',
-        jti: 'token-id',
-        type: 'refresh',
+      vi.mocked(tokenService.refreshTokens).mockResolvedValue({
+        tokens: mockTokenPair,
+        userId: 'user-123',
       });
       vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
 
@@ -150,12 +139,9 @@ describe('authService > session management', () => {
     // 场景 3：用户不存在（可能已被删除）
     // token 刷新成功但用户已不存在 → 抛出 TOKEN_INVALID
     it('should throw TOKEN_INVALID if user not found', async () => {
-      vi.mocked(tokenService.refreshTokens).mockResolvedValue(mockTokenPair);
-      vi.mocked(verifyRefreshToken).mockReturnValue({
-        sub: 'deleted-user',
-        sid: 'token-id',
-        jti: 'token-id',
-        type: 'refresh',
+      vi.mocked(tokenService.refreshTokens).mockResolvedValue({
+        tokens: mockTokenPair,
+        userId: 'deleted-user',
       });
       vi.mocked(userRepository.findById).mockResolvedValue(undefined);
 

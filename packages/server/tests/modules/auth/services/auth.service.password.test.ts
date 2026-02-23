@@ -47,6 +47,12 @@ vi.mock('@modules/auth/repositories/refresh-token.repository', () => ({
   },
 }));
 
+vi.mock('@modules/auth/repositories/user-token-state.repository', () => ({
+  userTokenStateRepository: {
+    bumpTokenValidAfter: vi.fn(),
+  },
+}));
+
 vi.mock('@modules/auth/services/token.service', () => ({
   tokenService: {
     generateTokenPair: vi.fn(),
@@ -79,6 +85,7 @@ vi.mock('@shared/db/db.utils', () => ({
 import { authService } from '@modules/auth';
 import { userService } from '@modules/user';
 import { refreshTokenRepository } from '@modules/auth';
+import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';
 
 // ==================== changePassword ====================
 // 场景：用户修改密码
@@ -86,6 +93,7 @@ import { refreshTokenRepository } from '@modules/auth';
 describe('authService > changePassword', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mockResolvedValue(undefined);
   });
 
   const userId = 'user-123';

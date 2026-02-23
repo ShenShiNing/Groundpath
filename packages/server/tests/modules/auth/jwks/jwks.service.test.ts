@@ -3,19 +3,22 @@ import { jwksService } from '@modules/auth/jwks';
 import { authConfig } from '@config/env';
 
 describe('jwksService', () => {
-  it('returns access and refresh public keys as JWKS', () => {
+  it('returns all active/previous access and refresh public keys as JWKS', () => {
     const jwks = jwksService.getPublicJwks();
 
-    expect(jwks.keys).toHaveLength(2);
+    const publishedKids = [
+      ...authConfig.keyRings.access.keys,
+      ...authConfig.keyRings.refresh.keys,
+    ]
+      .filter((key) => key.status === 'active' || key.status === 'previous')
+      .map((key) => key.kid);
 
-    const accessKey = jwks.keys.find((key) => key.kid === authConfig.accessToken.keyId);
-    const refreshKey = jwks.keys.find((key) => key.kid === authConfig.refreshToken.keyId);
-
-    expect(accessKey).toBeDefined();
-    expect(refreshKey).toBeDefined();
-    expect(accessKey?.alg).toBe(authConfig.jwt.algorithm);
-    expect(refreshKey?.alg).toBe(authConfig.jwt.algorithm);
-    expect(accessKey?.use).toBe('sig');
-    expect(refreshKey?.use).toBe('sig');
+    expect(jwks.keys.length).toBeGreaterThan(0);
+    for (const kid of publishedKids) {
+      const key = jwks.keys.find((candidate) => candidate.kid === kid);
+      expect(key).toBeDefined();
+      expect(key?.alg).toBe(authConfig.jwt.algorithm);
+      expect(key?.use).toBe('sig');
+    }
   });
 });

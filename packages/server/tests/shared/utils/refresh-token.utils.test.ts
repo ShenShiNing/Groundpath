@@ -37,9 +37,9 @@ describe('refresh-token.utils', () => {
       expect(isStoredRefreshTokenMatch(storedHash, token)).toBe(true);
     });
 
-    it('should support legacy plaintext stored token', () => {
+    it('should reject legacy plaintext stored token', () => {
       const token = 'legacy-plain-token';
-      expect(isStoredRefreshTokenMatch(token, token)).toBe(true);
+      expect(isStoredRefreshTokenMatch(token, token)).toBe(false);
     });
 
     it('should return false for mismatched token', () => {

@@ -1,6 +1,6 @@
 import { generateKeyPairSync } from 'crypto';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import { authConfig } from '@config/env';
 import { AppError } from '@shared/errors';
@@ -394,15 +394,15 @@ describe('emailVerificationService > verifyToken', () => {
 
   const signVerificationToken = (
     payload: Record<string, unknown>,
-    expiresIn: string,
-    privateKey: string = authConfig.accessToken.privateKey
+    expiresIn: SignOptions['expiresIn'],
+    privateKey: string = authConfig.emailVerificationToken.privateKey
   ) =>
     jwt.sign(payload, privateKey, {
       expiresIn,
       algorithm: authConfig.jwt.algorithm,
       issuer: authConfig.jwtClaims.issuer,
       audience: authConfig.jwtClaims.audience,
-      keyid: authConfig.accessToken.keyId,
+      keyid: authConfig.emailVerificationToken.keyId,
     });
 
   // 场景 1：令牌有效
