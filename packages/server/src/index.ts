@@ -18,6 +18,7 @@ import {
 import { systemLogger } from '@shared/logger/system-logger';
 import { initializeScheduler } from '@shared/scheduler';
 import { closeDatabase } from '@shared/db';
+import { closeRedis, connectRedis } from '@shared/redis';
 import router from './router';
 
 // ==================== App Setup ====================
@@ -123,6 +124,12 @@ function createShutdownHandler(server: Server): (signal: string) => void {
         logger.error({ err: dbErr }, 'Error closing database connections');
       }
 
+      try {
+        await closeRedis();
+      } catch (redisErr) {
+        logger.error({ err: redisErr }, 'Error closing Redis connection');
+      }
+
       logger.info('Server closed successfully');
       process.exit(0);
     });
@@ -138,7 +145,9 @@ function createShutdownHandler(server: Server): (signal: string) => void {
 /**
  * Start the HTTP server
  */
-function startServer(): void {
+async function startServer(): Promise<void> {
+  await connectRedis();
+
   const app = createApp();
   const server = createServer(app);
 
@@ -154,4 +163,7 @@ function startServer(): void {
 
 // ==================== Entry Point ====================
 
-startServer();
+startServer().catch((error) => {
+  logger.fatal({ err: error }, 'Failed to start server');
+  process.exit(1);
+});

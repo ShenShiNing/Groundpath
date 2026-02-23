@@ -58,7 +58,7 @@ vi.mock('@modules/auth/services/token.service', () => ({
 }));
 
 vi.mock('@shared/middleware/rate-limit.middleware', () => ({
-  checkAccountRateLimit: vi.fn(() => ({ allowed: true })),
+  checkAccountRateLimit: vi.fn(async () => ({ allowed: true })),
   resetAccountRateLimit: vi.fn(),
   // no-op placeholders to satisfy barrel exports used by routes
   loginRateLimiter: vi.fn((_req, _res, next) => next()),
@@ -98,7 +98,7 @@ describe('authService > login', () => {
   // 场景 1：正常登录 — 凭证正确、用户状态正常
   // 应返回用户公开信息和令牌对
   it('should login successfully with valid credentials', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(loginLogRepository.recordSuccess).mockResolvedValue(undefined);
@@ -124,7 +124,7 @@ describe('authService > login', () => {
   // 场景 2：验证账户级别限流检查
   // 确保在任何数据库操作之前先进行限流检查
   it('should check rate limit before processing login', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -144,7 +144,7 @@ describe('authService > login', () => {
   // 场景 3：登录尝试次数超限
   // 账户级别限流触发（如 10 次/小时）→ 抛出 RATE_LIMITED (429)
   it('should throw RATE_LIMITED when rate limit exceeded', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({
       allowed: false,
       retryAfter: 300,
     });
@@ -170,7 +170,7 @@ describe('authService > login', () => {
   // 场景 3.1：限流 — retryAfter 为 undefined（覆盖 ?? 0 分支）
   // 测试空值合并运算符的 fallback 分支
   it('should handle rate limit with undefined retryAfter', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({
       allowed: false,
       retryAfter: undefined,
     });
@@ -196,7 +196,7 @@ describe('authService > login', () => {
   // 场景 3.2：限流 — retryAfter <= 60 秒（覆盖单数 minute 分支）
   // 测试三元表达式的 false 分支：minutes <= 1 时不加 's'
   it('should handle rate limit with retryAfter <= 60 seconds (singular minute)', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({
       allowed: false,
       retryAfter: 30, // 30 秒 → Math.ceil(30/60) = 1 分钟
     });
@@ -221,7 +221,7 @@ describe('authService > login', () => {
   // 邮箱在数据库中查不到 → 记录失败日志 → 抛出 INVALID_CREDENTIALS
   // 注意：不应泄露"用户不存在"的信息，统一返回"凭证无效"
   it('should throw INVALID_CREDENTIALS when user not found', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(undefined);
 
     let actual: { code: string; loggedFailure: boolean } | null = null;
@@ -256,7 +256,7 @@ describe('authService > login', () => {
   // 用户存在但 password 字段为 null（第三方登录注册）→ 抛出 INVALID_CREDENTIALS
   it('should throw INVALID_CREDENTIALS when user has no password (OAuth user)', async () => {
     const oauthUser = { ...mockUser, password: null };
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(oauthUser);
 
     let actual: { code: string } | null = null;
@@ -275,7 +275,7 @@ describe('authService > login', () => {
   // 场景 6：密码错误
   // 用户存在但 bcrypt.compare 返回 false → 记录失败日志（含 userId） → 抛出 INVALID_CREDENTIALS
   it('should throw INVALID_CREDENTIALS when password is wrong', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
 
@@ -308,7 +308,7 @@ describe('authService > login', () => {
   // 凭证正确但用户状态为 banned → 记录失败日志 → 抛出 USER_BANNED (403)
   it('should throw USER_BANNED when user is banned', async () => {
     const bannedUser = { ...mockUser, status: 'banned' as const };
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(bannedUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
 
@@ -329,7 +329,7 @@ describe('authService > login', () => {
   // 场景 8：成功登录后记录日志
   // 验证 loginLogRepository.recordSuccess 被正确调用
   it('should record successful login', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -361,7 +361,7 @@ describe('authService > login', () => {
   // 场景 9：成功登录后重置限流计数器
   // 防止之前的失败尝试影响后续正常使用
   it('should reset rate limit on successful login', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -381,7 +381,7 @@ describe('authService > login', () => {
   // 场景 10：更新用户最后登录信息
   // 记录登录时间和 IP 地址
   it('should update last login info', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -401,7 +401,7 @@ describe('authService > login', () => {
   // 场景 11：从 User-Agent 解析设备信息
   // 测试 parseDeviceInfo 函数正确识别 Windows + Chrome + Desktop
   it('should parse device info from user agent', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -439,7 +439,7 @@ describe('authService > login', () => {
         os: 'iOS',
       },
     };
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -463,7 +463,7 @@ describe('authService > login', () => {
   // 场景 13：IP 地址为 null（如通过负载均衡器但未配置 X-Forwarded-For）
   // 应正常处理，IP 字段记录为 null
   it('should handle null IP address', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -479,7 +479,7 @@ describe('authService > login', () => {
   // 场景 14：User-Agent 为 null（某些 API 客户端可能不发送）
   // 应正常处理，deviceInfo 为 null
   it('should handle null user agent', async () => {
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -500,7 +500,7 @@ describe('authService > login', () => {
   // 测试 parseDeviceInfo 函数正确识别 Mobile + Safari
   it('should detect mobile device from user agent', async () => {
     const mobileUserAgent = 'Mozilla/5.0 Mobile Safari/605.1';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -528,7 +528,7 @@ describe('authService > login', () => {
   // 测试 parseDeviceInfo 函数正确识别 tablet
   it('should detect tablet device from user agent', async () => {
     const tabletUserAgent = 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) Tablet Safari/605.1';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -555,7 +555,7 @@ describe('authService > login', () => {
   // 测试 parseDeviceInfo 函数正确识别 macOS
   it('should detect macOS from user agent', async () => {
     const macUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -583,7 +583,7 @@ describe('authService > login', () => {
   // 测试 parseDeviceInfo 函数正确识别 Linux（非 Android）
   it('should detect Linux from user agent', async () => {
     const linuxUserAgent = 'Mozilla/5.0 (X11; Linux x86_64) Firefox/120.0';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -610,7 +610,7 @@ describe('authService > login', () => {
   // 场景 19：检测 Android 系统
   it('should detect Android from user agent (without Linux keyword)', async () => {
     const androidUserAgent = 'Mozilla/5.0 (Android 14; Mobile) Chrome/120.0';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -637,7 +637,7 @@ describe('authService > login', () => {
   // 场景 20：检测 iOS 系统
   it('should detect iOS from user agent (without Mac OS keyword)', async () => {
     const iosUserAgent = 'Mozilla/5.0 (iPhone) Mobile Safari/605.1';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -664,7 +664,7 @@ describe('authService > login', () => {
   // 场景 21：检测 Edge 浏览器
   it('should detect Edge browser from user agent', async () => {
     const edgeUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Edg/120.0';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -691,7 +691,7 @@ describe('authService > login', () => {
   // 场景 22：未知操作系统和浏览器
   it('should handle unknown OS and browser in user agent', async () => {
     const unknownUserAgent = 'CustomBot/1.0';
-    vi.mocked(checkAccountRateLimit).mockReturnValue({ allowed: true });
+    vi.mocked(checkAccountRateLimit).mockResolvedValue({ allowed: true });
     vi.mocked(userRepository.findByEmail).mockResolvedValue(mockUser);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
     vi.mocked(tokenService.generateTokenPair).mockResolvedValue(mockTokenPair);
@@ -721,3 +721,4 @@ describe('authService > login', () => {
     expect(calledDeviceInfo?.browser).toBeUndefined();
   });
 });
+

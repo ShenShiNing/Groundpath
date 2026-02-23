@@ -49,6 +49,12 @@ const databaseSchema = z.object({
   DB_QUEUE_LIMIT: z.coerce.number().default(0),
 });
 
+// -------------------- Redis --------------------
+const redisSchema = z.object({
+  REDIS_URL: z.string().min(1),
+  REDIS_PREFIX: z.string().default('knowledge-agent'),
+});
+
 // -------------------- Authentication --------------------
 const authSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1),
@@ -170,6 +176,7 @@ const featureFlagsSchema = z.object({
 
 const envSchema = serverSchema
   .extend(databaseSchema.shape)
+  .extend(redisSchema.shape)
   .extend(authSchema.shape)
   .extend(emailSchema.shape)
   .extend(oauthSchema.shape)
@@ -249,6 +256,12 @@ export const databaseConfig = {
   url: validatedEnv.DATABASE_URL,
   connectionLimit: validatedEnv.DB_CONNECTION_LIMIT,
   queueLimit: validatedEnv.DB_QUEUE_LIMIT,
+} as const;
+
+/** Redis configuration */
+export const redisConfig = {
+  url: validatedEnv.REDIS_URL,
+  prefix: validatedEnv.REDIS_PREFIX,
 } as const;
 
 /** Authentication configuration */

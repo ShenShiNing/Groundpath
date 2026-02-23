@@ -148,7 +148,7 @@ export const authService = {
     const email = normalizeEmail(credentials.email);
 
     // Check account-level rate limit before any database operations
-    const rateCheck = checkAccountRateLimit(email);
+    const rateCheck = await checkAccountRateLimit(email);
     if (!rateCheck.allowed) {
       const minutes = Math.ceil((rateCheck.retryAfter ?? 0) / 60);
       throw Errors.auth(
@@ -231,7 +231,7 @@ export const authService = {
     );
 
     // Reset account rate limit on successful login
-    resetAccountRateLimit(email);
+    await resetAccountRateLimit(email);
 
     // Update last login info
     await userService.updateLastLogin(user.id, ipAddress);
