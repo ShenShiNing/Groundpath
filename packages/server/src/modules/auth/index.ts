@@ -28,6 +28,9 @@ export * from './oauth/oauth.controller';
 export { githubProvider } from './oauth/providers/github.provider';
 export { googleProvider } from './oauth/providers/google.provider';
 
+// JWKS (sub-module)
+export * from './jwks';
+
 // Routes
 export { default as authRoutes } from './auth.routes';
 export { default as emailRoutes } from './verification/email.routes';

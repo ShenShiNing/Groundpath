@@ -1,39 +1,39 @@
 import { and, eq, gt, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
-import type { AuthResponse } from '@knowledge-agent/shared/types';
 import { db } from '@shared/db';
 import { addSeconds, now } from '@shared/db/db.utils';
 import { oauthExchangeCodes } from '@shared/db/schema/auth/oauth-exchange-codes.schema';
+import { hashOAuthExchangeCode } from '@shared/utils';
 
-function deserializeAuthResponse(payload: string): AuthResponse | null {
-  try {
-    const parsed = JSON.parse(payload) as AuthResponse & { user: { createdAt: string | Date } };
-    return {
-      ...parsed,
-      user: {
-        ...parsed.user,
-        createdAt: new Date(parsed.user.createdAt),
-      },
-    };
-  } catch {
-    return null;
-  }
+export interface OAuthExchangeCodeContext {
+  userId: string;
+  returnUrl: string;
 }
 
 export const oauthExchangeCodeRepository = {
-  async create(code: string, authResponse: AuthResponse, ttlSeconds: number): Promise<void> {
+  async create(code: string, userId: string, returnUrl: string, ttlSeconds: number): Promise<void> {
+    const codeHash = hashOAuthExchangeCode(code);
     await db.insert(oauthExchangeCodes).values({
-      code,
-      payload: JSON.stringify(authResponse),
+      codeHash,
+      userId,
+      returnUrl,
       expiresAt: addSeconds(ttlSeconds),
       consumedAt: null,
     });
   },
 
-  async consume(code: string): Promise<AuthResponse | null> {
+  async consume(code: string, userId: string): Promise<OAuthExchangeCodeContext | null> {
+    const codeHash = hashOAuthExchangeCode(code);
     const record = await db
-      .select()
+      .select({
+        userId: oauthExchangeCodes.userId,
+        returnUrl: oauthExchangeCodes.returnUrl,
+        consumedAt: oauthExchangeCodes.consumedAt,
+        expiresAt: oauthExchangeCodes.expiresAt,
+      })
       .from(oauthExchangeCodes)
-      .where(eq(oauthExchangeCodes.code, code))
+      .where(
+        and(eq(oauthExchangeCodes.codeHash, codeHash), eq(oauthExchangeCodes.userId, userId))
+      )
       .limit(1);
 
     const row = record[0];
@@ -46,7 +46,8 @@ export const oauthExchangeCodeRepository = {
       .set({ consumedAt: now() })
       .where(
         and(
-          eq(oauthExchangeCodes.code, code),
+          eq(oauthExchangeCodes.codeHash, codeHash),
+          eq(oauthExchangeCodes.userId, userId),
           isNull(oauthExchangeCodes.consumedAt),
           gt(oauthExchangeCodes.expiresAt, now())
         )
@@ -56,12 +57,15 @@ export const oauthExchangeCodeRepository = {
       return null;
     }
 
-    return deserializeAuthResponse(row.payload);
+    return {
+      userId: row.userId,
+      returnUrl: row.returnUrl,
+    };
   },
 
   async deleteExpiredAndConsumed(batchSize: number = 500): Promise<number> {
     const candidates = await db
-      .select({ code: oauthExchangeCodes.code })
+      .select({ codeHash: oauthExchangeCodes.codeHash })
       .from(oauthExchangeCodes)
       .where(
         or(lt(oauthExchangeCodes.expiresAt, now()), isNotNull(oauthExchangeCodes.consumedAt))
@@ -72,8 +76,10 @@ export const oauthExchangeCodeRepository = {
       return 0;
     }
 
-    const codes = candidates.map((item) => item.code);
-    const result = await db.delete(oauthExchangeCodes).where(inArray(oauthExchangeCodes.code, codes));
+    const codeHashes = candidates.map((item) => item.codeHash);
+    const result = await db
+      .delete(oauthExchangeCodes)
+      .where(inArray(oauthExchangeCodes.codeHash, codeHashes));
 
     return result[0]?.affectedRows ?? 0;
   },

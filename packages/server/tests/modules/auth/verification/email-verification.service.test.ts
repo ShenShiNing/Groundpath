@@ -1,6 +1,8 @@
+import { generateKeyPairSync } from 'crypto';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
+import { authConfig } from '@config/env';
 import { AppError } from '@shared/errors';
 import {
   mockEmail,
@@ -16,9 +18,13 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'generated-code-uuid'),
 }));
 
-vi.mock('crypto', () => ({
-  randomInt: vi.fn(() => 123456),
-}));
+vi.mock('crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('crypto')>();
+  return {
+    ...actual,
+    randomInt: vi.fn(() => 123456),
+  };
+});
 
 vi.mock('@modules/auth/verification/email-verification.repository', () => ({
   emailVerificationRepository: {
@@ -386,10 +392,23 @@ describe('emailVerificationService > verifyToken', () => {
     purpose: 'email_verified' as const,
   };
 
+  const signVerificationToken = (
+    payload: Record<string, unknown>,
+    expiresIn: string,
+    privateKey: string = authConfig.accessToken.privateKey
+  ) =>
+    jwt.sign(payload, privateKey, {
+      expiresIn,
+      algorithm: authConfig.jwt.algorithm,
+      issuer: authConfig.jwtClaims.issuer,
+      audience: authConfig.jwtClaims.audience,
+      keyid: authConfig.accessToken.keyId,
+    });
+
   // 场景 1：令牌有效
   // 应返回邮箱地址
   it('should verify valid token and return email', () => {
-    const token = jwt.sign(validPayload, 'test-verification-secret', { expiresIn: '5m' });
+    const token = signVerificationToken(validPayload, '5m');
 
     const result = emailVerificationService.verifyToken(token, 'register');
 
@@ -405,7 +424,7 @@ describe('emailVerificationService > verifyToken', () => {
   // 场景 2：令牌已过期
   // 应抛出 VERIFICATION_TOKEN_EXPIRED 错误 (400)
   it('should throw VERIFICATION_TOKEN_EXPIRED when token is expired', () => {
-    const token = jwt.sign(validPayload, 'test-verification-secret', { expiresIn: '-1s' });
+    const token = signVerificationToken(validPayload, '-1s');
 
     let actual: { code: string; statusCode: number } | null = null;
     try {
@@ -424,7 +443,14 @@ describe('emailVerificationService > verifyToken', () => {
   // 场景 3：令牌签名无效
   // 应抛出 VERIFICATION_TOKEN_INVALID 错误 (400)
   it('should throw VERIFICATION_TOKEN_INVALID when token signature is invalid', () => {
-    const token = jwt.sign(validPayload, 'wrong-secret', { expiresIn: '5m' });
+    const wrongPrivateKey = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+    }).privateKey;
+    const token = signVerificationToken(
+      validPayload,
+      '5m',
+      wrongPrivateKey.export({ format: 'pem', type: 'pkcs8' }).toString()
+    );
 
     let actual: { code: string; statusCode: number } | null = null;
     try {
@@ -443,7 +469,7 @@ describe('emailVerificationService > verifyToken', () => {
   // 场景 4：令牌类型不匹配
   // 应抛出 VERIFICATION_TOKEN_INVALID 错误 (400)
   it('should throw VERIFICATION_TOKEN_INVALID when token type does not match', () => {
-    const token = jwt.sign(validPayload, 'test-verification-secret', { expiresIn: '5m' });
+    const token = signVerificationToken(validPayload, '5m');
 
     let actual: { code: string; statusCode: number } | null = null;
     try {
@@ -463,7 +489,7 @@ describe('emailVerificationService > verifyToken', () => {
   // 应抛出 VERIFICATION_TOKEN_INVALID 错误 (400)
   it('should throw VERIFICATION_TOKEN_INVALID when token purpose is wrong', () => {
     const wrongPayload = { ...validPayload, purpose: 'wrong_purpose' };
-    const token = jwt.sign(wrongPayload, 'test-verification-secret', { expiresIn: '5m' });
+    const token = signVerificationToken(wrongPayload, '5m');
 
     let actual: { code: string; statusCode: number } | null = null;
     try {

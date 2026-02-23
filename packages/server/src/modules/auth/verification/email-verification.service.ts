@@ -3,7 +3,7 @@ import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
-import { emailConfig } from '@config/env';
+import { authConfig, emailConfig } from '@config/env';
 import { emailVerificationRepository } from '../verification/email-verification.repository';
 import { emailService } from './email.service';
 import { AppError, Errors } from '@shared/errors';
@@ -40,10 +40,13 @@ function generateVerificationToken(email: string, type: EmailVerificationCodeTyp
 
   const options: SignOptions = {
     expiresIn: `${emailConfig.verification.tokenExpiresInMinutes}m`,
-    algorithm: 'HS256',
+    algorithm: authConfig.jwt.algorithm,
+    issuer: authConfig.jwtClaims.issuer,
+    audience: authConfig.jwtClaims.audience,
+    keyid: authConfig.accessToken.keyId,
   };
 
-  return jwt.sign(payload, emailConfig.verification.secret, options);
+  return jwt.sign(payload, authConfig.accessToken.privateKey, options);
 }
 
 /**
@@ -54,8 +57,10 @@ function verifyVerificationToken(
   expectedType: EmailVerificationCodeType
 ): VerificationTokenPayload {
   try {
-    const decoded = jwt.verify(token, emailConfig.verification.secret, {
-      algorithms: ['HS256'],
+    const decoded = jwt.verify(token, authConfig.accessToken.publicKey, {
+      algorithms: [authConfig.jwt.algorithm],
+      issuer: authConfig.jwtClaims.issuer,
+      audience: authConfig.jwtClaims.audience,
     }) as JwtPayload & VerificationTokenPayload;
 
     if (decoded.purpose !== 'email_verified') {

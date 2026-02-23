@@ -29,3 +29,5 @@ export {
   safeCompareTokenHash,
   isStoredRefreshTokenMatch,
 } from './refresh-token.utils';
+
+export { hashOAuthExchangeCode } from './oauth-exchange-code.utils';

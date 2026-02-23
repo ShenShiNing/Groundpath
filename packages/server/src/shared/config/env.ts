@@ -57,14 +57,13 @@ const redisSchema = z.object({
 
 // -------------------- Authentication --------------------
 const authSchema = z.object({
-  JWT_ACCESS_SECRET: z.string().min(1),
-  JWT_REFRESH_SECRET: z.string().min(1),
+  JWT_ALGORITHM: z.literal('RS256').default('RS256'),
+  JWT_ACCESS_PRIVATE_KEY: z.string().min(1),
+  JWT_ACCESS_PUBLIC_KEY: z.string().min(1),
+  JWT_REFRESH_PRIVATE_KEY: z.string().min(1),
+  JWT_REFRESH_PUBLIC_KEY: z.string().min(1),
   JWT_ACCESS_KEY_ID: z.string().default('access-v1'),
   JWT_REFRESH_KEY_ID: z.string().default('refresh-v1'),
-  JWT_ACCESS_PREVIOUS_SECRETS: z.string().default(''),
-  JWT_REFRESH_PREVIOUS_SECRETS: z.string().default(''),
-  JWT_ACCESS_PREVIOUS_KEYS: z.string().default(''),
-  JWT_REFRESH_PREVIOUS_KEYS: z.string().default(''),
   JWT_ISSUER: z.string().default('knowledge-agent'),
   JWT_AUDIENCE: z.string().default('knowledge-agent-client'),
   ENCRYPTION_KEY: z.string().min(32),
@@ -202,36 +201,8 @@ if (!result.success) {
 
 const validatedEnv = result.data;
 
-function parseSecretList(value: string): string[] {
-  return value
-    .split(',')
-    .map((secret) => secret.trim())
-    .filter(Boolean);
-}
-
-interface JwtKeySecret {
-  keyId: string;
-  secret: string;
-}
-
-function parseKeySecretList(value: string): JwtKeySecret[] {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .map((entry) => {
-      const separatorIndex = entry.indexOf(':');
-      if (separatorIndex <= 0 || separatorIndex === entry.length - 1) {
-        return null;
-      }
-      const keyId = entry.slice(0, separatorIndex).trim();
-      const secret = entry.slice(separatorIndex + 1).trim();
-      if (!keyId || !secret) {
-        return null;
-      }
-      return { keyId, secret };
-    })
-    .filter((item): item is JwtKeySecret => item !== null);
+function normalizePem(value: string): string {
+  return value.replace(/\\n/g, '\n').trim();
 }
 
 // ==================== Modular Config Exports ====================
@@ -266,19 +237,20 @@ export const redisConfig = {
 
 /** Authentication configuration */
 export const authConfig = {
+  jwt: {
+    algorithm: validatedEnv.JWT_ALGORITHM,
+  },
   accessToken: {
-    secret: validatedEnv.JWT_ACCESS_SECRET,
+    privateKey: normalizePem(validatedEnv.JWT_ACCESS_PRIVATE_KEY),
+    publicKey: normalizePem(validatedEnv.JWT_ACCESS_PUBLIC_KEY),
     expiresInSeconds: validatedEnv.ACCESS_TOKEN_EXPIRES_IN,
     keyId: validatedEnv.JWT_ACCESS_KEY_ID,
-    previousSecrets: parseSecretList(validatedEnv.JWT_ACCESS_PREVIOUS_SECRETS),
-    previousKeys: parseKeySecretList(validatedEnv.JWT_ACCESS_PREVIOUS_KEYS),
   },
   refreshToken: {
-    secret: validatedEnv.JWT_REFRESH_SECRET,
+    privateKey: normalizePem(validatedEnv.JWT_REFRESH_PRIVATE_KEY),
+    publicKey: normalizePem(validatedEnv.JWT_REFRESH_PUBLIC_KEY),
     expiresInSeconds: validatedEnv.REFRESH_TOKEN_EXPIRES_IN,
     keyId: validatedEnv.JWT_REFRESH_KEY_ID,
-    previousSecrets: parseSecretList(validatedEnv.JWT_REFRESH_PREVIOUS_SECRETS),
-    previousKeys: parseKeySecretList(validatedEnv.JWT_REFRESH_PREVIOUS_KEYS),
   },
   bcrypt: {
     saltRounds: validatedEnv.BCRYPT_SALT_ROUNDS,

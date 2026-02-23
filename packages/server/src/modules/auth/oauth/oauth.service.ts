@@ -7,12 +7,13 @@ import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@shared/types';
 import { toUserPublicInfo } from '@shared/utils';
 import { Errors } from '@shared/errors';
-import { authConfig, oauthConfig } from '@config/env';
+import { authConfig } from '@config/env';
 import { userService } from '../../user';
 import { userAuthRepository } from '../repositories/user-auth.repository';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from '../services/token.service';
 import { oauthExchangeCodeRepository } from '../repositories/oauth-exchange-code.repository';
+import type { OAuthExchangeCodeContext } from '../repositories/oauth-exchange-code.repository';
 import type { OAuthProviderType, OAuthUserData } from './oauth.types';
 import { detectDevice } from '../../logs/services/device-detection.service';
 import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
@@ -37,11 +38,12 @@ export function generateState(returnUrl: string = '/'): string {
   };
   const options: SignOptions = {
     expiresIn: '5m',
-    algorithm: 'HS256',
+    algorithm: authConfig.jwt.algorithm,
     issuer: authConfig.jwtClaims.issuer,
     audience: authConfig.jwtClaims.audience,
+    keyid: authConfig.accessToken.keyId,
   };
-  return jwt.sign(payload, oauthConfig.stateSecret, options);
+  return jwt.sign(payload, authConfig.accessToken.privateKey, options);
 }
 
 /**
@@ -49,8 +51,8 @@ export function generateState(returnUrl: string = '/'): string {
  */
 export function validateState(state: string): { returnUrl: string } | null {
   try {
-    const decoded = jwt.verify(state, oauthConfig.stateSecret, {
-      algorithms: ['HS256'],
+    const decoded = jwt.verify(state, authConfig.accessToken.publicKey, {
+      algorithms: [authConfig.jwt.algorithm],
       issuer: authConfig.jwtClaims.issuer,
       audience: authConfig.jwtClaims.audience,
     }) as JwtPayload & OAuthStateTokenPayload;
@@ -68,17 +70,20 @@ export function validateState(state: string): { returnUrl: string } | null {
  * Generate one-time exchange code for frontend callback.
  * The frontend exchanges this code for auth payload via API.
  */
-export async function createOAuthExchangeCode(authResponse: AuthResponse): Promise<string> {
+export async function createOAuthExchangeCode(userId: string, returnUrl: string): Promise<string> {
   const code = uuidv4();
-  await oauthExchangeCodeRepository.create(code, authResponse, 60);
+  await oauthExchangeCodeRepository.create(code, userId, returnUrl, 60);
   return code;
 }
 
 /**
  * Consume one-time OAuth exchange code.
  */
-export function consumeOAuthExchangeCode(code: string): Promise<AuthResponse | null> {
-  return oauthExchangeCodeRepository.consume(code);
+export function consumeOAuthExchangeCode(
+  code: string,
+  userId: string
+): Promise<OAuthExchangeCodeContext | null> {
+  return oauthExchangeCodeRepository.consume(code, userId);
 }
 
 // ==================== Auth Response ====================

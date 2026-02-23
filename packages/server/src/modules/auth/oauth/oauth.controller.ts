@@ -8,8 +8,14 @@ import { systemLogger } from '@shared/logger/system-logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { getClientIp, setRefreshTokenCookie } from '@shared/utils';
+import {
+  getClientIp,
+  setRefreshTokenCookie,
+  getRefreshTokenFromRequest,
+  verifyRefreshToken,
+} from '@shared/utils';
 import { consumeOAuthExchangeCode, createOAuthExchangeCode } from './oauth.service';
+import { authService } from '../services/auth.service';
 
 const logger = createLogger('oauth');
 const FRONTEND_URL = serverConfig.frontendUrl;
@@ -98,7 +104,7 @@ export const oauthController = {
 
       // Redirect to frontend with one-time code (refresh token sent via cookie)
       setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
-      const exchangeCode = await createOAuthExchangeCode(authResponse);
+      const exchangeCode = await createOAuthExchangeCode(authResponse.user.id, returnUrl);
 
       const callbackUrl = buildCallbackUrl(returnUrl, {
         code: exchangeCode,
@@ -155,7 +161,7 @@ export const oauthController = {
 
       // Redirect to frontend with one-time code (refresh token sent via cookie)
       setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
-      const exchangeCode = await createOAuthExchangeCode(authResponse);
+      const exchangeCode = await createOAuthExchangeCode(authResponse.user.id, returnUrl);
 
       const callbackUrl = buildCallbackUrl(returnUrl, {
         code: exchangeCode,
@@ -178,11 +184,18 @@ export const oauthController = {
       throw Errors.validation('OAuth exchange code is required');
     }
 
-    const authResponse = await consumeOAuthExchangeCode(code);
-    if (!authResponse) {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      throw Errors.auth(AUTH_ERROR_CODES.MISSING_TOKEN, 'Refresh token required');
+    }
+
+    let refreshPayload: { sub: string };
+    try {
+      refreshPayload = verifyRefreshToken(refreshToken);
+    } catch {
       systemLogger.securityEvent(
-        'auth.oauth.exchange.invalid_code',
-        'Invalid or expired OAuth exchange code used',
+        'auth.oauth.exchange.invalid_refresh',
+        'OAuth exchange attempted with invalid refresh token',
         { codeLength: code.length, ipAddress: getClientIp(req) }
       );
       throw Errors.auth(
@@ -191,6 +204,24 @@ export const oauthController = {
         400
       );
     }
+
+    const exchangeContext = await consumeOAuthExchangeCode(code, refreshPayload.sub);
+    if (!exchangeContext) {
+      systemLogger.securityEvent(
+        'auth.oauth.exchange.invalid_code',
+        'Invalid or expired OAuth exchange code used',
+        { codeLength: code.length, userId: refreshPayload.sub, ipAddress: getClientIp(req) }
+      );
+      throw Errors.auth(
+        AUTH_ERROR_CODES.TOKEN_INVALID,
+        'OAuth exchange code is invalid or expired',
+        400
+      );
+    }
+
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] ?? null;
+    const authResponse = await authService.refresh(refreshToken, ipAddress, userAgent);
 
     setRefreshTokenCookie(res, authResponse.tokens.refreshToken);
     sendSuccessResponse(res, sanitizeAuthResponse(authResponse));

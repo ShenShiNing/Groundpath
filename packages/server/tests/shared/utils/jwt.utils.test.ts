@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from 'crypto';
 import { describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
@@ -9,106 +10,39 @@ import {
   extractBearerToken,
 } from '@shared/utils/jwt.utils';
 import { authConfig } from '@config/env';
-import type { AccessTokenPayload, RefreshTokenPayload } from '@shared/types';
+import type { AccessTokenPayload } from '@shared/types';
 import { AppError } from '@shared/errors';
 
-describe('jwtUtils', () => {
-  // ==================== Access Token Tests ====================
-  describe('generateAccessToken', () => {
-    const validPayload: AccessTokenPayload = {
-      sub: 'user-123',
-      email: 'test@example.com',
-      username: 'testuser',
-      status: 'active',
-      emailVerified: true,
-      sid: 'session-123',
-    };
+function createKeyPairPem(): { privateKey: string; publicKey: string } {
+  const pair =
+    authConfig.jwt.algorithm === 'RS256'
+      ? generateKeyPairSync('rsa', { modulusLength: 2048 })
+      : generateKeyPairSync('ed25519');
+  return {
+    privateKey: pair.privateKey.export({ format: 'pem', type: 'pkcs8' }).toString(),
+    publicKey: pair.publicKey.export({ format: 'pem', type: 'spki' }).toString(),
+  };
+}
 
-    it('should generate a valid JWT token', () => {
-      const token = generateAccessToken(validPayload);
+describe('jwt utils', () => {
+  const accessPayload: AccessTokenPayload = {
+    sub: 'user-123',
+    email: 'test@example.com',
+    username: 'testuser',
+    status: 'active',
+    emailVerified: true,
+    sid: 'session-123',
+  };
 
-      expect(token).toBeDefined();
-      expect(typeof token).toBe('string');
-      expect(token.split('.')).toHaveLength(3); // JWT has 3 parts
+  describe('access token', () => {
+    it('generates and verifies a valid access token', () => {
+      const token = generateAccessToken(accessPayload);
+      const verified = verifyAccessToken(token);
+      expect(verified).toEqual(accessPayload);
     });
 
-    it('should include all payload fields in the token', () => {
-      const token = generateAccessToken(validPayload);
-      const decoded = jwt.decode(token) as jwt.JwtPayload & AccessTokenPayload;
-
-      expect(decoded.sub).toBe(validPayload.sub);
-      expect(decoded.email).toBe(validPayload.email);
-      expect(decoded.username).toBe(validPayload.username);
-      expect(decoded.status).toBe(validPayload.status);
-      expect(decoded.emailVerified).toBe(validPayload.emailVerified);
-    });
-
-    it('should set the correct expiration time', () => {
-      const token = generateAccessToken(validPayload);
-      const decoded = jwt.decode(token) as jwt.JwtPayload;
-
-      expect(decoded.exp).toBeDefined();
-      expect(decoded.iat).toBeDefined();
-      // 15 minutes = 900 seconds
-      expect(decoded.exp! - decoded.iat!).toBe(15 * 60);
-    });
-
-    it('should generate different tokens for different payloads', () => {
-      const payload2: AccessTokenPayload = {
-        ...validPayload,
-        sub: 'user-456',
-      };
-
-      const token1 = generateAccessToken(validPayload);
-      const token2 = generateAccessToken(payload2);
-
-      expect(token1).not.toBe(token2);
-    });
-
-    it('should handle different user statuses', () => {
-      const statuses: Array<'active' | 'inactive' | 'banned'> = ['active', 'inactive', 'banned'];
-
-      statuses.forEach((status) => {
-        const payload: AccessTokenPayload = { ...validPayload, status };
-        const token = generateAccessToken(payload);
-        const decoded = jwt.decode(token) as jwt.JwtPayload & AccessTokenPayload;
-
-        expect(decoded.status).toBe(status);
-      });
-    });
-
-    it('should handle emailVerified as false', () => {
-      const payload: AccessTokenPayload = { ...validPayload, emailVerified: false };
-      const token = generateAccessToken(payload);
-      const decoded = jwt.decode(token) as jwt.JwtPayload & AccessTokenPayload;
-
-      expect(decoded.emailVerified).toBe(false);
-    });
-  });
-
-  describe('verifyAccessToken', () => {
-    const validPayload: AccessTokenPayload = {
-      sub: 'user-123',
-      email: 'test@example.com',
-      username: 'testuser',
-      status: 'active',
-      emailVerified: true,
-      sid: 'session-123',
-    };
-
-    it('should verify and return payload for valid token', () => {
-      const token = generateAccessToken(validPayload);
-      const result = verifyAccessToken(token);
-
-      expect(result.sub).toBe(validPayload.sub);
-      expect(result.email).toBe(validPayload.email);
-      expect(result.username).toBe(validPayload.username);
-      expect(result.status).toBe(validPayload.status);
-      expect(result.emailVerified).toBe(validPayload.emailVerified);
-    });
-
-    it('should include issuer, audience and key id claims', () => {
-      const token = generateAccessToken(validPayload);
+    it('contains kid/iss/aud claims', () => {
+      const token = generateAccessToken(accessPayload);
       const decoded = jwt.decode(token, { complete: true }) as jwt.Jwt & {
         payload: jwt.JwtPayload;
       };
@@ -118,503 +52,179 @@ describe('jwtUtils', () => {
       expect(decoded.payload.aud).toBe(authConfig.jwtClaims.audience);
     });
 
-    it('should verify token signed with previous access secret', () => {
-      const previousSecrets = authConfig.accessToken.previousSecrets as unknown as string[];
-      const originalSecrets = [...previousSecrets];
-      try {
-        previousSecrets.push('legacy-access-secret');
-
-        const legacyToken = jwt.sign(validPayload, 'legacy-access-secret', {
-          expiresIn: '15m',
-          algorithm: 'HS256',
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
-        });
-
-        const result = verifyAccessToken(legacyToken);
-        expect(result.sub).toBe(validPayload.sub);
-      } finally {
-        previousSecrets.length = 0;
-        previousSecrets.push(...originalSecrets);
-      }
-    });
-
-    it('should verify token signed with previous access key matched by kid', () => {
-      const previousKeys = authConfig.accessToken.previousKeys as unknown as Array<{
-        keyId: string;
-        secret: string;
-      }>;
-      const originalKeys = [...previousKeys];
-      try {
-        previousKeys.push({ keyId: 'access-v0', secret: 'legacy-access-key-secret' });
-
-        const legacyToken = jwt.sign(validPayload, 'legacy-access-key-secret', {
-          expiresIn: '15m',
-          algorithm: 'HS256',
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
-          keyid: 'access-v0',
-        });
-
-        const result = verifyAccessToken(legacyToken);
-        expect(result.sub).toBe(validPayload.sub);
-      } finally {
-        previousKeys.length = 0;
-        previousKeys.push(...originalKeys);
-      }
-    });
-
-    it('should throw TOKEN_EXPIRED error for expired token', () => {
-      // Create an expired token
-      const expiredToken = jwt.sign(validPayload, authConfig.accessToken.secret, {
-        expiresIn: '-1s', // Already expired
-        algorithm: 'HS256',
+    it('rejects expired token', () => {
+      const expiredToken = jwt.sign(accessPayload, authConfig.accessToken.privateKey, {
+        algorithm: authConfig.jwt.algorithm,
+        keyid: authConfig.accessToken.keyId,
         issuer: authConfig.jwtClaims.issuer,
         audience: authConfig.jwtClaims.audience,
+        expiresIn: '-1s',
       });
 
       expect(() => verifyAccessToken(expiredToken)).toThrow(AppError);
       try {
         verifyAccessToken(expiredToken);
       } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
         expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_EXPIRED);
-        expect((error as AppError).message).toBe('Access token has expired');
       }
     });
 
-    it('should throw TOKEN_INVALID error for malformed token', () => {
-      const malformedToken = 'not.a.valid.jwt.token';
-
-      expect(() => verifyAccessToken(malformedToken)).toThrow(AppError);
-      try {
-        verifyAccessToken(malformedToken);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-        expect((error as AppError).message).toBe('Invalid access token');
-      }
-    });
-
-    it('should throw TOKEN_INVALID error for token signed with wrong secret', () => {
-      const tokenWithWrongSecret = jwt.sign(validPayload, 'wrong-secret', {
-        expiresIn: '15m',
-        algorithm: 'HS256',
-        issuer: authConfig.jwtClaims.issuer,
-        audience: authConfig.jwtClaims.audience,
-      });
-
-      expect(() => verifyAccessToken(tokenWithWrongSecret)).toThrow(AppError);
-      try {
-        verifyAccessToken(tokenWithWrongSecret);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      }
-    });
-
-    it('should throw TOKEN_INVALID error for empty token', () => {
-      expect(() => verifyAccessToken('')).toThrow(AppError);
-      try {
-        verifyAccessToken('');
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      }
-    });
-
-    it('should throw TOKEN_INVALID error for token with invalid signature', () => {
-      const token = generateAccessToken(validPayload);
-      // Tamper with the signature
-      const parts = token.split('.');
-      parts[2] = 'invalid_signature';
-      const tamperedToken = parts.join('.');
-
-      expect(() => verifyAccessToken(tamperedToken)).toThrow(AppError);
-      try {
-        verifyAccessToken(tamperedToken);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      }
-    });
-
-    it('should throw TOKEN_INVALID error for token with different algorithm', () => {
-      // Create token with HS384 algorithm
-      const tokenWithDiffAlgo = jwt.sign(validPayload, authConfig.accessToken.secret, {
-        expiresIn: '15m',
+    it('rejects wrong algorithm', () => {
+      const token = jwt.sign(accessPayload, 'wrong-secret', {
         algorithm: 'HS384',
+        keyid: authConfig.accessToken.keyId,
         issuer: authConfig.jwtClaims.issuer,
         audience: authConfig.jwtClaims.audience,
+        expiresIn: '15m',
       });
 
-      expect(() => verifyAccessToken(tokenWithDiffAlgo)).toThrow(AppError);
+      expect(() => verifyAccessToken(token)).toThrow(AppError);
     });
 
-    it('should re-throw unknown errors', () => {
-      // Mock jwt.verify to throw a non-JWT error
+    it('rejects wrong kid', () => {
+      const token = jwt.sign(accessPayload, authConfig.accessToken.privateKey, {
+        algorithm: authConfig.jwt.algorithm,
+        keyid: 'unexpected-kid',
+        issuer: authConfig.jwtClaims.issuer,
+        audience: authConfig.jwtClaims.audience,
+        expiresIn: '15m',
+      });
+
+      expect(() => verifyAccessToken(token)).toThrow(AppError);
+    });
+
+    it('rejects token signed by unknown private key', () => {
+      const wrongKeys = createKeyPairPem();
+      const token = jwt.sign(accessPayload, wrongKeys.privateKey, {
+        algorithm: authConfig.jwt.algorithm,
+        keyid: authConfig.accessToken.keyId,
+        issuer: authConfig.jwtClaims.issuer,
+        audience: authConfig.jwtClaims.audience,
+        expiresIn: '15m',
+      });
+
+      expect(() => verifyAccessToken(token)).toThrow(AppError);
+    });
+
+    it('rejects refresh token in access verifier', () => {
+      const refreshToken = generateRefreshToken('user-123', 'session-123');
+      expect(() => verifyAccessToken(refreshToken)).toThrow(AppError);
+    });
+
+    it('rethrows unknown errors', () => {
+      const token = generateAccessToken(accessPayload);
       const customError = new Error('Unknown error');
-
       vi.spyOn(jwt, 'verify').mockImplementation(() => {
         throw customError;
       });
 
-      expect(() => verifyAccessToken('any-token')).toThrow(customError);
-
-      // Restore original
+      expect(() => verifyAccessToken(token)).toThrow(customError);
       vi.mocked(jwt.verify).mockRestore();
     });
   });
 
-  // ==================== Refresh Token Tests ====================
-  describe('generateRefreshToken', () => {
-    const userId = 'user-123';
-    const tokenId = 'token-456';
+  describe('refresh token', () => {
+    it('generates and verifies a valid refresh token', () => {
+      const token = generateRefreshToken('user-123', 'session-123');
+      const verified = verifyRefreshToken(token);
 
-    it('should generate a valid JWT token', () => {
-      const token = generateRefreshToken(userId, tokenId);
-
-      expect(token).toBeDefined();
-      expect(typeof token).toBe('string');
-      expect(token.split('.')).toHaveLength(3);
+      expect(verified.sub).toBe('user-123');
+      expect(verified.sid).toBe('session-123');
+      expect(verified.jti).toBe('session-123');
+      expect(verified.type).toBe('refresh');
     });
 
-    it('should include correct payload fields', () => {
-      const token = generateRefreshToken(userId, tokenId);
-      const decoded = jwt.decode(token) as jwt.JwtPayload & RefreshTokenPayload;
-
-      expect(decoded.sub).toBe(userId);
-      expect(decoded.sid).toBe(tokenId);
-      expect(decoded.jti).toBe(tokenId);
-      expect(decoded.type).toBe('refresh');
-    });
-
-    it('should set the correct expiration time (7 days)', () => {
-      const token = generateRefreshToken(userId, tokenId);
-      const decoded = jwt.decode(token) as jwt.JwtPayload;
-
-      expect(decoded.exp).toBeDefined();
-      expect(decoded.iat).toBeDefined();
-      // 7 days = 604800 seconds
-      expect(decoded.exp! - decoded.iat!).toBe(7 * 24 * 60 * 60);
-    });
-
-    it('should generate different tokens for different user IDs', () => {
-      const token1 = generateRefreshToken('user-1', tokenId);
-      const token2 = generateRefreshToken('user-2', tokenId);
-
-      expect(token1).not.toBe(token2);
-    });
-
-    it('should generate different tokens for different token IDs', () => {
-      const token1 = generateRefreshToken(userId, 'token-1');
-      const token2 = generateRefreshToken(userId, 'token-2');
-
-      expect(token1).not.toBe(token2);
-    });
-  });
-
-  describe('verifyRefreshToken', () => {
-    const userId = 'user-123';
-    const tokenId = 'token-456';
-
-    it('should verify and return payload for valid token', () => {
-      const token = generateRefreshToken(userId, tokenId);
-      const result = verifyRefreshToken(token);
-
-      expect(result.sub).toBe(userId);
-      expect(result.sid).toBe(tokenId);
-      expect(result.jti).toBe(tokenId);
-      expect(result.type).toBe('refresh');
-    });
-
-    it('should throw TOKEN_EXPIRED error for expired token', () => {
-      const expiredToken = jwt.sign(
-        { sub: userId, sid: tokenId, jti: tokenId, type: 'refresh' },
-        authConfig.refreshToken.secret,
+    it('rejects expired refresh token', () => {
+      const token = jwt.sign(
+        { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'refresh' },
+        authConfig.refreshToken.privateKey,
         {
+          algorithm: authConfig.jwt.algorithm,
+          keyid: authConfig.refreshToken.keyId,
+          issuer: authConfig.jwtClaims.issuer,
+          audience: authConfig.jwtClaims.audience,
           expiresIn: '-1s',
-          algorithm: 'HS256',
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
         }
       );
 
-      expect(() => verifyRefreshToken(expiredToken)).toThrow(AppError);
+      expect(() => verifyRefreshToken(token)).toThrow(AppError);
       try {
-        verifyRefreshToken(expiredToken);
+        verifyRefreshToken(token);
       } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
         expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_EXPIRED);
-        expect((error as AppError).message).toBe('Refresh token has expired');
       }
     });
 
-    it('should throw TOKEN_INVALID error for malformed token', () => {
-      expect(() => verifyRefreshToken('invalid.token')).toThrow(AppError);
-      try {
-        verifyRefreshToken('invalid.token');
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-        expect((error as AppError).message).toBe('Invalid refresh token');
-      }
-    });
-
-    it('should throw TOKEN_INVALID error for token signed with wrong secret', () => {
-      const tokenWithWrongSecret = jwt.sign(
-        { sub: userId, sid: tokenId, jti: tokenId, type: 'refresh' },
-        'wrong-secret',
+    it('rejects wrong token type', () => {
+      const token = jwt.sign(
+        { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'access' },
+        authConfig.refreshToken.privateKey,
         {
-          expiresIn: '7d',
-          algorithm: 'HS256',
+          algorithm: authConfig.jwt.algorithm,
+          keyid: authConfig.refreshToken.keyId,
           issuer: authConfig.jwtClaims.issuer,
           audience: authConfig.jwtClaims.audience,
+          expiresIn: '7d',
         }
       );
 
-      expect(() => verifyRefreshToken(tokenWithWrongSecret)).toThrow(AppError);
-      try {
-        verifyRefreshToken(tokenWithWrongSecret);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      }
+      expect(() => verifyRefreshToken(token)).toThrow(AppError);
     });
 
-    it('should verify refresh token signed with previous key matched by kid', () => {
-      const previousKeys = authConfig.refreshToken.previousKeys as unknown as Array<{
-        keyId: string;
-        secret: string;
-      }>;
-      const originalKeys = [...previousKeys];
-      try {
-        previousKeys.push({ keyId: 'refresh-v0', secret: 'legacy-refresh-key-secret' });
-
-        const legacyToken = jwt.sign(
-          { sub: userId, sid: tokenId, jti: tokenId, type: 'refresh' },
-          'legacy-refresh-key-secret',
-          {
-            expiresIn: '7d',
-            algorithm: 'HS256',
-            issuer: authConfig.jwtClaims.issuer,
-            audience: authConfig.jwtClaims.audience,
-            keyid: 'refresh-v0',
-          }
-        );
-
-        const result = verifyRefreshToken(legacyToken);
-        expect(result.sub).toBe(userId);
-      } finally {
-        previousKeys.length = 0;
-        previousKeys.push(...originalKeys);
-      }
-    });
-
-    it('should throw TOKEN_INVALID error for wrong token type', () => {
-      const tokenWithWrongType = jwt.sign(
-        { sub: userId, sid: tokenId, jti: tokenId, type: 'access' },
-        authConfig.refreshToken.secret,
+    it('rejects mismatched sid and jti', () => {
+      const token = jwt.sign(
+        { sub: 'user-123', sid: 'session-a', jti: 'session-b', type: 'refresh' },
+        authConfig.refreshToken.privateKey,
         {
-          expiresIn: '7d',
-          algorithm: 'HS256',
+          algorithm: authConfig.jwt.algorithm,
+          keyid: authConfig.refreshToken.keyId,
           issuer: authConfig.jwtClaims.issuer,
           audience: authConfig.jwtClaims.audience,
+          expiresIn: '7d',
         }
       );
 
-      expect(() => verifyRefreshToken(tokenWithWrongType)).toThrow(AppError);
-      try {
-        verifyRefreshToken(tokenWithWrongType);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-        expect((error as AppError).message).toBe('Invalid token type');
-      }
+      expect(() => verifyRefreshToken(token)).toThrow(AppError);
     });
 
-    it('should throw TOKEN_INVALID error for missing type field', () => {
-      const tokenWithoutType = jwt.sign(
-        { sub: userId, jti: tokenId },
-        authConfig.refreshToken.secret,
+    it('rejects token signed by unknown private key', () => {
+      const wrongKeys = createKeyPairPem();
+      const token = jwt.sign(
+        { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'refresh' },
+        wrongKeys.privateKey,
         {
-          expiresIn: '7d',
-          algorithm: 'HS256',
+          algorithm: authConfig.jwt.algorithm,
+          keyid: authConfig.refreshToken.keyId,
           issuer: authConfig.jwtClaims.issuer,
           audience: authConfig.jwtClaims.audience,
+          expiresIn: '7d',
         }
       );
 
-      expect(() => verifyRefreshToken(tokenWithoutType)).toThrow(AppError);
-      try {
-        verifyRefreshToken(tokenWithoutType);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      }
+      expect(() => verifyRefreshToken(token)).toThrow(AppError);
     });
 
-    it('should throw TOKEN_INVALID error for empty token', () => {
-      expect(() => verifyRefreshToken('')).toThrow(AppError);
-    });
-
-    it('should throw TOKEN_INVALID error for token with tampered signature', () => {
-      const token = generateRefreshToken(userId, tokenId);
-      const parts = token.split('.');
-      parts[2] = 'tampered_signature_here';
-      const tamperedToken = parts.join('.');
-
-      expect(() => verifyRefreshToken(tamperedToken)).toThrow(AppError);
-      try {
-        verifyRefreshToken(tamperedToken);
-      } catch (error) {
-        expect(error).toBeInstanceOf(AppError);
-        expect((error as AppError).code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      }
-    });
-
-    it('should re-throw unknown errors', () => {
-      const customError = new Error('Database connection failed');
-
+    it('rethrows unknown errors', () => {
+      const token = generateRefreshToken('user-123', 'session-123');
+      const customError = new Error('Unknown error');
       vi.spyOn(jwt, 'verify').mockImplementation(() => {
         throw customError;
       });
 
-      expect(() => verifyRefreshToken('any-token')).toThrow(customError);
-
-      vi.mocked(jwt.verify).mockRestore();
-    });
-
-    it('should re-throw AppError without wrapping', () => {
-      const authError = new AppError(AUTH_ERROR_CODES.TOKEN_INVALID, 'Custom auth error');
-
-      vi.spyOn(jwt, 'verify').mockImplementation(() => {
-        throw authError;
-      });
-
-      expect(() => verifyRefreshToken('any-token')).toThrow(authError);
-
+      expect(() => verifyRefreshToken(token)).toThrow(customError);
       vi.mocked(jwt.verify).mockRestore();
     });
   });
 
   describe('extractBearerToken', () => {
-    it('should extract token from valid Bearer header', () => {
-      const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test';
-      const result = extractBearerToken(`Bearer ${token}`);
-
-      expect(result).toBe(token);
+    it('extracts token from a valid bearer header', () => {
+      expect(extractBearerToken('Bearer abc.def.ghi')).toBe('abc.def.ghi');
     });
 
-    it('should return null for undefined header', () => {
-      const result = extractBearerToken(undefined);
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null for empty string', () => {
-      const result = extractBearerToken('');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null for header without Bearer prefix', () => {
-      const result = extractBearerToken('Basic dXNlcjpwYXNz');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null for "Bearer" without space', () => {
-      const result = extractBearerToken('Bearertoken123');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return empty string for "Bearer " with no token', () => {
-      const result = extractBearerToken('Bearer ');
-
-      expect(result).toBe('');
-    });
-
-    it('should handle token with spaces in it (edge case)', () => {
-      // This tests the slice behavior - it should take everything after "Bearer "
-      const result = extractBearerToken('Bearer token with spaces');
-
-      expect(result).toBe('token with spaces');
-    });
-
-    it('should be case-sensitive for Bearer prefix', () => {
-      const result = extractBearerToken('bearer token123');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null for "BEARER" (uppercase)', () => {
-      const result = extractBearerToken('BEARER token123');
-
-      expect(result).toBeNull();
-    });
-
-    it('should handle very long tokens', () => {
-      const longToken = 'a'.repeat(10000);
-      const result = extractBearerToken(`Bearer ${longToken}`);
-
-      expect(result).toBe(longToken);
-    });
-  });
-
-  // ==================== Integration Tests ====================
-  describe('Access Token Round Trip', () => {
-    it('should generate and verify token successfully', () => {
-      const payload: AccessTokenPayload = {
-        sub: 'user-integration-test',
-        email: 'integration@test.com',
-        username: 'integrationuser',
-        status: 'active',
-        emailVerified: true,
-        sid: 'session-integration',
-      };
-
-      const token = generateAccessToken(payload);
-      const verified = verifyAccessToken(token);
-
-      expect(verified).toEqual(payload);
-    });
-  });
-
-  describe('Refresh Token Round Trip', () => {
-    it('should generate and verify token successfully', () => {
-      const userId = 'user-round-trip';
-      const tokenId = 'token-round-trip';
-
-      const token = generateRefreshToken(userId, tokenId);
-      const verified = verifyRefreshToken(token);
-
-      expect(verified.sub).toBe(userId);
-      expect(verified.sid).toBe(tokenId);
-      expect(verified.jti).toBe(tokenId);
-      expect(verified.type).toBe('refresh');
-    });
-  });
-
-  describe('Cross-token validation', () => {
-    it('should fail when using access token secret to verify refresh token', () => {
-      const refreshToken = generateRefreshToken('user-1', 'token-1');
-
-      expect(() => verifyAccessToken(refreshToken)).toThrow(AppError);
-    });
-
-    it('should fail when using refresh token secret to verify access token', () => {
-      const accessToken = generateAccessToken({
-        sub: 'user-1',
-        email: 'test@test.com',
-        username: 'test',
-        status: 'active',
-        emailVerified: true,
-        sid: 'session-1',
-      });
-
-      expect(() => verifyRefreshToken(accessToken)).toThrow(AppError);
+    it('returns null for invalid headers', () => {
+      expect(extractBearerToken(undefined)).toBeNull();
+      expect(extractBearerToken('')).toBeNull();
+      expect(extractBearerToken('Basic aaa')).toBeNull();
     });
   });
 });

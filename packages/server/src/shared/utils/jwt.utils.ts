@@ -4,84 +4,42 @@ import { authConfig } from '@config/env';
 import type { AccessTokenPayload, RefreshTokenPayload } from '../types';
 import { AppError, Errors } from '../errors';
 
-// ==================== Access Token ====================
-
-interface KeyCandidate {
-  keyId?: string;
-  secret: string;
+function getJwtAlgorithm(): SignOptions['algorithm'] {
+  return authConfig.jwt.algorithm;
 }
 
-function getTokenKid(token: string): string | undefined {
-  const decoded = jwt.decode(token, { complete: true }) as
-    | (jwt.Jwt & { header: { kid?: string } })
-    | null;
-  return decoded?.header?.kid;
+function assertExpectedHeader(token: string, expectedKid: string): void {
+  const decoded = jwt.decode(token, { complete: true }) as jwt.Jwt | null;
+  const header = decoded?.header;
+
+  if (!header) {
+    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token header');
+  }
+
+  if (header.alg !== authConfig.jwt.algorithm) {
+    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token algorithm');
+  }
+
+  if (header.kid !== expectedKid) {
+    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token key id');
+  }
 }
 
-function dedupeCandidates(candidates: KeyCandidate[]): KeyCandidate[] {
-  const seen = new Set<string>();
-  return candidates.filter((candidate) => {
-    const key = `${candidate.keyId ?? ''}:${candidate.secret}`;
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-
-function resolveVerificationCandidates(
+function verifyWithPublicKey<T extends JwtPayload>(
   token: string,
-  current: { keyId: string; secret: string },
-  previousKeys: Array<{ keyId: string; secret: string }>,
-  previousSecrets: string[]
-): KeyCandidate[] {
-  const tokenKid = getTokenKid(token);
-  if (tokenKid) {
-    if (tokenKid === current.keyId) {
-      return [{ keyId: current.keyId, secret: current.secret }];
-    }
-    const matchedLegacyKey = previousKeys.find((key) => key.keyId === tokenKid);
-    if (matchedLegacyKey) {
-      return [{ keyId: matchedLegacyKey.keyId, secret: matchedLegacyKey.secret }];
-    }
-  }
+  publicKey: string,
+  keyId: string
+): T {
+  assertExpectedHeader(token, keyId);
 
-  return dedupeCandidates([
-    { keyId: current.keyId, secret: current.secret },
-    ...previousKeys.map((key) => ({ keyId: key.keyId, secret: key.secret })),
-    ...previousSecrets.map((secret) => ({ secret })),
-  ]);
+  return jwt.verify(token, publicKey, {
+    algorithms: [authConfig.jwt.algorithm],
+    issuer: authConfig.jwtClaims.issuer,
+    audience: authConfig.jwtClaims.audience,
+  }) as T;
 }
 
-function verifyWithRotatingSecrets<T extends JwtPayload>(token: string, secrets: string[]): T {
-  let lastJwtError: jwt.JsonWebTokenError | null = null;
-
-  for (const secret of secrets) {
-    try {
-      return jwt.verify(token, secret, {
-        algorithms: ['HS256'],
-        issuer: authConfig.jwtClaims.issuer,
-        audience: authConfig.jwtClaims.audience,
-      }) as T;
-    } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        throw error;
-      }
-      if (error instanceof jwt.JsonWebTokenError) {
-        lastJwtError = error;
-        continue;
-      }
-      throw error;
-    }
-  }
-
-  if (lastJwtError) {
-    throw lastJwtError;
-  }
-
-  throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token');
-}
+// ==================== Access Token ====================
 
 /**
  * Generate an access token containing user information
@@ -89,13 +47,13 @@ function verifyWithRotatingSecrets<T extends JwtPayload>(token: string, secrets:
 export function generateAccessToken(payload: AccessTokenPayload): string {
   const options: SignOptions = {
     expiresIn: authConfig.accessToken.expiresInSeconds,
-    algorithm: 'HS256',
+    algorithm: getJwtAlgorithm(),
     issuer: authConfig.jwtClaims.issuer,
     audience: authConfig.jwtClaims.audience,
     keyid: authConfig.accessToken.keyId,
   };
 
-  return jwt.sign(payload, authConfig.accessToken.secret, options);
+  return jwt.sign(payload, authConfig.accessToken.privateKey, options);
 }
 
 /**
@@ -103,19 +61,15 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
  */
 export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
-    const candidates = resolveVerificationCandidates(
+    const decoded = verifyWithPublicKey<JwtPayload & AccessTokenPayload>(
       token,
-      {
-        keyId: authConfig.accessToken.keyId,
-        secret: authConfig.accessToken.secret,
-      },
-      authConfig.accessToken.previousKeys,
-      authConfig.accessToken.previousSecrets
+      authConfig.accessToken.publicKey,
+      authConfig.accessToken.keyId
     );
-    const decoded = verifyWithRotatingSecrets<JwtPayload & AccessTokenPayload>(
-      token,
-      candidates.map((candidate) => candidate.secret)
-    );
+
+    if (typeof (decoded as JwtPayload & { type?: unknown }).type !== 'undefined') {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token type');
+    }
 
     if (typeof decoded.sid !== 'string' || decoded.sid.length === 0) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
@@ -130,6 +84,9 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
       sid: decoded.sid,
     };
   } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
     if (error instanceof jwt.TokenExpiredError) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Access token has expired');
     }
@@ -155,13 +112,13 @@ export function generateRefreshToken(userId: string, sessionId: string): string 
 
   const options: SignOptions = {
     expiresIn: authConfig.refreshToken.expiresInSeconds,
-    algorithm: 'HS256',
+    algorithm: getJwtAlgorithm(),
     issuer: authConfig.jwtClaims.issuer,
     audience: authConfig.jwtClaims.audience,
     keyid: authConfig.refreshToken.keyId,
   };
 
-  return jwt.sign(payload, authConfig.refreshToken.secret, options);
+  return jwt.sign(payload, authConfig.refreshToken.privateKey, options);
 }
 
 /**
@@ -169,18 +126,10 @@ export function generateRefreshToken(userId: string, sessionId: string): string 
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
   try {
-    const candidates = resolveVerificationCandidates(
+    const decoded = verifyWithPublicKey<JwtPayload & RefreshTokenPayload>(
       token,
-      {
-        keyId: authConfig.refreshToken.keyId,
-        secret: authConfig.refreshToken.secret,
-      },
-      authConfig.refreshToken.previousKeys,
-      authConfig.refreshToken.previousSecrets
-    );
-    const decoded = verifyWithRotatingSecrets<JwtPayload & RefreshTokenPayload>(
-      token,
-      candidates.map((candidate) => candidate.secret)
+      authConfig.refreshToken.publicKey,
+      authConfig.refreshToken.keyId
     );
 
     if (decoded.type !== 'refresh') {
