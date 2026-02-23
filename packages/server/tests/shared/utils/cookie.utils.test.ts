@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Request, Response } from 'express';
 import {
+  CSRF_TOKEN_COOKIE_NAME,
+  REFRESH_TOKEN_COOKIE_NAME,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   getRefreshTokenFromRequest,
+  getCsrfTokenFromRequest,
 } from '@shared/utils/cookie.utils';
 
 describe('cookie.utils', () => {
@@ -14,12 +17,21 @@ describe('cookie.utils', () => {
 
     setRefreshTokenCookie(res, 'refresh-token-value');
 
-    expect(res.cookie).toHaveBeenCalledTimes(1);
+    expect(res.cookie).toHaveBeenCalledTimes(2);
     expect(res.cookie).toHaveBeenCalledWith(
-      'refresh_token',
+      REFRESH_TOKEN_COOKIE_NAME,
       'refresh-token-value',
       expect.objectContaining({
         httpOnly: true,
+        sameSite: 'strict',
+        path: '/api/auth',
+      })
+    );
+    expect(res.cookie).toHaveBeenCalledWith(
+      CSRF_TOKEN_COOKIE_NAME,
+      expect.any(String),
+      expect.objectContaining({
+        httpOnly: false,
         sameSite: 'strict',
         path: '/api/auth',
       })
@@ -33,11 +45,19 @@ describe('cookie.utils', () => {
 
     clearRefreshTokenCookie(res);
 
-    expect(res.clearCookie).toHaveBeenCalledTimes(1);
+    expect(res.clearCookie).toHaveBeenCalledTimes(2);
     expect(res.clearCookie).toHaveBeenCalledWith(
-      'refresh_token',
+      REFRESH_TOKEN_COOKIE_NAME,
       expect.objectContaining({
         httpOnly: true,
+        sameSite: 'strict',
+        path: '/api/auth',
+      })
+    );
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      CSRF_TOKEN_COOKIE_NAME,
+      expect.objectContaining({
+        httpOnly: false,
         sameSite: 'strict',
         path: '/api/auth',
       })
@@ -47,11 +67,21 @@ describe('cookie.utils', () => {
   it('should read refresh token from cookie', () => {
     const req = {
       cookies: {
-        refresh_token: 'cookie-token',
+        [REFRESH_TOKEN_COOKIE_NAME]: 'cookie-token',
       },
     } as unknown as Request;
 
     expect(getRefreshTokenFromRequest(req)).toBe('cookie-token');
+  });
+
+  it('should read csrf token from cookie', () => {
+    const req = {
+      cookies: {
+        [CSRF_TOKEN_COOKIE_NAME]: 'csrf-cookie-token',
+      },
+    } as unknown as Request;
+
+    expect(getCsrfTokenFromRequest(req)).toBe('csrf-cookie-token');
   });
 
   it('should not read refresh token from request body', () => {

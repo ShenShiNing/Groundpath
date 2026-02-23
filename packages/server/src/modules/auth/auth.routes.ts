@@ -8,6 +8,7 @@ import {
   refreshRateLimiter,
   generalRateLimiter,
   passwordResetRateLimiter,
+  requireCsrfProtection,
   validateBody,
 } from '@shared/middleware';
 import {
@@ -42,7 +43,7 @@ router.post(
 router.post('/login', loginRateLimiter, validateBody(loginRequestSchema), authController.login);
 
 // Refresh access token
-router.post('/refresh', refreshRateLimiter, authController.refresh);
+router.post('/refresh', refreshRateLimiter, requireCsrfProtection, authController.refresh);
 
 // Reset password with verified email
 router.post(
@@ -55,7 +56,7 @@ router.post(
 // ==================== Protected Routes (Refresh Token Auth) ====================
 
 // Logout current device - requires refresh token cookie
-router.post('/logout', authenticateRefreshToken, authController.logout);
+router.post('/logout', requireCsrfProtection, authenticateRefreshToken, authController.logout);
 
 // ==================== Protected Routes (Access Token Auth) ====================
 

@@ -49,7 +49,7 @@ async function executeRefresh(): Promise<string> {
   try {
     const response = await fetch('/api/auth/refresh', {
       method: 'POST',
-      headers: buildHeaders(),
+      headers: buildHeaders(undefined, { includeCsrfToken: true }),
       credentials: 'include',
       body: JSON.stringify({}),
     });

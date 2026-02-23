@@ -1,7 +1,11 @@
 import helmet from 'helmet';
 import cors from 'cors';
+import { timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
+import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { serverConfig, storageConfig } from '@config/env';
+import { Errors, handleError } from '@shared/errors';
+import { getCsrfTokenFromRequest } from '@shared/utils/cookie.utils';
 
 // ============================================================================
 // Helmet - Security Headers
@@ -62,35 +66,131 @@ function parseAllowedOrigins(): (string | RegExp)[] {
   return [frontendUrl];
 }
 
+function isAllowedOrigin(origin: string): boolean {
+  const allowedOrigins = parseAllowedOrigins();
+
+  return allowedOrigins.some((allowed) => {
+    if (typeof allowed === 'string') {
+      return origin === allowed;
+    }
+    return allowed.test(origin);
+  });
+}
+
+function extractRequestOrigin(req: Request): string | null {
+  const originHeader = req.headers.origin;
+  if (typeof originHeader === 'string' && originHeader.length > 0) {
+    return originHeader;
+  }
+
+  const refererHeader = req.headers.referer;
+  if (typeof refererHeader !== 'string' || refererHeader.length === 0) {
+    return null;
+  }
+
+  try {
+    return new URL(refererHeader).origin;
+  } catch {
+    return null;
+  }
+}
+
+function isProtectedCsrfMethod(method: string): boolean {
+  const normalizedMethod = method.toUpperCase();
+  return (
+    normalizedMethod === 'POST' ||
+    normalizedMethod === 'PUT' ||
+    normalizedMethod === 'PATCH' ||
+    normalizedMethod === 'DELETE'
+  );
+}
+
+function extractCsrfTokenHeader(req: Request): string | null {
+  const raw = req.headers['x-csrf-token'];
+  if (typeof raw === 'string' && raw.length > 0) {
+    return raw;
+  }
+
+  if (Array.isArray(raw) && raw[0]) {
+    return raw[0];
+  }
+
+  return null;
+}
+
+function isSameToken(expected: string, actual: string): boolean {
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(actual);
+
+  if (expectedBuffer.length !== actualBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(expectedBuffer, actualBuffer);
+}
+
+/**
+ * CSRF protection middleware.
+ * Enforces:
+ * 1) Origin/Referer origin must be trusted.
+ * 2) Double-submit token check: X-CSRF-Token header == csrf cookie.
+ */
+export function requireCsrfProtection(req: Request, res: Response, next: NextFunction): void {
+  try {
+    if (!isProtectedCsrfMethod(req.method)) {
+      next();
+      return;
+    }
+
+    const requestOrigin = extractRequestOrigin(req);
+    if (!requestOrigin || !isAllowedOrigin(requestOrigin)) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid request origin', 403, {
+        origin: requestOrigin,
+      });
+    }
+
+    const csrfHeaderToken = extractCsrfTokenHeader(req);
+    const csrfCookieToken = getCsrfTokenFromRequest(req);
+    if (!csrfHeaderToken || !csrfCookieToken) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'CSRF token required', 403);
+    }
+
+    if (!isSameToken(csrfCookieToken, csrfHeaderToken)) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'CSRF token mismatch', 403);
+    }
+
+    next();
+  } catch (error) {
+    handleError(error, res, 'CSRF middleware');
+  }
+}
+
 /**
  * CORS configuration
  */
 export const corsMiddleware = cors({
   origin: (origin, callback) => {
-    const allowedOrigins = parseAllowedOrigins();
-
     // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) {
       callback(null, true);
       return;
     }
 
-    // Check if origin is allowed
-    const isAllowed = allowedOrigins.some((allowed) => {
-      if (typeof allowed === 'string') {
-        return origin === allowed;
-      }
-      return allowed.test(origin);
-    });
-
-    if (isAllowed) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`Origin ${origin} not allowed by CORS`));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'X-CSRF-Token',
+  ],
   exposedHeaders: [
     'X-RateLimit-Limit',
     'X-RateLimit-Remaining',

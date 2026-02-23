@@ -21,6 +21,7 @@ export {
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   getRefreshTokenFromRequest,
+  getCsrfTokenFromRequest,
 } from './cookie.utils';
 
 export {

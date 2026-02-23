@@ -15,7 +15,12 @@ export {
   incrementAccountRateLimit,
 } from './rate-limit.middleware';
 export { sanitizeMiddleware, createSanitizeMiddleware } from './sanitize.middleware';
-export { helmetMiddleware, corsMiddleware, requestIdMiddleware } from './security.middleware';
+export {
+  helmetMiddleware,
+  corsMiddleware,
+  requestIdMiddleware,
+  requireCsrfProtection,
+} from './security.middleware';
 export {
   validateBody,
   validateQuery,
