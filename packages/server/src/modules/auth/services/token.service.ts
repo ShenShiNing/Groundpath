@@ -76,14 +76,14 @@ export const tokenService = {
         tx
       );
       if (consumeResult === 'token_mismatch') {
-        await refreshTokenRepository.revokeAllForUser(payload.sub, tx);
-        await userTokenStateRepository.bumpTokenValidAfter(payload.sub, tx);
+        await refreshTokenRepository.revoke(payload.sid, tx);
         systemLogger.securityEvent(
           'auth.refresh.token_mismatch',
-          'Refresh token mismatch detected, revoked all user sessions',
+          'Refresh token mismatch detected, revoked suspicious session',
           {
             userId: payload.sub,
             tokenId: payload.sid,
+            action: 'revoke_session',
             ipAddress,
             deviceInfo,
           }

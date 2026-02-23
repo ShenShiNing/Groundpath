@@ -57,18 +57,11 @@ const redisSchema = z.object({
 
 // -------------------- Authentication --------------------
 const authSchema = z.object({
-  JWT_ALGORITHM: z.literal('RS256').default('RS256'),
-  JWT_ACCESS_KEYS: z.string().min(1),
-  JWT_REFRESH_KEYS: z.string().min(1),
-  JWT_EMAIL_VERIFICATION_KEYS: z.string().min(1),
-  JWT_OAUTH_STATE_KEYS: z.string().min(1),
-  JWT_ACCESS_ACTIVE_KID: z.string().default('access-v1'),
-  JWT_REFRESH_ACTIVE_KID: z.string().default('refresh-v1'),
-  JWT_EMAIL_VERIFICATION_ACTIVE_KID: z.string().default('email-v1'),
-  JWT_OAUTH_STATE_ACTIVE_KID: z.string().default('oauth-state-v1'),
+  JWT_SECRET: z.string().min(32),
   JWT_ISSUER: z.string().default('knowledge-agent'),
   JWT_AUDIENCE: z.string().default('knowledge-agent-client'),
   ENCRYPTION_KEY: z.string().min(32),
+  OAUTH_EXCHANGE_CODE_SECRET: z.string().default(''),
   // Token expiration (in seconds)
   ACCESS_TOKEN_EXPIRES_IN: z.coerce.number().default(900), // 15 minutes
   REFRESH_TOKEN_EXPIRES_IN: z.coerce.number().default(604800), // 7 days
@@ -203,140 +196,6 @@ if (!result.success) {
 
 const validatedEnv = result.data;
 
-function normalizePem(value: string): string {
-  return value.replace(/\\n/g, '\n').trim();
-}
-
-type JwtKeyStatus = 'active' | 'previous' | 'disabled';
-
-interface JwtKey {
-  kid: string;
-  publicKey: string;
-  privateKey?: string;
-  status: JwtKeyStatus;
-}
-
-interface JwtKeyRing {
-  activeKid: string;
-  keys: JwtKey[];
-}
-
-function isJwtKeyStatus(value: unknown): value is JwtKeyStatus {
-  return value === 'active' || value === 'previous' || value === 'disabled';
-}
-
-function parseJwtKeyRing(raw: string, activeKid: string, ringName: string): JwtKeyRing {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`Invalid ${ringName} JSON: expected a JSON array`);
-  }
-
-  if (!Array.isArray(parsed) || parsed.length === 0) {
-    throw new Error(`Invalid ${ringName}: at least one key is required`);
-  }
-
-  const keys: JwtKey[] = [];
-  const seenKids = new Set<string>();
-
-  for (let i = 0; i < parsed.length; i += 1) {
-    const item = parsed[i];
-    if (!item || typeof item !== 'object') {
-      throw new Error(`Invalid ${ringName}[${i}]: key must be an object`);
-    }
-
-    const key = item as Record<string, unknown>;
-    const kid = typeof key.kid === 'string' ? key.kid.trim() : '';
-    const publicKey = typeof key.publicKey === 'string' ? key.publicKey : '';
-    const privateKey = typeof key.privateKey === 'string' ? key.privateKey : undefined;
-    const rawStatus = key.status;
-
-    if (!kid) {
-      throw new Error(`Invalid ${ringName}[${i}]: missing kid`);
-    }
-    if (!publicKey) {
-      throw new Error(`Invalid ${ringName}[${i}]: missing publicKey`);
-    }
-    if (seenKids.has(kid)) {
-      throw new Error(`Invalid ${ringName}: duplicate kid "${kid}"`);
-    }
-    seenKids.add(kid);
-
-    let status: JwtKeyStatus;
-    if (rawStatus === undefined) {
-      status = kid === activeKid ? 'active' : 'previous';
-    } else if (isJwtKeyStatus(rawStatus)) {
-      status = rawStatus;
-    } else {
-      throw new Error(`Invalid ${ringName}[${i}]: status must be active|previous|disabled`);
-    }
-
-    keys.push({
-      kid,
-      publicKey: normalizePem(publicKey),
-      privateKey: privateKey ? normalizePem(privateKey) : undefined,
-      status,
-    });
-  }
-
-  const activeKey = keys.find((key) => key.kid === activeKid);
-  if (!activeKey) {
-    throw new Error(`Invalid ${ringName}: active kid "${activeKid}" not found`);
-  }
-  if (!activeKey.privateKey) {
-    throw new Error(`Invalid ${ringName}: active kid "${activeKid}" must include privateKey`);
-  }
-
-  return {
-    activeKid,
-    keys,
-  };
-}
-
-function resolveActiveSigningKey(
-  ring: JwtKeyRing,
-  ringName: string
-): JwtKey & { privateKey: string } {
-  const key = ring.keys.find((candidate) => candidate.kid === ring.activeKid);
-  if (!key?.privateKey) {
-    throw new Error(`Invalid ${ringName}: active signing key "${ring.activeKid}" is incomplete`);
-  }
-  return {
-    ...key,
-    privateKey: key.privateKey,
-  };
-}
-
-const accessTokenKeyRing = parseJwtKeyRing(
-  validatedEnv.JWT_ACCESS_KEYS,
-  validatedEnv.JWT_ACCESS_ACTIVE_KID,
-  'JWT_ACCESS_KEYS'
-);
-const refreshTokenKeyRing = parseJwtKeyRing(
-  validatedEnv.JWT_REFRESH_KEYS,
-  validatedEnv.JWT_REFRESH_ACTIVE_KID,
-  'JWT_REFRESH_KEYS'
-);
-const emailVerificationKeyRing = parseJwtKeyRing(
-  validatedEnv.JWT_EMAIL_VERIFICATION_KEYS,
-  validatedEnv.JWT_EMAIL_VERIFICATION_ACTIVE_KID,
-  'JWT_EMAIL_VERIFICATION_KEYS'
-);
-const oauthStateKeyRing = parseJwtKeyRing(
-  validatedEnv.JWT_OAUTH_STATE_KEYS,
-  validatedEnv.JWT_OAUTH_STATE_ACTIVE_KID,
-  'JWT_OAUTH_STATE_KEYS'
-);
-
-const accessSigningKey = resolveActiveSigningKey(accessTokenKeyRing, 'JWT_ACCESS_KEYS');
-const refreshSigningKey = resolveActiveSigningKey(refreshTokenKeyRing, 'JWT_REFRESH_KEYS');
-const emailVerificationSigningKey = resolveActiveSigningKey(
-  emailVerificationKeyRing,
-  'JWT_EMAIL_VERIFICATION_KEYS'
-);
-const oauthStateSigningKey = resolveActiveSigningKey(oauthStateKeyRing, 'JWT_OAUTH_STATE_KEYS');
-
 // ==================== Modular Config Exports ====================
 
 /** Raw environment variables (use specific configs below when possible) */
@@ -370,52 +229,24 @@ export const redisConfig = {
 /** Authentication configuration */
 export const authConfig = {
   jwt: {
-    algorithm: validatedEnv.JWT_ALGORITHM,
+    secret: validatedEnv.JWT_SECRET,
+    issuer: validatedEnv.JWT_ISSUER,
+    audience: validatedEnv.JWT_AUDIENCE,
   },
   accessToken: {
-    privateKey: accessSigningKey.privateKey,
-    publicKey: accessSigningKey.publicKey,
     expiresInSeconds: validatedEnv.ACCESS_TOKEN_EXPIRES_IN,
-    keyId: accessSigningKey.kid,
-    activeKid: accessTokenKeyRing.activeKid,
-    keys: accessTokenKeyRing.keys,
   },
   refreshToken: {
-    privateKey: refreshSigningKey.privateKey,
-    publicKey: refreshSigningKey.publicKey,
     expiresInSeconds: validatedEnv.REFRESH_TOKEN_EXPIRES_IN,
-    keyId: refreshSigningKey.kid,
-    activeKid: refreshTokenKeyRing.activeKid,
-    keys: refreshTokenKeyRing.keys,
-  },
-  emailVerificationToken: {
-    privateKey: emailVerificationSigningKey.privateKey,
-    publicKey: emailVerificationSigningKey.publicKey,
-    keyId: emailVerificationSigningKey.kid,
-    activeKid: emailVerificationKeyRing.activeKid,
-    keys: emailVerificationKeyRing.keys,
-  },
-  oauthStateToken: {
-    privateKey: oauthStateSigningKey.privateKey,
-    publicKey: oauthStateSigningKey.publicKey,
-    keyId: oauthStateSigningKey.kid,
-    activeKid: oauthStateKeyRing.activeKid,
-    keys: oauthStateKeyRing.keys,
-  },
-  keyRings: {
-    access: accessTokenKeyRing,
-    refresh: refreshTokenKeyRing,
-    emailVerification: emailVerificationKeyRing,
-    oauthState: oauthStateKeyRing,
   },
   bcrypt: {
     saltRounds: validatedEnv.BCRYPT_SALT_ROUNDS,
   },
-  jwtClaims: {
-    issuer: validatedEnv.JWT_ISSUER,
-    audience: validatedEnv.JWT_AUDIENCE,
-  },
   encryptionKey: validatedEnv.ENCRYPTION_KEY,
+  tokenHashing: {
+    refreshTokenSecret: validatedEnv.ENCRYPTION_KEY,
+    oauthExchangeCodeSecret: validatedEnv.OAUTH_EXCHANGE_CODE_SECRET || validatedEnv.ENCRYPTION_KEY,
+  },
   cookie: {
     sameSite: validatedEnv.AUTH_COOKIE_SAMESITE,
     domain: validatedEnv.AUTH_COOKIE_DOMAIN || undefined,

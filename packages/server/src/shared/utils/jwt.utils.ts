@@ -4,21 +4,6 @@ import { authConfig } from '@config/env';
 import type { AccessTokenPayload, RefreshTokenPayload } from '../types';
 import { AppError, Errors } from '../errors';
 
-type JwtKeyStatus = 'active' | 'previous' | 'disabled';
-type JwtPurpose = 'access' | 'refresh' | 'emailVerification' | 'oauthState';
-
-interface JwtKey {
-  kid: string;
-  publicKey: string;
-  privateKey?: string;
-  status: JwtKeyStatus;
-}
-
-interface JwtKeyRing {
-  activeKid: string;
-  keys: JwtKey[];
-}
-
 export interface OAuthStateTokenPayload {
   returnUrl: string;
   purpose: 'oauth_state';
@@ -30,91 +15,21 @@ export interface EmailVerificationTokenPayload {
   purpose: 'email_verified';
 }
 
-function getJwtAlgorithm(): SignOptions['algorithm'] {
-  return authConfig.jwt.algorithm;
-}
-
-function getKeyRing(purpose: JwtPurpose): JwtKeyRing {
-  switch (purpose) {
-    case 'access':
-      return authConfig.keyRings.access;
-    case 'refresh':
-      return authConfig.keyRings.refresh;
-    case 'emailVerification':
-      return authConfig.keyRings.emailVerification;
-    case 'oauthState':
-      return authConfig.keyRings.oauthState;
-  }
-}
-
-function getActiveSigningKey(purpose: JwtPurpose): JwtKey & { privateKey: string } {
-  const ring = getKeyRing(purpose);
-  const key = ring.keys.find((candidate) => candidate.kid === ring.activeKid);
-
-  if (!key?.privateKey) {
-    throw new Error(`JWT signing key for purpose "${purpose}" is not configured`);
-  }
-
-  return {
-    ...key,
-    privateKey: key.privateKey,
-  };
-}
-
-function resolveVerificationKey(token: string, purpose: JwtPurpose): JwtKey {
-  const decoded = jwt.decode(token, { complete: true }) as jwt.Jwt | null;
-  const header = decoded?.header;
-
-  if (!header) {
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token header');
-  }
-
-  if (header.alg !== authConfig.jwt.algorithm) {
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token algorithm');
-  }
-
-  if (typeof header.kid !== 'string' || header.kid.length === 0) {
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Missing token key id');
-  }
-
-  const ring = getKeyRing(purpose);
-  const verificationKey = ring.keys.find(
-    (candidate) =>
-      candidate.kid === header.kid &&
-      (candidate.status === 'active' || candidate.status === 'previous')
-  );
-  if (!verificationKey) {
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Unknown token key id');
-  }
-
-  return verificationKey;
-}
-
-function verifyWithPurpose<T extends JwtPayload>(token: string, purpose: JwtPurpose): T {
-  const verificationKey = resolveVerificationKey(token, purpose);
-
-  return jwt.verify(token, verificationKey.publicKey, {
-    algorithms: [authConfig.jwt.algorithm],
-    issuer: authConfig.jwtClaims.issuer,
-    audience: authConfig.jwtClaims.audience,
-  }) as T;
-}
-
-function signWithPurpose(
-  payload: string | object | Buffer,
-  purpose: JwtPurpose,
-  expiresIn: SignOptions['expiresIn']
-): string {
-  const signingKey = getActiveSigningKey(purpose);
-  const options: SignOptions = {
+function sign(payload: string | object | Buffer, expiresIn: SignOptions['expiresIn']): string {
+  return jwt.sign(payload, authConfig.jwt.secret, {
+    algorithm: 'HS256',
+    issuer: authConfig.jwt.issuer,
+    audience: authConfig.jwt.audience,
     expiresIn,
-    algorithm: getJwtAlgorithm(),
-    issuer: authConfig.jwtClaims.issuer,
-    audience: authConfig.jwtClaims.audience,
-    keyid: signingKey.kid,
-  };
+  });
+}
 
-  return jwt.sign(payload, signingKey.privateKey, options);
+function verify<T extends JwtPayload>(token: string): T {
+  return jwt.verify(token, authConfig.jwt.secret, {
+    algorithms: ['HS256'],
+    issuer: authConfig.jwt.issuer,
+    audience: authConfig.jwt.audience,
+  }) as T;
 }
 
 // ==================== Access Token ====================
@@ -123,7 +38,7 @@ function signWithPurpose(
  * Generate an access token containing user information
  */
 export function generateAccessToken(payload: AccessTokenPayload): string {
-  return signWithPurpose(payload, 'access', authConfig.accessToken.expiresInSeconds);
+  return sign(payload, authConfig.accessToken.expiresInSeconds);
 }
 
 /**
@@ -131,7 +46,7 @@ export function generateAccessToken(payload: AccessTokenPayload): string {
  */
 export function verifyAccessToken(token: string): AccessTokenPayload {
   try {
-    const decoded = verifyWithPurpose<JwtPayload & AccessTokenPayload>(token, 'access');
+    const decoded = verify<JwtPayload & AccessTokenPayload>(token);
 
     if (typeof (decoded as JwtPayload & { type?: unknown }).type !== 'undefined') {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token type');
@@ -140,9 +55,12 @@ export function verifyAccessToken(token: string): AccessTokenPayload {
     if (typeof decoded.sid !== 'string' || decoded.sid.length === 0) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
     }
+    if (typeof decoded.sub !== 'string' || decoded.sub.length === 0) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token subject');
+    }
 
     return {
-      sub: decoded.sub!,
+      sub: decoded.sub,
       email: decoded.email,
       username: decoded.username,
       status: decoded.status,
@@ -176,7 +94,7 @@ export function generateRefreshToken(userId: string, sessionId: string): string 
     type: 'refresh',
   };
 
-  return signWithPurpose(payload, 'refresh', authConfig.refreshToken.expiresInSeconds);
+  return sign(payload, authConfig.refreshToken.expiresInSeconds);
 }
 
 /**
@@ -184,7 +102,7 @@ export function generateRefreshToken(userId: string, sessionId: string): string 
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload {
   try {
-    const decoded = verifyWithPurpose<JwtPayload & RefreshTokenPayload>(token, 'refresh');
+    const decoded = verify<JwtPayload & RefreshTokenPayload>(token);
 
     if (decoded.type !== 'refresh') {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid token type');
@@ -195,14 +113,17 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
     if (typeof decoded.jti !== 'string' || decoded.jti.length === 0) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token id');
     }
+    if (typeof decoded.sub !== 'string' || decoded.sub.length === 0) {
+      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid refresh token subject');
+    }
     if (decoded.sid !== decoded.jti) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Refresh token session mismatch');
     }
 
     return {
-      sub: decoded.sub!,
+      sub: decoded.sub,
       sid: decoded.sid,
-      jti: decoded.jti!,
+      jti: decoded.jti,
       type: decoded.type,
     };
   } catch (error) {
@@ -221,17 +142,20 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 
 // ==================== OAuth State Token ====================
 
-export function generateOAuthStateToken(returnUrl: string, expiresIn: SignOptions['expiresIn']): string {
+export function generateOAuthStateToken(
+  returnUrl: string,
+  expiresIn: SignOptions['expiresIn']
+): string {
   const payload: OAuthStateTokenPayload = {
     returnUrl,
     purpose: 'oauth_state',
   };
-  return signWithPurpose(payload, 'oauthState', expiresIn);
+  return sign(payload, expiresIn);
 }
 
 export function verifyOAuthStateToken(token: string): OAuthStateTokenPayload {
   try {
-    const decoded = verifyWithPurpose<JwtPayload & OAuthStateTokenPayload>(token, 'oauthState');
+    const decoded = verify<JwtPayload & OAuthStateTokenPayload>(token);
 
     if (decoded.purpose !== 'oauth_state' || typeof decoded.returnUrl !== 'string') {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid OAuth state token');
@@ -261,15 +185,12 @@ export function generateEmailVerificationToken(
   payload: EmailVerificationTokenPayload,
   expiresIn: SignOptions['expiresIn']
 ): string {
-  return signWithPurpose(payload, 'emailVerification', expiresIn);
+  return sign(payload, expiresIn);
 }
 
 export function verifyEmailVerificationToken(token: string): EmailVerificationTokenPayload {
   try {
-    const decoded = verifyWithPurpose<JwtPayload & EmailVerificationTokenPayload>(
-      token,
-      'emailVerification'
-    );
+    const decoded = verify<JwtPayload & EmailVerificationTokenPayload>(token);
 
     if (decoded.purpose !== 'email_verified') {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid email verification token');

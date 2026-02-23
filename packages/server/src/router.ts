@@ -1,7 +1,7 @@
 import path from 'path';
 import type { Request, Response } from 'express';
 import express from 'express';
-import { authRoutes, emailRoutes, oauthRoutes, jwksRoutes } from './modules/auth';
+import { authRoutes, emailRoutes, oauthRoutes } from './modules/auth';
 import { userRoutes } from './modules/user';
 import { documentRoutes, folderRoutes } from './modules/document';
 import { knowledgeBaseRoutes } from './modules/knowledge-base';
@@ -41,9 +41,6 @@ router.use('/api/auth/email', emailRoutes);
 
 // OAuth routes (under /api/auth/oauth)
 router.use('/api/auth/oauth', oauthRoutes);
-
-// JWKS routes (under /api/auth/.well-known)
-router.use('/api/auth', jwksRoutes);
 
 // User routes
 router.use('/api/user', userRoutes);

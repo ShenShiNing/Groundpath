@@ -5,7 +5,10 @@ import { authConfig } from '@config/env';
  * Hash refresh token for storage/lookup.
  */
 export function hashRefreshToken(token: string): string {
-  return crypto.createHmac('sha256', authConfig.encryptionKey).update(token).digest('hex');
+  return crypto
+    .createHmac('sha256', authConfig.tokenHashing.refreshTokenSecret)
+    .update(token)
+    .digest('hex');
 }
 
 /**

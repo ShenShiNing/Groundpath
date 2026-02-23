@@ -1,4 +1,3 @@
-import { generateKeyPairSync } from 'crypto';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
@@ -395,14 +394,13 @@ describe('emailVerificationService > verifyToken', () => {
   const signVerificationToken = (
     payload: Record<string, unknown>,
     expiresIn: SignOptions['expiresIn'],
-    privateKey: string = authConfig.emailVerificationToken.privateKey
+    secret: string = authConfig.jwt.secret
   ) =>
-    jwt.sign(payload, privateKey, {
+    jwt.sign(payload, secret, {
       expiresIn,
-      algorithm: authConfig.jwt.algorithm,
-      issuer: authConfig.jwtClaims.issuer,
-      audience: authConfig.jwtClaims.audience,
-      keyid: authConfig.emailVerificationToken.keyId,
+      algorithm: 'HS256',
+      issuer: authConfig.jwt.issuer,
+      audience: authConfig.jwt.audience,
     });
 
   // 场景 1：令牌有效
@@ -443,13 +441,10 @@ describe('emailVerificationService > verifyToken', () => {
   // 场景 3：令牌签名无效
   // 应抛出 VERIFICATION_TOKEN_INVALID 错误 (400)
   it('should throw VERIFICATION_TOKEN_INVALID when token signature is invalid', () => {
-    const wrongPrivateKey = generateKeyPairSync('rsa', {
-      modulusLength: 2048,
-    }).privateKey;
     const token = signVerificationToken(
       validPayload,
       '5m',
-      wrongPrivateKey.export({ format: 'pem', type: 'pkcs8' }).toString()
+      'a-completely-wrong-secret-key-32chars!'
     );
 
     let actual: { code: string; statusCode: number } | null = null;

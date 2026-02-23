@@ -104,6 +104,10 @@ packages/
 - **Authentication** — JWT-based auth with OAuth (GitHub, Google) and email verification
 - **Multi-device Sessions** — Track and manage login sessions across devices
 
+## Documentation
+
+- PDF annotation implementation: `docs/pdf-annotation-implementation.md`
+
 ## License
 
 MIT

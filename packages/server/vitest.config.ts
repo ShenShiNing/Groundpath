@@ -17,6 +17,11 @@ export default defineProject({
     exclude: ['node_modules', 'dist'],
     env: {
       NODE_ENV: 'test',
+      DATABASE_URL: 'mysql://test:test@localhost:3306/test_db',
+      REDIS_URL: 'redis://localhost:6379',
+      JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
+      ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars',
+      EMAIL_VERIFICATION_SECRET: 'test-email-verification-secret',
     },
   },
 });

@@ -16,7 +16,10 @@ function isTokenRevokedByTimestamp(tokenIatSeconds: number, tokenValidAfter: Dat
   if (!tokenValidAfter) {
     return false;
   }
-  return tokenIatSeconds * 1000 <= tokenValidAfter.getTime();
+  // JWT iat has second precision. Floor tokenValidAfter to the same precision to avoid
+  // rejecting tokens issued in the same second immediately after a revoke-all event.
+  const tokenValidAfterSeconds = Math.floor(tokenValidAfter.getTime() / 1000);
+  return tokenIatSeconds < tokenValidAfterSeconds;
 }
 
 async function isSessionActiveForUser(sessionId: string, userId: string): Promise<boolean> {
@@ -84,7 +87,9 @@ export async function optionalAuthenticate(
     if (token) {
       const payload = verifyAccessToken(token);
       const tokenIat = getTokenIssuedAt(token);
-      const authState = tokenIat ? await userRepository.findAccessAuthStateById(payload.sub) : undefined;
+      const authState = tokenIat
+        ? await userRepository.findAccessAuthStateById(payload.sub)
+        : undefined;
       if (
         tokenIat &&
         authState &&

@@ -227,7 +227,7 @@ describe('tokenService', () => {
 
   // ==================== refreshTokens ====================
   // 场景：使用有效 refresh token 换取新的令牌对（token rotation）
-  // 职责：JWT 验证 → 数据库查找 → token 字符串比对 → 用户状态检查 → 吊销旧 token → 生成新令牌对
+  // 职责：JWT 验证 → 原子消费 → 用户状态检查 → 生成新令牌对
   describe('refreshTokens', () => {
     const mockRefreshToken = 'valid-refresh-token';
     const ipAddress = '192.168.1.1';
@@ -326,35 +326,38 @@ describe('tokenService', () => {
       expect(actual?.code).toBe(AUTH_ERROR_CODES.TOKEN_REVOKED);
     });
 
-    // 场景 4：token 重用攻击检测
-    // JWT 解码的 jti 在数据库中存在，但 token 字符串不匹配（说明旧 token 被重用）
-    // 安全措施：吊销该用户的所有 token → 抛出 TOKEN_INVALID
-    it('should revoke all tokens on token mismatch (reuse attack)', async () => {
+    // 场景 4：token 重用攻击检测（mismatch → revoke_session）
+    // JWT 解码的 jti 在数据库中存在，但 token 字符串不匹配
+    // 安全措施：吊销当前会话 → 抛出 TOKEN_INVALID
+    it('should revoke session on token mismatch (reuse attack)', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('token_mismatch');
-      vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
-      vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mockResolvedValue(undefined);
+      vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
 
-      let actual: { code: string; revokedAll: boolean } | null = null;
+      let actual: { code: string; revokedSession: boolean } | null = null;
       try {
         await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
       } catch (error) {
         actual = {
           code: (error as AppError).code,
-          revokedAll: vi.mocked(refreshTokenRepository.revokeAllForUser).mock.calls.length > 0,
+          revokedSession: vi.mocked(refreshTokenRepository.revoke).mock.calls.length > 0,
         };
       }
 
-      const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID, revokedAll: true };
-      logTestInfo({ inputToken: mockRefreshToken, consumeResult: 'token_mismatch' }, expected, actual);
+      const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID, revokedSession: true };
+      logTestInfo(
+        { inputToken: mockRefreshToken, consumeResult: 'token_mismatch' },
+        expected,
+        actual
+      );
 
-      expect(actual?.revokedAll).toBe(true);
+      expect(actual?.revokedSession).toBe(true);
       expect(actual?.code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
+      expect(refreshTokenRepository.revoke).toHaveBeenCalledWith('token-id-456', {});
     });
 
     // 场景 5：用户不存在（可能已被删除）
-    // token 在数据库中有效，但对应的用户已不存在 → 吊销该 token → 抛出 TOKEN_INVALID
+    // token 在数据库中有效，但对应的用户已不存在 → 抛出 TOKEN_INVALID
     it('should throw TOKEN_INVALID if user not found', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('consumed');
@@ -373,7 +376,19 @@ describe('tokenService', () => {
       expect(actual?.code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
     });
 
-    // 场景 6：用户已被封禁
+    // 场景 6：already_revoked → 直接拒绝（无重放缓存）
+    it('should throw TOKEN_REVOKED when token already revoked', async () => {
+      vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
+      vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('already_revoked');
+
+      await expect(
+        tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo)
+      ).rejects.toMatchObject({
+        code: AUTH_ERROR_CODES.TOKEN_REVOKED,
+      });
+    });
+
+    // 场景 7：用户已被封禁
     // token 有效但用户状态为 banned → 吊销该用户所有 token → 抛出 USER_BANNED (403)
     it('should revoke all tokens and throw USER_BANNED if user is banned', async () => {
       const bannedUser = { ...mockUser, status: 'banned' as const };
@@ -402,7 +417,7 @@ describe('tokenService', () => {
       expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
     });
 
-    // 场景 7：令牌轮换 — 旧 token 原子消费
+    // 场景 8：令牌轮换 — 旧 token 原子消费
     // 刷新成功后，旧 token 应通过 consumeIfValid 被一次性消费
     it('should consume old token atomically during rotation', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);

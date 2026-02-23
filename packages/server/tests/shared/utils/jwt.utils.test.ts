@@ -1,4 +1,3 @@
-import { generateKeyPairSync } from 'crypto';
 import { describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
@@ -12,17 +11,6 @@ import {
 import { authConfig } from '@config/env';
 import type { AccessTokenPayload } from '@shared/types';
 import { AppError } from '@shared/errors';
-
-function createKeyPairPem(): { privateKey: string; publicKey: string } {
-  const pair =
-    authConfig.jwt.algorithm === 'RS256'
-      ? generateKeyPairSync('rsa', { modulusLength: 2048 })
-      : generateKeyPairSync('ed25519');
-  return {
-    privateKey: pair.privateKey.export({ format: 'pem', type: 'pkcs8' }).toString(),
-    publicKey: pair.publicKey.export({ format: 'pem', type: 'spki' }).toString(),
-  };
-}
 
 describe('jwt utils', () => {
   const accessPayload: AccessTokenPayload = {
@@ -41,23 +29,22 @@ describe('jwt utils', () => {
       expect(verified).toEqual(accessPayload);
     });
 
-    it('contains kid/iss/aud claims', () => {
+    it('contains iss/aud claims', () => {
       const token = generateAccessToken(accessPayload);
       const decoded = jwt.decode(token, { complete: true }) as jwt.Jwt & {
         payload: jwt.JwtPayload;
       };
 
-      expect(decoded.header.kid).toBe(authConfig.accessToken.keyId);
-      expect(decoded.payload.iss).toBe(authConfig.jwtClaims.issuer);
-      expect(decoded.payload.aud).toBe(authConfig.jwtClaims.audience);
+      expect(decoded.header.alg).toBe('HS256');
+      expect(decoded.payload.iss).toBe(authConfig.jwt.issuer);
+      expect(decoded.payload.aud).toBe(authConfig.jwt.audience);
     });
 
     it('rejects expired token', () => {
-      const expiredToken = jwt.sign(accessPayload, authConfig.accessToken.privateKey, {
-        algorithm: authConfig.jwt.algorithm,
-        keyid: authConfig.accessToken.keyId,
-        issuer: authConfig.jwtClaims.issuer,
-        audience: authConfig.jwtClaims.audience,
+      const expiredToken = jwt.sign(accessPayload, authConfig.jwt.secret, {
+        algorithm: 'HS256',
+        issuer: authConfig.jwt.issuer,
+        audience: authConfig.jwt.audience,
         expiresIn: '-1s',
       });
 
@@ -72,59 +59,23 @@ describe('jwt utils', () => {
     it('rejects wrong algorithm', () => {
       const token = jwt.sign(accessPayload, 'wrong-secret', {
         algorithm: 'HS384',
-        keyid: authConfig.accessToken.keyId,
-        issuer: authConfig.jwtClaims.issuer,
-        audience: authConfig.jwtClaims.audience,
+        issuer: authConfig.jwt.issuer,
+        audience: authConfig.jwt.audience,
         expiresIn: '15m',
       });
 
       expect(() => verifyAccessToken(token)).toThrow(AppError);
     });
 
-    it('rejects wrong kid', () => {
-      const token = jwt.sign(accessPayload, authConfig.accessToken.privateKey, {
-        algorithm: authConfig.jwt.algorithm,
-        keyid: 'unexpected-kid',
-        issuer: authConfig.jwtClaims.issuer,
-        audience: authConfig.jwtClaims.audience,
+    it('rejects token signed with wrong secret', () => {
+      const token = jwt.sign(accessPayload, 'a-completely-different-secret-key!', {
+        algorithm: 'HS256',
+        issuer: authConfig.jwt.issuer,
+        audience: authConfig.jwt.audience,
         expiresIn: '15m',
       });
 
       expect(() => verifyAccessToken(token)).toThrow(AppError);
-    });
-
-    it('rejects token signed by unknown private key', () => {
-      const wrongKeys = createKeyPairPem();
-      const token = jwt.sign(accessPayload, wrongKeys.privateKey, {
-        algorithm: authConfig.jwt.algorithm,
-        keyid: authConfig.accessToken.keyId,
-        issuer: authConfig.jwtClaims.issuer,
-        audience: authConfig.jwtClaims.audience,
-        expiresIn: '15m',
-      });
-
-      expect(() => verifyAccessToken(token)).toThrow(AppError);
-    });
-
-    it('accepts token signed by previous access key in rotation window', () => {
-      const previousKey = authConfig.keyRings.access.keys.find(
-        (key) => key.status === 'previous' && key.privateKey
-      );
-      if (!previousKey?.privateKey) {
-        expect(true).toBe(true);
-        return;
-      }
-
-      const token = jwt.sign(accessPayload, previousKey.privateKey, {
-        algorithm: authConfig.jwt.algorithm,
-        keyid: previousKey.kid,
-        issuer: authConfig.jwtClaims.issuer,
-        audience: authConfig.jwtClaims.audience,
-        expiresIn: '15m',
-      });
-
-      const verified = verifyAccessToken(token);
-      expect(verified).toEqual(accessPayload);
     });
 
     it('rejects refresh token in access verifier', () => {
@@ -158,12 +109,11 @@ describe('jwt utils', () => {
     it('rejects expired refresh token', () => {
       const token = jwt.sign(
         { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'refresh' },
-        authConfig.refreshToken.privateKey,
+        authConfig.jwt.secret,
         {
-          algorithm: authConfig.jwt.algorithm,
-          keyid: authConfig.refreshToken.keyId,
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
+          algorithm: 'HS256',
+          issuer: authConfig.jwt.issuer,
+          audience: authConfig.jwt.audience,
           expiresIn: '-1s',
         }
       );
@@ -179,12 +129,11 @@ describe('jwt utils', () => {
     it('rejects wrong token type', () => {
       const token = jwt.sign(
         { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'access' },
-        authConfig.refreshToken.privateKey,
+        authConfig.jwt.secret,
         {
-          algorithm: authConfig.jwt.algorithm,
-          keyid: authConfig.refreshToken.keyId,
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
+          algorithm: 'HS256',
+          issuer: authConfig.jwt.issuer,
+          audience: authConfig.jwt.audience,
           expiresIn: '7d',
         }
       );
@@ -195,12 +144,11 @@ describe('jwt utils', () => {
     it('rejects mismatched sid and jti', () => {
       const token = jwt.sign(
         { sub: 'user-123', sid: 'session-a', jti: 'session-b', type: 'refresh' },
-        authConfig.refreshToken.privateKey,
+        authConfig.jwt.secret,
         {
-          algorithm: authConfig.jwt.algorithm,
-          keyid: authConfig.refreshToken.keyId,
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
+          algorithm: 'HS256',
+          issuer: authConfig.jwt.issuer,
+          audience: authConfig.jwt.audience,
           expiresIn: '7d',
         }
       );
@@ -208,47 +156,19 @@ describe('jwt utils', () => {
       expect(() => verifyRefreshToken(token)).toThrow(AppError);
     });
 
-    it('rejects token signed by unknown private key', () => {
-      const wrongKeys = createKeyPairPem();
+    it('rejects token signed with wrong secret', () => {
       const token = jwt.sign(
         { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'refresh' },
-        wrongKeys.privateKey,
+        'a-completely-different-secret-key!',
         {
-          algorithm: authConfig.jwt.algorithm,
-          keyid: authConfig.refreshToken.keyId,
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
+          algorithm: 'HS256',
+          issuer: authConfig.jwt.issuer,
+          audience: authConfig.jwt.audience,
           expiresIn: '7d',
         }
       );
 
       expect(() => verifyRefreshToken(token)).toThrow(AppError);
-    });
-
-    it('accepts token signed by previous refresh key in rotation window', () => {
-      const previousKey = authConfig.keyRings.refresh.keys.find(
-        (key) => key.status === 'previous' && key.privateKey
-      );
-      if (!previousKey?.privateKey) {
-        expect(true).toBe(true);
-        return;
-      }
-
-      const token = jwt.sign(
-        { sub: 'user-123', sid: 'session-123', jti: 'session-123', type: 'refresh' },
-        previousKey.privateKey,
-        {
-          algorithm: authConfig.jwt.algorithm,
-          keyid: previousKey.kid,
-          issuer: authConfig.jwtClaims.issuer,
-          audience: authConfig.jwtClaims.audience,
-          expiresIn: '7d',
-        }
-      );
-
-      const verified = verifyRefreshToken(token);
-      expect(verified.sub).toBe('user-123');
-      expect(verified.sid).toBe('session-123');
     });
 
     it('rethrows unknown errors', () => {
