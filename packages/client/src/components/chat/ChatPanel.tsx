@@ -1,13 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import {
-  X,
-  MessageSquare,
-  Sparkles,
-  Trash2,
-  StopCircle,
-  PanelLeftClose,
-  PanelLeft,
-} from 'lucide-react';
+import { X, MessageSquare, Sparkles, Trash2, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -128,17 +120,6 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {isLoading && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={stopGeneration}
-                title="Stop generation"
-              >
-                <StopCircle className="size-4 text-destructive" />
-              </Button>
-            )}
             {messages.length > 0 && (
               <Button
                 variant="ghost"
@@ -213,7 +194,12 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
 
             {/* Input */}
             <div className="shrink-0">
-              <ChatInput onSend={handleSendMessage} disabled={isLoading} />
+              <ChatInput
+                onSend={handleSendMessage}
+                onStop={stopGeneration}
+                isGenerating={isLoading}
+                disabled={isLoading}
+              />
             </div>
           </div>
         </div>

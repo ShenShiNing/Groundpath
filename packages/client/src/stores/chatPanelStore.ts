@@ -36,7 +36,7 @@ export interface ChatPanelState {
   showSidebar: boolean;
 
   // Actions
-  open: (kbId: string) => void;
+  open: (kbId?: string | null) => void;
   close: () => void;
   toggle: () => void;
   sendMessage: (content: string, getAccessToken: () => string | null) => Promise<void>;
@@ -81,13 +81,14 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
   abortController: null,
   showSidebar: false,
 
-  open: (kbId: string) => {
+  open: (kbId?: string | null) => {
+    const normalizedKbId = kbId ?? null;
     const { knowledgeBaseId } = get();
     // Clear messages if switching knowledge bases
-    if (knowledgeBaseId !== kbId) {
+    if (knowledgeBaseId !== normalizedKbId) {
       set({
         isOpen: true,
-        knowledgeBaseId: kbId,
+        knowledgeBaseId: normalizedKbId,
         conversationId: null,
         messages: [],
         selectedDocumentIds: [],
@@ -120,16 +121,23 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       selectedDocumentIds,
     } = get();
 
-    if (!knowledgeBaseId || !content.trim()) return;
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return;
 
     // Create conversation if needed
     let convId = conversationId;
     if (!convId) {
       try {
-        const conversation = await conversationApi.create({
-          knowledgeBaseId,
-          title: content.substring(0, 50),
-        });
+        const conversation = await conversationApi.create(
+          knowledgeBaseId
+            ? {
+                knowledgeBaseId,
+                title: trimmedContent.substring(0, 50),
+              }
+            : {
+                title: trimmedContent.substring(0, 50),
+              }
+        );
         convId = conversation.id;
         set({ conversationId: convId });
       } catch (error) {
@@ -137,7 +145,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: 'Failed to start conversation. Please check your AI settings.',
+          content: '无法开始对话。请先前往 [AI 设置页面](/settings/ai) 完成模型配置后再试。',
           timestamp: new Date(),
         });
         return;
@@ -148,7 +156,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: content.trim(),
+      content: trimmedContent,
       timestamp: new Date(),
     };
     addMessage(userMessage);
@@ -170,7 +178,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     const abortController = sendMessageWithSSE(
       convId,
       {
-        content: content.trim(),
+        content: trimmedContent,
         documentIds: selectedDocumentIds.length > 0 ? selectedDocumentIds : undefined,
       },
       {
@@ -186,9 +194,12 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           set({ isLoading: false, abortController: null });
         },
         onError: (error) => {
+          const fallbackMessage =
+            error.code === 'LLM_CONFIG_NOT_FOUND'
+              ? '尚未配置 AI 模型。请先前往 [AI 设置页面](/settings/ai) 完成配置后再试。'
+              : `Error: ${error.message}`;
           updateLastMessage({
-            content:
-              get().messages[get().messages.length - 1]?.content || `Error: ${error.message}`,
+            content: get().messages[get().messages.length - 1]?.content || fallbackMessage,
             isLoading: false,
           });
           set({ isLoading: false, abortController: null });

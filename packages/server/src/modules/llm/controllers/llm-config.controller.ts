@@ -38,6 +38,19 @@ export const llmConfigController = {
   },
 
   /**
+   * DELETE /api/llm/config - Delete user's LLM configuration
+   */
+  async deleteConfig(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.sub;
+      await llmConfigService.deleteConfig(userId);
+      sendSuccessResponse(res, null);
+    } catch (error) {
+      handleError(error, res, 'Delete LLM config');
+    }
+  },
+
+  /**
    * POST /api/llm/test-connection - Test provider connection
    */
   async testConnection(req: Request, res: Response): Promise<void> {

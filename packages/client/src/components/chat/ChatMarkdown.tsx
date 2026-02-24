@@ -8,6 +8,7 @@ import {
   type MouseEvent,
 } from 'react';
 import MDEditor from '@uiw/react-md-editor/nohighlight';
+import { Link } from '@tanstack/react-router';
 import type { Citation } from '@/stores/chatPanelStore';
 import { CitationInline } from './CitationInline';
 import { toast } from 'sonner';
@@ -121,6 +122,14 @@ export function ChatMarkdown({ content, citations, onCitationClick }: ChatMarkdo
                 );
               }
               return <span>[{citationIndex}]</span>;
+            }
+
+            if (href?.startsWith('/')) {
+              return (
+                <Link to={href as string} className="underline break-all">
+                  {children}
+                </Link>
+              );
             }
 
             return (

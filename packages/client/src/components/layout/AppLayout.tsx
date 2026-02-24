@@ -3,8 +3,8 @@ import { Link, useRouter, useLocation } from '@tanstack/react-router';
 import {
   Brain,
   LogOut,
-  PanelLeftClose,
   PanelLeft,
+  PanelLeftClose,
   LayoutDashboard,
   MessageSquare,
   User,
@@ -29,9 +29,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { ModeToggle } from '@/components/theme/mode-toggle';
-import { useAuthStore } from '@/stores';
+import { ConversationList } from '@/components/chat';
+import { useAuthStore, useChatPanelStore } from '@/stores';
 import { authApi } from '@/api';
 
 // ============================================================================
@@ -56,7 +56,6 @@ interface NavItem {
 const mainNavItems: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="size-4" /> },
   { label: 'Knowledge Bases', to: '/knowledge-bases', icon: <Database className="size-4" /> },
-  { label: 'Chat', to: '/chat', icon: <MessageSquare className="size-4" /> },
 ];
 
 // ============================================================================
@@ -90,11 +89,10 @@ function SidebarNavItem({
     <Link
       to={item.to}
       className={cn(
-        'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
-        'hover:bg-accent',
+        'flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors',
         isActive
-          ? 'bg-accent text-accent-foreground font-medium'
-          : 'text-muted-foreground hover:text-foreground'
+          ? 'bg-muted text-foreground'
+          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
       )}
     >
       {item.icon}
@@ -160,13 +158,19 @@ function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
+            <Link to={'/knowledge-bases' as string}>
+              <Plus className="size-4 mr-2" />
+              New Knowledge Base
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link to={'/profile' as string}>
               <User className="size-4 mr-2" />
               Profile
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to={'/settings' as string}>
+            <Link to={'/settings/ai' as string}>
               <Settings className="size-4 mr-2" />
               Settings
             </Link>
@@ -194,19 +198,42 @@ function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed
 
 function Sidebar({
   isCollapsed,
-  onToggleCollapse,
   onLogout,
+  onToggleCollapse,
 }: {
   isCollapsed: boolean;
-  onToggleCollapse: () => void;
   onLogout: () => void;
+  onToggleCollapse: () => void;
 }) {
+  const router = useRouter();
   const location = useLocation();
   const { accessToken } = useAuthStore();
+  const { conversationId, switchConversation, startNewConversation } = useChatPanelStore();
   const isAuthenticated = !!accessToken;
+  const isChatPage = location.pathname === '/chat' || location.pathname.startsWith('/chat/');
 
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
+
+  const handleSelectConversation = (selectedConversationId: string) => {
+    void (async () => {
+      await switchConversation(selectedConversationId);
+      if (!isChatPage) {
+        await router.navigate({ to: '/chat' });
+      }
+    })();
+  };
+
+  const handleNewConversation = () => {
+    startNewConversation();
+    if (!isChatPage) {
+      void router.navigate({ to: '/chat' });
+    }
+  };
+
+  const handleCurrentConversationDeleted = () => {
+    startNewConversation();
   };
 
   if (!isAuthenticated) return null;
@@ -214,21 +241,25 @@ function Sidebar({
   return (
     <aside
       className={cn(
-        'flex flex-col border-r bg-background transition-all duration-200',
-        isCollapsed ? 'w-13' : 'w-60'
+        'flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-200',
+        isCollapsed ? 'w-14' : 'w-72'
       )}
     >
-      {/* Logo & Collapse Toggle */}
-      <div className="flex items-center justify-between h-14 px-3 border-b">
+      {/* Top Bar */}
+      <div
+        className={cn(
+          'flex items-center px-2 pt-2',
+          isCollapsed ? 'justify-center' : 'justify-between'
+        )}
+      >
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                className="group/logo flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground mx-auto cursor-pointer hover:opacity-80 transition-opacity"
+                className="flex size-9 items-center justify-center rounded-lg hover:bg-muted/70 transition-colors"
                 onClick={onToggleCollapse}
               >
-                <Brain className="size-4 group-hover/logo:hidden" />
-                <PanelLeft className="size-4 hidden group-hover/logo:block" />
+                <PanelLeft className="size-4" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">Expand sidebar</TooltipContent>
@@ -236,30 +267,61 @@ function Sidebar({
         ) : (
           <>
             <Link
-              to="/dashboard"
-              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              to="/chat"
+              className="flex items-center gap-2 px-2 text-sm font-medium hover:text-foreground/90 transition-colors"
             >
-              <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <Brain className="size-4" />
+              <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
+                <Brain className="size-3.5" />
               </div>
-              <span className="font-semibold text-sm">KnowledgeAgent</span>
+              <span>KnowledgeAgent</span>
             </Link>
-            <Button variant="ghost" size="icon" className="size-7" onClick={onToggleCollapse}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 rounded-lg"
+              onClick={onToggleCollapse}
+            >
               <PanelLeftClose className="size-4" />
             </Button>
           </>
         )}
       </div>
 
-      {/* Search (collapsed: icon only) */}
+      {/* New Chat */}
       {!isCollapsed ? (
-        <div className="p-3">
+        <div className="px-2 pb-1 pt-2">
+          <Button className="h-10 w-full justify-start rounded-lg" onClick={handleNewConversation}>
+            <Plus className="size-4 mr-2" />
+            新聊天
+          </Button>
+        </div>
+      ) : (
+        <div className="p-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="default"
+                size="icon"
+                className="h-9 w-full rounded-lg"
+                onClick={handleNewConversation}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">新聊天</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
+
+      {/* Search */}
+      {!isCollapsed ? (
+        <div className="px-2 pb-2">
           <Button
-            variant="outline"
-            className="w-full justify-start text-muted-foreground font-normal"
+            variant="ghost"
+            className="h-10 w-full justify-start rounded-lg text-muted-foreground font-normal hover:bg-muted/60"
           >
             <Search className="size-4 mr-2" />
-            Search...
+            搜索聊天
             <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
               <span className="text-xs">⌘</span>K
             </kbd>
@@ -273,52 +335,58 @@ function Sidebar({
                 <Search className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">Search</TooltipContent>
+            <TooltipContent side="right">搜索聊天</TooltipContent>
           </Tooltip>
         </div>
       )}
 
-      {/* Quick Actions */}
-      {!isCollapsed ? (
-        <div className="px-3 pb-3">
-          <Button variant="default" size="sm" className="w-full" asChild>
-            <Link to="/knowledge-bases">
-              <Plus className="size-4 mr-2" />
-              New Knowledge Base
-            </Link>
-          </Button>
-        </div>
-      ) : (
-        <div className="px-2 pb-2">
+      {/* Workspace Navigation */}
+      <div className={cn('px-2 pb-2', isCollapsed && 'px-1')}>
+        {!isCollapsed && <p className="px-2 pb-1 text-xs text-muted-foreground">工作区</p>}
+        <nav className={cn('space-y-1', isCollapsed && 'space-y-0')}>
+          {mainNavItems.map((item) => (
+            <SidebarNavItem
+              key={item.to}
+              item={item}
+              isCollapsed={isCollapsed}
+              isActive={isActive(item.to)}
+            />
+          ))}
+        </nav>
+      </div>
+
+      {/* Chat History */}
+      <div className={cn('flex-1 min-h-0', isCollapsed ? 'p-2' : 'px-2 pb-2')}>
+        {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="default" size="icon" className="w-full h-9" asChild>
-                <Link to="/knowledge-bases">
-                  <Plus className="size-4" />
+              <Button variant="ghost" size="icon" className="w-full h-9 rounded-lg" asChild>
+                <Link to="/chat">
+                  <MessageSquare className="size-4" />
                 </Link>
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">New Knowledge Base</TooltipContent>
+            <TooltipContent side="right">聊天记录</TooltipContent>
           </Tooltip>
-        </div>
-      )}
-
-      <Separator />
-
-      {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {mainNavItems.map((item) => (
-          <SidebarNavItem
-            key={item.to}
-            item={item}
-            isCollapsed={isCollapsed}
-            isActive={isActive(item.to)}
-          />
-        ))}
-      </nav>
+        ) : (
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="px-2 pb-2 pt-1 text-xs text-muted-foreground">聊天记录</div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <ConversationList
+                knowledgeBaseId={undefined}
+                currentConversationId={conversationId}
+                onSelect={handleSelectConversation}
+                onNewConversation={handleNewConversation}
+                onCurrentConversationDeleted={handleCurrentConversationDeleted}
+                showNewButton={false}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Bottom Section */}
-      <div className="mt-auto border-t p-2">
+      <div className="border-t p-2">
         {/* Theme Toggle */}
         <div className={cn('flex items-center mb-2', isCollapsed ? 'justify-center' : 'px-1')}>
           {isCollapsed ? (

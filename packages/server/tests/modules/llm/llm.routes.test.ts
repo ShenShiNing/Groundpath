@@ -5,6 +5,7 @@ const { mockRouter, RouterMock, authenticateMock, llmConfigControllerMock } = vi
     use: vi.fn(),
     get: vi.fn(),
     put: vi.fn(),
+    delete: vi.fn(),
     post: vi.fn(),
   };
 
@@ -15,6 +16,7 @@ const { mockRouter, RouterMock, authenticateMock, llmConfigControllerMock } = vi
     llmConfigControllerMock: {
       getConfig: vi.fn(),
       updateConfig: vi.fn(),
+      deleteConfig: vi.fn(),
       testConnection: vi.fn(),
       getProviders: vi.fn(),
       fetchModels: vi.fn(),
@@ -49,6 +51,7 @@ describe('llm.routes', () => {
   it('should register all llm config endpoints', () => {
     expect(mockRouter.get).toHaveBeenCalledWith('/config', llmConfigControllerMock.getConfig);
     expect(mockRouter.put).toHaveBeenCalledWith('/config', llmConfigControllerMock.updateConfig);
+    expect(mockRouter.delete).toHaveBeenCalledWith('/config', llmConfigControllerMock.deleteConfig);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/test-connection',
       llmConfigControllerMock.testConnection

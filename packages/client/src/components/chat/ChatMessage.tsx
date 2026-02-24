@@ -79,12 +79,12 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
   // User message
   if (isUser) {
     return (
-      <div className="flex justify-end mb-4">
+      <div className="mb-5 flex justify-end">
         <div className="max-w-[85%]">
-          <div className="bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm">
+          <div className="rounded-2xl rounded-tr-md bg-muted px-4 py-2.5 text-sm text-foreground">
             {message.content}
           </div>
-          <div className="text-[10px] text-muted-foreground text-right mt-1">
+          <div className="mt-1 text-right text-[10px] text-muted-foreground">
             {formatTime(message.timestamp)}
           </div>
         </div>
@@ -95,9 +95,9 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
   // Assistant message (loading with no content yet)
   if (message.isLoading && !message.content) {
     return (
-      <div className="flex gap-3 mb-4">
-        <div className="size-7 rounded-full bg-primary flex items-center justify-center shrink-0">
-          <Bot className="size-4 text-primary-foreground" />
+      <div className="mb-5 flex gap-3">
+        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+          <Bot className="size-4" />
         </div>
         <div className="flex items-center gap-2 py-2">
           <Loader2 className="size-4 text-muted-foreground animate-spin" />
@@ -109,9 +109,9 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
 
   // Assistant message (streaming or complete)
   return (
-    <div className="flex gap-3 mb-4">
-      <div className="size-7 rounded-full bg-primary flex items-center justify-center shrink-0">
-        <Bot className="size-4 text-primary-foreground" />
+    <div className="mb-6 flex gap-3">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <Bot className="size-4" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm">

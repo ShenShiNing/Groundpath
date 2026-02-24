@@ -71,6 +71,25 @@ export function useUpdateLLMConfig() {
 }
 
 /**
+ * Hook to delete LLM configuration
+ */
+export function useDeleteLLMConfig() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: llmConfigApi.deleteConfig,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.llm.config });
+      queryClient.invalidateQueries({ queryKey: ['llm', 'models'] });
+      toast.success('AI configuration cleared');
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to clear configuration');
+    },
+  });
+}
+
+/**
  * Hook to test LLM connection
  */
 export function useTestLLMConnection() {

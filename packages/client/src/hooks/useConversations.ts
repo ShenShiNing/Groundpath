@@ -11,10 +11,12 @@ import type { ConversationListItem } from '@knowledge-agent/shared/types';
  * Fetch conversations for a knowledge base
  */
 export function useConversations(knowledgeBaseId: string | undefined) {
+  const scopeKey = knowledgeBaseId ?? '__global__';
   return useQuery<ConversationListItem[]>({
-    queryKey: queryKeys.knowledgeBases.conversations(knowledgeBaseId ?? ''),
-    queryFn: () => conversationApi.list({ knowledgeBaseId }),
-    enabled: !!knowledgeBaseId,
+    queryKey: queryKeys.knowledgeBases.conversations(scopeKey),
+    queryFn: () =>
+      conversationApi.list(scopeKey === '__global__' ? undefined : { knowledgeBaseId: scopeKey }),
+    enabled: true,
   });
 }
 

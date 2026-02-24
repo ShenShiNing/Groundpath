@@ -30,6 +30,14 @@ export const llmConfigApi = {
   },
 
   /**
+   * Delete user's LLM configuration
+   */
+  async deleteConfig(): Promise<void> {
+    const response = await apiClient.delete<ApiResponse<null>>('/api/llm/config');
+    unwrapResponse(response.data);
+  },
+
+  /**
    * Test provider connection
    */
   async testConnection(data: TestLLMConnectionInput = {}): Promise<TestLLMConnectionResponse> {

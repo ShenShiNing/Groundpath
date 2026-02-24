@@ -10,6 +10,7 @@ router.use(authenticate);
 // LLM configuration endpoints
 router.get('/config', llmConfigController.getConfig);
 router.put('/config', llmConfigController.updateConfig);
+router.delete('/config', llmConfigController.deleteConfig);
 router.post('/test-connection', llmConfigController.testConnection);
 router.get('/providers', llmConfigController.getProviders);
 router.post('/models', llmConfigController.fetchModels);

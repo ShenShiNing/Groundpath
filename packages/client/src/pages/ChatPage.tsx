@@ -1,10 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Database, FileText, History, Sparkles, StopCircle, Trash2, Upload } from 'lucide-react';
+import { Database, Ellipsis, FileText, Loader2, Sparkles, Trash2, Upload } from 'lucide-react';
+import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -12,26 +19,59 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import {
-  ChatInput,
-  ChatMessage,
-  CitationPreview,
-  ConversationList,
-  DocumentScopeSelector,
-} from '@/components/chat';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ChatInput, ChatMessage, CitationPreview, DocumentScopeSelector } from '@/components/chat';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
-import { useKBDocuments, useKnowledgeBases } from '@/hooks';
+import { knowledgeBasesApi } from '@/api';
+import { useCreateKnowledgeBase, useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useAuthStore, useChatPanelStore } from '@/stores';
 import type { Citation } from '@/stores/chatPanelStore';
 import { toast } from 'sonner';
+
+type KnowledgeSeedSource = 'conversation' | 'latest-assistant';
+
+function sanitizeFileName(input: string): string {
+  const invalidChars = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
+  const sanitized = input
+    .trim()
+    .split('')
+    .map((char) => {
+      const codePoint = char.charCodeAt(0);
+      if (codePoint <= 31 || invalidChars.has(char)) {
+        return '_';
+      }
+      return char;
+    })
+    .join('');
+
+  return input ? sanitized.replace(/\s+/g, '-').slice(0, 80) : '';
+}
+
+function buildConversationMarkdown(
+  messages: Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>
+): string {
+  const body = messages
+    .filter((message) => message.content.trim().length > 0)
+    .map((message) => {
+      const title = message.role === 'user' ? 'User' : 'Assistant';
+      const time = message.timestamp.toISOString();
+      return `## ${title} (${time})\n\n${message.content.trim()}\n`;
+    })
+    .join('\n');
+
+  return `# Chat Transcript\n\n${body}`.trim();
+}
 
 export function ChatPage() {
   const navigate = useNavigate();
@@ -41,11 +81,19 @@ export function ChatPage() {
     useChatPanelStore.getState().knowledgeBaseId ?? undefined
   );
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [conversationSheetOpen, setConversationSheetOpen] = useState(false);
   const [previewCitation, setPreviewCitation] = useState<Citation | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [createKbDialogOpen, setCreateKbDialogOpen] = useState(false);
+  const [newKbName, setNewKbName] = useState('');
+  const [newKbDescription, setNewKbDescription] = useState('');
+  const [newKbEmbeddingProvider, setNewKbEmbeddingProvider] =
+    useState<EmbeddingProviderType>('zhipu');
+  const [seedSource, setSeedSource] = useState<KnowledgeSeedSource>('conversation');
+  const [switchToNewKb, setSwitchToNewKb] = useState(true);
+  const [isCreatingKb, setIsCreatingKb] = useState(false);
 
   const { data: knowledgeBases = [], isLoading: kbLoading } = useKnowledgeBases();
+  const createKnowledgeBase = useCreateKnowledgeBase();
   const { data: documentsResponse, isLoading: docsLoading } = useKBDocuments(
     selectedKnowledgeBaseId,
     {
@@ -65,7 +113,6 @@ export function ChatPage() {
     setDocumentScope,
     clearMessages,
     startNewConversation,
-    switchConversation,
   } = useChatPanelStore();
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
@@ -92,6 +139,22 @@ export function ChatPage() {
     () => knowledgeBases.find((kb) => kb.id === selectedKnowledgeBaseId),
     [knowledgeBases, selectedKnowledgeBaseId]
   );
+  const assistantMessages = useMemo(
+    () =>
+      messages.filter(
+        (message) =>
+          message.role === 'assistant' && !message.isLoading && message.content.trim().length > 0
+      ),
+    [messages]
+  );
+  const latestAssistantMessage = useMemo(
+    () => assistantMessages[assistantMessages.length - 1] ?? null,
+    [assistantMessages]
+  );
+  const hasPersistableMessages = useMemo(
+    () => messages.some((message) => !message.isLoading && message.content.trim().length > 0),
+    [messages]
+  );
 
   useEffect(() => {
     if (knowledgeBases.length === 0) {
@@ -107,11 +170,25 @@ export function ChatPage() {
     }
   }, [knowledgeBases, preferredKnowledgeBaseId, selectedKnowledgeBaseId]);
 
+  // Keep local selected KB in sync when conversation is switched from outside ChatPage (e.g. sidebar)
   useEffect(() => {
-    if (selectedKnowledgeBaseId && selectedKnowledgeBaseId !== knowledgeBaseId) {
-      open(selectedKnowledgeBaseId);
+    if (!conversationId) return;
+    const currentSelected = selectedKnowledgeBaseId ?? null;
+    if (knowledgeBaseId !== currentSelected) {
+      setSelectedKnowledgeBaseId(knowledgeBaseId ?? undefined);
     }
-  }, [knowledgeBaseId, open, selectedKnowledgeBaseId]);
+  }, [conversationId, knowledgeBaseId, selectedKnowledgeBaseId]);
+
+  useEffect(() => {
+    const targetKnowledgeBaseId = selectedKnowledgeBaseId ?? null;
+    // Avoid overriding externally-loaded conversation context
+    if (conversationId && targetKnowledgeBaseId !== knowledgeBaseId) {
+      return;
+    }
+    if (targetKnowledgeBaseId !== knowledgeBaseId) {
+      open(targetKnowledgeBaseId);
+    }
+  }, [conversationId, knowledgeBaseId, open, selectedKnowledgeBaseId]);
 
   useEffect(() => {
     if (selectedDocumentIds.length === 0) return;
@@ -130,25 +207,13 @@ export function ChatPage() {
 
   const handleSendMessage = useCallback(
     (content: string) => {
-      if (!selectedKnowledgeBaseId) return;
-      if (!docsLoading && searchableDocuments.length === 0) {
-        toast.warning('当前知识库暂无可检索文档，请先上传并等待处理完成');
-        return;
-      }
-      if (knowledgeBaseId !== selectedKnowledgeBaseId) {
-        open(selectedKnowledgeBaseId);
+      const targetKnowledgeBaseId = selectedKnowledgeBaseId ?? null;
+      if (knowledgeBaseId !== targetKnowledgeBaseId) {
+        open(targetKnowledgeBaseId);
       }
       void sendMessage(content, getAccessToken);
     },
-    [
-      docsLoading,
-      getAccessToken,
-      knowledgeBaseId,
-      open,
-      searchableDocuments.length,
-      selectedKnowledgeBaseId,
-      sendMessage,
-    ]
+    [getAccessToken, knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage]
   );
 
   const handleCitationClick = useCallback((citation: Citation) => {
@@ -179,13 +244,99 @@ export function ChatPage() {
     setUploadDialogOpen(false);
   }, []);
 
-  const handleSelectConversation = useCallback(
-    (nextConversationId: string) => {
-      void switchConversation(nextConversationId);
-      setConversationSheetOpen(false);
-    },
-    [switchConversation]
-  );
+  const handleOpenCreateKbDialog = useCallback(() => {
+    if (!hasPersistableMessages) {
+      toast.info('当前还没有可沉淀的聊天内容');
+      return;
+    }
+
+    const defaultName =
+      selectedKnowledgeBase?.name ?? `Chat Knowledge Base ${new Date().toISOString().slice(0, 10)}`;
+    setNewKbName(defaultName);
+    setNewKbDescription('');
+    setNewKbEmbeddingProvider('zhipu');
+    setSeedSource(latestAssistantMessage ? 'latest-assistant' : 'conversation');
+    setSwitchToNewKb(true);
+    setCreateKbDialogOpen(true);
+  }, [hasPersistableMessages, latestAssistantMessage, selectedKnowledgeBase?.name]);
+
+  const handleCreateKbFromChat = useCallback(async () => {
+    if (!newKbName.trim()) {
+      toast.error('请输入知识库名称');
+      return;
+    }
+
+    if (seedSource === 'latest-assistant' && !latestAssistantMessage) {
+      toast.error('当前没有可用的 AI 回复内容');
+      return;
+    }
+
+    const conversationContent = buildConversationMarkdown(
+      messages
+        .filter((message) => !message.isLoading)
+        .map((message) => ({
+          role: message.role,
+          content: message.content,
+          timestamp: message.timestamp,
+        }))
+    );
+    const latestAssistantContent = latestAssistantMessage?.content.trim() ?? '';
+    const selectedContent =
+      seedSource === 'latest-assistant' ? latestAssistantContent : conversationContent;
+
+    if (!selectedContent.trim()) {
+      toast.error('没有可保存的内容');
+      return;
+    }
+
+    setIsCreatingKb(true);
+    try {
+      const knowledgeBase = await createKnowledgeBase.mutateAsync({
+        name: newKbName.trim(),
+        description: newKbDescription.trim() || null,
+        embeddingProvider: newKbEmbeddingProvider,
+      });
+
+      const documentTitle =
+        seedSource === 'latest-assistant' ? 'AI Generated Notes' : 'Chat Transcript';
+      const fileBaseName = sanitizeFileName(documentTitle || knowledgeBase.name) || 'chat-notes';
+      const file = new File([selectedContent], `${fileBaseName}.md`, {
+        type: 'text/markdown',
+      });
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', documentTitle);
+      formData.append('description', 'Generated from chat content');
+
+      await knowledgeBasesApi.uploadDocument(knowledgeBase.id, formData);
+
+      if (switchToNewKb) {
+        setSelectedKnowledgeBaseId(knowledgeBase.id);
+        open(knowledgeBase.id);
+        startNewConversation();
+      }
+
+      setCreateKbDialogOpen(false);
+      toast.success('知识库创建成功，聊天内容已保存为文档');
+    } catch (error) {
+      console.error('Failed to create knowledge base from chat:', error);
+      toast.error('创建知识库失败，请重试');
+    } finally {
+      setIsCreatingKb(false);
+    }
+  }, [
+    createKnowledgeBase,
+    latestAssistantMessage,
+    messages,
+    newKbDescription,
+    newKbEmbeddingProvider,
+    newKbName,
+    open,
+    seedSource,
+    startNewConversation,
+    switchToNewKb,
+  ]);
 
   if (kbLoading) {
     return (
@@ -194,27 +345,6 @@ export function ChatPage() {
           <div className="mx-auto flex h-full max-w-6xl flex-col gap-4">
             <Skeleton className="h-32 rounded-2xl" />
             <Skeleton className="h-112 rounded-2xl" />
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (knowledgeBases.length === 0) {
-    return (
-      <AppLayout>
-        <div className="flex-1 overflow-y-auto bg-background px-6 py-8 md:py-10">
-          <div className="mx-auto w-full max-w-3xl rounded-2xl border bg-card/70 p-8 text-center">
-            <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
-              <Database className="size-6 text-muted-foreground" />
-            </div>
-            <h1 className="text-xl font-semibold">还没有可用知识库</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              先创建知识库并上传文档，再开始多轮问答。
-            </p>
-            <Button className="mt-6 cursor-pointer" asChild>
-              <Link to="/knowledge-bases">前往创建知识库</Link>
-            </Button>
           </div>
         </div>
       </AppLayout>
@@ -230,163 +360,136 @@ export function ChatPage() {
         跳转到聊天内容
       </a>
 
-      <div className="relative flex-1 overflow-hidden bg-background px-4 py-4 md:px-6 md:py-6">
+      <div className="relative flex-1 overflow-hidden bg-background">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 h-72 w-2xl -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+          <div className="absolute left-1/2 top-0 h-64 w-2xl -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
         </div>
 
-        <div className="mx-auto flex h-full max-w-6xl flex-col gap-4">
-          <header className="rounded-2xl border bg-card/70 p-4 md:p-5">
-            <div className="flex flex-wrap items-start gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">Workspace / Chat</p>
-                <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight">
-                  知识库聊天
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  聚焦提问与引用答案，已隐藏会话列表与知识库选择器。
-                </p>
-              </div>
-
-              <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="cursor-pointer"
-                  onClick={startNewConversation}
-                  disabled={!selectedKnowledgeBaseId}
-                >
-                  <Sparkles className="size-4 mr-2" />
-                  新会话
-                </Button>
-                <Button
-                  variant="outline"
-                  className="cursor-pointer"
-                  onClick={() => setConversationSheetOpen(true)}
-                  disabled={!selectedKnowledgeBaseId}
-                >
-                  <History className="size-4 mr-2" />
-                  历史会话
-                </Button>
-                <Button
-                  variant="outline"
-                  className="cursor-pointer"
-                  onClick={() => setUploadDialogOpen(true)}
-                  disabled={!selectedKnowledgeBaseId}
-                >
-                  <Upload className="size-4 mr-2" />
-                  上传文件
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Database className="size-3.5" />
-                {selectedKnowledgeBase?.name ?? '未选择'}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <FileText className="size-3.5" />
-                {selectedKnowledgeBase?.documentCount ?? 0} 份文档
-              </span>
-              <span>{messages.length} 条消息</span>
-              {selectedKnowledgeBase && selectedKnowledgeBase.documentCount === 0 && (
-                <span className="text-amber-600">当前知识库暂无文档，AI无法命中文档内容</span>
-              )}
-              {selectedKnowledgeBaseId && (
-                <Button variant="link" size="sm" className="h-auto p-0 text-xs" asChild>
-                  <Link to={`/knowledge-bases/${selectedKnowledgeBaseId}` as string}>
-                    查看知识库详情
-                  </Link>
-                </Button>
-              )}
-            </div>
-          </header>
-
-          <section id="chat-main" className="min-h-0 flex-1 rounded-2xl border bg-card/80">
+        <div className="mx-auto flex h-full w-full max-w-6xl flex-col">
+          <section id="chat-main" className="flex min-h-0 flex-1 flex-col">
             <div className="flex h-full min-h-88 flex-col">
-              <div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-3">
-                <DocumentScopeSelector
-                  documents={searchableDocuments}
-                  selectedIds={selectedDocumentIds}
-                  onChange={setDocumentScope}
-                />
+              <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 md:px-6">
+                {selectedKnowledgeBaseId ? (
+                  <DocumentScopeSelector
+                    documents={searchableDocuments}
+                    selectedIds={selectedDocumentIds}
+                    onChange={setDocumentScope}
+                  />
+                ) : (
+                  <span className="text-xs text-muted-foreground">通用模式</span>
+                )}
                 <span
-                  className={`text-xs ${searchableDocuments.length === 0 ? 'text-amber-600' : 'text-muted-foreground'}`}
+                  className={`text-xs ${
+                    selectedKnowledgeBaseId && searchableDocuments.length === 0
+                      ? 'text-amber-600'
+                      : 'text-muted-foreground'
+                  }`}
                 >
-                  {docsLoading
-                    ? '文档加载中...'
-                    : processingDocumentCount > 0
-                      ? `当前可检索 ${searchableDocuments.length} 份文档，另有 ${processingDocumentCount} 份处理中`
-                      : `当前可检索 ${searchableDocuments.length} 份文档`}
+                  {!selectedKnowledgeBaseId
+                    ? '通用聊天模式不限定文档范围'
+                    : docsLoading
+                      ? '文档加载中...'
+                      : processingDocumentCount > 0
+                        ? `当前可检索 ${searchableDocuments.length} 份文档，另有 ${processingDocumentCount} 份处理中`
+                        : `当前可检索 ${searchableDocuments.length} 份文档`}
                 </span>
 
-                <div className="ml-auto flex items-center gap-1">
-                  {isLoading && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 cursor-pointer"
-                      onClick={stopGeneration}
-                      title="停止生成"
+                      className="ml-auto size-8 cursor-pointer"
+                      title="聊天操作"
                     >
-                      <StopCircle className="size-4 text-destructive" />
+                      <Ellipsis className="size-4" />
                     </Button>
-                  )}
-                  {messages.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 cursor-pointer"
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem className="cursor-pointer" onClick={startNewConversation}>
+                      <Sparkles className="size-4" />
+                      新会话
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={() => setUploadDialogOpen(true)}
+                      disabled={!selectedKnowledgeBaseId}
+                    >
+                      <Upload className="size-4" />
+                      上传文件
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onClick={handleOpenCreateKbDialog}
+                      disabled={!hasPersistableMessages}
+                    >
+                      <Database className="size-4" />
+                      沉淀为知识库
+                    </DropdownMenuItem>
+                    {selectedKnowledgeBaseId && (
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link to={`/knowledge-bases/${selectedKnowledgeBaseId}` as string}>
+                          <FileText className="size-4" />
+                          查看知识库详情
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      variant="destructive"
+                      className="cursor-pointer"
                       onClick={clearMessages}
-                      title="清空聊天"
+                      disabled={messages.length === 0}
                     >
                       <Trash2 className="size-4" />
-                    </Button>
-                  )}
-                </div>
+                      清空聊天
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               <div className="min-h-0 flex-1">
                 {messages.length === 0 ? (
-                  <div className="flex h-full items-center justify-center px-4 py-5 md:px-6">
-                    <div className="mx-auto flex max-w-md flex-col items-center text-center">
-                      <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-primary/10">
-                        <Sparkles className="size-6 text-primary" />
+                  <div className="flex h-full items-center justify-center px-4 py-8 md:px-6">
+                    <div className="mx-auto flex max-w-lg flex-col items-center text-center">
+                      <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
+                        <Sparkles className="size-6 text-muted-foreground" />
                       </div>
-                      <h3 className="text-base font-semibold">开始你的第一条提问</h3>
-                      <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                        你可以先点击“上传文件”，然后询问摘要、结论、出处对比等问题。
+                      <h3 className="text-lg font-semibold">开始你的第一条提问</h3>
+                      <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                        {selectedKnowledgeBaseId
+                          ? '你可以先点击“上传文件”，然后询问摘要、结论、出处对比等问题。'
+                          : '你可以先直接聊天，之后手动将聊天内容沉淀为知识库。'}
                       </p>
                     </div>
                   </div>
                 ) : (
                   <ScrollArea className="h-full">
-                    <div className="mx-auto max-w-4xl px-4 py-5 md:px-6">
-                      <>
-                        {messages.map((message) => (
-                          <ChatMessage
-                            key={message.id}
-                            message={message}
-                            onCitationClick={handleCitationClick}
-                            onCopy={(format) => handleCopyMessage(message.content, format)}
-                          />
-                        ))}
-                        <div ref={messagesEndRef} />
-                      </>
+                    <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6">
+                      {messages.map((message) => (
+                        <ChatMessage
+                          key={message.id}
+                          message={message}
+                          onCitationClick={handleCitationClick}
+                          onCopy={(format) => handleCopyMessage(message.content, format)}
+                        />
+                      ))}
+                      <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
                 )}
               </div>
 
-              <div className="shrink-0 border-t bg-background/80">
-                <div className="mx-auto max-w-4xl">
+              <div className="shrink-0 bg-background pb-4 pt-2 md:pb-6">
+                <div className="mx-auto w-full max-w-3xl px-4 md:px-6">
                   <ChatInput
                     onSend={handleSendMessage}
-                    disabled={isLoading || !selectedKnowledgeBaseId}
+                    onStop={stopGeneration}
+                    isGenerating={isLoading}
+                    disabled={isLoading}
                     placeholder={
                       selectedKnowledgeBaseId
                         ? '输入你的问题，Enter 发送，Shift+Enter 换行...'
-                        : '当前没有可用知识库'
+                        : '通用聊天模式：直接提问，后续可将内容沉淀为知识库...'
                     }
                   />
                 </div>
@@ -396,22 +499,104 @@ export function ChatPage() {
         </div>
       </div>
 
-      <Sheet open={conversationSheetOpen} onOpenChange={setConversationSheetOpen}>
-        <SheetContent side="right" className="p-0 sm:max-w-md">
-          <SheetHeader className="border-b">
-            <SheetTitle>历史会话</SheetTitle>
-            <SheetDescription>查看并切换当前知识库下的对话记录</SheetDescription>
-          </SheetHeader>
-          <div className="min-h-0 flex-1">
-            <ConversationList
-              knowledgeBaseId={selectedKnowledgeBaseId}
-              currentConversationId={conversationId}
-              onSelect={handleSelectConversation}
-              onNewConversation={startNewConversation}
-            />
+      <Dialog open={createKbDialogOpen} onOpenChange={setCreateKbDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>从聊天内容创建知识库</DialogTitle>
+            <DialogDescription>手动选择内容来源并创建知识库，不会自动触发创建。</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="chat-kb-name">知识库名称</Label>
+              <Input
+                id="chat-kb-name"
+                value={newKbName}
+                onChange={(event) => setNewKbName(event.target.value)}
+                placeholder="My Chat Knowledge Base"
+                maxLength={200}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="chat-kb-description">知识库描述</Label>
+              <Textarea
+                id="chat-kb-description"
+                value={newKbDescription}
+                onChange={(event) => setNewKbDescription(event.target.value)}
+                placeholder="可选：记录该知识库用途"
+                maxLength={2000}
+                rows={3}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="chat-kb-provider">Embedding Provider</Label>
+              <Select
+                value={newKbEmbeddingProvider}
+                onValueChange={(value) => setNewKbEmbeddingProvider(value as EmbeddingProviderType)}
+              >
+                <SelectTrigger id="chat-kb-provider">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="zhipu">Zhipu AI</SelectItem>
+                  <SelectItem value="openai">OpenAI</SelectItem>
+                  <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="chat-seed-source">内容来源</Label>
+              <Select
+                value={seedSource}
+                onValueChange={(value) => setSeedSource(value as KnowledgeSeedSource)}
+              >
+                <SelectTrigger id="chat-seed-source">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="conversation">完整聊天记录</SelectItem>
+                  <SelectItem value="latest-assistant" disabled={!latestAssistantMessage}>
+                    最新 AI 回复内容
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {seedSource === 'latest-assistant' && !latestAssistantMessage && (
+                <p className="text-xs text-amber-600">暂无可用 AI 回复，请先完成至少一次问答。</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="switch-to-new-kb"
+                checked={switchToNewKb}
+                onCheckedChange={(checked) => setSwitchToNewKb(checked === true)}
+              />
+              <Label htmlFor="switch-to-new-kb" className="text-sm">
+                创建完成后切换到该知识库
+              </Label>
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setCreateKbDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={() => void handleCreateKbFromChat()} disabled={isCreatingKb}>
+              {isCreatingKb ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  创建中...
+                </>
+              ) : (
+                '创建知识库并保存内容'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent className="max-w-2xl">

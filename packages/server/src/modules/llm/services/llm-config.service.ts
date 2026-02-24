@@ -49,6 +49,13 @@ export const llmConfigService = {
   },
 
   /**
+   * Delete user's LLM configuration
+   */
+  async deleteConfig(userId: string): Promise<void> {
+    await llmConfigRepository.deleteByUserId(userId);
+  },
+
+  /**
    * Create or update user's LLM configuration
    */
   async upsertConfig(

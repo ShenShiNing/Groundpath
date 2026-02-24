@@ -32,7 +32,7 @@ const quickLinks: QuickLink[] = [
   {
     label: 'Settings',
     description: 'Configure your preferences',
-    to: '/settings',
+    to: '/settings/ai',
     icon: <Settings className="size-5" />,
   },
 ];

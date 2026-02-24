@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Loader2 } from 'lucide-react';
+import { ArrowUp, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 
 export interface ChatInputProps {
   onSend: (message: string) => void;
+  onStop?: () => void;
+  isGenerating?: boolean;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -19,11 +21,15 @@ export interface ChatInputProps {
 
 export function ChatInput({
   onSend,
+  onStop,
+  isGenerating = false,
   disabled = false,
   placeholder = 'Ask a question about your documents...',
 }: ChatInputProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasInput = input.trim().length > 0;
+  const canStop = isGenerating && Boolean(onStop);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -35,7 +41,7 @@ export function ChatInput({
   }, [input]);
 
   const handleSend = () => {
-    if (!input.trim() || disabled) return;
+    if (!hasInput || disabled || isGenerating) return;
     onSend(input.trim());
     setInput('');
     // Reset height
@@ -51,9 +57,17 @@ export function ChatInput({
     }
   };
 
+  const handlePrimaryAction = () => {
+    if (canStop) {
+      onStop?.();
+      return;
+    }
+    handleSend();
+  };
+
   return (
-    <div className="p-3 border-t bg-background">
-      <div className="flex items-end gap-2 bg-muted/50 rounded-xl p-2">
+    <div>
+      <div className="flex items-end gap-2 rounded-3xl border bg-background px-3 py-2 shadow-sm">
         <textarea
           ref={textareaRef}
           placeholder={placeholder}
@@ -69,15 +83,17 @@ export function ChatInput({
           disabled={disabled}
         />
         <Button
+          type="button"
           size="icon"
-          className="size-8 rounded-lg shrink-0"
-          onClick={handleSend}
-          disabled={!input.trim() || disabled}
+          className="size-8 rounded-full shrink-0 cursor-pointer"
+          onClick={handlePrimaryAction}
+          disabled={canStop ? false : !hasInput || disabled}
+          title={canStop ? '停止输出' : '发送消息'}
         >
-          {disabled ? <Loader2 className="size-4 animate-spin" /> : <ArrowUp className="size-4" />}
+          {canStop ? <Square className="size-3.5 fill-current" /> : <ArrowUp className="size-4" />}
         </Button>
       </div>
-      <p className="text-[10px] text-muted-foreground text-center mt-2">
+      <p className="mt-2 text-center text-[10px] text-muted-foreground">
         AI can make mistakes. Verify important information.
       </p>
     </div>

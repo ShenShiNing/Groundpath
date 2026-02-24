@@ -61,5 +61,6 @@ export {
   useLLMProviders,
   useLLMModels,
   useUpdateLLMConfig,
+  useDeleteLLMConfig,
   useTestLLMConnection,
 } from './useLLMConfig';

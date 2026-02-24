@@ -1,10 +1,21 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useForm } from '@tanstack/react-form';
-import { Loader2, Eye, EyeOff, RefreshCw, Zap, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, RefreshCw, Zap, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -24,28 +35,22 @@ import {
   useLLMProviders,
   useLLMModels,
   useUpdateLLMConfig,
+  useDeleteLLMConfig,
   useTestLLMConnection,
 } from '@/hooks/useLLMConfig';
 import { useAISettingsStore, canFetchModels } from '@/stores/aiSettingsStore';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 
 export function AISettingsForm() {
+  const [clearDialogOpen, setClearDialogOpen] = React.useState(false);
   const { data: config, isLoading, isError } = useLLMConfig();
   const { data: providers = [] } = useLLMProviders();
   const updateMutation = useUpdateLLMConfig();
+  const deleteMutation = useDeleteLLMConfig();
   const testMutation = useTestLLMConnection();
 
   // Zustand store
   const store = useAISettingsStore();
-
-  // 自动重置测试状态
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => {
-    if (store.testStatus === 'success') {
-      timerRef.current = setTimeout(store.resetTestStatus, 5000);
-      return () => clearTimeout(timerRef.current);
-    }
-  }, [store.testStatus, store.resetTestStatus]);
 
   const reset = useAISettingsStore((state) => state.reset);
 
@@ -115,9 +120,23 @@ export function AISettingsForm() {
   }
 
   const isSaving = updateMutation.isPending;
+  const isClearing = deleteMutation.isPending;
+  const isBusy = isSaving || isClearing;
   const showApiKeyField = !!currentProvider?.requiresApiKey;
   const showBaseUrlField = !!currentProvider?.requiresBaseUrl;
   const hasSavedKey = !!(config?.hasApiKey && config.provider === values.provider);
+
+  function resetFormAfterClear() {
+    form.setFieldValue('provider', 'openai');
+    form.setFieldValue('model', '');
+    form.setFieldValue('apiKey', '');
+    form.setFieldValue('baseUrl', '');
+    form.setFieldValue('temperature', 0.7);
+    form.setFieldValue('maxTokens', 2048);
+    form.setFieldValue('topP', 1.0);
+    store.resetPendingCredentials();
+    store.resetTestStatus();
+  }
 
   // Provider 切换
   function handleProviderChange(newProvider: LLMProviderType) {
@@ -133,7 +152,13 @@ export function AISettingsForm() {
 
   // 测试连接
   function handleTest() {
-    store.setTestResult('testing', '测试连接中...');
+    const normalizeTestMessage = (message: string) => {
+      if (message === 'Provider health check failed') {
+        return '连接失败，请检查 API Key、模型与 Base URL 配置';
+      }
+      return message;
+    };
+
     testMutation.mutate(
       {
         ...(effectiveModel && { model: effectiveModel }),
@@ -144,13 +169,16 @@ export function AISettingsForm() {
       {
         onSuccess: (result) => {
           if (result.success) {
-            store.setTestResult('success', `连接成功 (${result.latencyMs}ms)`);
+            toast.success(
+              result.latencyMs !== undefined ? `连接成功 (${result.latencyMs}ms)` : '连接成功'
+            );
           } else {
-            store.setTestResult('error', result.message);
+            toast.error(normalizeTestMessage(result.message));
           }
         },
         onError: (error) => {
-          store.setTestResult('error', error instanceof Error ? error.message : '连接测试失败');
+          const message = error instanceof Error ? error.message : '连接测试失败';
+          toast.error(normalizeTestMessage(message));
         },
       }
     );
@@ -188,6 +216,17 @@ export function AISettingsForm() {
     }
   }
 
+  function handleClearConfig() {
+    if (!config) return;
+
+    deleteMutation.mutate(undefined, {
+      onSuccess: () => {
+        resetFormAfterClear();
+        setClearDialogOpen(false);
+      },
+    });
+  }
+
   return (
     <div className="space-y-6">
       {/* Provider 选择 */}
@@ -198,7 +237,7 @@ export function AISettingsForm() {
             <Select
               value={field.state.value}
               onValueChange={(v) => handleProviderChange(v as LLMProviderType)}
-              disabled={isSaving}
+              disabled={isBusy}
             >
               <SelectTrigger id="provider">
                 <SelectValue placeholder="选择服务商" />
@@ -242,13 +281,14 @@ export function AISettingsForm() {
                     }
                   }}
                   placeholder={hasSavedKey ? '输入新 Key 以更新' : '输入 API Key'}
-                  disabled={isSaving}
+                  disabled={isBusy}
                   className="pr-10"
                   autoComplete="off"
                 />
                 <button
                   type="button"
                   onClick={store.toggleShowApiKey}
+                  disabled={isBusy}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {store.showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -282,7 +322,7 @@ export function AISettingsForm() {
                   }
                 }}
                 placeholder="https://api.example.com"
-                disabled={isSaving}
+                disabled={isBusy}
                 autoComplete="off"
               />
               <p className="text-xs text-muted-foreground">OpenAI 兼容的 API 端点地址</p>
@@ -322,7 +362,7 @@ export function AISettingsForm() {
                 isError={modelsError}
                 canFetch={canFetch}
                 requiresApiKey={!!currentProvider?.requiresApiKey}
-                disabled={isSaving}
+                disabled={isBusy}
                 onValueChange={(v) => field.handleChange(v)}
               />
               <p className="text-xs text-muted-foreground">从列表选择或输入自定义模型名称</p>
@@ -347,7 +387,7 @@ export function AISettingsForm() {
                   step={0.1}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(parseFloat(e.target.value) || 0)}
-                  disabled={isSaving}
+                  disabled={isBusy}
                 />
                 <p className="text-xs text-muted-foreground">0 = 确定性, 2 = 创造性</p>
               </div>
@@ -365,7 +405,7 @@ export function AISettingsForm() {
                   max={128000}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(parseInt(e.target.value) || 2048)}
-                  disabled={isSaving}
+                  disabled={isBusy}
                 />
                 <p className="text-xs text-muted-foreground">最大响应长度</p>
               </div>
@@ -384,7 +424,7 @@ export function AISettingsForm() {
                   step={0.1}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(parseFloat(e.target.value) || 1)}
-                  disabled={isSaving}
+                  disabled={isBusy}
                 />
                 <p className="text-xs text-muted-foreground">核采样参数</p>
               </div>
@@ -393,53 +433,66 @@ export function AISettingsForm() {
         </div>
       </div>
 
-      {/* 测试连接 */}
-      <div className="flex items-center gap-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleTest}
-          disabled={
-            testMutation.isPending ||
-            !effectiveModel ||
-            (showApiKeyField && !hasSavedKey && !values.apiKey) ||
-            (showBaseUrlField && !values.baseUrl)
-          }
-        >
-          {testMutation.isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Zap className="mr-2 h-4 w-4" />
-          )}
-          测试连接
-        </Button>
+      {/* 操作区 */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleTest}
+            disabled={
+              isBusy ||
+              testMutation.isPending ||
+              !effectiveModel ||
+              (showApiKeyField && !hasSavedKey && !values.apiKey) ||
+              (showBaseUrlField && !values.baseUrl)
+            }
+          >
+            {testMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="mr-2 h-4 w-4" />
+            )}
+            测试连接
+          </Button>
 
-        {store.testStatus !== 'idle' && (
-          <div className="flex items-center gap-2 text-sm" role="status">
-            {store.testStatus === 'testing' && <Loader2 className="h-4 w-4 animate-spin" />}
-            {store.testStatus === 'success' && <CheckCircle className="h-4 w-4 text-green-500" />}
-            {store.testStatus === 'error' && <XCircle className="h-4 w-4 text-red-500" />}
-            <span
-              className={
-                store.testStatus === 'success'
-                  ? 'text-green-500'
-                  : store.testStatus === 'error'
-                    ? 'text-red-500'
-                    : ''
-              }
-            >
-              {store.testMessage}
-            </span>
-          </div>
-        )}
-      </div>
+          <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="destructive" disabled={!config || isBusy}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                清空配置
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent size="sm">
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认清空 AI 配置？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  此操作将删除当前模型、密钥与参数配置，且不可撤销。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isClearing}>取消</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={isClearing}
+                  onClick={handleClearConfig}
+                >
+                  {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  确认清空
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
-      {/* 保存按钮 */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving || !effectiveModel}>
-          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          保存设置
-        </Button>
+          <Button type="button" onClick={handleSave} disabled={isBusy || !effectiveModel}>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            保存设置
+          </Button>
+        </div>
       </div>
     </div>
   );
