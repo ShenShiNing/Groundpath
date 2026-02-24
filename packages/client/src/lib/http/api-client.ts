@@ -24,6 +24,21 @@ const apiClient = axios.create({
   },
 });
 
+type HeaderCarrier = InternalAxiosRequestConfig | RetryableRequest;
+
+export function setRequestHeader(config: HeaderCarrier, name: string, value: string): void {
+  if (!config.headers) {
+    config.headers = {};
+  }
+
+  if (typeof config.headers.set === 'function') {
+    config.headers.set(name, value);
+    return;
+  }
+
+  config.headers[name] = value;
+}
+
 function extractPathname(url: string): string {
   if (!url) {
     return '';
@@ -56,17 +71,13 @@ apiClient.interceptors.request.use(
   (config) => {
     const token = getAccessToken();
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      setRequestHeader(config, 'Authorization', `Bearer ${token}`);
     }
 
     if (shouldAttachCsrfToken(config)) {
       const csrfToken = getCsrfTokenFromCookie();
       if (csrfToken) {
-        if (typeof config.headers.set === 'function') {
-          config.headers.set('X-CSRF-Token', csrfToken);
-        } else {
-          config.headers['X-CSRF-Token'] = csrfToken;
-        }
+        setRequestHeader(config, 'X-CSRF-Token', csrfToken);
       }
     }
 
@@ -76,7 +87,7 @@ apiClient.interceptors.request.use(
 );
 
 /** 检查错误是否需要刷新 token */
-function shouldRefreshToken(
+export function shouldRefreshToken(
   error: AxiosError<ApiResponse>,
   request: RetryableRequest | undefined
 ): boolean {
@@ -87,34 +98,34 @@ function shouldRefreshToken(
   return true;
 }
 
-/** 响应拦截器 — 401 自动刷新 token 并重试 */
-apiClient.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError<ApiResponse>) => {
-    const originalRequest = error.config as RetryableRequest | undefined;
+/** 响应拦截器分支 — 401 自动刷新 token 并重试 */
+export async function handleUnauthorizedError(error: AxiosError<ApiResponse>) {
+  const originalRequest = error.config as RetryableRequest | undefined;
 
-    if (!originalRequest) {
-      return Promise.reject(error);
-    }
-
-    if (!shouldRefreshToken(error, originalRequest)) {
-      return Promise.reject(error);
-    }
-
-    if (!hasRefreshToken()) {
-      return Promise.reject(error);
-    }
-
-    originalRequest._retry = true;
-
-    try {
-      const newAccessToken = await getOrRefreshToken();
-      originalRequest.headers.set('Authorization', `Bearer ${newAccessToken}`);
-      return apiClient(originalRequest);
-    } catch (refreshError) {
-      return Promise.reject(refreshError);
-    }
+  if (!originalRequest) {
+    return Promise.reject(error);
   }
-);
+
+  if (!shouldRefreshToken(error, originalRequest)) {
+    return Promise.reject(error);
+  }
+
+  if (!hasRefreshToken()) {
+    return Promise.reject(error);
+  }
+
+  originalRequest._retry = true;
+
+  try {
+    const newAccessToken = await getOrRefreshToken();
+    setRequestHeader(originalRequest, 'Authorization', `Bearer ${newAccessToken}`);
+    return apiClient(originalRequest);
+  } catch (refreshError) {
+    return Promise.reject(refreshError);
+  }
+}
+
+/** 响应拦截器 — 401 自动刷新 token 并重试 */
+apiClient.interceptors.response.use((response) => response, handleUnauthorizedError);
 
 export { apiClient };

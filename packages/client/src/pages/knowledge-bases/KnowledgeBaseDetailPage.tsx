@@ -61,7 +61,7 @@ import { ProcessingStatusBadge } from '@/components/documents/ProcessingStatusBa
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { FolderDialog } from '@/components/documents/FolderDialog';
 import { queryKeys } from '@/lib/query';
-import { formatBytes, cn } from '@/lib/utils';
+import { formatBytes, cn, openInNewTab } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChatPanelStore } from '@/stores';
 import type {
@@ -483,7 +483,7 @@ export default function KnowledgeBaseDetailPage() {
   }, [deleteDialog, deleteDocumentMutation, id, queryClient]);
 
   const handleDownloadDocument = useCallback((doc: DocumentListItem) => {
-    window.open(`/api/documents/${doc.id}/download`, '_blank');
+    openInNewTab(`/api/documents/${doc.id}/download`);
   }, []);
 
   const handleOpenChat = useCallback(() => {

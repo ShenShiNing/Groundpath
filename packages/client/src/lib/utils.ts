@@ -16,3 +16,16 @@ export function formatBytes(bytes: number, decimals = 2): string {
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+export function openInNewTab(url: string): Window | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const popup = window.open(url, '_blank', 'noopener,noreferrer');
+  if (popup) {
+    popup.opener = null;
+  }
+
+  return popup;
+}

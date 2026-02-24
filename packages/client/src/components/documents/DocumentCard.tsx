@@ -10,7 +10,7 @@ import {
   FolderInput,
 } from 'lucide-react';
 import type { DocumentListItem, DocumentType } from '@knowledge-agent/shared/types';
-import { cn } from '@/lib/utils';
+import { cn, openInNewTab } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -66,7 +66,7 @@ export function DocumentCard({ document, onEdit, onDelete, onMove, className }: 
 
   const handleDownload = () => {
     const url = documentsApi.getDownloadUrl(document.id);
-    window.open(url, '_blank');
+    openInNewTab(url);
   };
 
   return (

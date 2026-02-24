@@ -1,0 +1,63 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const chatApiMocks = vi.hoisted(() => ({
+  createConversation: vi.fn(),
+  getConversation: vi.fn(),
+  sendMessageWithSSE: vi.fn(),
+}));
+
+vi.mock('@/api/chat', () => ({
+  conversationApi: {
+    create: chatApiMocks.createConversation,
+    getById: chatApiMocks.getConversation,
+  },
+  sendMessageWithSSE: chatApiMocks.sendMessageWithSSE,
+}));
+
+import { useChatPanelStore } from '@/stores/chatPanelStore';
+
+describe('chatPanelStore sendMessage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useChatPanelStore.setState({
+      isOpen: false,
+      knowledgeBaseId: null,
+      conversationId: null,
+      messages: [],
+      selectedDocumentIds: [],
+      isLoading: false,
+      abortController: null,
+      showSidebar: false,
+    });
+  });
+
+  it('ignores blank messages', async () => {
+    await useChatPanelStore.getState().sendMessage('   ', () => null);
+
+    expect(chatApiMocks.createConversation).not.toHaveBeenCalled();
+    expect(chatApiMocks.sendMessageWithSSE).not.toHaveBeenCalled();
+    expect(useChatPanelStore.getState().messages).toHaveLength(0);
+  });
+
+  it('adds guidance message when creating conversation fails', async () => {
+    chatApiMocks.createConversation.mockRejectedValue(new Error('creation failed'));
+    useChatPanelStore.setState({ knowledgeBaseId: 'kb-1' });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await useChatPanelStore.getState().sendMessage('How are you?', () => 'token');
+    errorSpy.mockRestore();
+
+    expect(chatApiMocks.createConversation).toHaveBeenCalledWith({
+      knowledgeBaseId: 'kb-1',
+      title: 'How are you?',
+    });
+    expect(chatApiMocks.sendMessageWithSSE).not.toHaveBeenCalled();
+
+    const state = useChatPanelStore.getState();
+    expect(state.conversationId).toBeNull();
+    expect(state.isLoading).toBe(false);
+    expect(state.messages).toHaveLength(1);
+    expect(state.messages[0]?.role).toBe('assistant');
+    expect(state.messages[0]?.content).toContain('AI 设置页面');
+  });
+});
