@@ -54,8 +54,7 @@ export class ZhipuProvider implements LLMProvider {
 
     const data = (await response.json()) as ZhipuResponse;
     const message = data.choices[0]?.message;
-    // Only return content, not reasoning_content (which contains thinking process)
-    return message?.content || '';
+    return message?.content || message?.reasoning_content || '';
   }
 
   async *streamGenerate(
@@ -110,9 +109,8 @@ export class ZhipuProvider implements LLMProvider {
             try {
               const chunk = JSON.parse(data) as ZhipuStreamChunk;
               const delta = chunk.choices[0]?.delta;
-              // Only yield content, not reasoning_content (which contains thinking process)
-              const content = delta?.content;
-              if (content) yield content;
+              const text = delta?.content || delta?.reasoning_content;
+              if (text) yield text;
             } catch {
               // Skip malformed chunks
             }
