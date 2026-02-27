@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { conversationApi, sendMessageWithSSE } from '@/api/chat';
+import { queryClient } from '@/lib/query';
 import type { Citation as APICitation } from '@knowledge-agent/shared/types';
 
 // ============================================================================
@@ -65,6 +66,15 @@ function toStoreCitation(citation: APICitation, index: number): Citation {
     pageNumber: citation.pageNumber,
     score: citation.score,
   };
+}
+
+function invalidateConversationQueries(): void {
+  void queryClient.invalidateQueries({
+    predicate: (query) =>
+      Array.isArray(query.queryKey) &&
+      query.queryKey.includes('knowledgeBases') &&
+      query.queryKey.includes('conversations'),
+  });
 }
 
 // ============================================================================
@@ -140,6 +150,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         );
         convId = conversation.id;
         set({ conversationId: convId });
+        invalidateConversationQueries();
       } catch (error) {
         console.error('Failed to create conversation:', error);
         addMessage({
@@ -173,6 +184,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     addMessage(loadingMessage);
 
     set({ isLoading: true });
+    invalidateConversationQueries();
 
     // Start SSE streaming
     const abortController = sendMessageWithSSE(
@@ -190,7 +202,17 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           updateLastMessage({ citations: storeCitations });
         },
         onDone: (data) => {
-          updateLastMessage({ id: data.messageId, isLoading: false });
+          const lastMsg = get().messages[get().messages.length - 1];
+          if (lastMsg && !lastMsg.content.trim()) {
+            updateLastMessage({
+              id: data.messageId,
+              content: '模型返回了空响应，请重试。',
+              isLoading: false,
+            });
+          } else {
+            updateLastMessage({ id: data.messageId, isLoading: false });
+          }
+          invalidateConversationQueries();
           set({ isLoading: false, abortController: null });
         },
         onError: (error) => {
@@ -202,6 +224,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
             content: get().messages[get().messages.length - 1]?.content || fallbackMessage,
             isLoading: false,
           });
+          invalidateConversationQueries();
           set({ isLoading: false, abortController: null });
         },
       },
@@ -216,6 +239,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     if (abortController) {
       abortController.abort();
       updateLastMessage({ isLoading: false });
+      invalidateConversationQueries();
       set({ isLoading: false, abortController: null });
     }
   },

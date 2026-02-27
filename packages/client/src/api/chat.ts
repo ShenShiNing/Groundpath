@@ -156,7 +156,12 @@ export function sendMessageWithSSE(
     await parseSSEStream(result.reader, dispatcher);
   };
 
-  run();
+  run().catch((error) => {
+    handlers.onError({
+      code: 'UNEXPECTED_ERROR',
+      message: error instanceof Error ? error.message : 'An unexpected error occurred',
+    });
+  });
   return abortController;
 }
 
