@@ -180,6 +180,20 @@ export const chatService = {
         return;
       }
 
+      // Reject empty responses before persisting
+      if (!fullContent.trim()) {
+        logger.warn({ conversationId, userId }, 'LLM stream completed with empty content');
+        sendSSE(res, {
+          type: 'error',
+          data: {
+            code: CHAT_ERROR_CODES.STREAMING_FAILED,
+            message: 'The model returned an empty response. Please try again.',
+          },
+        });
+        res.end();
+        return;
+      }
+
       // Save assistant message
       const citations =
         searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
