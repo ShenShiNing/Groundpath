@@ -14,6 +14,29 @@ export interface SSEParserOptions {
 }
 
 /**
+ * Process a single SSE data line: parse JSON and dispatch to handler.
+ * Separates parse errors (silently skipped) from handler errors (logged).
+ */
+function processLine<T>(line: string, handlers: SSEEventHandlers<T>): void {
+  if (!line.startsWith('data: ')) return;
+  const jsonStr = line.slice(6).trim();
+  if (!jsonStr) return;
+
+  let event: T;
+  try {
+    event = JSON.parse(jsonStr) as T;
+  } catch {
+    return; // Skip malformed JSON
+  }
+
+  try {
+    handlers.onEvent(event);
+  } catch (handlerError) {
+    console.error('[SSE] Event handler error:', handlerError);
+  }
+}
+
+/**
  * Parse an SSE stream and dispatch events via handlers.
  *
  * @param reader - ReadableStream reader from fetch response body
@@ -38,17 +61,14 @@ export async function parseSSEStream<T>(
       buffer = lines.pop() ?? '';
 
       for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const jsonStr = line.slice(6).trim();
-        if (!jsonStr) continue;
-
-        try {
-          const event = JSON.parse(jsonStr) as T;
-          handlers.onEvent(event);
-        } catch {
-          // Skip malformed JSON
-        }
+        processLine(line, handlers);
       }
+    }
+
+    // Process any remaining data in the buffer
+    if (buffer.trim()) {
+      processLine(buffer, handlers);
+      buffer = '';
     }
 
     options?.onComplete?.();
