@@ -1,7 +1,9 @@
 import { Link } from '@tanstack/react-router';
 import { Brain } from 'lucide-react';
+import { LanguageToggle } from '@/components/i18n/LanguageToggle';
 import { ModeToggle } from '@/components/theme/mode-toggle';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
 
 interface AuthPageLayoutProps {
@@ -12,6 +14,7 @@ interface AuthPageLayoutProps {
 }
 
 function AuthHeader() {
+  const { t } = useTranslation('auth');
   const { accessToken, isAuthenticated } = useAuthStore();
   const hasAuthSession = isAuthenticated || !!accessToken;
 
@@ -38,13 +41,14 @@ function AuthHeader() {
               className="hidden cursor-pointer sm:inline-flex"
               asChild
             >
-              <Link to="/">首页</Link>
+              <Link to="/">{t('header.home')}</Link>
             </Button>
             {hasAuthSession && (
               <Button size="sm" className="hidden cursor-pointer sm:inline-flex" asChild>
-                <Link to="/dashboard">控制台</Link>
+                <Link to="/dashboard">{t('header.console')}</Link>
               </Button>
             )}
+            <LanguageToggle />
             <ModeToggle />
           </div>
         </div>

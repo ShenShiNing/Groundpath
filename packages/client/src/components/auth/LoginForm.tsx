@@ -8,12 +8,14 @@ import { emailSchema, loginRequestSchema } from '@knowledge-agent/shared/schemas
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
 import { initiateGitHubLogin, initiateGoogleLogin } from '@/api';
 import { FormField } from './FormField';
 import { GitHubIcon, GoogleIcon } from './SocialIcons';
 
 export function LoginForm() {
+  const { t } = useTranslation(['auth', 'common']);
   const router = useRouter();
   const login = useAuthStore((state) => state.login);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function LoginForm() {
       const validationResult = loginRequestSchema.safeParse(value);
       if (!validationResult.success) {
         const firstError = validationResult.error.issues[0];
-        setError(firstError?.message || '表单校验失败');
+        setError(firstError?.message || t('login.validationFailed'));
         return;
       }
 
@@ -40,8 +42,7 @@ export function LoginForm() {
         await router.navigate({ to: '/dashboard' });
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        const errorMessage =
-          axiosError.response?.data?.error?.message || '登录失败，请检查邮箱和密码。';
+        const errorMessage = axiosError.response?.data?.error?.message || t('login.failed');
         setError(errorMessage);
       }
     },
@@ -50,8 +51,8 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">欢迎回来</CardTitle>
-        <CardDescription>使用邮箱或社交账号登录</CardDescription>
+        <CardTitle className="text-xl">{t('login.form.title')}</CardTitle>
+        <CardDescription>{t('login.form.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -75,7 +76,7 @@ export function LoginForm() {
             {(field) => (
               <FormField
                 name={field.name}
-                label="邮箱"
+                label={t('common:email')}
                 type="email"
                 placeholder="name@example.com"
                 icon={Mail}
@@ -93,13 +94,13 @@ export function LoginForm() {
           <form.Field
             name="password"
             validators={{
-              onBlur: ({ value }) => (!value ? '请输入密码' : undefined),
+              onBlur: ({ value }) => (!value ? t('login.passwordRequired') : undefined),
             }}
           >
             {(field) => (
               <FormField
                 name={field.name}
-                label="密码"
+                label={t('common:password')}
                 placeholder="••••••••"
                 icon={Lock}
                 value={field.state.value}
@@ -121,7 +122,7 @@ export function LoginForm() {
               to="/auth/forgot-password"
               className="text-sm text-muted-foreground hover:text-primary cursor-pointer"
             >
-              忘记密码？
+              {t('login.forgotPassword')}
             </Link>
           </div>
 
@@ -133,7 +134,7 @@ export function LoginForm() {
             {(isSubmitting) => (
               <>
                 <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
-                  {isSubmitting ? '登录中...' : '登录'}
+                  {isSubmitting ? t('login.submitting') : t('login.submit')}
                 </Button>
 
                 {/* Divider */}
@@ -142,7 +143,9 @@ export function LoginForm() {
                     <Separator />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">或使用以下方式继续</span>
+                    <span className="bg-card px-2 text-muted-foreground">
+                      {t('common:orContinueWith')}
+                    </span>
                   </div>
                 </div>
 

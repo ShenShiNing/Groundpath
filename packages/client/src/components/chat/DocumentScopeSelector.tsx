@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from 'react-i18next';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
 
 // ============================================================================
@@ -34,6 +35,7 @@ export function DocumentScopeSelector({
   onChange,
   className,
 }: DocumentScopeSelectorProps) {
+  const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
 
   const isAllSelected = selectedIds.length === 0;
@@ -60,28 +62,28 @@ export function DocumentScopeSelector({
     return documents.filter((doc) => selectedIds.includes(doc.id)).map((doc) => doc.title);
   };
 
+  const buttonLabel = isAllSelected
+    ? t('scope.allDocuments')
+    : t('scope.selectedDocuments', { count: selectedCount });
+
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="h-7 text-xs justify-between min-w-35">
-            <span className="truncate">
-              {isAllSelected
-                ? 'All documents'
-                : `${selectedCount} document${selectedCount > 1 ? 's' : ''}`}
-            </span>
+            <span className="truncate">{buttonLabel}</span>
             <ChevronDown className="size-3.5 ml-1 shrink-0" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-62.5">
-          <DropdownMenuLabel className="text-xs">Document Scope</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-xs">{t('scope.label')}</DropdownMenuLabel>
           <DropdownMenuSeparator />
 
           {/* All Documents Option */}
           <DropdownMenuCheckboxItem checked={isAllSelected} onCheckedChange={handleSelectAll}>
             <span className="flex items-center gap-2">
               <FileText className="size-4" />
-              All documents
+              {t('scope.allDocuments')}
             </span>
           </DropdownMenuCheckboxItem>
 
@@ -91,7 +93,7 @@ export function DocumentScopeSelector({
           <div className="max-h-50 overflow-y-auto">
             {documents.length === 0 ? (
               <div className="py-4 text-center text-xs text-muted-foreground">
-                No documents available
+                {t('scope.noDocuments')}
               </div>
             ) : (
               documents.map((doc) => (
@@ -117,7 +119,7 @@ export function DocumentScopeSelector({
                   onClick={handleClearSelection}
                 >
                   <X className="size-3 mr-1" />
-                  Clear selection
+                  {t('scope.clearSelection')}
                 </Button>
               </div>
             </>

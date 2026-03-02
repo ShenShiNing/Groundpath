@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserSummary, QuickLinks } from '@/components/dashboard';
 import { useKnowledgeBases } from '@/hooks';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
 
 export function DashboardPage() {
+  const { t } = useTranslation('dashboard');
   const user = useAuthStore((state) => state.user);
   const { data: knowledgeBases = [] } = useKnowledgeBases();
   const totalDocuments = knowledgeBases.reduce((sum, kb) => sum + kb.documentCount, 0);
@@ -17,23 +19,25 @@ export function DashboardPage() {
       <div className="flex-1 overflow-y-auto bg-background">
         <div className="mx-auto w-full max-w-6xl px-6 py-8 md:py-10">
           <section className="rounded-2xl border bg-card/70 p-6 md:p-8">
-            <p className="text-sm text-muted-foreground">欢迎回来</p>
+            <p className="text-sm text-muted-foreground">{t('hero.welcome')}</p>
             <h1 className="font-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {user?.username ? `${user.username} 的工作台` : 'KnowledgeAgent Dashboard'}
+              {user?.username
+                ? t('hero.titleWithUser', { username: user.username })
+                : t('hero.titleDefault')}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              在这里统一管理知识库、文档资产与问答质量，保持团队知识可用且持续更新。
+              {t('hero.description')}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Button className="cursor-pointer" asChild>
                 <Link to="/knowledge-bases">
-                  打开知识库
+                  {t('hero.openKnowledgeBases')}
                   <ArrowUpRight className="ml-1 size-4" />
                 </Link>
               </Button>
               <Button variant="outline" className="cursor-pointer" asChild>
-                <Link to="/settings/ai">配置模型参数</Link>
+                <Link to="/settings/ai">{t('hero.configureModel')}</Link>
               </Button>
             </div>
           </section>
@@ -42,7 +46,7 @@ export function DashboardPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  知识库总数
+                  {t('stats.knowledgeBaseCount')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -58,7 +62,7 @@ export function DashboardPage() {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  文档总量
+                  {t('stats.documentCount')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -74,12 +78,12 @@ export function DashboardPage() {
             <Card className="sm:col-span-2 lg:col-span-1">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  当前状态
+                  {t('stats.systemStatus')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
-                  <p className="text-base font-medium">系统运行正常</p>
+                  <p className="text-base font-medium">{t('stats.systemHealthy')}</p>
                   <div className="rounded-lg bg-primary/10 p-2 text-primary">
                     <Sparkles className="size-4" />
                   </div>

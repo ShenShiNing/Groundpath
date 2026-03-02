@@ -29,7 +29,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { LanguageToggle } from '@/components/i18n/LanguageToggle';
 import { ModeToggle } from '@/components/theme/mode-toggle';
+import { useTranslation } from 'react-i18next';
 import { ConversationList } from '@/components/chat';
 import { useAuthStore, useChatPanelStore } from '@/stores';
 import { authApi } from '@/api';
@@ -43,8 +45,10 @@ interface AppLayoutProps {
   showSidebar?: boolean;
 }
 
+type NavItemLabelKey = 'nav.dashboard' | 'nav.knowledgeBases';
+
 interface NavItem {
-  label: string;
+  labelKey: NavItemLabelKey;
   to: string;
   icon: React.ReactNode;
 }
@@ -54,8 +58,12 @@ interface NavItem {
 // ============================================================================
 
 const mainNavItems: NavItem[] = [
-  { label: 'Dashboard', to: '/dashboard', icon: <LayoutDashboard className="size-4" /> },
-  { label: 'Knowledge Bases', to: '/knowledge-bases', icon: <Database className="size-4" /> },
+  { labelKey: 'nav.dashboard', to: '/dashboard', icon: <LayoutDashboard className="size-4" /> },
+  {
+    labelKey: 'nav.knowledgeBases',
+    to: '/knowledge-bases',
+    icon: <Database className="size-4" />,
+  },
 ];
 
 // ============================================================================
@@ -66,10 +74,6 @@ function getUserInitials(username?: string, email?: string): string {
   if (username) return username.slice(0, 2).toUpperCase();
   if (email) return email.slice(0, 2).toUpperCase();
   return 'U';
-}
-
-function getUserDisplayName(username?: string): string {
-  return username ?? 'User';
 }
 
 // ============================================================================
@@ -85,6 +89,8 @@ function SidebarNavItem({
   isCollapsed: boolean;
   isActive: boolean;
 }) {
+  const { t } = useTranslation('app');
+  const label = String(t(item.labelKey));
   const content = (
     <Link
       to={item.to}
@@ -96,7 +102,7 @@ function SidebarNavItem({
       )}
     >
       {item.icon}
-      {!isCollapsed && <span>{item.label}</span>}
+      {!isCollapsed && <span>{label}</span>}
     </Link>
   );
 
@@ -104,7 +110,7 @@ function SidebarNavItem({
     return (
       <Tooltip>
         <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right">{item.label}</TooltipContent>
+        <TooltipContent side="right">{label}</TooltipContent>
       </Tooltip>
     );
   }
@@ -117,9 +123,10 @@ function SidebarNavItem({
 // ============================================================================
 
 function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed: boolean }) {
+  const { t } = useTranslation(['app', 'common']);
   const { user } = useAuthStore();
   const userInitials = getUserInitials(user?.username, user?.email);
-  const displayName = getUserDisplayName(user?.username);
+  const displayName = user?.username ?? t('user', { ns: 'common' });
 
   return (
     <DropdownMenu>
@@ -160,32 +167,32 @@ function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed
           <DropdownMenuItem asChild>
             <Link to={'/knowledge-bases' as string}>
               <Plus className="size-4 mr-2" />
-              New Knowledge Base
+              {t('userMenu.newKnowledgeBase')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to={'/profile' as string}>
               <User className="size-4 mr-2" />
-              Profile
+              {t('userMenu.profile')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to={'/settings/ai' as string}>
               <Settings className="size-4 mr-2" />
-              Settings
+              {t('userMenu.settings')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to={'/sessions' as string}>
               <Monitor className="size-4 mr-2" />
-              Sessions
+              {t('userMenu.sessions')}
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
           <LogOut className="size-4 mr-2" />
-          Log out
+          {t('userMenu.logOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -205,6 +212,7 @@ function Sidebar({
   onLogout: () => void;
   onToggleCollapse: () => void;
 }) {
+  const { t } = useTranslation(['app', 'common']);
   const router = useRouter();
   const location = useLocation();
   const { accessToken } = useAuthStore();
@@ -262,7 +270,7 @@ function Sidebar({
                 <PanelLeft className="size-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right">Expand sidebar</TooltipContent>
+            <TooltipContent side="right">{t('sidebar.expand')}</TooltipContent>
           </Tooltip>
         ) : (
           <>
@@ -292,7 +300,7 @@ function Sidebar({
         <div className="px-2 pb-1 pt-2">
           <Button className="h-10 w-full justify-start rounded-lg" onClick={handleNewConversation}>
             <Plus className="size-4 mr-2" />
-            新聊天
+            {t('sidebar.newChat')}
           </Button>
         </div>
       ) : (
@@ -308,7 +316,7 @@ function Sidebar({
                 <Plus className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">新聊天</TooltipContent>
+            <TooltipContent side="right">{t('sidebar.newChat')}</TooltipContent>
           </Tooltip>
         </div>
       )}
@@ -321,7 +329,7 @@ function Sidebar({
             className="h-10 w-full justify-start rounded-lg text-muted-foreground font-normal hover:bg-muted/60"
           >
             <Search className="size-4 mr-2" />
-            搜索聊天
+            {t('sidebar.searchChat')}
             <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
               <span className="text-xs">⌘</span>K
             </kbd>
@@ -335,14 +343,16 @@ function Sidebar({
                 <Search className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">搜索聊天</TooltipContent>
+            <TooltipContent side="right">{t('sidebar.searchChat')}</TooltipContent>
           </Tooltip>
         </div>
       )}
 
       {/* Workspace Navigation */}
       <div className={cn('px-2 pb-2', isCollapsed && 'px-1')}>
-        {!isCollapsed && <p className="px-2 pb-1 text-xs text-muted-foreground">工作区</p>}
+        {!isCollapsed && (
+          <p className="px-2 pb-1 text-xs text-muted-foreground">{t('sidebar.workspace')}</p>
+        )}
         <nav className={cn('space-y-1', isCollapsed && 'space-y-0')}>
           {mainNavItems.map((item) => (
             <SidebarNavItem
@@ -366,11 +376,13 @@ function Sidebar({
                 </Link>
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">聊天记录</TooltipContent>
+            <TooltipContent side="right">{t('sidebar.chatHistory')}</TooltipContent>
           </Tooltip>
         ) : (
           <div className="flex h-full min-h-0 flex-col">
-            <div className="px-2 pb-2 pt-1 text-xs text-muted-foreground">聊天记录</div>
+            <div className="px-2 pb-2 pt-1 text-xs text-muted-foreground">
+              {t('sidebar.chatHistory')}
+            </div>
             <div className="min-h-0 flex-1 overflow-hidden">
               <ConversationList
                 knowledgeBaseId={undefined}
@@ -393,8 +405,22 @@ function Sidebar({
             <ModeToggle />
           ) : (
             <div className="flex items-center justify-between w-full">
-              <span className="text-xs text-muted-foreground px-2">Theme</span>
+              <span className="text-xs text-muted-foreground px-2">
+                {t('theme', { ns: 'common' })}
+              </span>
               <ModeToggle />
+            </div>
+          )}
+        </div>
+        <div className={cn('flex items-center mb-2', isCollapsed ? 'justify-center' : 'px-1')}>
+          {isCollapsed ? (
+            <LanguageToggle compact />
+          ) : (
+            <div className="flex items-center justify-between w-full">
+              <span className="text-xs text-muted-foreground px-2">
+                {t('language', { ns: 'common' })}
+              </span>
+              <LanguageToggle />
             </div>
           )}
         </div>

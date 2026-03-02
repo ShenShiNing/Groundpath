@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import type { ConversationListItem } from '@knowledge-agent/shared/types';
 
 // ============================================================================
@@ -24,6 +25,8 @@ export function ConversationItem({
   onClick,
   onDelete,
 }: ConversationItemProps) {
+  const { t } = useTranslation('chat');
+
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete();
@@ -40,7 +43,7 @@ export function ConversationItem({
       onClick={onClick}
     >
       <div className="flex-1 min-w-0">
-        <p className="truncate text-sm">{conversation.title || '新会话'}</p>
+        <p className="truncate text-sm">{conversation.title || t('conversation.untitled')}</p>
       </div>
       <Button
         variant="ghost"

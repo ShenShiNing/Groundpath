@@ -1,11 +1,20 @@
 import { LoginForm, AuthPageLayout, AuthFooterLink } from '@/components/auth';
+import { useTranslation } from 'react-i18next';
 
 export function LoginPage() {
+  const { t } = useTranslation('auth');
+
   return (
     <AuthPageLayout
-      title="登录 KnowledgeAgent"
-      description="使用邮箱登录并继续你的知识工作流"
-      footer={<AuthFooterLink text="还没有账号？" linkText="立即注册" linkTo="/auth/signup" />}
+      title={t('login.pageTitle')}
+      description={t('login.pageDescription')}
+      footer={
+        <AuthFooterLink
+          text={t('login.footerText')}
+          linkText={t('login.footerLink')}
+          linkTo="/auth/signup"
+        />
+      }
     >
       <LoginForm />
     </AuthPageLayout>

@@ -35,6 +35,7 @@ import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { knowledgeBasesApi } from '@/api';
 import { useCreateKnowledgeBase, useKBDocuments, useKnowledgeBases } from '@/hooks';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore, useChatPanelStore } from '@/stores';
 import type { Citation } from '@/stores/chatPanelStore';
 import { toast } from 'sonner';
@@ -59,21 +60,27 @@ function sanitizeFileName(input: string): string {
 }
 
 function buildConversationMarkdown(
-  messages: Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>
+  messages: Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>,
+  labels: {
+    transcript: string;
+    user: string;
+    assistant: string;
+  }
 ): string {
   const body = messages
     .filter((message) => message.content.trim().length > 0)
     .map((message) => {
-      const title = message.role === 'user' ? 'User' : 'Assistant';
+      const title = message.role === 'user' ? labels.user : labels.assistant;
       const time = message.timestamp.toISOString();
       return `## ${title} (${time})\n\n${message.content.trim()}\n`;
     })
     .join('\n');
 
-  return `# Chat Transcript\n\n${body}`.trim();
+  return `# ${labels.transcript}\n\n${body}`.trim();
 }
 
 export function ChatPage() {
+  const { t } = useTranslation('chat');
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -221,14 +228,17 @@ export function ChatPage() {
     setPreviewOpen(true);
   }, []);
 
-  const handleCopyMessage = useCallback(async (content: string, format: CopyFormat) => {
-    try {
-      await copyMessageToClipboard(content, format);
-      toast.success(format === 'plain' ? '已复制纯文本' : '已复制 Markdown');
-    } catch {
-      toast.error('复制失败，请重试');
-    }
-  }, []);
+  const handleCopyMessage = useCallback(
+    async (content: string, format: CopyFormat) => {
+      try {
+        await copyMessageToClipboard(content, format);
+        toast.success(format === 'plain' ? t('copy.plain.success') : t('copy.markdown.success'));
+      } catch {
+        toast.error(t('copy.error'));
+      }
+    },
+    [t]
+  );
 
   const handleOpenDocumentFromCitation = useCallback(
     (documentId: string) => {
@@ -246,28 +256,27 @@ export function ChatPage() {
 
   const handleOpenCreateKbDialog = useCallback(() => {
     if (!hasPersistableMessages) {
-      toast.info('当前还没有可沉淀的聊天内容');
+      toast.info(t('kbSeed.none'));
       return;
     }
 
-    const defaultName =
-      selectedKnowledgeBase?.name ?? `Chat Knowledge Base ${new Date().toISOString().slice(0, 10)}`;
+    const defaultName = selectedKnowledgeBase?.name ?? t('kb.defaultName');
     setNewKbName(defaultName);
     setNewKbDescription('');
     setNewKbEmbeddingProvider('zhipu');
     setSeedSource(latestAssistantMessage ? 'latest-assistant' : 'conversation');
     setSwitchToNewKb(true);
     setCreateKbDialogOpen(true);
-  }, [hasPersistableMessages, latestAssistantMessage, selectedKnowledgeBase?.name]);
+  }, [hasPersistableMessages, latestAssistantMessage, selectedKnowledgeBase?.name, t]);
 
   const handleCreateKbFromChat = useCallback(async () => {
     if (!newKbName.trim()) {
-      toast.error('请输入知识库名称');
+      toast.error(t('kbName.required'));
       return;
     }
 
     if (seedSource === 'latest-assistant' && !latestAssistantMessage) {
-      toast.error('当前没有可用的 AI 回复内容');
+      toast.error(t('latestAssistant.none'));
       return;
     }
 
@@ -278,14 +287,19 @@ export function ChatPage() {
           role: message.role,
           content: message.content,
           timestamp: message.timestamp,
-        }))
+        })),
+      {
+        transcript: t('export.transcriptTitle'),
+        user: t('export.user'),
+        assistant: t('export.assistant'),
+      }
     );
     const latestAssistantContent = latestAssistantMessage?.content.trim() ?? '';
     const selectedContent =
       seedSource === 'latest-assistant' ? latestAssistantContent : conversationContent;
 
     if (!selectedContent.trim()) {
-      toast.error('没有可保存的内容');
+      toast.error(t('content.empty'));
       return;
     }
 
@@ -298,7 +312,9 @@ export function ChatPage() {
       });
 
       const documentTitle =
-        seedSource === 'latest-assistant' ? 'AI Generated Notes' : 'Chat Transcript';
+        seedSource === 'latest-assistant'
+          ? t('seed.documentTitle.latestAssistant')
+          : t('seed.documentTitle.transcript');
       const fileBaseName = sanitizeFileName(documentTitle || knowledgeBase.name) || 'chat-notes';
       const file = new File([selectedContent], `${fileBaseName}.md`, {
         type: 'text/markdown',
@@ -307,7 +323,7 @@ export function ChatPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('title', documentTitle);
-      formData.append('description', 'Generated from chat content');
+      formData.append('description', t('seed.documentDescription'));
 
       await knowledgeBasesApi.uploadDocument(knowledgeBase.id, formData);
 
@@ -318,9 +334,9 @@ export function ChatPage() {
       }
 
       setCreateKbDialogOpen(false);
-      toast.success('知识库创建成功，聊天内容已保存为文档');
+      toast.success(t('kbCreate.success'));
     } catch {
-      toast.error('创建知识库失败，请重试');
+      toast.error(t('kbCreate.error'));
     } finally {
       setIsCreatingKb(false);
     }
@@ -335,6 +351,7 @@ export function ChatPage() {
     seedSource,
     startNewConversation,
     switchToNewKb,
+    t,
   ]);
 
   if (kbLoading) {
@@ -356,7 +373,7 @@ export function ChatPage() {
         href="#chat-main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
       >
-        跳转到聊天内容
+        {t('skipToContent')}
       </a>
 
       <div className="relative flex-1 overflow-hidden bg-background">
@@ -375,7 +392,7 @@ export function ChatPage() {
                     onChange={setDocumentScope}
                   />
                 ) : (
-                  <span className="text-xs text-muted-foreground">通用模式</span>
+                  <span className="text-xs text-muted-foreground">{t('mode.general')}</span>
                 )}
                 <span
                   className={`text-xs ${
@@ -385,12 +402,17 @@ export function ChatPage() {
                   }`}
                 >
                   {!selectedKnowledgeBaseId
-                    ? '通用聊天模式不限定文档范围'
+                    ? t('mode.generalNoLimit')
                     : docsLoading
-                      ? '文档加载中...'
+                      ? t('documents.loading')
                       : processingDocumentCount > 0
-                        ? `当前可检索 ${searchableDocuments.length} 份文档，另有 ${processingDocumentCount} 份处理中`
-                        : `当前可检索 ${searchableDocuments.length} 份文档`}
+                        ? t('documents.searchableWithProcessing', {
+                            searchable: searchableDocuments.length,
+                            processing: processingDocumentCount,
+                          })
+                        : t('documents.searchableOnly', {
+                            searchable: searchableDocuments.length,
+                          })}
                 </span>
 
                 <DropdownMenu>
@@ -399,7 +421,7 @@ export function ChatPage() {
                       variant="ghost"
                       size="icon"
                       className="ml-auto size-8 cursor-pointer"
-                      title="聊天操作"
+                      title={t('actions.title')}
                     >
                       <Ellipsis className="size-4" />
                     </Button>
@@ -407,7 +429,7 @@ export function ChatPage() {
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuItem className="cursor-pointer" onClick={startNewConversation}>
                       <Sparkles className="size-4" />
-                      新会话
+                      {t('actions.newConversation')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
@@ -415,7 +437,7 @@ export function ChatPage() {
                       disabled={!selectedKnowledgeBaseId}
                     >
                       <Upload className="size-4" />
-                      上传文件
+                      {t('actions.uploadFile')}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
@@ -423,13 +445,13 @@ export function ChatPage() {
                       disabled={!hasPersistableMessages}
                     >
                       <Database className="size-4" />
-                      沉淀为知识库
+                      {t('actions.seedKnowledgeBase')}
                     </DropdownMenuItem>
                     {selectedKnowledgeBaseId && (
                       <DropdownMenuItem asChild className="cursor-pointer">
                         <Link to={`/knowledge-bases/${selectedKnowledgeBaseId}` as string}>
                           <FileText className="size-4" />
-                          查看知识库详情
+                          {t('actions.viewKnowledgeBaseDetail')}
                         </Link>
                       </DropdownMenuItem>
                     )}
@@ -440,7 +462,7 @@ export function ChatPage() {
                       disabled={messages.length === 0}
                     >
                       <Trash2 className="size-4" />
-                      清空聊天
+                      {t('actions.clearChat')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -453,11 +475,9 @@ export function ChatPage() {
                       <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
                         <Sparkles className="size-6 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-semibold">开始你的第一条提问</h3>
+                      <h3 className="text-lg font-semibold">{t('empty.title')}</h3>
                       <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                        {selectedKnowledgeBaseId
-                          ? '你可以先点击“上传文件”，然后询问摘要、结论、出处对比等问题。'
-                          : '你可以先直接聊天，之后手动将聊天内容沉淀为知识库。'}
+                        {selectedKnowledgeBaseId ? t('empty.withKb') : t('empty.general')}
                       </p>
                     </div>
                   </div>
@@ -487,8 +507,8 @@ export function ChatPage() {
                     disabled={isLoading}
                     placeholder={
                       selectedKnowledgeBaseId
-                        ? '输入你的问题，Enter 发送，Shift+Enter 换行...'
-                        : '通用聊天模式：直接提问，后续可将内容沉淀为知识库...'
+                        ? t('input.placeholder.withKb')
+                        : t('input.placeholder.general')
                     }
                   />
                 </div>
@@ -501,36 +521,36 @@ export function ChatPage() {
       <Dialog open={createKbDialogOpen} onOpenChange={setCreateKbDialogOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>从聊天内容创建知识库</DialogTitle>
-            <DialogDescription>手动选择内容来源并创建知识库，不会自动触发创建。</DialogDescription>
+            <DialogTitle>{t('createKb.title')}</DialogTitle>
+            <DialogDescription>{t('createKb.description')}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
-              <Label htmlFor="chat-kb-name">知识库名称</Label>
+              <Label htmlFor="chat-kb-name">{t('createKb.name')}</Label>
               <Input
                 id="chat-kb-name"
                 value={newKbName}
                 onChange={(event) => setNewKbName(event.target.value)}
-                placeholder="My Chat Knowledge Base"
+                placeholder={t('createKb.namePlaceholder')}
                 maxLength={200}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="chat-kb-description">知识库描述</Label>
+              <Label htmlFor="chat-kb-description">{t('createKb.descriptionLabel')}</Label>
               <Textarea
                 id="chat-kb-description"
                 value={newKbDescription}
                 onChange={(event) => setNewKbDescription(event.target.value)}
-                placeholder="可选：记录该知识库用途"
+                placeholder={t('createKb.descriptionPlaceholder')}
                 maxLength={2000}
                 rows={3}
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="chat-kb-provider">Embedding Provider</Label>
+              <Label htmlFor="chat-kb-provider">{t('createKb.provider')}</Label>
               <Select
                 value={newKbEmbeddingProvider}
                 onValueChange={(value) => setNewKbEmbeddingProvider(value as EmbeddingProviderType)}
@@ -547,7 +567,7 @@ export function ChatPage() {
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="chat-seed-source">内容来源</Label>
+              <Label htmlFor="chat-seed-source">{t('createKb.seedSource')}</Label>
               <Select
                 value={seedSource}
                 onValueChange={(value) => setSeedSource(value as KnowledgeSeedSource)}
@@ -556,14 +576,18 @@ export function ChatPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="conversation">完整聊天记录</SelectItem>
+                  <SelectItem value="conversation">
+                    {t('createKb.seedSourceConversation')}
+                  </SelectItem>
                   <SelectItem value="latest-assistant" disabled={!latestAssistantMessage}>
-                    最新 AI 回复内容
+                    {t('createKb.seedSourceLatestAssistant')}
                   </SelectItem>
                 </SelectContent>
               </Select>
               {seedSource === 'latest-assistant' && !latestAssistantMessage && (
-                <p className="text-xs text-amber-600">暂无可用 AI 回复，请先完成至少一次问答。</p>
+                <p className="text-xs text-amber-600">
+                  {t('createKb.seedSourceLatestAssistantEmpty')}
+                </p>
               )}
             </div>
 
@@ -574,23 +598,23 @@ export function ChatPage() {
                 onCheckedChange={(checked) => setSwitchToNewKb(checked === true)}
               />
               <Label htmlFor="switch-to-new-kb" className="text-sm">
-                创建完成后切换到该知识库
+                {t('createKb.switchToNewKb')}
               </Label>
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setCreateKbDialogOpen(false)}>
-              取消
+              {t('createKb.cancel')}
             </Button>
             <Button onClick={() => void handleCreateKbFromChat()} disabled={isCreatingKb}>
               {isCreatingKb ? (
                 <>
                   <Loader2 className="size-4 mr-2 animate-spin" />
-                  创建中...
+                  {t('createKb.creating')}
                 </>
               ) : (
-                '创建知识库并保存内容'
+                t('createKb.submit')
               )}
             </Button>
           </div>
@@ -600,10 +624,8 @@ export function ChatPage() {
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>上传文档到知识库</DialogTitle>
-            <DialogDescription>
-              上传完成后可立即用于检索和对话引用。支持 PDF、Markdown、TXT、DOCX。
-            </DialogDescription>
+            <DialogTitle>{t('upload.title')}</DialogTitle>
+            <DialogDescription>{t('upload.description')}</DialogDescription>
           </DialogHeader>
           <DocumentUpload
             knowledgeBaseId={selectedKnowledgeBaseId}

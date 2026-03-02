@@ -12,6 +12,7 @@ import { Link } from '@tanstack/react-router';
 import type { Citation } from '@/stores/chatPanelStore';
 import { CitationInline } from './CitationInline';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 interface ChatMarkdownProps {
   content: string;
@@ -63,6 +64,7 @@ function getCitationIndex(href?: string): number | null {
 }
 
 export function ChatMarkdown({ content, citations, onCitationClick }: ChatMarkdownProps) {
+  const { t } = useTranslation('chat');
   const source = useMemo(() => injectCitationLinks(content), [content]);
   const hasFencedCodeBlock = useMemo(() => /```|~~~/.test(content), [content]);
   const [highlightRenderer, setHighlightRenderer] =
@@ -95,12 +97,15 @@ export function ChatMarkdown({ content, citations, onCitationClick }: ChatMarkdo
   );
   const MarkdownRenderer =
     hasFencedCodeBlock && highlightRenderer ? highlightRenderer : MDEditor.Markdown;
-  const handleCopyToast = useCallback((event: MouseEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('.copied')) {
-      toast.success('已复制代码');
-    }
-  }, []);
+  const handleCopyToast = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('.copied')) {
+        toast.success(t('markdown.codeCopied'));
+      }
+    },
+    [t]
+  );
 
   return (
     <div className="min-w-0" onClickCapture={handleCopyToast}>

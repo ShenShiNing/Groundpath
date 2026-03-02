@@ -12,6 +12,7 @@ import { useChatPanelStore, type Citation } from '@/stores/chatPanelStore';
 import { useAuthStore } from '@/stores/authStore';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 // ============================================================================
@@ -29,6 +30,7 @@ export interface ChatPanelProps {
 // ============================================================================
 
 export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPanelProps) {
+  const { t } = useTranslation('chat');
   const {
     isOpen,
     messages,
@@ -74,9 +76,9 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
   const handleCopyMessage = async (content: string, format: CopyFormat) => {
     try {
       await copyMessageToClipboard(content, format);
-      toast.success(format === 'plain' ? '已复制纯文本' : '已复制 Markdown');
+      toast.success(format === 'plain' ? t('copy.plain.success') : t('copy.markdown.success'));
     } catch {
-      toast.error('复制失败，请重试');
+      toast.error(t('copy.error'));
     }
   };
 
@@ -101,7 +103,11 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
               size="icon"
               className="h-7 w-7"
               onClick={toggleSidebar}
-              title={showSidebar ? 'Hide conversations' : 'Show conversations'}
+              title={
+                showSidebar
+                  ? t('panel.toggle.hideConversations')
+                  : t('panel.toggle.showConversations')
+              }
             >
               {showSidebar ? (
                 <PanelLeftClose className="size-4" />
@@ -113,10 +119,8 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
               <MessageSquare className="size-4 text-primary-foreground" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold">AI Chat</h3>
-              <p className="text-[10px] text-muted-foreground">
-                Ask questions about your documents
-              </p>
+              <h3 className="text-sm font-semibold">{t('panel.title')}</h3>
+              <p className="text-[10px] text-muted-foreground">{t('panel.subtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -126,7 +130,7 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
                 size="icon"
                 className="h-7 w-7"
                 onClick={clearMessages}
-                title="Clear chat"
+                title={t('actions.clearChat')}
               >
                 <Trash2 className="size-4" />
               </Button>
@@ -170,10 +174,9 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
                     <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
                       <Sparkles className="size-6 text-primary" />
                     </div>
-                    <h4 className="text-sm font-medium">Start a conversation</h4>
+                    <h4 className="text-sm font-medium">{t('panel.empty.title')}</h4>
                     <p className="text-xs text-muted-foreground max-w-65">
-                      Ask questions about the documents in your knowledge base. I'll provide answers
-                      with source citations.
+                      {t('panel.empty.description')}
                     </p>
                   </div>
                 ) : (

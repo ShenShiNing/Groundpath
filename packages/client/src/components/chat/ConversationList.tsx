@@ -5,6 +5,7 @@ import { ConversationItem } from './ConversationItem';
 import { useConversations, useDeleteConversation } from '@/hooks';
 import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import type { ConversationListItem as ConversationListItemType } from '@knowledge-agent/shared/types';
 
 // ============================================================================
@@ -20,6 +21,13 @@ export interface ConversationListProps {
   showNewButton?: boolean;
 }
 
+type GroupLabel =
+  | 'conversation.group.today'
+  | 'conversation.group.yesterday'
+  | 'conversation.group.last7Days'
+  | 'conversation.group.last30Days'
+  | 'conversation.group.older';
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -32,6 +40,7 @@ export function ConversationList({
   onCurrentConversationDeleted,
   showNewButton = true,
 }: ConversationListProps) {
+  const { t } = useTranslation('chat');
   const queryClient = useQueryClient();
   const { data: conversations, isLoading } = useConversations(knowledgeBaseId);
   const deleteConversation = useDeleteConversation();
@@ -75,7 +84,7 @@ export function ConversationList({
             onClick={onNewConversation}
           >
             <Plus className="size-4 mr-2" />
-            新会话
+            {t('conversation.newConversation')}
           </Button>
         </div>
       )}
@@ -91,7 +100,7 @@ export function ConversationList({
             ) : sortedConversations.length > 0 ? (
               groupedConversations.map((group) => (
                 <div key={group.label} className="space-y-1">
-                  <p className="px-2 text-[11px] text-muted-foreground">{group.label}</p>
+                  <p className="px-2 text-[11px] text-muted-foreground">{t(group.label)}</p>
                   {group.items.map((conversation) => (
                     <ConversationItem
                       key={conversation.id}
@@ -104,7 +113,9 @@ export function ConversationList({
                 </div>
               ))
             ) : (
-              <div className="text-center py-8 text-xs text-muted-foreground">暂无会话</div>
+              <div className="text-center py-8 text-xs text-muted-foreground">
+                {t('conversation.empty')}
+              </div>
             )}
           </div>
         </ScrollArea>
@@ -123,21 +134,27 @@ function getDayDiffFromToday(date: Date, now: Date): number {
   return Math.floor((todayStart - dateStart) / (1000 * 60 * 60 * 24));
 }
 
-function getGroupLabel(dateValue: string | Date): string {
+function getGroupLabel(dateValue: string | Date): GroupLabel {
   const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return '更早';
+  if (Number.isNaN(date.getTime())) return 'conversation.group.older';
 
   const diff = getDayDiffFromToday(date, new Date());
-  if (diff <= 0) return '今天';
-  if (diff === 1) return '昨天';
-  if (diff <= 7) return '过去 7 天';
-  if (diff <= 30) return '过去 30 天';
-  return '更早';
+  if (diff <= 0) return 'conversation.group.today';
+  if (diff === 1) return 'conversation.group.yesterday';
+  if (diff <= 7) return 'conversation.group.last7Days';
+  if (diff <= 30) return 'conversation.group.last30Days';
+  return 'conversation.group.older';
 }
 
 function groupConversationsByTime(conversations: ConversationListItemType[]) {
-  const orderedLabels = ['今天', '昨天', '过去 7 天', '过去 30 天', '更早'] as const;
-  const groups = new Map<string, ConversationListItemType[]>();
+  const orderedLabels = [
+    'conversation.group.today',
+    'conversation.group.yesterday',
+    'conversation.group.last7Days',
+    'conversation.group.last30Days',
+    'conversation.group.older',
+  ] as const;
+  const groups = new Map<GroupLabel, ConversationListItemType[]>();
 
   conversations.forEach((conversation) => {
     const dateValue = conversation.lastMessageAt ?? conversation.createdAt;

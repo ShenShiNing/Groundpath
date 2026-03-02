@@ -5,6 +5,7 @@ import type { AxiosError } from 'axios';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { emailSchema } from '@knowledge-agent/shared/schemas';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import { FormField } from './FormField';
 import { emailApi } from '@/api/email';
 
@@ -14,6 +15,7 @@ interface SignupStepEmailProps {
 }
 
 export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailProps) {
+  const { t } = useTranslation(['auth', 'common']);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm({
@@ -25,7 +27,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
 
       const result = emailSchema.safeParse(value.email);
       if (!result.success) {
-        setError(result.error.issues[0]?.message || '邮箱格式不正确');
+        setError(result.error.issues[0]?.message || t('signup.email.invalid'));
         return;
       }
 
@@ -34,7 +36,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
         onNext(value.email);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || '验证码发送失败');
+        setError(axiosError.response?.data?.error?.message || t('signup.email.sendFailed'));
       }
     },
   });
@@ -49,9 +51,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
       className="space-y-4"
     >
       <div className="text-center space-y-1">
-        <p className="text-sm text-muted-foreground">
-          输入你的邮箱地址，我们会发送验证码到该邮箱。
-        </p>
+        <p className="text-sm text-muted-foreground">{t('signup.email.helper')}</p>
       </div>
 
       <form.Field
@@ -66,7 +66,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
         {(field) => (
           <FormField
             name={field.name}
-            label="邮箱"
+            label={t('common:email')}
             type="email"
             placeholder="name@example.com"
             icon={Mail}
@@ -85,7 +85,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
           <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
-            {isSubmitting ? '发送中...' : '发送验证码'}
+            {isSubmitting ? t('signup.email.sending') : t('signup.email.sendCode')}
           </Button>
         )}
       </form.Subscribe>

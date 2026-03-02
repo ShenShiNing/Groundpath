@@ -1,43 +1,39 @@
 import { Link } from '@tanstack/react-router';
 import { User, Monitor, MessageSquare, Settings } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
-interface QuickLink {
-  label: string;
-  description: string;
-  to: string;
-  icon: React.ReactNode;
-}
-
-const quickLinks: QuickLink[] = [
+const quickLinks = [
   {
-    label: 'Profile',
-    description: 'Edit your profile and avatar',
+    labelKey: 'quickLinks.profile.label',
+    descriptionKey: 'quickLinks.profile.description',
     to: '/profile',
     icon: <User className="size-5" />,
   },
   {
-    label: 'Sessions',
-    description: 'Manage active login sessions',
+    labelKey: 'quickLinks.sessions.label',
+    descriptionKey: 'quickLinks.sessions.description',
     to: '/sessions',
     icon: <Monitor className="size-5" />,
   },
   {
-    label: 'Chat',
-    description: 'Start a conversation',
+    labelKey: 'quickLinks.chat.label',
+    descriptionKey: 'quickLinks.chat.description',
     to: '/chat',
     icon: <MessageSquare className="size-5" />,
   },
   {
-    label: 'Settings',
-    description: 'Configure your preferences',
+    labelKey: 'quickLinks.settings.label',
+    descriptionKey: 'quickLinks.settings.description',
     to: '/settings/ai',
     icon: <Settings className="size-5" />,
   },
-];
+] as const;
 
-function QuickLinkCard({ link }: { link: QuickLink }) {
+function QuickLinkCard({ link }: { link: (typeof quickLinks)[number] }) {
+  const { t } = useTranslation('dashboard');
+
   return (
     <Link to={link.to as string}>
       <Card className={cn('transition-colors hover:bg-muted/50 cursor-pointer', 'h-full')}>
@@ -46,8 +42,8 @@ function QuickLinkCard({ link }: { link: QuickLink }) {
             {link.icon}
           </div>
           <div>
-            <p className="font-medium">{link.label}</p>
-            <p className="text-xs text-muted-foreground">{link.description}</p>
+            <p className="font-medium">{t(link.labelKey)}</p>
+            <p className="text-xs text-muted-foreground">{t(link.descriptionKey)}</p>
           </div>
         </CardContent>
       </Card>
@@ -56,9 +52,11 @@ function QuickLinkCard({ link }: { link: QuickLink }) {
 }
 
 export function QuickLinks() {
+  const { t } = useTranslation('dashboard');
+
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Quick Links</h3>
+      <h3 className="text-lg font-semibold">{t('quickLinks.title')}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         {quickLinks.map((link) => (
           <QuickLinkCard key={link.to} link={link} />

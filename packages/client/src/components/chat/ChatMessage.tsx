@@ -11,6 +11,7 @@ import { CitationSources } from './CitationSources';
 import { ChatMarkdown } from './ChatMarkdown';
 import type { ChatMessage as ChatMessageType, Citation } from '@/stores/chatPanelStore';
 import type { CopyFormat } from '@/lib/chat';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // Types
@@ -37,6 +38,7 @@ function formatTime(date: Date): string {
 // ============================================================================
 
 export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: ChatMessageProps) {
+  const { t } = useTranslation('chat');
   const isUser = message.role === 'user';
   const isPureCodeBlock = !isUser && PURE_CODE_BLOCK_PATTERN.test(message.content);
   const [copiedFormat, setCopiedFormat] = useState<CopyFormat | null>(null);
@@ -89,7 +91,7 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
       <div className="mb-5">
         <div className="flex items-center gap-2 py-2">
           <Loader2 className="size-4 text-muted-foreground animate-spin" />
-          <span className="text-sm text-muted-foreground">Thinking...</span>
+          <span className="text-sm text-muted-foreground">{t('message.thinking')}</span>
         </div>
       </div>
     );
@@ -128,10 +130,10 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
                     variant="ghost"
                     size="sm"
                     className="h-7 cursor-pointer gap-1.5 px-2 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label={copiedFormat ? '已复制消息' : '复制消息'}
+                    aria-label={copiedFormat ? t('message.copyAriaDone') : t('message.copyAria')}
                   >
                     {copiedFormat ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                    <span>{copiedFormat ? '已复制' : '复制'}</span>
+                    <span>{copiedFormat ? t('message.copied') : t('message.copy')}</span>
                     <ChevronDown className="size-3" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -143,7 +145,7 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
                     }}
                   >
                     <AlignLeft className="size-3.5" />
-                    复制纯文本
+                    {t('message.copyPlain')}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="cursor-pointer"
@@ -152,7 +154,7 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
                     }}
                   >
                     <FileCode2 className="size-3.5" />
-                    复制 Markdown
+                    {t('message.copyMarkdown')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -165,7 +167,7 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
                 onClick={onRegenerate}
               >
                 <RefreshCw className="size-3 mr-1" />
-                Regenerate
+                {t('message.regenerate')}
               </Button>
             )}
           </div>

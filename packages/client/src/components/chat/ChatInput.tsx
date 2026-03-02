@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ArrowUp, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // Types
@@ -24,8 +25,9 @@ export function ChatInput({
   onStop,
   isGenerating = false,
   disabled = false,
-  placeholder = 'Ask a question about your documents...',
+  placeholder,
 }: ChatInputProps) {
+  const { t } = useTranslation('chat');
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasInput = input.trim().length > 0;
@@ -70,7 +72,7 @@ export function ChatInput({
       <div className="flex items-end gap-2 rounded-3xl border bg-background px-3 py-2 shadow-sm">
         <textarea
           ref={textareaRef}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t('input.defaultPlaceholder')}
           className={cn(
             'flex-1 bg-transparent px-2 py-1.5 resize-none',
             'focus:outline-none text-sm',
@@ -88,14 +90,12 @@ export function ChatInput({
           className="size-8 rounded-full shrink-0 cursor-pointer"
           onClick={handlePrimaryAction}
           disabled={canStop ? false : !hasInput || disabled}
-          title={canStop ? '停止输出' : '发送消息'}
+          title={canStop ? t('input.stop') : t('input.send')}
         >
           {canStop ? <Square className="size-3.5 fill-current" /> : <ArrowUp className="size-4" />}
         </Button>
       </div>
-      <p className="mt-2 text-center text-[10px] text-muted-foreground">
-        AI can make mistakes. Verify important information.
-      </p>
+      <p className="mt-2 text-center text-[10px] text-muted-foreground">{t('input.disclaimer')}</p>
     </div>
   );
 }

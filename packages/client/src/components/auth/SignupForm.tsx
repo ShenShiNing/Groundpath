@@ -3,6 +3,7 @@ import { useRouter } from '@tanstack/react-router';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
 import { initiateGitHubLogin, initiateGoogleLogin } from '@/api';
 import { SignupStepEmail } from './SignupStepEmail';
@@ -46,26 +47,27 @@ function StepIndicator({ currentStep }: { currentStep: SignupStep }) {
 function getStepTitle(step: SignupStep): string {
   switch (step) {
     case 'email':
-      return '开始创建账号';
+      return 'signup.step.email.title';
     case 'code':
-      return '验证邮箱';
+      return 'signup.step.code.title';
     case 'details':
-      return '完善资料';
+      return 'signup.step.details.title';
   }
 }
 
 function getStepDescription(step: SignupStep): string {
   switch (step) {
     case 'email':
-      return '先输入邮箱并获取验证码';
+      return 'signup.step.email.description';
     case 'code':
-      return '输入邮箱收到的验证码';
+      return 'signup.step.code.description';
     case 'details':
-      return '设置用户名和密码';
+      return 'signup.step.details.description';
   }
 }
 
 export function SignupForm() {
+  const { t } = useTranslation(['auth', 'common']);
   const router = useRouter();
   const registerWithCode = useAuthStore((state) => state.registerWithCode);
   const [step, setStep] = useState<SignupStep>('email');
@@ -111,8 +113,8 @@ export function SignupForm() {
     <Card>
       <CardHeader className="text-center">
         <StepIndicator currentStep={step} />
-        <CardTitle className="text-xl">{getStepTitle(step)}</CardTitle>
-        <CardDescription>{getStepDescription(step)}</CardDescription>
+        <CardTitle className="text-xl">{t(getStepTitle(step))}</CardTitle>
+        <CardDescription>{t(getStepDescription(step))}</CardDescription>
       </CardHeader>
       <CardContent>
         {step === 'email' && (
@@ -126,7 +128,9 @@ export function SignupForm() {
                   <Separator />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">或使用以下方式继续</span>
+                  <span className="bg-card px-2 text-muted-foreground">
+                    {t('common:orContinueWith')}
+                  </span>
                 </div>
               </div>
 

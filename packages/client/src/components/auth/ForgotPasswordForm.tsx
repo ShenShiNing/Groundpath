@@ -7,6 +7,7 @@ import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { emailSchema, passwordSchema } from '@knowledge-agent/shared/schemas';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 import { FormField } from './FormField';
 import { VerificationCodeInput } from './VerificationCodeInput';
 import { emailApi } from '@/api/email';
@@ -50,22 +51,22 @@ function StepIndicator({ currentStep }: { currentStep: ResetStep }) {
 function getStepTitle(step: ResetStep): string {
   switch (step) {
     case 'email':
-      return '重置密码';
+      return 'forgot.step.email.title';
     case 'code':
-      return '验证邮箱';
+      return 'forgot.step.code.title';
     case 'password':
-      return '设置新密码';
+      return 'forgot.step.password.title';
   }
 }
 
 function getStepDescription(step: ResetStep): string {
   switch (step) {
     case 'email':
-      return '输入邮箱后我们会发送验证码';
+      return 'forgot.step.email.description';
     case 'code':
-      return '输入你收到的验证码';
+      return 'forgot.step.code.description';
     case 'password':
-      return '设置一个新的安全密码';
+      return 'forgot.step.password.description';
   }
 }
 
@@ -77,6 +78,7 @@ function EmailStep({
   onNext: (email: string) => void;
   defaultEmail: string;
 }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [error, setError] = useState<string | null>(null);
 
   const form = useForm({
@@ -85,7 +87,7 @@ function EmailStep({
       setError(null);
       const result = emailSchema.safeParse(value.email);
       if (!result.success) {
-        setError(result.error.issues[0]?.message || '邮箱格式不正确');
+        setError(result.error.issues[0]?.message || t('forgot.email.invalid'));
         return;
       }
 
@@ -94,7 +96,7 @@ function EmailStep({
         onNext(value.email);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || '验证码发送失败');
+        setError(axiosError.response?.data?.error?.message || t('forgot.email.sendFailed'));
       }
     },
   });
@@ -119,7 +121,7 @@ function EmailStep({
         {(field) => (
           <FormField
             name={field.name}
-            label="邮箱"
+            label={t('common:email')}
             type="email"
             placeholder="name@example.com"
             icon={Mail}
@@ -138,7 +140,7 @@ function EmailStep({
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
           <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
-            {isSubmitting ? '发送中...' : '发送重置验证码'}
+            {isSubmitting ? t('forgot.email.sending') : t('forgot.email.sendCode')}
           </Button>
         )}
       </form.Subscribe>
@@ -156,6 +158,7 @@ function CodeStep({
   onNext: (token: string) => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation(['auth', 'common']);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -174,7 +177,7 @@ function CodeStep({
   const handleVerify = useCallback(
     async (codeToVerify: string) => {
       if (codeToVerify.length !== 6) {
-        setError('请输入 6 位验证码');
+        setError(t('forgot.code.invalidLength'));
         return;
       }
 
@@ -190,14 +193,14 @@ function CodeStep({
         onNext(result.verificationToken);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || '验证码无效');
+        setError(axiosError.response?.data?.error?.message || t('forgot.code.invalid'));
         // Reset auto-verify flag on error so user can try again
         hasAutoVerified.current = false;
       } finally {
         setIsVerifying(false);
       }
     },
-    [email, onNext]
+    [email, onNext, t]
   );
 
   // Handle code change with auto-verify
@@ -226,7 +229,7 @@ function CodeStep({
       hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || '验证码重发失败');
+      setError(axiosError.response?.data?.error?.message || t('forgot.code.resendFailed'));
     } finally {
       setIsResending(false);
     }
@@ -235,7 +238,7 @@ function CodeStep({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <p className="text-sm text-muted-foreground">验证码已发送至</p>
+        <p className="text-sm text-muted-foreground">{t('forgot.code.sentTo')}</p>
         <p className="font-medium">{email}</p>
       </div>
 
@@ -257,7 +260,7 @@ function CodeStep({
           onClick={() => handleVerify(code)}
           disabled={code.length !== 6 || isVerifying}
         >
-          {isVerifying ? '验证中...' : '验证验证码'}
+          {isVerifying ? t('forgot.code.verifying') : t('forgot.code.verify')}
         </Button>
 
         <div className="flex items-center justify-between">
@@ -268,7 +271,7 @@ function CodeStep({
             className="cursor-pointer"
             onClick={onBack}
           >
-            返回
+            {t('common:back')}
           </Button>
           <Button
             type="button"
@@ -279,10 +282,10 @@ function CodeStep({
             disabled={resendCooldown > 0 || isResending}
           >
             {isResending
-              ? '发送中...'
+              ? t('forgot.email.sending')
               : resendCooldown > 0
-                ? `${resendCooldown}s 后可重发`
-                : '重新发送'}
+                ? t('forgot.code.resendAfter', { seconds: resendCooldown })
+                : t('forgot.code.resend')}
           </Button>
         </div>
       </div>
@@ -300,6 +303,7 @@ function PasswordStep({
   verificationToken: string;
   onBack: () => void;
 }) {
+  const { t } = useTranslation(['auth', 'common']);
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -324,7 +328,7 @@ function PasswordStep({
         await router.navigate({ to: '/auth/login' });
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || '重置密码失败');
+        setError(axiosError.response?.data?.error?.message || t('forgot.password.failed'));
       }
     },
   });
@@ -349,7 +353,7 @@ function PasswordStep({
         {(field) => (
           <FormField
             name={field.name}
-            label="新密码"
+            label={t('forgot.password.new')}
             placeholder="••••••••"
             icon={Lock}
             value={field.state.value}
@@ -358,7 +362,7 @@ function PasswordStep({
             disabled={form.state.isSubmitting}
             required
             errors={field.state.meta.errors as string[]}
-            hint="至少 8 位，且包含字母和数字"
+            hint={t('forgot.password.hint')}
             showPasswordToggle
             showPassword={showPassword}
             onTogglePassword={() => setShowPassword(!showPassword)}
@@ -371,9 +375,9 @@ function PasswordStep({
         validators={{
           onChangeListenTo: ['newPassword'],
           onChange: ({ value, fieldApi }) => {
-            if (!value) return '请再次输入密码';
+            if (!value) return t('forgot.password.repeat');
             const password = fieldApi.form.getFieldValue('newPassword');
-            if (value !== password) return '两次输入的密码不一致';
+            if (value !== password) return t('forgot.password.mismatch');
             return undefined;
           },
         }}
@@ -381,7 +385,7 @@ function PasswordStep({
         {(field) => (
           <FormField
             name={field.name}
-            label="确认新密码"
+            label={t('forgot.password.confirmNew')}
             placeholder="••••••••"
             icon={Lock}
             value={field.state.value}
@@ -403,7 +407,7 @@ function PasswordStep({
         <form.Subscribe selector={(state) => state.isSubmitting}>
           {(isSubmitting) => (
             <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
-              {isSubmitting ? '重置中...' : '重置密码'}
+              {isSubmitting ? t('forgot.password.submitting') : t('forgot.password.submit')}
             </Button>
           )}
         </form.Subscribe>
@@ -416,7 +420,7 @@ function PasswordStep({
             className="cursor-pointer"
             onClick={onBack}
           >
-            返回
+            {t('common:back')}
           </Button>
         </div>
       </div>
@@ -425,6 +429,7 @@ function PasswordStep({
 }
 
 export function ForgotPasswordForm() {
+  const { t } = useTranslation(['auth', 'common']);
   const [step, setStep] = useState<ResetStep>('email');
   const [resetState, setResetState] = useState<ResetState>({
     email: '',
@@ -445,8 +450,8 @@ export function ForgotPasswordForm() {
     <Card>
       <CardHeader className="text-center">
         <StepIndicator currentStep={step} />
-        <CardTitle className="text-xl">{getStepTitle(step)}</CardTitle>
-        <CardDescription>{getStepDescription(step)}</CardDescription>
+        <CardTitle className="text-xl">{t(getStepTitle(step))}</CardTitle>
+        <CardDescription>{t(getStepDescription(step))}</CardDescription>
       </CardHeader>
       <CardContent>
         {step === 'email' && (
@@ -458,7 +463,7 @@ export function ForgotPasswordForm() {
                 className="inline-flex items-center text-sm text-muted-foreground hover:text-primary cursor-pointer"
               >
                 <ArrowLeft className="mr-1 h-4 w-4" />
-                返回登录
+                {t('forgot.backToLogin')}
               </Link>
             </div>
           </>

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AxiosError } from 'axios';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 import { VerificationCodeInput } from './VerificationCodeInput';
 import { emailApi } from '@/api/email';
 
@@ -14,6 +15,7 @@ interface SignupStepCodeProps {
 const RESEND_COOLDOWN = 60; // seconds
 
 export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
+  const { t } = useTranslation(['auth', 'common']);
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -35,7 +37,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
   const handleVerify = useCallback(
     async (codeToVerify: string) => {
       if (codeToVerify.length !== 6) {
-        setError('请输入 6 位验证码');
+        setError(t('signup.code.invalidLength'));
         return;
       }
 
@@ -47,14 +49,14 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
         onNext(result.verificationToken);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || '验证码无效');
+        setError(axiosError.response?.data?.error?.message || t('signup.code.invalid'));
         // Reset auto-verify flag on error so user can try again
         hasAutoVerified.current = false;
       } finally {
         setIsVerifying(false);
       }
     },
-    [email, onNext]
+    [email, onNext, t]
   );
 
   // Handle code change with auto-verify
@@ -84,7 +86,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
       hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || '验证码重发失败');
+      setError(axiosError.response?.data?.error?.message || t('signup.code.resendFailed'));
     } finally {
       setIsResending(false);
     }
@@ -93,7 +95,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <p className="text-sm text-muted-foreground">验证码已发送至</p>
+        <p className="text-sm text-muted-foreground">{t('signup.code.sentTo')}</p>
         <p className="font-medium">{email}</p>
       </div>
 
@@ -111,7 +113,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
 
       <div className="flex items-center justify-between">
         <Button type="button" variant="ghost" size="sm" className="cursor-pointer" onClick={onBack}>
-          返回
+          {t('common:back')}
         </Button>
 
         <Button
@@ -123,10 +125,10 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
           disabled={resendCooldown > 0 || isResending}
         >
           {isResending
-            ? '发送中...'
+            ? t('signup.code.sending')
             : resendCooldown > 0
-              ? `${resendCooldown}s 后可重发`
-              : '重新发送'}
+              ? t('signup.code.resendAfter', { seconds: resendCooldown })
+              : t('signup.code.resend')}
         </Button>
       </div>
     </div>

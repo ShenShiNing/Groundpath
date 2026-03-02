@@ -1,30 +1,37 @@
 import { Link } from '@tanstack/react-router';
 import { SignupForm, AuthPageLayout, AuthFooterLink } from '@/components/auth';
+import { useTranslation } from 'react-i18next';
 
 export function SignupPage() {
+  const { t } = useTranslation('auth');
+
   return (
     <AuthPageLayout
-      title="创建你的账号"
-      description="开始搭建你的知识库 Agent 工作空间"
+      title={t('signup.pageTitle')}
+      description={t('signup.pageDescription')}
       footer={
         <>
-          <AuthFooterLink text="已经有账号？" linkText="去登录" linkTo="/auth/login" />
+          <AuthFooterLink
+            text={t('signup.footerText')}
+            linkText={t('signup.footerLink')}
+            linkTo="/auth/login"
+          />
           <p className="text-center text-xs text-muted-foreground mt-4">
-            注册即代表你同意我们的{' '}
+            {t('signup.termsPrefix')}{' '}
             <Link
               to="/about"
               className="underline underline-offset-4 hover:text-foreground cursor-pointer"
             >
-              服务条款
+              {t('signup.terms')}
             </Link>{' '}
-            与{' '}
+            {t('signup.and')}{' '}
             <Link
               to="/about"
               className="underline underline-offset-4 hover:text-foreground cursor-pointer"
             >
-              隐私政策
+              {t('signup.privacy')}
             </Link>
-            。
+            {t('signup.suffix')}
           </p>
         </>
       }
