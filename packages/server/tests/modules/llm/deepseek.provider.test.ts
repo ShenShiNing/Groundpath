@@ -46,7 +46,7 @@ describe('DeepSeekProvider', () => {
       expect(result).toBe('Hello');
     });
 
-    it('falls back to reasoning_content when content is empty', async () => {
+    it('returns empty string when content is empty (does not leak reasoning)', async () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
         new Response(
           JSON.stringify({
@@ -57,7 +57,7 @@ describe('DeepSeekProvider', () => {
       );
 
       const result = await provider.generate([{ role: 'user', content: 'Hi' }]);
-      expect(result).toBe('thinking output');
+      expect(result).toBe('');
     });
 
     it('falls back to reasoning_content when content is missing', async () => {
@@ -104,7 +104,7 @@ describe('DeepSeekProvider', () => {
       expect(chunks).toEqual(['Hello', ' world']);
     });
 
-    it('yields reasoning_content when content is absent', async () => {
+    it('ignores reasoning_content during streaming', async () => {
       const stream = encodeSSE([
         { data: JSON.stringify({ choices: [{ delta: { reasoning_content: 'step 1' } }] }) },
         { data: JSON.stringify({ choices: [{ delta: { reasoning_content: ' step 2' } }] }) },
@@ -118,7 +118,8 @@ describe('DeepSeekProvider', () => {
       for await (const chunk of provider.streamGenerate([{ role: 'user', content: 'Hi' }])) {
         chunks.push(chunk);
       }
-      expect(chunks).toEqual(['step 1', ' step 2', 'final answer']);
+      // Only content chunks are yielded; reasoning_content is filtered out
+      expect(chunks).toEqual(['final answer']);
     });
 
     it('yields nothing for empty deltas', async () => {
