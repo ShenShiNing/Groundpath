@@ -41,7 +41,8 @@ export const llmService = {
    * Get generation options for a user.
    * Returns empty options so each provider uses its own API/SDK defaults.
    */
-  async getOptionsForUser(_userId: string): Promise<GenerateOptions> {
+  async getOptionsForUser(userId: string): Promise<GenerateOptions> {
+    void userId;
     return {};
   },
 
