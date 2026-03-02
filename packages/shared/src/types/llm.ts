@@ -57,6 +57,7 @@ export interface LLMProviderInfo {
   name: string;
   requiresApiKey: boolean;
   requiresBaseUrl: boolean; // true for custom provider
+  optionalBaseUrl?: boolean; // show base URL field but don't require it (e.g. Ollama)
   defaultBaseUrl?: string;
 }
 

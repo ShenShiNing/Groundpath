@@ -195,6 +195,7 @@ export const llmConfigService = {
         name: 'Ollama (Local)',
         requiresApiKey: false,
         requiresBaseUrl: false,
+        optionalBaseUrl: true,
         defaultBaseUrl: 'http://localhost:11434',
       },
       {

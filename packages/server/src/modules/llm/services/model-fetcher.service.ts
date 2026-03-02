@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 import type { ModelInfo, FetchModelsOptions } from '../providers/llm-provider.interface';
+import { llmConfig } from '@config/env';
 import { logger } from '@shared/logger';
 
 interface OllamaTagsResponse {
@@ -18,6 +19,16 @@ interface OpenAIModelsResponse {
     created: number;
     owned_by: string;
   }>;
+}
+
+/** Known OpenAI chat model prefixes */
+const OPENAI_CHAT_MODEL_PREFIXES = ['gpt-', 'o1-', 'o3-', 'o4-'];
+
+/**
+ * Create an AbortSignal that times out after configured ms
+ */
+function createTimeoutSignal(): AbortSignal {
+  return AbortSignal.timeout(llmConfig.modelFetchTimeout);
 }
 
 /**
@@ -46,7 +57,13 @@ export const modelFetcherService = {
           return [];
       }
     } catch (error) {
-      logger.warn({ error, provider }, 'Failed to fetch models');
+      const isTimeout = error instanceof DOMException && error.name === 'AbortError';
+      logger.warn(
+        { error, provider, isTimeout },
+        isTimeout
+          ? `Model fetch timed out after ${llmConfig.modelFetchTimeout}ms`
+          : 'Failed to fetch models'
+      );
       return [];
     }
   },
@@ -61,16 +78,15 @@ export const modelFetcherService = {
 
     const client = new OpenAI({
       apiKey: options.apiKey,
+      timeout: llmConfig.modelFetchTimeout,
     });
 
     const response = await client.models.list();
     const models: ModelInfo[] = [];
 
     for await (const model of response) {
-      // Filter to only OpenAI chat models (gpt-*, o1-*, o3-*)
-      // Excludes instruct models and other providers' models
       const isOpenAIModel =
-        (model.id.startsWith('gpt-') || model.id.startsWith('o1-') || model.id.startsWith('o3-')) &&
+        OPENAI_CHAT_MODEL_PREFIXES.some((prefix) => model.id.startsWith(prefix)) &&
         !model.id.includes('instruct');
 
       if (isOpenAIModel) {
@@ -103,6 +119,7 @@ export const modelFetcherService = {
     const response = await fetch(`${baseUrl}/api/tags`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
+      signal: createTimeoutSignal(),
     });
 
     if (!response.ok) {
@@ -137,6 +154,7 @@ export const modelFetcherService = {
         Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: createTimeoutSignal(),
     });
 
     if (!response.ok) {
@@ -173,6 +191,7 @@ export const modelFetcherService = {
         Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: createTimeoutSignal(),
     });
 
     if (!response.ok) {
@@ -206,6 +225,7 @@ export const modelFetcherService = {
 
     const client = new Anthropic({
       apiKey: options.apiKey,
+      timeout: llmConfig.modelFetchTimeout,
     });
 
     const models: ModelInfo[] = [];
@@ -241,6 +261,7 @@ export const modelFetcherService = {
         Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: createTimeoutSignal(),
     });
 
     if (!response.ok) {

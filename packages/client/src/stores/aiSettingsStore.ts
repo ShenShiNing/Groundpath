@@ -1,13 +1,9 @@
 import { create } from 'zustand';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 
-export type TestStatus = 'idle' | 'testing' | 'success' | 'error';
-
 interface AISettingsState {
   // UI 状态
   showApiKey: boolean;
-  testStatus: TestStatus;
-  testMessage: string;
 
   // 待提交的凭证（用于在保存前获取模型列表）
   pendingApiKey: string | null;
@@ -15,8 +11,6 @@ interface AISettingsState {
 
   // 操作
   toggleShowApiKey: () => void;
-  setTestResult: (status: TestStatus, message: string) => void;
-  resetTestStatus: () => void;
   setPendingApiKey: (key: string | null) => void;
   setPendingBaseUrl: (url: string | null) => void;
   resetPendingCredentials: () => void;
@@ -25,20 +19,14 @@ interface AISettingsState {
 
 const initialState = {
   showApiKey: false,
-  testStatus: 'idle' as TestStatus,
-  testMessage: '',
-  pendingApiKey: null,
-  pendingBaseUrl: null,
+  pendingApiKey: null as string | null,
+  pendingBaseUrl: null as string | null,
 };
 
 export const useAISettingsStore = create<AISettingsState>()((set) => ({
   ...initialState,
 
   toggleShowApiKey: () => set((s) => ({ showApiKey: !s.showApiKey })),
-
-  setTestResult: (status, message) => set({ testStatus: status, testMessage: message }),
-
-  resetTestStatus: () => set({ testStatus: 'idle', testMessage: '' }),
 
   setPendingApiKey: (key) => set({ pendingApiKey: key }),
 

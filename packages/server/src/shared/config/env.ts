@@ -148,6 +148,7 @@ const llmSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),
   DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
+  MODEL_FETCH_TIMEOUT: z.coerce.number().default(15000), // 15s for fetching model lists
 });
 
 // -------------------- Logging --------------------
@@ -353,6 +354,7 @@ export const llmConfig = {
     apiKey: validatedEnv.DEEPSEEK_API_KEY,
     baseUrl: validatedEnv.DEEPSEEK_BASE_URL,
   },
+  modelFetchTimeout: validatedEnv.MODEL_FETCH_TIMEOUT,
 } as const;
 
 /** Logging configuration */

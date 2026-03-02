@@ -49,10 +49,15 @@ export function AISettingsForm() {
   const deleteMutation = useDeleteLLMConfig();
   const testMutation = useTestLLMConnection();
 
-  // Zustand store
-  const store = useAISettingsStore();
-
-  const reset = useAISettingsStore((state) => state.reset);
+  // Zustand — fine-grained selectors
+  const showApiKey = useAISettingsStore((s) => s.showApiKey);
+  const pendingApiKey = useAISettingsStore((s) => s.pendingApiKey);
+  const pendingBaseUrl = useAISettingsStore((s) => s.pendingBaseUrl);
+  const toggleShowApiKey = useAISettingsStore((s) => s.toggleShowApiKey);
+  const setPendingApiKey = useAISettingsStore((s) => s.setPendingApiKey);
+  const setPendingBaseUrl = useAISettingsStore((s) => s.setPendingBaseUrl);
+  const resetPendingCredentials = useAISettingsStore((s) => s.resetPendingCredentials);
+  const reset = useAISettingsStore((s) => s.reset);
 
   useEffect(() => {
     reset();
@@ -82,25 +87,26 @@ export function AISettingsForm() {
   const canFetch = canFetchModels(
     values.provider,
     !!(config?.hasApiKey && config.provider === values.provider),
-    store.pendingApiKey,
+    pendingApiKey,
     values.baseUrl,
-    store.pendingBaseUrl
+    pendingBaseUrl
   );
 
   // 获取模型列表
+  const showBaseUrlField = !!currentProvider?.requiresBaseUrl || !!currentProvider?.optionalBaseUrl;
+
   const {
     data: modelsData,
     isLoading: modelsLoading,
     isError: modelsError,
     refetch: refetchModels,
   } = useLLMModels(values.provider, {
-    apiKey: store.pendingApiKey ?? undefined,
-    baseUrl: values.provider === 'custom' ? (store.pendingBaseUrl ?? values.baseUrl) : undefined,
+    apiKey: pendingApiKey ?? undefined,
+    baseUrl: showBaseUrlField ? (pendingBaseUrl ?? values.baseUrl) || undefined : undefined,
     enabled: canFetch,
   });
 
   const models = modelsData?.models ?? [];
-  const effectiveModel = values.model || models[0]?.id || '';
 
   // Loading 状态
   if (isLoading) {
@@ -123,8 +129,8 @@ export function AISettingsForm() {
   const isClearing = deleteMutation.isPending;
   const isBusy = isSaving || isClearing;
   const showApiKeyField = !!currentProvider?.requiresApiKey;
-  const showBaseUrlField = !!currentProvider?.requiresBaseUrl;
   const hasSavedKey = !!(config?.hasApiKey && config.provider === values.provider);
+  const hasModel = !!values.model;
 
   function resetFormAfterClear() {
     form.setFieldValue('provider', 'openai');
@@ -134,8 +140,7 @@ export function AISettingsForm() {
     form.setFieldValue('temperature', 0.7);
     form.setFieldValue('maxTokens', 2048);
     form.setFieldValue('topP', 1.0);
-    store.resetPendingCredentials();
-    store.resetTestStatus();
+    resetPendingCredentials();
   }
 
   // Provider 切换
@@ -146,8 +151,7 @@ export function AISettingsForm() {
     if (newProvider !== 'custom') {
       form.setFieldValue('baseUrl', '');
     }
-    store.resetPendingCredentials();
-    store.resetTestStatus();
+    resetPendingCredentials();
   }
 
   // 测试连接
@@ -161,7 +165,7 @@ export function AISettingsForm() {
 
     testMutation.mutate(
       {
-        ...(effectiveModel && { model: effectiveModel }),
+        ...(values.model && { model: values.model }),
         ...(values.provider !== config?.provider && { provider: values.provider }),
         ...(values.apiKey && { apiKey: values.apiKey }),
         ...(values.baseUrl && { baseUrl: values.baseUrl }),
@@ -186,10 +190,15 @@ export function AISettingsForm() {
 
   // 保存设置
   function handleSave() {
+    if (!values.model) {
+      toast.error('请先选择或输入模型');
+      return;
+    }
+
     updateMutation.mutate(
       {
         provider: values.provider,
-        model: effectiveModel,
+        model: values.model,
         baseUrl: values.baseUrl || null,
         temperature: values.temperature,
         maxTokens: values.maxTokens,
@@ -199,7 +208,7 @@ export function AISettingsForm() {
       {
         onSuccess: () => {
           form.setFieldValue('apiKey', '');
-          store.resetPendingCredentials();
+          resetPendingCredentials();
         },
       }
     );
@@ -271,13 +280,13 @@ export function AISettingsForm() {
               <div className="relative">
                 <Input
                   id="apiKey"
-                  type={store.showApiKey ? 'text' : 'password'}
+                  type={showApiKey ? 'text' : 'password'}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={() => {
                     field.handleBlur();
                     if (field.state.value.trim()) {
-                      store.setPendingApiKey(field.state.value.trim());
+                      setPendingApiKey(field.state.value.trim());
                     }
                   }}
                   placeholder={hasSavedKey ? '输入新 Key 以更新' : '输入 API Key'}
@@ -287,11 +296,12 @@ export function AISettingsForm() {
                 />
                 <button
                   type="button"
-                  onClick={store.toggleShowApiKey}
+                  onClick={toggleShowApiKey}
                   disabled={isBusy}
+                  aria-label={showApiKey ? '隐藏 API Key' : '显示 API Key'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {store.showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -309,7 +319,12 @@ export function AISettingsForm() {
         <form.Field name="baseUrl">
           {(field) => (
             <div className="space-y-2">
-              <Label htmlFor="baseUrl">Base URL</Label>
+              <Label htmlFor="baseUrl">
+                Base URL
+                {currentProvider?.optionalBaseUrl && (
+                  <span className="ml-2 text-xs text-muted-foreground">(可选)</span>
+                )}
+              </Label>
               <Input
                 id="baseUrl"
                 type="url"
@@ -318,14 +333,18 @@ export function AISettingsForm() {
                 onBlur={() => {
                   field.handleBlur();
                   if (field.state.value.trim()) {
-                    store.setPendingBaseUrl(field.state.value.trim());
+                    setPendingBaseUrl(field.state.value.trim());
                   }
                 }}
-                placeholder="https://api.example.com"
+                placeholder={currentProvider?.defaultBaseUrl ?? 'https://api.example.com'}
                 disabled={isBusy}
                 autoComplete="off"
               />
-              <p className="text-xs text-muted-foreground">OpenAI 兼容的 API 端点地址</p>
+              <p className="text-xs text-muted-foreground">
+                {currentProvider?.optionalBaseUrl
+                  ? `留空则使用默认地址 ${currentProvider.defaultBaseUrl ?? ''}`
+                  : 'OpenAI 兼容的 API 端点地址'}
+              </p>
             </div>
           )}
         </form.Field>
@@ -333,105 +352,40 @@ export function AISettingsForm() {
 
       {/* 模型选择 */}
       <form.Field name="model">
-        {(field) => {
-          const effectiveModelValue = field.state.value || models[0]?.id || '';
-          return (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="model">模型</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefreshModels}
-                  disabled={modelsLoading}
-                  className="h-6 px-2 text-xs"
-                >
-                  {modelsLoading ? (
-                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-1 h-3 w-3" />
-                  )}
-                  刷新
-                </Button>
-              </div>
-              <ModelSelector
-                value={effectiveModelValue}
-                models={models}
-                isLoading={modelsLoading}
-                isError={modelsError}
-                canFetch={canFetch}
-                requiresApiKey={!!currentProvider?.requiresApiKey}
-                disabled={isBusy}
-                onValueChange={(v) => field.handleChange(v)}
-              />
-              <p className="text-xs text-muted-foreground">从列表选择或输入自定义模型名称</p>
+        {(field) => (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="model">模型</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleRefreshModels}
+                disabled={modelsLoading}
+                className="h-6 px-2 text-xs"
+              >
+                {modelsLoading ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-1 h-3 w-3" />
+                )}
+                刷新
+              </Button>
             </div>
-          );
-        }}
+            <ModelSelector
+              value={field.state.value}
+              models={models}
+              isLoading={modelsLoading}
+              isError={modelsError}
+              canFetch={canFetch}
+              requiresApiKey={!!currentProvider?.requiresApiKey}
+              disabled={isBusy}
+              onValueChange={(v) => field.handleChange(v)}
+            />
+            <p className="text-xs text-muted-foreground">从列表选择或输入自定义模型名称</p>
+          </div>
+        )}
       </form.Field>
-
-      {/* 高级设置 */}
-      <div className="space-y-4 rounded-lg border p-4">
-        <h4 className="font-medium">高级设置</h4>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <form.Field name="temperature">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor="temperature">Temperature</Label>
-                <Input
-                  id="temperature"
-                  type="number"
-                  min={0}
-                  max={2}
-                  step={0.1}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(parseFloat(e.target.value) || 0)}
-                  disabled={isBusy}
-                />
-                <p className="text-xs text-muted-foreground">0 = 确定性, 2 = 创造性</p>
-              </div>
-            )}
-          </form.Field>
-
-          <form.Field name="maxTokens">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor="maxTokens">Max Tokens</Label>
-                <Input
-                  id="maxTokens"
-                  type="number"
-                  min={1}
-                  max={128000}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(parseInt(e.target.value) || 2048)}
-                  disabled={isBusy}
-                />
-                <p className="text-xs text-muted-foreground">最大响应长度</p>
-              </div>
-            )}
-          </form.Field>
-
-          <form.Field name="topP">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor="topP">Top P</Label>
-                <Input
-                  id="topP"
-                  type="number"
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(parseFloat(e.target.value) || 1)}
-                  disabled={isBusy}
-                />
-                <p className="text-xs text-muted-foreground">核采样参数</p>
-              </div>
-            )}
-          </form.Field>
-        </div>
-      </div>
 
       {/* 操作区 */}
       <div className="space-y-3">
@@ -443,9 +397,9 @@ export function AISettingsForm() {
             disabled={
               isBusy ||
               testMutation.isPending ||
-              !effectiveModel ||
+              !hasModel ||
               (showApiKeyField && !hasSavedKey && !values.apiKey) ||
-              (showBaseUrlField && !values.baseUrl)
+              (currentProvider?.requiresBaseUrl && !values.baseUrl)
             }
           >
             {testMutation.isPending ? (
@@ -484,7 +438,7 @@ export function AISettingsForm() {
             </AlertDialogContent>
           </AlertDialog>
 
-          <Button type="button" onClick={handleSave} disabled={isBusy || !effectiveModel}>
+          <Button type="button" onClick={handleSave} disabled={isBusy || !hasModel}>
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
