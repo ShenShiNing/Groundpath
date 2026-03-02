@@ -231,7 +231,7 @@ export function AISettingsForm() {
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {/* Provider */}
           <form.Field name="provider">
             {(field) => (
@@ -312,11 +312,11 @@ export function AISettingsForm() {
             </form.Field>
           )}
 
-          {/* Base URL */}
+          {/* Base URL — full width */}
           {showBaseUrlField && (
             <form.Field name="baseUrl">
               {(field) => (
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="baseUrl">
                     Base URL
                     {currentProvider?.optionalBaseUrl && (
@@ -384,16 +384,18 @@ export function AISettingsForm() {
                   {t('form.refresh')}
                 </Button>
               </div>
-              <ModelSelector
-                value={field.state.value}
-                models={models}
-                isLoading={modelsLoading}
-                isError={modelsError}
-                canFetch={canFetch}
-                requiresApiKey={!!currentProvider?.requiresApiKey}
-                disabled={isBusy}
-                onValueChange={(v) => field.handleChange(v)}
-              />
+              <div className="max-w-md">
+                <ModelSelector
+                  value={field.state.value}
+                  models={models}
+                  isLoading={modelsLoading}
+                  isError={modelsError}
+                  canFetch={canFetch}
+                  requiresApiKey={!!currentProvider?.requiresApiKey}
+                  disabled={isBusy}
+                  onValueChange={(v) => field.handleChange(v)}
+                />
+              </div>
               <p className="text-xs text-muted-foreground">{t('form.modelHelper')}</p>
             </div>
           )}

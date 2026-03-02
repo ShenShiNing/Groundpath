@@ -83,14 +83,14 @@ export function AISettingsPage() {
         </header>
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_20rem] xl:gap-12">
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 xl:grid-cols-[1fr_18rem]">
             {/* Left: Settings Form */}
-            <div className="min-w-0 max-w-2xl">
+            <div className="min-w-0">
               <AISettingsForm />
             </div>
 
             {/* Right: Contextual Sidebar */}
-            <aside className="hidden space-y-6 xl:block">
+            <aside className="hidden space-y-6 xl:block xl:sticky xl:top-0 xl:self-start">
               {/* Status Overview */}
               <div className="rounded-lg border bg-muted/30 p-5">
                 <h3 className="flex items-center gap-2 text-sm font-semibold">
