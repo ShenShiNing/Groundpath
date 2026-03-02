@@ -7,7 +7,7 @@ import { emailSchema } from '@knowledge-agent/shared/schemas';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { FormField } from './FormField';
-import { emailApi } from '@/api/email';
+import { emailApi } from '@/api';
 
 interface SignupStepEmailProps {
   onNext: (email: string) => void;

@@ -9,7 +9,7 @@ import {
 } from 'react';
 import MDEditor from '@uiw/react-md-editor/nohighlight';
 import { Link } from '@tanstack/react-router';
-import type { Citation } from '@/stores/chatPanelStore';
+import type { Citation } from '@/stores';
 import { CitationInline } from './CitationInline';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';

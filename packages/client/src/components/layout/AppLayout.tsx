@@ -124,7 +124,7 @@ function SidebarNavItem({
 
 function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed: boolean }) {
   const { t } = useTranslation(['app', 'common']);
-  const { user } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const userInitials = getUserInitials(user?.username, user?.email);
   const displayName = user?.username ?? t('user', { ns: 'common' });
 
@@ -165,25 +165,25 @@ function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to={'/knowledge-bases' as string}>
+            <Link to="/knowledge-bases">
               <Plus className="size-4 mr-2" />
               {t('userMenu.newKnowledgeBase')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to={'/profile' as string}>
+            <Link to="/profile">
               <User className="size-4 mr-2" />
               {t('userMenu.profile')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to={'/settings/ai' as string}>
+            <Link to="/settings/ai">
               <Settings className="size-4 mr-2" />
               {t('userMenu.settings')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to={'/sessions' as string}>
+            <Link to="/sessions">
               <Monitor className="size-4 mr-2" />
               {t('userMenu.sessions')}
             </Link>
@@ -215,8 +215,10 @@ function Sidebar({
   const { t } = useTranslation(['app', 'common']);
   const router = useRouter();
   const location = useLocation();
-  const { accessToken } = useAuthStore();
-  const { conversationId, switchConversation, startNewConversation } = useChatPanelStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const conversationId = useChatPanelStore((s) => s.conversationId);
+  const switchConversation = useChatPanelStore((s) => s.switchConversation);
+  const startNewConversation = useChatPanelStore((s) => s.startNewConversation);
   const isAuthenticated = !!accessToken;
   const isChatPage = location.pathname === '/chat' || location.pathname.startsWith('/chat/');
 
@@ -224,13 +226,11 @@ function Sidebar({
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  const handleSelectConversation = (selectedConversationId: string) => {
-    void (async () => {
-      await switchConversation(selectedConversationId);
-      if (!isChatPage) {
-        await router.navigate({ to: '/chat' });
-      }
-    })();
+  const handleSelectConversation = async (selectedConversationId: string) => {
+    await switchConversation(selectedConversationId);
+    if (!isChatPage) {
+      await router.navigate({ to: '/chat' });
+    }
   };
 
   const handleNewConversation = () => {
@@ -438,7 +438,9 @@ function Sidebar({
 
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   const router = useRouter();
-  const { accessToken, isAuthenticated: storeIsAuthenticated, clearAuth } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const storeIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
   const isAuthenticated = !!accessToken;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

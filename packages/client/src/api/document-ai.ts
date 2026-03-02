@@ -178,7 +178,12 @@ export function streamSummary(
     await parseSSEStream(result.reader, dispatcher);
   };
 
-  run();
+  run().catch((error) => {
+    handlers.onError({
+      code: 'STREAM_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  });
   return abortController;
 }
 
@@ -219,7 +224,12 @@ export function streamGenerate(
     await parseSSEStream(result.reader, dispatcher);
   };
 
-  run();
+  run().catch((error) => {
+    handlers.onError({
+      code: 'STREAM_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  });
   return abortController;
 }
 
@@ -261,7 +271,12 @@ export function streamExpand(
     await parseSSEStream(result.reader, dispatcher);
   };
 
-  run();
+  run().catch((error) => {
+    handlers.onError({
+      code: 'STREAM_ERROR',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  });
   return abortController;
 }
 

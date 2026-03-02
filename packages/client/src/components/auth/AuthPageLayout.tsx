@@ -15,7 +15,8 @@ interface AuthPageLayoutProps {
 
 function AuthHeader() {
   const { t } = useTranslation('auth');
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
 
   return (

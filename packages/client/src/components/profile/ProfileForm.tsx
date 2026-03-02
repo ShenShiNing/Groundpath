@@ -10,13 +10,16 @@ import { Label } from '@/components/ui/label';
 import { FormField } from '@/components/auth/FormField';
 import { useAuthStore, useUserStore } from '@/stores';
 import { AvatarUpload } from './AvatarUpload';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileFormProps {
   onSuccess?: (user: UserPublicInfo) => void;
 }
 
 export function ProfileForm({ onSuccess }: ProfileFormProps) {
-  const { user, setUser } = useAuthStore();
+  const { t } = useTranslation('profile');
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const { updateProfile, isUpdatingProfile } = useUserStore();
   const [error, setError] = useState<string | null>(null);
 
@@ -37,8 +40,7 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
         onSuccess?.(updatedUser);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        const errorMessage =
-          axiosError.response?.data?.error?.message || 'Failed to update profile';
+        const errorMessage = axiosError.response?.data?.error?.message || t('form.updateFailed');
         setError(errorMessage);
       }
     },
@@ -69,8 +71,8 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
         {(field) => (
           <FormField
             name={field.name}
-            label="Username"
-            placeholder="john_doe"
+            label={t('form.username')}
+            placeholder={t('form.usernamePlaceholder')}
             icon={User}
             value={field.state.value}
             onChange={field.handleChange}
@@ -78,7 +80,7 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
             disabled={isUpdatingProfile}
             required
             errors={field.state.meta.errors as string[]}
-            hint="3-50 characters, letters, numbers, and underscores only"
+            hint={t('form.usernameHint')}
           />
         )}
       </form.Field>
@@ -95,12 +97,12 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
       >
         {(field) => (
           <div className="space-y-2">
-            <Label htmlFor="bio">Bio</Label>
+            <Label htmlFor="bio">{t('form.bio')}</Label>
             <div className="relative">
               <FileText className="absolute left-3 top-3 size-4 text-muted-foreground" />
               <Textarea
                 id="bio"
-                placeholder="Tell us about yourself..."
+                placeholder={t('form.bioPlaceholder')}
                 className="min-h-24 pl-10 resize-none"
                 value={field.state.value}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -122,7 +124,7 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
 
       {/* Submit Button */}
       <Button type="submit" disabled={isUpdatingProfile}>
-        {isUpdatingProfile ? 'Saving...' : 'Save Changes'}
+        {isUpdatingProfile ? t('form.saving') : t('form.save')}
       </Button>
     </form>
   );

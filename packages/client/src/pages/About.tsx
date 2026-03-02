@@ -24,7 +24,8 @@ const principles = [
 
 export default function AboutPage() {
   const { t } = useTranslation('home');
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
 
   return (

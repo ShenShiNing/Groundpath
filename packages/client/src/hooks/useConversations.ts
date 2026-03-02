@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { conversationApi } from '@/api/chat';
+import { conversationApi } from '@/api';
 import { queryKeys } from '@/lib/query';
 import type { ConversationListItem } from '@knowledge-agent/shared/types';
 

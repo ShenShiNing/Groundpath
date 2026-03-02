@@ -77,7 +77,8 @@ function getUserInitials(username?: string, email?: string): string {
 function HomeUserMenu() {
   const { t } = useTranslation(['home', 'common']);
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const displayName = user?.username ?? t('user', { ns: 'common' });
   const initials = getUserInitials(user?.username, user?.email);
 
@@ -113,19 +114,19 @@ function HomeUserMenu() {
 
         <DropdownMenuGroup>
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link to={'/dashboard' as string}>
+            <Link to="/dashboard">
               <LayoutDashboard className="size-4 mr-2" />
               {t('dashboard', { ns: 'common' })}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link to={'/profile' as string}>
+            <Link to="/profile">
               <User className="size-4 mr-2" />
               {t('profile', { ns: 'common' })}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild className="cursor-pointer">
-            <Link to={'/sessions' as string}>
+            <Link to="/sessions">
               <Monitor className="size-4 mr-2" />
               {t('sessions', { ns: 'common' })}
             </Link>
@@ -152,7 +153,8 @@ function HomeUserMenu() {
 function Navbar() {
   const { t } = useTranslation('home');
   const { theme, setTheme } = useTheme();
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
 
   return (
@@ -189,10 +191,10 @@ function Navbar() {
             ) : (
               <>
                 <Button variant="ghost" size="sm" className="cursor-pointer" asChild>
-                  <Link to={'/auth/login' as string}>{t('login')}</Link>
+                  <Link to="/auth/login">{t('login')}</Link>
                 </Button>
                 <Button size="sm" className="cursor-pointer" asChild>
-                  <Link to={'/auth/signup' as string}>{t('getStarted')}</Link>
+                  <Link to="/auth/signup">{t('getStarted')}</Link>
                 </Button>
               </>
             )}
@@ -205,7 +207,8 @@ function Navbar() {
 
 const HomePage = () => {
   const { t } = useTranslation('home');
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
   const ctaPrimaryKey = hasAuthSession ? 'cta.primary.auth' : 'cta.primary.guest';
 
@@ -237,7 +240,7 @@ const HomePage = () => {
           <div className="mt-9 flex flex-wrap items-center gap-3">
             {hasAuthSession ? (
               <Button size="lg" className="cursor-pointer" asChild>
-                <Link to={'/dashboard' as string}>
+                <Link to="/dashboard">
                   {t('hero.enterDashboard')}
                   <ArrowRight className="ml-1.5 size-4" />
                 </Link>
@@ -245,13 +248,13 @@ const HomePage = () => {
             ) : (
               <>
                 <Button size="lg" className="cursor-pointer" asChild>
-                  <Link to={'/auth/signup' as string}>
+                  <Link to="/auth/signup">
                     {t('hero.startBuilding')}
                     <ArrowRight className="ml-1.5 size-4" />
                   </Link>
                 </Button>
                 <Button size="lg" variant="outline" className="cursor-pointer" asChild>
-                  <Link to={'/auth/login' as string}>{t('hero.loginNow')}</Link>
+                  <Link to="/auth/login">{t('hero.loginNow')}</Link>
                 </Button>
               </>
             )}
@@ -338,13 +341,13 @@ const HomePage = () => {
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Button size="lg" className="cursor-pointer" asChild>
-              <Link to={hasAuthSession ? ('/dashboard' as string) : ('/auth/signup' as string)}>
+              <Link to={hasAuthSession ? '/dashboard' : '/auth/signup'}>
                 {t(ctaPrimaryKey)}
                 <ArrowRight className="ml-1.5 size-4" />
               </Link>
             </Button>
             <Button variant="outline" size="lg" className="cursor-pointer" asChild>
-              <Link to={'/about' as string}>{t('cta.secondary')}</Link>
+              <Link to="/about">{t('cta.secondary')}</Link>
             </Button>
           </div>
         </div>
@@ -362,7 +365,7 @@ const HomePage = () => {
                 {t('footer.about')}
               </Link>
               <Link
-                to={hasAuthSession ? ('/dashboard' as string) : ('/auth/login' as string)}
+                to={hasAuthSession ? '/dashboard' : '/auth/login'}
                 className="cursor-pointer transition-colors duration-200 hover:text-foreground"
               >
                 {t('footer.console')}

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useQueryClient } from '@tanstack/react-query';
 import { Upload, File, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useUploadQueue } from '@/hooks';
 import { queryKeys } from '@/lib/query';
+import { useTranslation } from 'react-i18next';
 
 interface DocumentUploadProps {
   knowledgeBaseId?: string;
@@ -31,8 +32,16 @@ export function DocumentUpload({
   onSuccess,
   className,
 }: DocumentUploadProps) {
+  const { t } = useTranslation('document');
   const queryClient = useQueryClient();
   const queue = useUploadQueue({ maxConcurrent: 3 });
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    return () => {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current);
+    };
+  }, []);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -48,7 +57,7 @@ export function DocumentUpload({
     onDropRejected: (rejections) => {
       rejections.forEach((rejection) => {
         const errors = rejection.errors.map((e) => e.message).join(', ');
-        toast.error(`File rejected: ${rejection.file.name} - ${errors}`);
+        toast.error(t('upload.fileRejected', { name: rejection.file.name, errors }));
       });
     },
   });
@@ -58,7 +67,7 @@ export function DocumentUpload({
       knowledgeBaseId: knowledgeBaseId ?? undefined,
       folderId: folderId ?? undefined,
       onFileComplete: (_, file) => {
-        toast.success(`Uploaded: ${file.name}`);
+        toast.success(t('upload.fileUploaded', { name: file.name }));
       },
       onAllComplete: (hasErrors) => {
         // Invalidate document queries to refresh the list
@@ -74,7 +83,7 @@ export function DocumentUpload({
 
         if (!hasErrors) {
           // Clear completed files after a delay and close dialog
-          setTimeout(() => {
+          clearTimerRef.current = setTimeout(() => {
             queue.clearCompleted();
             onSuccess?.();
           }, 1500);
@@ -100,13 +109,11 @@ export function DocumentUpload({
         <input {...getInputProps()} />
         <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         {isDragActive ? (
-          <p className="text-primary">Drop files here...</p>
+          <p className="text-primary">{t('upload.dropHere')}</p>
         ) : (
           <>
-            <p className="text-muted-foreground mb-2">Drag & drop files here, or click to select</p>
-            <p className="text-xs text-muted-foreground">
-              Supported: PDF, Markdown, Text, DOCX (max 21MB)
-            </p>
+            <p className="text-muted-foreground mb-2">{t('upload.dragAndDrop')}</p>
+            <p className="text-xs text-muted-foreground">{t('upload.supportedTypes')}</p>
           </>
         )}
       </div>
@@ -114,12 +121,16 @@ export function DocumentUpload({
       {files.length > 0 && (
         <div className="space-y-2">
           <div className="text-sm font-medium">
-            Files ({files.length})
+            {t('upload.fileCount', { count: files.length })}
             {isUploading && (
               <span className="text-muted-foreground">
                 {' '}
-                - Uploading {stats.uploading} of {stats.uploading + stats.pending} ({totalProgress}
-                %)
+                -{' '}
+                {t('upload.uploadingProgress', {
+                  current: stats.uploading,
+                  total: stats.uploading + stats.pending,
+                  progress: totalProgress,
+                })}
               </span>
             )}
           </div>
@@ -157,10 +168,12 @@ export function DocumentUpload({
                       <span className="text-xs text-blue-600">{fileState.progress}%</span>
                     )}
                     {fileState.status === 'completed' && (
-                      <span className="text-xs text-green-600">Complete</span>
+                      <span className="text-xs text-green-600">{t('upload.complete')}</span>
                     )}
                     {fileState.status === 'error' && (
-                      <span className="text-xs text-red-600">{fileState.error || 'Error'}</span>
+                      <span className="text-xs text-red-600">
+                        {fileState.error || t('upload.error')}
+                      </span>
                     )}
                   </div>
                   {fileState.status === 'uploading' && (
@@ -184,7 +197,7 @@ export function DocumentUpload({
           {isUploading && (
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Overall progress</span>
+                <span>{t('upload.overallProgress')}</span>
                 <span>{totalProgress}%</span>
               </div>
               <Progress value={totalProgress} className="h-2" />
@@ -199,17 +212,17 @@ export function DocumentUpload({
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading...
+                {t('upload.uploading')}
               </>
             ) : stats.error > 0 ? (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Retry {stats.error} failed file{stats.error !== 1 ? 's' : ''}
+                {t('upload.retryFailed', { count: stats.error })}
               </>
             ) : (
               <>
                 <Upload className="mr-2 h-4 w-4" />
-                Upload {stats.pending} file{stats.pending !== 1 ? 's' : ''}
+                {t('upload.uploadFiles', { count: stats.pending })}
               </>
             )}
           </Button>

@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useKBFolders, useCreateFolderInKB, useUpdateFolder } from '@/hooks';
+import { useTranslation } from 'react-i18next';
 
 interface FolderDialogProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function FolderDialog({
   parentId,
   knowledgeBaseId,
 }: FolderDialogProps) {
+  const { t } = useTranslation(['document', 'common']);
   // Use KB-specific folder list when knowledgeBaseId is provided
   const effectiveKbId = knowledgeBaseId ?? folder?.knowledgeBaseId;
   const { data: folders = [] } = useKBFolders(effectiveKbId);
@@ -61,10 +63,10 @@ export function FolderDialog({
               parentId: value.parentId,
             },
           });
-          toast.success('Folder updated');
+          toast.success(t('folder.toast.updated'));
         } else {
           if (!effectiveKbId) {
-            toast.error('Knowledge base ID is required');
+            toast.error(t('folder.toast.kbIdRequired'));
             return;
           }
           await createMutation.mutateAsync({
@@ -74,11 +76,11 @@ export function FolderDialog({
               parentId: value.parentId,
             },
           });
-          toast.success('Folder created');
+          toast.success(t('folder.toast.created'));
         }
         onOpenChange(false);
       } catch {
-        toast.error(isEditing ? 'Failed to update folder' : 'Failed to create folder');
+        toast.error(isEditing ? t('folder.toast.updateFailed') : t('folder.toast.createFailed'));
       }
     },
   });
@@ -98,12 +100,10 @@ export function FolderDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Folder className="h-5 w-5" />
-            {isEditing ? 'Edit Folder' : 'Create Folder'}
+            {isEditing ? t('folder.dialog.editTitle') : t('folder.dialog.createTitle')}
           </DialogTitle>
           <DialogDescription>
-            {isEditing
-              ? 'Update the folder name and location.'
-              : 'Create a new folder to organize your documents.'}
+            {isEditing ? t('folder.dialog.editDescription') : t('folder.dialog.createDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -118,10 +118,10 @@ export function FolderDialog({
           <form.Field name="name">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">{t('folder.form.name')}</Label>
                 <Input
                   id="name"
-                  placeholder="Folder name"
+                  placeholder={t('folder.form.namePlaceholder')}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   disabled={isSubmitting}
@@ -133,17 +133,17 @@ export function FolderDialog({
           <form.Field name="parentId">
             {(field) => (
               <div className="space-y-2">
-                <Label htmlFor="parentId">Parent Folder</Label>
+                <Label htmlFor="parentId">{t('folder.form.parentFolder')}</Label>
                 <Select
                   value={field.state.value ?? 'root'}
                   onValueChange={(value) => field.handleChange(value === 'root' ? null : value)}
                   disabled={isSubmitting}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select parent folder" />
+                    <SelectValue placeholder={t('folder.form.parentPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="root">Root (no parent)</SelectItem>
+                    <SelectItem value="root">{t('folder.form.root')}</SelectItem>
                     {availableParents.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.name}
@@ -162,16 +162,16 @@ export function FolderDialog({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel
+              {t('cancel', { ns: 'common' })}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting
                 ? isEditing
-                  ? 'Updating...'
-                  : 'Creating...'
+                  ? t('folder.form.updating')
+                  : t('folder.form.creating')
                 : isEditing
-                  ? 'Update'
-                  : 'Create'}
+                  ? t('folder.form.update')
+                  : t('folder.form.create')}
             </Button>
           </DialogFooter>
         </form>

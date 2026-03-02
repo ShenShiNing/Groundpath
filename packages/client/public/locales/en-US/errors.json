@@ -6,6 +6,17 @@
     "backToHome": "Back to Home",
     "goBack": "Go back"
   },
+  "boundary": {
+    "title": "Something went wrong",
+    "defaultMessage": "An unexpected error occurred",
+    "retry": "Try again"
+  },
+  "route": {
+    "title": "Page Error",
+    "defaultMessage": "An unexpected error occurred while loading this page.",
+    "retry": "Retry",
+    "dashboard": "Dashboard"
+  },
   "oauth": {
     "processing": {
       "title": "Processing login",

@@ -29,13 +29,13 @@ const quickLinks = [
     to: '/settings/ai',
     icon: <Settings className="size-5" />,
   },
-] as const;
+];
 
 function QuickLinkCard({ link }: { link: (typeof quickLinks)[number] }) {
   const { t } = useTranslation('dashboard');
 
   return (
-    <Link to={link.to as string}>
+    <Link to={link.to}>
       <Card className={cn('transition-colors hover:bg-muted/50 cursor-pointer', 'h-full')}>
         <CardContent className="flex items-center gap-4 p-4">
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">

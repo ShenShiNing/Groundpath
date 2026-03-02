@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useDeleteKnowledgeBase } from '@/hooks';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 interface KnowledgeBaseCardProps {
   knowledgeBase: KnowledgeBaseListItem;
@@ -34,29 +35,35 @@ function getIconColors(id: string) {
   return iconColorVariants[hash % iconColorVariants.length]!;
 }
 
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const dateObj = new Date(date);
-  const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+function useFormatTimeAgo() {
+  const { t } = useTranslation('knowledgeBase');
 
-  if (seconds < 60) return 'Just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-  if (seconds < 2592000) return `${Math.floor(seconds / 604800)}w ago`;
-  return dateObj.toLocaleDateString();
+  return (date: Date): string => {
+    const now = new Date();
+    const dateObj = new Date(date);
+    const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
+
+    if (seconds < 60) return t('time.justNow');
+    if (seconds < 3600) return t('time.minutesAgo', { count: Math.floor(seconds / 60) });
+    if (seconds < 86400) return t('time.hoursAgo', { count: Math.floor(seconds / 3600) });
+    if (seconds < 604800) return t('time.daysAgo', { count: Math.floor(seconds / 86400) });
+    if (seconds < 2592000) return t('time.weeksAgo', { count: Math.floor(seconds / 604800) });
+    return dateObj.toLocaleDateString();
+  };
 }
 
 export function KnowledgeBaseCard({ knowledgeBase, onEdit }: KnowledgeBaseCardProps) {
+  const { t } = useTranslation(['knowledgeBase', 'common']);
   const iconColors = getIconColors(knowledgeBase.id);
   const deleteMutation = useDeleteKnowledgeBase();
+  const formatTimeAgo = useFormatTimeAgo();
 
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync(knowledgeBase.id);
-      toast.success('Knowledge base deleted');
+      toast.success(t('toast.deleted'));
     } catch {
-      toast.error('Failed to delete knowledge base');
+      toast.error(t('toast.deleteFailed'));
     }
   };
 
@@ -80,7 +87,9 @@ export function KnowledgeBaseCard({ knowledgeBase, onEdit }: KnowledgeBaseCardPr
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link to={`/knowledge-bases/${knowledgeBase.id}` as string}>Open</Link>
+              <Link to="/knowledge-bases/$id" params={{ id: knowledgeBase.id }}>
+                {t('card.open')}
+              </Link>
             </DropdownMenuItem>
             {onEdit && (
               <DropdownMenuItem
@@ -89,7 +98,7 @@ export function KnowledgeBaseCard({ knowledgeBase, onEdit }: KnowledgeBaseCardPr
                   onEdit(knowledgeBase);
                 }}
               >
-                Edit
+                {t('edit', { ns: 'common' })}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
@@ -100,14 +109,18 @@ export function KnowledgeBaseCard({ knowledgeBase, onEdit }: KnowledgeBaseCardPr
                 handleDelete();
               }}
             >
-              Delete
+              {t('delete', { ns: 'common' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
       {/* Content */}
-      <Link to={`/knowledge-bases/${knowledgeBase.id}` as string} className="flex-1 flex flex-col">
+      <Link
+        to="/knowledge-bases/$id"
+        params={{ id: knowledgeBase.id }}
+        className="flex-1 flex flex-col"
+      >
         <div className="flex-1 flex flex-col gap-1 mb-4">
           <h3 className="text-lg font-bold leading-tight line-clamp-1">{knowledgeBase.name}</h3>
           {knowledgeBase.description && (
@@ -121,7 +134,7 @@ export function KnowledgeBaseCard({ knowledgeBase, onEdit }: KnowledgeBaseCardPr
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="flex items-center gap-2">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="text-xs font-medium text-muted-foreground">Ready</span>
+            <span className="text-xs font-medium text-muted-foreground">{t('card.ready')}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">

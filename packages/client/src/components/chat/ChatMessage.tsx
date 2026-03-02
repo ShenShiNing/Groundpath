@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CitationSources } from './CitationSources';
 import { ChatMarkdown } from './ChatMarkdown';
-import type { ChatMessage as ChatMessageType, Citation } from '@/stores/chatPanelStore';
+import type { ChatMessage as ChatMessageType, Citation } from '@/stores';
 import type { CopyFormat } from '@/lib/chat';
 import { useTranslation } from 'react-i18next';
 

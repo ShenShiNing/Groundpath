@@ -8,8 +8,8 @@ import { ChatInput } from './ChatInput';
 import { CitationPreview } from './CitationPreview';
 import { DocumentScopeSelector } from './DocumentScopeSelector';
 import { ConversationList } from './ConversationList';
-import { useChatPanelStore, type Citation } from '@/stores/chatPanelStore';
-import { useAuthStore } from '@/stores/authStore';
+import { useChatPanelStore, type Citation } from '@/stores';
+import { useAuthStore } from '@/stores';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { useTranslation } from 'react-i18next';
@@ -31,22 +31,20 @@ export interface ChatPanelProps {
 
 export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPanelProps) {
   const { t } = useTranslation('chat');
-  const {
-    isOpen,
-    messages,
-    isLoading,
-    selectedDocumentIds,
-    conversationId,
-    showSidebar,
-    close,
-    sendMessage,
-    stopGeneration,
-    setDocumentScope,
-    clearMessages,
-    toggleSidebar,
-    startNewConversation,
-    switchConversation,
-  } = useChatPanelStore();
+  const isOpen = useChatPanelStore((s) => s.isOpen);
+  const messages = useChatPanelStore((s) => s.messages);
+  const isLoading = useChatPanelStore((s) => s.isLoading);
+  const selectedDocumentIds = useChatPanelStore((s) => s.selectedDocumentIds);
+  const conversationId = useChatPanelStore((s) => s.conversationId);
+  const showSidebar = useChatPanelStore((s) => s.showSidebar);
+  const close = useChatPanelStore((s) => s.close);
+  const sendMessage = useChatPanelStore((s) => s.sendMessage);
+  const stopGeneration = useChatPanelStore((s) => s.stopGeneration);
+  const setDocumentScope = useChatPanelStore((s) => s.setDocumentScope);
+  const clearMessages = useChatPanelStore((s) => s.clearMessages);
+  const toggleSidebar = useChatPanelStore((s) => s.toggleSidebar);
+  const startNewConversation = useChatPanelStore((s) => s.startNewConversation);
+  const switchConversation = useChatPanelStore((s) => s.switchConversation);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [previewCitation, setPreviewCitation] = useState<Citation | null>(null);

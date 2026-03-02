@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useTranslation } from 'react-i18next';
 
 interface FolderTreeProps {
   folders: FolderTreeNode[];
@@ -49,6 +50,7 @@ function FolderNode({
   expandedIds,
   onToggleExpand,
 }: FolderNodeProps) {
+  const { t } = useTranslation('document');
   const isExpanded = expandedIds.has(folder.id);
   const isSelected = selectedFolderId === folder.id;
   const hasChildren = folder.children.length > 0;
@@ -56,12 +58,21 @@ function FolderNode({
   return (
     <div>
       <div
+        role="button"
+        tabIndex={0}
         className={cn(
           'group flex items-center gap-1 py-1 px-2 rounded-md cursor-pointer hover:bg-muted transition-colors',
           isSelected && 'bg-primary/10 text-primary'
         )}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => onSelectFolder(folder.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelectFolder(folder.id);
+          }
+        }}
+        aria-current={isSelected ? 'true' : undefined}
       >
         {hasChildren ? (
           <Button
@@ -108,7 +119,7 @@ function FolderNode({
                   }}
                 >
                   <Pencil className="h-4 w-4 mr-2" />
-                  Rename
+                  {t('folder.action.rename', { ns: 'document' })}
                 </DropdownMenuItem>
               )}
               {onEditFolder && onDeleteFolder && <DropdownMenuSeparator />}
@@ -121,7 +132,7 @@ function FolderNode({
                   }}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                  {t('folder.action.delete', { ns: 'document' })}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -158,6 +169,7 @@ export function FolderTree({
   onDeleteFolder,
   className,
 }: FolderTreeProps) {
+  const { t } = useTranslation('document');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpand = (folderId: string) => {
@@ -175,14 +187,23 @@ export function FolderTree({
   return (
     <div className={cn('space-y-1', className)}>
       <div
+        role="button"
+        tabIndex={0}
         className={cn(
           'flex items-center gap-2 py-1 px-2 rounded-md cursor-pointer hover:bg-muted transition-colors',
           selectedFolderId === null && 'bg-primary/10 text-primary'
         )}
         onClick={() => onSelectFolder(null)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelectFolder(null);
+          }
+        }}
+        aria-current={selectedFolderId === null ? 'true' : undefined}
       >
         <Home className="h-4 w-4" />
-        <span className="text-sm font-medium">All Documents</span>
+        <span className="text-sm font-medium">{t('folder.allDocuments')}</span>
       </div>
 
       {folders.map((folder) => (

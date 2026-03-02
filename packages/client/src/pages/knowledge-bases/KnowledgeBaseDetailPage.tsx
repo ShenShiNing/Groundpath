@@ -391,7 +391,8 @@ export default function KnowledgeBaseDetailPage() {
   });
 
   // Chat panel store
-  const { open: openChat, isOpen: isChatOpen } = useChatPanelStore();
+  const openChat = useChatPanelStore((s) => s.open);
+  const isChatOpen = useChatPanelStore((s) => s.isOpen);
 
   // Query client for manual invalidation
   const queryClient = useQueryClient();

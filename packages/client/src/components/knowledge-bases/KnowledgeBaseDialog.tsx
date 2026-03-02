@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { useCreateKnowledgeBase, useUpdateKnowledgeBase } from '@/hooks';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 type EditableKnowledgeBase = KnowledgeBaseInfo | KnowledgeBaseListItem;
 
@@ -40,6 +41,7 @@ interface FormContentProps {
 }
 
 function FormContent({ knowledgeBase, onOpenChange }: FormContentProps) {
+  const { t } = useTranslation(['knowledgeBase', 'common']);
   const isEditing = !!knowledgeBase;
   const [name, setName] = useState(knowledgeBase?.name ?? '');
   const [description, setDescription] = useState(knowledgeBase?.description ?? '');
@@ -64,20 +66,18 @@ function FormContent({ knowledgeBase, onOpenChange }: FormContentProps) {
             description: description.trim() || null,
           },
         });
-        toast.success('Knowledge base updated');
+        toast.success(t('dialog.toast.updated'));
       } else {
         await createMutation.mutateAsync({
           name: name.trim(),
           description: description.trim() || null,
           embeddingProvider,
         });
-        toast.success('Knowledge base created');
+        toast.success(t('dialog.toast.created'));
       }
       onOpenChange(false);
     } catch {
-      toast.error(
-        isEditing ? 'Failed to update knowledge base' : 'Failed to create knowledge base'
-      );
+      toast.error(isEditing ? t('dialog.toast.updateFailed') : t('dialog.toast.createFailed'));
     }
   };
 
@@ -86,41 +86,39 @@ function FormContent({ knowledgeBase, onOpenChange }: FormContentProps) {
   return (
     <form onSubmit={handleSubmit}>
       <DialogHeader>
-        <DialogTitle>{isEditing ? 'Edit Knowledge Base' : 'Create Knowledge Base'}</DialogTitle>
+        <DialogTitle>{isEditing ? t('dialog.editTitle') : t('dialog.createTitle')}</DialogTitle>
         <DialogDescription>
-          {isEditing
-            ? 'Update the name and description. Embedding configuration cannot be changed.'
-            : 'Create a new knowledge base with an embedding provider.'}
+          {isEditing ? t('dialog.editDescription') : t('dialog.createDescription')}
         </DialogDescription>
       </DialogHeader>
 
       <div className="grid gap-4 py-4">
         <div className="grid gap-2">
-          <Label htmlFor="name">Name</Label>
+          <Label htmlFor="name">{t('dialog.name')}</Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="My Knowledge Base"
+            placeholder={t('dialog.namePlaceholder')}
             maxLength={200}
             required
           />
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="description">Description</Label>
+          <Label htmlFor="description">{t('dialog.description')}</Label>
           <Textarea
             id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Optional description..."
+            placeholder={t('dialog.descriptionPlaceholder')}
             maxLength={2000}
             rows={3}
           />
         </div>
 
         <div className="grid gap-2">
-          <Label htmlFor="provider">Embedding Provider</Label>
+          <Label htmlFor="provider">{t('dialog.embeddingProvider')}</Label>
           <Select
             value={embeddingProvider}
             onValueChange={(v) => setEmbeddingProvider(v as EmbeddingProviderType)}
@@ -130,31 +128,27 @@ function FormContent({ knowledgeBase, onOpenChange }: FormContentProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="zhipu">Zhipu AI</SelectItem>
-              <SelectItem value="openai">OpenAI</SelectItem>
-              <SelectItem value="ollama">Ollama (Local)</SelectItem>
+              <SelectItem value="zhipu">{t('dialog.providerZhipu')}</SelectItem>
+              <SelectItem value="openai">{t('dialog.providerOpenAI')}</SelectItem>
+              <SelectItem value="ollama">{t('dialog.providerOllama')}</SelectItem>
             </SelectContent>
           </Select>
-          {isEditing && (
-            <p className="text-xs text-muted-foreground">
-              Embedding provider cannot be changed after creation.
-            </p>
-          )}
+          {isEditing && <p className="text-xs text-muted-foreground">{t('dialog.providerNote')}</p>}
         </div>
       </div>
 
       <DialogFooter>
         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-          Cancel
+          {t('cancel', { ns: 'common' })}
         </Button>
         <Button type="submit" disabled={isPending || !name.trim()}>
           {isPending
             ? isEditing
-              ? 'Updating...'
-              : 'Creating...'
+              ? t('dialog.updating')
+              : t('dialog.creating')
             : isEditing
-              ? 'Update'
-              : 'Create'}
+              ? t('update', { ns: 'common' })
+              : t('create', { ns: 'common' })}
         </Button>
       </DialogFooter>
     </form>

@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import type { Citation } from '@/stores/chatPanelStore';
+import type { Citation } from '@/stores';
 
 // ============================================================================
 // Types

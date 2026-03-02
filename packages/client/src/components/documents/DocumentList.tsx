@@ -4,6 +4,7 @@ import type { DocumentListItem } from '@knowledge-agent/shared/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { DocumentCard } from './DocumentCard';
+import { useTranslation } from 'react-i18next';
 
 interface DocumentListProps {
   documents: DocumentListItem[];
@@ -24,6 +25,7 @@ export function DocumentList({
   onMove,
   className,
 }: DocumentListProps) {
+  const { t } = useTranslation('document');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   if (isLoading) {
@@ -37,7 +39,7 @@ export function DocumentList({
   if (documents.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">No documents found</p>
+        <p className="text-muted-foreground">{t('list.empty')}</p>
       </div>
     );
   }
@@ -51,6 +53,7 @@ export function DocumentList({
             size="icon"
             className="h-8 w-8"
             onClick={() => setViewMode('grid')}
+            aria-label="Grid view"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -59,6 +62,7 @@ export function DocumentList({
             size="icon"
             className="h-8 w-8"
             onClick={() => setViewMode('list')}
+            aria-label="List view"
           >
             <List className="h-4 w-4" />
           </Button>

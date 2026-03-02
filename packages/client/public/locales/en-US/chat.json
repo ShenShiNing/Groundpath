@@ -3,6 +3,7 @@
     "untitled": "New conversation",
     "newConversation": "New conversation",
     "empty": "No conversations yet",
+    "deleteFailed": "Failed to delete conversation",
     "group": {
       "today": "Today",
       "yesterday": "Yesterday",
@@ -136,5 +137,9 @@
       "title": "Start a conversation",
       "description": "Ask questions about documents in your knowledge base and get answers with citations."
     }
+  },
+  "citation": {
+    "sources_one": "{{count}} source",
+    "sources_other": "{{count}} sources"
   }
 }

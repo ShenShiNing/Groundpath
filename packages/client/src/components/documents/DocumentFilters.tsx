@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useTranslation } from 'react-i18next';
 
 interface DocumentFiltersProps {
   search: string;
@@ -22,19 +23,9 @@ interface DocumentFiltersProps {
   onClearFilters?: () => void;
 }
 
-const documentTypeOptions: { value: DocumentType; label: string }[] = [
-  { value: 'pdf', label: 'PDF' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'text', label: 'Text' },
-  { value: 'docx', label: 'Word Document' },
-];
+const documentTypeValues: DocumentType[] = ['pdf', 'markdown', 'text', 'docx'];
 
-const sortByOptions = [
-  { value: 'createdAt', label: 'Date Created' },
-  { value: 'updatedAt', label: 'Date Modified' },
-  { value: 'title', label: 'Title' },
-  { value: 'fileSize', label: 'File Size' },
-];
+const sortByValues = ['createdAt', 'updatedAt', 'title', 'fileSize'] as const;
 
 export function DocumentFilters({
   search,
@@ -47,14 +38,30 @@ export function DocumentFilters({
   onSortOrderChange,
   onClearFilters,
 }: DocumentFiltersProps) {
+  const { t } = useTranslation('document');
   const hasFilters = search || documentType;
+
+  const documentTypeLabels: Record<DocumentType, string> = {
+    pdf: 'PDF',
+    markdown: 'Markdown',
+    text: t('type.text'),
+    docx: t('type.docx'),
+    other: t('type.other'),
+  };
+
+  const sortByLabels: Record<string, string> = {
+    createdAt: t('filter.sortCreated'),
+    updatedAt: t('filter.sortModified'),
+    title: t('filter.sortTitle'),
+    fileSize: t('filter.sortSize'),
+  };
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
       <div className="relative flex-1 w-full sm:max-w-xs">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search documents..."
+          placeholder={t('filter.searchPlaceholder')}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-10"
@@ -70,13 +77,13 @@ export function DocumentFilters({
         >
           <SelectTrigger className="w-35">
             <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Type" />
+            <SelectValue placeholder={t('filter.typePlaceholder')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {documentTypeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
+            <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
+            {documentTypeValues.map((value) => (
+              <SelectItem key={value} value={value}>
+                {documentTypeLabels[value]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -89,12 +96,12 @@ export function DocumentFilters({
           }
         >
           <SelectTrigger className="w-37.5">
-            <SelectValue placeholder="Sort by" />
+            <SelectValue placeholder={t('filter.sortCreated')} />
           </SelectTrigger>
           <SelectContent>
-            {sortByOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
+            {sortByValues.map((value) => (
+              <SelectItem key={value} value={value}>
+                {sortByLabels[value]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -105,18 +112,18 @@ export function DocumentFilters({
           onValueChange={(value) => onSortOrderChange(value as 'asc' | 'desc')}
         >
           <SelectTrigger className="w-30">
-            <SelectValue placeholder="Order" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="desc">Newest first</SelectItem>
-            <SelectItem value="asc">Oldest first</SelectItem>
+            <SelectItem value="desc">{t('filter.newestFirst')}</SelectItem>
+            <SelectItem value="asc">{t('filter.oldestFirst')}</SelectItem>
           </SelectContent>
         </Select>
 
         {hasFilters && onClearFilters && (
           <Button variant="ghost" size="sm" onClick={onClearFilters}>
             <X className="h-4 w-4 mr-1" />
-            Clear
+            {t('filter.clear')}
           </Button>
         )}
       </div>

@@ -36,8 +36,8 @@ import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { knowledgeBasesApi } from '@/api';
 import { useCreateKnowledgeBase, useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore, useChatPanelStore } from '@/stores';
-import type { Citation } from '@/stores/chatPanelStore';
+import { useAuthStore } from '@/stores';
+import { useChatPanelStore, type Citation } from '@/stores';
 import { toast } from 'sonner';
 
 type KnowledgeSeedSource = 'conversation' | 'latest-assistant';
@@ -108,19 +108,17 @@ export function ChatPage() {
     }
   );
 
-  const {
-    knowledgeBaseId,
-    conversationId,
-    messages,
-    selectedDocumentIds,
-    isLoading,
-    open,
-    sendMessage,
-    stopGeneration,
-    setDocumentScope,
-    clearMessages,
-    startNewConversation,
-  } = useChatPanelStore();
+  const knowledgeBaseId = useChatPanelStore((s) => s.knowledgeBaseId);
+  const conversationId = useChatPanelStore((s) => s.conversationId);
+  const messages = useChatPanelStore((s) => s.messages);
+  const selectedDocumentIds = useChatPanelStore((s) => s.selectedDocumentIds);
+  const isLoading = useChatPanelStore((s) => s.isLoading);
+  const open = useChatPanelStore((s) => s.open);
+  const sendMessage = useChatPanelStore((s) => s.sendMessage);
+  const stopGeneration = useChatPanelStore((s) => s.stopGeneration);
+  const setDocumentScope = useChatPanelStore((s) => s.setDocumentScope);
+  const clearMessages = useChatPanelStore((s) => s.clearMessages);
+  const startNewConversation = useChatPanelStore((s) => s.startNewConversation);
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
   const searchableDocuments = useMemo(
@@ -445,7 +443,7 @@ export function ChatPage() {
                     </DropdownMenuItem>
                     {selectedKnowledgeBaseId && (
                       <DropdownMenuItem asChild className="cursor-pointer">
-                        <Link to={`/knowledge-bases/${selectedKnowledgeBaseId}` as string}>
+                        <Link to="/knowledge-bases/$id" params={{ id: selectedKnowledgeBaseId }}>
                           <FileText className="size-4" />
                           {t('actions.viewKnowledgeBaseDetail')}
                         </Link>

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { llmConfigApi } from '@/api/llm-config';
+import { llmConfigApi } from '@/api';
 import { queryKeys } from '@/lib/query';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 

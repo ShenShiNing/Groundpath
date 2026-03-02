@@ -10,8 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useTranslation } from 'react-i18next';
 import { FormField } from './FormField';
 import { VerificationCodeInput } from './VerificationCodeInput';
-import { emailApi } from '@/api/email';
-import { authApi } from '@/api/auth';
+import { emailApi, authApi } from '@/api';
 
 type ResetStep = 'email' | 'code' | 'password';
 

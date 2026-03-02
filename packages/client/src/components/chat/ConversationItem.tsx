@@ -25,7 +25,7 @@ export function ConversationItem({
   onClick,
   onDelete,
 }: ConversationItemProps) {
-  const { t } = useTranslation('chat');
+  const { t } = useTranslation(['chat', 'common']);
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -34,6 +34,8 @@ export function ConversationItem({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       className={cn(
         'group flex items-center gap-2 rounded-lg px-2.5 py-2 cursor-pointer transition-colors',
         isActive
@@ -41,6 +43,13 @@ export function ConversationItem({
           : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
       )}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      aria-current={isActive ? 'true' : undefined}
     >
       <div className="flex-1 min-w-0">
         <p className="truncate text-sm">{conversation.title || t('conversation.untitled')}</p>
@@ -50,6 +59,7 @@ export function ConversationItem({
         size="icon"
         className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
         onClick={handleDelete}
+        aria-label={t('delete', { ns: 'common' })}
       >
         <Trash2 className="size-3.5 text-muted-foreground hover:text-destructive" />
       </Button>

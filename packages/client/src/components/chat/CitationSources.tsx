@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { ChevronDown, FileText, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { Citation } from '@/stores/chatPanelStore';
+import type { Citation } from '@/stores';
+import { useTranslation } from 'react-i18next';
 
 // ============================================================================
 // Types
@@ -18,6 +19,7 @@ export interface CitationSourcesProps {
 // ============================================================================
 
 export function CitationSources({ citations, onCitationClick }: CitationSourcesProps) {
+  const { t } = useTranslation('chat');
   const [isExpanded, setIsExpanded] = useState(false);
 
   if (citations.length === 0) return null;
@@ -29,9 +31,7 @@ export function CitationSources({ citations, onCitationClick }: CitationSourcesP
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <ChevronDown className={cn('size-3.5 transition-transform', isExpanded && 'rotate-180')} />
-        <span>
-          {citations.length} source{citations.length > 1 ? 's' : ''}
-        </span>
+        <span>{t('citation.sources', { count: citations.length })}</span>
       </button>
 
       {isExpanded && (
@@ -54,7 +54,7 @@ export function CitationSources({ citations, onCitationClick }: CitationSourcesP
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 mb-1">
-                  <FileText className="size-3.5 text-muted-foreground" />
+                  <FileText className="size-3.5 text-muted-foreground" aria-hidden="true" />
                   <span className="text-xs font-medium truncate">{citation.documentTitle}</span>
                   {citation.pageNumber && (
                     <span className="text-[10px] text-muted-foreground">

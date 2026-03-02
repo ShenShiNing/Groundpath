@@ -3,6 +3,7 @@
     "untitled": "新会话",
     "newConversation": "新会话",
     "empty": "暂无会话",
+    "deleteFailed": "删除会话失败",
     "group": {
       "today": "今天",
       "yesterday": "昨天",
@@ -136,5 +137,9 @@
       "title": "开始新的对话",
       "description": "你可以针对知识库文档提问，我会返回带引用来源的答案。"
     }
+  },
+  "citation": {
+    "sources_one": "{{count}} 个来源",
+    "sources_other": "{{count}} 个来源"
   }
 }

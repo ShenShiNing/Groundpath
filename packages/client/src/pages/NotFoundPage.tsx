@@ -8,7 +8,8 @@ import { useAuthStore } from '@/stores';
 export function NotFoundPage() {
   const { t } = useTranslation('errors');
   const navigate = useNavigate();
-  const { accessToken, isAuthenticated } = useAuthStore();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
 
   const primaryActionTarget = hasAuthSession ? '/dashboard' : '/';

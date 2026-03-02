@@ -4,7 +4,7 @@ import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { VerificationCodeInput } from './VerificationCodeInput';
-import { emailApi } from '@/api/email';
+import { emailApi } from '@/api';
 
 interface SignupStepCodeProps {
   email: string;

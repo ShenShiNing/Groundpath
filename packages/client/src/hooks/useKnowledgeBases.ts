@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useRef, useEffect } from 'react';
 import { queryKeys } from '@/lib/query';
-import { knowledgeBasesApi } from '@/api/knowledge-bases';
-import { documentsApi } from '@/api/documents';
+import { knowledgeBasesApi, documentsApi } from '@/api';
 import type {
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,

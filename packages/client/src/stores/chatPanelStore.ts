@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { conversationApi, sendMessageWithSSE } from '@/api/chat';
+import { conversationApi, sendMessageWithSSE } from '@/api';
 import { queryClient } from '@/lib/query';
 import type { Citation as APICitation } from '@knowledge-agent/shared/types';
 

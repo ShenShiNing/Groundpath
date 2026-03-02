@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { documentsApi } from '@/api';
+import { useTranslation } from 'react-i18next';
 
 interface DocumentCardProps {
   document: DocumentListItem;
@@ -61,6 +62,7 @@ function formatDate(date: Date): string {
 }
 
 export function DocumentCard({ document, onEdit, onDelete, onMove, className }: DocumentCardProps) {
+  const { t } = useTranslation('document');
   const Icon = documentTypeIcons[document.documentType];
   const iconColor = documentTypeColors[document.documentType];
 
@@ -112,18 +114,18 @@ export function DocumentCard({ document, onEdit, onDelete, onMove, className }: 
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
-                Download
+                {t('cardAction.download')}
               </DropdownMenuItem>
               {onEdit && (
                 <DropdownMenuItem onClick={() => onEdit(document)}>
                   <Pencil className="mr-2 h-4 w-4" />
-                  Edit
+                  {t('cardAction.edit')}
                 </DropdownMenuItem>
               )}
               {onMove && (
                 <DropdownMenuItem onClick={() => onMove(document)}>
                   <FolderInput className="mr-2 h-4 w-4" />
-                  Move to folder
+                  {t('cardAction.moveToFolder')}
                 </DropdownMenuItem>
               )}
               {onDelete && (
@@ -131,7 +133,7 @@ export function DocumentCard({ document, onEdit, onDelete, onMove, className }: 
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => onDelete(document)} className="text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('cardAction.delete')}
                   </DropdownMenuItem>
                 </>
               )}

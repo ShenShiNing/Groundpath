@@ -14,7 +14,8 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
 export function AvatarUpload({ onUploadSuccess }: AvatarUploadProps) {
-  const { user, setUser } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const setUser = useAuthStore((s) => s.setUser);
   const { uploadAvatar, isUploadingAvatar } = useUserStore();
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);

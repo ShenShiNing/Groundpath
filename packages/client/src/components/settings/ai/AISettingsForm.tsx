@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { useForm } from '@tanstack/react-form';
+import { useForm, useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Eye, EyeOff, RefreshCw, Zap, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
@@ -38,8 +38,8 @@ import {
   useUpdateLLMConfig,
   useDeleteLLMConfig,
   useTestLLMConnection,
-} from '@/hooks/useLLMConfig';
-import { useAISettingsStore, canFetchModels } from '@/stores/aiSettingsStore';
+} from '@/hooks';
+import { useAISettingsStore, canFetchModels } from '@/stores';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 
 export function AISettingsForm() {
@@ -74,12 +74,66 @@ export function AISettingsForm() {
     },
   });
 
-  const values = form.state.values;
+  useEffect(() => {
+    form.setFieldValue('provider', config?.provider ?? 'openai');
+    form.setFieldValue('model', config?.model ?? '');
+    form.setFieldValue('apiKey', '');
+    form.setFieldValue('baseUrl', config?.baseUrl ?? '');
+  }, [config?.id, config?.provider, config?.model, config?.baseUrl, form]);
+
+  const values = useStore(form.store, (state) => state.values);
 
   const currentProvider = useMemo(
     () => providers.find((p) => p.provider === values.provider),
     [providers, values.provider]
   );
+
+  const providerCapabilities = useMemo(() => {
+    if (currentProvider) {
+      return {
+        requiresApiKey: !!currentProvider.requiresApiKey,
+        requiresBaseUrl: !!currentProvider.requiresBaseUrl,
+        optionalBaseUrl: !!currentProvider.optionalBaseUrl,
+        defaultBaseUrl: currentProvider.defaultBaseUrl,
+      };
+    }
+
+    // Fallback to deterministic local rules when provider metadata has not loaded yet.
+    if (values.provider === 'custom') {
+      return {
+        requiresApiKey: true,
+        requiresBaseUrl: true,
+        optionalBaseUrl: false,
+        defaultBaseUrl: undefined as string | undefined,
+      };
+    }
+
+    if (values.provider === 'ollama') {
+      return {
+        requiresApiKey: false,
+        requiresBaseUrl: false,
+        optionalBaseUrl: true,
+        defaultBaseUrl: 'http://localhost:11434',
+      };
+    }
+
+    return {
+      requiresApiKey: true,
+      requiresBaseUrl: false,
+      optionalBaseUrl: false,
+      defaultBaseUrl: undefined as string | undefined,
+    };
+  }, [currentProvider, values.provider]);
+
+  const isCustomProvider = values.provider === 'custom';
+  const isOllamaProvider = values.provider === 'ollama';
+  const requiresApiKey = isCustomProvider ? true : providerCapabilities.requiresApiKey;
+  const requiresBaseUrl = isCustomProvider ? true : providerCapabilities.requiresBaseUrl;
+  const optionalBaseUrl = isOllamaProvider ? true : providerCapabilities.optionalBaseUrl;
+  const defaultBaseUrl =
+    isOllamaProvider && !providerCapabilities.defaultBaseUrl
+      ? 'http://localhost:11434'
+      : providerCapabilities.defaultBaseUrl;
 
   const canFetch = canFetchModels(
     values.provider,
@@ -89,7 +143,7 @@ export function AISettingsForm() {
     pendingBaseUrl
   );
 
-  const showBaseUrlField = !!currentProvider?.requiresBaseUrl || !!currentProvider?.optionalBaseUrl;
+  const showBaseUrlField = requiresBaseUrl || optionalBaseUrl;
 
   const {
     data: modelsData,
@@ -123,7 +177,7 @@ export function AISettingsForm() {
   const isSaving = updateMutation.isPending;
   const isClearing = deleteMutation.isPending;
   const isBusy = isSaving || isClearing;
-  const showApiKeyField = !!currentProvider?.requiresApiKey;
+  const showApiKeyField = requiresApiKey;
   const hasSavedKey = !!(config?.hasApiKey && config.provider === values.provider);
   const hasModel = !!values.model;
 
@@ -202,9 +256,9 @@ export function AISettingsForm() {
   function handleRefreshModels() {
     if (canFetch) {
       refetchModels();
-    } else if (currentProvider?.requiresApiKey && currentProvider?.requiresBaseUrl) {
+    } else if (requiresApiKey && requiresBaseUrl) {
       toast.error(t('form.apiKeyAndBaseUrlRequired'));
-    } else if (currentProvider?.requiresApiKey) {
+    } else if (requiresApiKey) {
       toast.error(t('form.apiKeyRequired'));
     }
   }
@@ -276,12 +330,13 @@ export function AISettingsForm() {
                       id="apiKey"
                       type={showApiKey ? 'text' : 'password'}
                       value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
+                      onChange={(e) => {
+                        const nextValue = e.target.value;
+                        field.handleChange(nextValue);
+                        setPendingApiKey(nextValue.trim() || null);
+                      }}
                       onBlur={() => {
                         field.handleBlur();
-                        if (field.state.value.trim()) {
-                          setPendingApiKey(field.state.value.trim());
-                        }
                       }}
                       placeholder={
                         hasSavedKey
@@ -319,7 +374,7 @@ export function AISettingsForm() {
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="baseUrl">
                     Base URL
-                    {currentProvider?.optionalBaseUrl && (
+                    {optionalBaseUrl && (
                       <span className="ml-2 text-xs text-muted-foreground">
                         {t('form.optional')}
                       </span>
@@ -329,21 +384,22 @@ export function AISettingsForm() {
                     id="baseUrl"
                     type="url"
                     value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      field.handleChange(nextValue);
+                      setPendingBaseUrl(nextValue.trim() || null);
+                    }}
                     onBlur={() => {
                       field.handleBlur();
-                      if (field.state.value.trim()) {
-                        setPendingBaseUrl(field.state.value.trim());
-                      }
                     }}
-                    placeholder={currentProvider?.defaultBaseUrl ?? 'https://api.example.com'}
+                    placeholder={defaultBaseUrl ?? 'https://api.example.com'}
                     disabled={isBusy}
                     autoComplete="off"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {currentProvider?.optionalBaseUrl
+                    {optionalBaseUrl
                       ? t('form.baseUrlHelperOptional', {
-                          defaultUrl: currentProvider.defaultBaseUrl ?? '',
+                          defaultUrl: defaultBaseUrl ?? '',
                         })
                       : t('form.baseUrlHelper')}
                   </p>
@@ -391,7 +447,8 @@ export function AISettingsForm() {
                   isLoading={modelsLoading}
                   isError={modelsError}
                   canFetch={canFetch}
-                  requiresApiKey={!!currentProvider?.requiresApiKey}
+                  requiresApiKey={requiresApiKey}
+                  requiresBaseUrl={requiresBaseUrl}
                   disabled={isBusy}
                   onValueChange={(v) => field.handleChange(v)}
                 />
@@ -419,7 +476,9 @@ export function AISettingsForm() {
               <AlertDialogDescription>{t('form.clearConfirmDescription')}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isClearing}>{t('common:cancel')}</AlertDialogCancel>
+              <AlertDialogCancel disabled={isClearing}>
+                {t('cancel', { ns: 'common' })}
+              </AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
                 disabled={isClearing}
@@ -440,9 +499,8 @@ export function AISettingsForm() {
             disabled={
               isBusy ||
               testMutation.isPending ||
-              !hasModel ||
               (showApiKeyField && !hasSavedKey && !values.apiKey) ||
-              (currentProvider?.requiresBaseUrl && !values.baseUrl)
+              (requiresBaseUrl && !values.baseUrl)
             }
           >
             {testMutation.isPending ? (
@@ -474,6 +532,7 @@ interface ModelSelectorProps {
   isError: boolean;
   canFetch: boolean;
   requiresApiKey: boolean;
+  requiresBaseUrl: boolean;
   disabled: boolean;
   onValueChange: (value: string) => void;
 }
@@ -485,6 +544,7 @@ function ModelSelector({
   isError,
   canFetch,
   requiresApiKey,
+  requiresBaseUrl,
   disabled,
   onValueChange,
 }: ModelSelectorProps) {
@@ -501,13 +561,15 @@ function ModelSelector({
   }, [models, searchInput]);
 
   const selectedModel = models.find((m) => m.id === value);
-  const displayValue = open ? searchInput : (selectedModel?.name ?? value);
+  const displayValue = searchInput || selectedModel?.name || value;
 
   function getEmptyMessage() {
     if (isLoading) return t('form.modelsLoading');
     if (isError) return t('form.modelsError');
     if (!canFetch) {
-      return requiresApiKey ? t('form.needsApiKey') : t('form.needsApiKeyAndBaseUrl');
+      if (requiresApiKey && requiresBaseUrl) return t('form.needsApiKeyAndBaseUrl');
+      if (requiresApiKey) return t('form.needsApiKey');
+      return t('form.needsApiKeyAndBaseUrl');
     }
     if (searchInput.trim()) return t('form.pressEnterToUse', { model: searchInput.trim() });
     return t('form.noModels');
@@ -523,7 +585,7 @@ function ModelSelector({
       open={open}
       onOpenChange={(isOpen) => {
         setOpen(isOpen);
-        if (isOpen) {
+        if (!isOpen) {
           setSearchInput('');
         }
       }}
@@ -533,7 +595,12 @@ function ModelSelector({
         id="model"
         placeholder={t('form.modelPlaceholder')}
         value={displayValue}
-        onChange={(e) => setSearchInput(e.target.value)}
+        onChange={(e) => {
+          setSearchInput(e.target.value);
+          if (!open) {
+            setOpen(true);
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && searchInput.trim()) {
             e.preventDefault();

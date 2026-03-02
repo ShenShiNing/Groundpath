@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { useConversations, useDeleteConversation } from '@/hooks';
 import { queryKeys } from '@/lib/query';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { ConversationListItem as ConversationListItemType } from '@knowledge-agent/shared/types';
 
 // ============================================================================
@@ -45,10 +47,14 @@ export function ConversationList({
   const { data: conversations, isLoading } = useConversations(knowledgeBaseId);
   const deleteConversation = useDeleteConversation();
 
-  const sortedConversations = [...(conversations ?? [])].sort(
-    (a, b) =>
-      new Date(b.lastMessageAt ?? b.createdAt).getTime() -
-      new Date(a.lastMessageAt ?? a.createdAt).getTime()
+  const sortedConversations = useMemo(
+    () =>
+      [...(conversations ?? [])].sort(
+        (a, b) =>
+          new Date(b.lastMessageAt ?? b.createdAt).getTime() -
+          new Date(a.lastMessageAt ?? a.createdAt).getTime()
+      ),
+    [conversations]
   );
 
   const handleDelete = async (conversationId: string) => {
@@ -67,11 +73,14 @@ export function ConversationList({
         queryKey: queryKeys.knowledgeBases.conversations(knowledgeBaseId ?? '__global__'),
       });
     } catch {
-      // deletion failed — query will refetch to show current state
+      toast.error(t('conversation.deleteFailed'));
     }
   };
 
-  const groupedConversations = groupConversationsByTime(sortedConversations);
+  const groupedConversations = useMemo(
+    () => groupConversationsByTime(sortedConversations),
+    [sortedConversations]
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
