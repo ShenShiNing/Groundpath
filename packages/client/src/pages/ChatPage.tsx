@@ -171,18 +171,23 @@ export function ChatPage() {
       !selectedKnowledgeBaseId ||
       !knowledgeBases.some((kb) => kb.id === selectedKnowledgeBaseId)
     ) {
+      // If the store agrees with our selection, the KB was explicitly set
+      // (e.g. newly created) but the query cache hasn't refreshed yet — don't override
+      if (selectedKnowledgeBaseId && selectedKnowledgeBaseId === knowledgeBaseId) {
+        return;
+      }
       setSelectedKnowledgeBaseId(preferredKnowledgeBaseId);
     }
-  }, [knowledgeBases, preferredKnowledgeBaseId, selectedKnowledgeBaseId]);
+  }, [knowledgeBases, knowledgeBaseId, preferredKnowledgeBaseId, selectedKnowledgeBaseId]);
 
   // Keep local selected KB in sync when conversation is switched from outside ChatPage (e.g. sidebar)
   useEffect(() => {
     if (!conversationId) return;
-    const currentSelected = selectedKnowledgeBaseId ?? null;
-    if (knowledgeBaseId !== currentSelected) {
+    if (knowledgeBaseId !== (selectedKnowledgeBaseId ?? null)) {
       setSelectedKnowledgeBaseId(knowledgeBaseId ?? undefined);
     }
-  }, [conversationId, knowledgeBaseId, selectedKnowledgeBaseId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when store values change, not when local state does
+  }, [conversationId, knowledgeBaseId]);
 
   useEffect(() => {
     const targetKnowledgeBaseId = selectedKnowledgeBaseId ?? null;
