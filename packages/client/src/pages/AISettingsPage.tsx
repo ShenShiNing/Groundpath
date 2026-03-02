@@ -52,8 +52,10 @@ export function AISettingsPage() {
 
           <Card className="bg-card/80">
             <CardHeader>
-              <CardTitle>模型参数</CardTitle>
-              <CardDescription>修改后会立即应用到新的问答请求中。</CardDescription>
+              <CardTitle>模型配置</CardTitle>
+              <CardDescription>
+                配置服务商、密钥与模型，修改后立即应用到新的问答请求中。
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <AISettingsForm />

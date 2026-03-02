@@ -69,9 +69,6 @@ export function AISettingsForm() {
       model: config?.model ?? '',
       apiKey: '',
       baseUrl: config?.baseUrl ?? '',
-      temperature: config?.temperature ?? 0.7,
-      maxTokens: config?.maxTokens ?? 2048,
-      topP: config?.topP ?? 1.0,
     },
   });
 
@@ -137,9 +134,6 @@ export function AISettingsForm() {
     form.setFieldValue('model', '');
     form.setFieldValue('apiKey', '');
     form.setFieldValue('baseUrl', '');
-    form.setFieldValue('temperature', 0.7);
-    form.setFieldValue('maxTokens', 2048);
-    form.setFieldValue('topP', 1.0);
     resetPendingCredentials();
   }
 
@@ -200,9 +194,6 @@ export function AISettingsForm() {
         provider: values.provider,
         model: values.model,
         baseUrl: values.baseUrl || null,
-        temperature: values.temperature,
-        maxTokens: values.maxTokens,
-        topP: values.topP,
         ...(values.apiKey && { apiKey: values.apiKey }),
       },
       {
