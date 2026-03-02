@@ -1,0 +1,186 @@
+{
+  "page": {
+    "title": "文档详情",
+    "subtitle": "支持阅读与在线编辑"
+  },
+  "loading": "文档加载中...",
+  "notFound": "文档不存在或无访问权限",
+  "action": {
+    "read": "阅读",
+    "edit": "编辑",
+    "download": "下载",
+    "backToList": "返回知识库列表"
+  },
+  "card": {
+    "editor": "文档编辑器",
+    "preview": "文档预览",
+    "info": "文档信息"
+  },
+  "toast": {
+    "saved": "文档已保存",
+    "saveFailed": "保存失败"
+  },
+  "editor": {
+    "unsaved": "未保存更改",
+    "saved": "已保存",
+    "draftRestored": "已恢复本地草稿",
+    "truncated": "内容已截断",
+    "reset": "重置",
+    "saving": "保存中...",
+    "save": "保存"
+  },
+  "reader": {
+    "loading": "正在加载",
+    "pdfNotSupported": "PDF 文档暂不支持在线预览",
+    "docxNotSupported": "Word 文档暂不支持在线预览",
+    "downloadToView": "点击下载查看",
+    "noContent": "暂无可预览内容"
+  },
+  "upload": {
+    "dropHere": "将文件拖放到此处...",
+    "dragAndDrop": "拖放文件到此处，或点击选择文件",
+    "supportedTypes": "支持: PDF, Markdown, 文本, DOCX (最大 21MB)",
+    "fileCount": "文件 ({{count}})",
+    "uploadingProgress": "正在上传 {{current}} / {{total}} ({{progress}}%)",
+    "complete": "完成",
+    "error": "错误",
+    "overallProgress": "总体进度",
+    "uploading": "上传中...",
+    "retryFailed": "重试 {{count}} 个失败文件",
+    "uploadFiles": "上传 {{count}} 个文件",
+    "fileRejected": "文件被拒绝: {{name}} - {{errors}}",
+    "fileUploaded": "已上传: {{name}}"
+  },
+  "info": {
+    "file": "文件:",
+    "type": "类型:",
+    "size": "大小:",
+    "created": "创建:",
+    "modified": "修改:",
+    "description": "描述"
+  },
+  "type": {
+    "pdf": "PDF 文档",
+    "markdown": "Markdown 文件",
+    "text": "文本文件",
+    "docx": "Word 文档",
+    "other": "其他"
+  },
+  "status": {
+    "pending": "等待中",
+    "processing": "处理中",
+    "completed": "已完成",
+    "failed": "失败"
+  },
+  "filter": {
+    "searchPlaceholder": "搜索文档...",
+    "typePlaceholder": "类型",
+    "allTypes": "所有类型",
+    "sortCreated": "创建时间",
+    "sortModified": "修改时间",
+    "sortTitle": "标题",
+    "sortSize": "文件大小",
+    "newestFirst": "最新优先",
+    "oldestFirst": "最旧优先",
+    "clear": "清空"
+  },
+  "list": {
+    "empty": "未找到文档"
+  },
+  "folder": {
+    "allDocuments": "全部文档",
+    "action": {
+      "rename": "重命名",
+      "delete": "删除"
+    },
+    "dialog": {
+      "editTitle": "编辑文件夹",
+      "createTitle": "创建文件夹",
+      "editDescription": "更新文件夹名称和位置。",
+      "createDescription": "创建新文件夹来组织文档。"
+    },
+    "form": {
+      "name": "名称",
+      "namePlaceholder": "文件夹名称",
+      "parentFolder": "父文件夹",
+      "parentPlaceholder": "选择父文件夹",
+      "root": "根目录（无父文件夹）",
+      "updating": "更新中...",
+      "creating": "创建中...",
+      "update": "更新",
+      "create": "创建"
+    },
+    "toast": {
+      "updated": "文件夹已更新",
+      "created": "文件夹已创建",
+      "updateFailed": "更新文件夹失败",
+      "createFailed": "创建文件夹失败",
+      "kbIdRequired": "需要知识库 ID"
+    }
+  },
+  "viewer": {
+    "docxNotSupported": "Word 文档暂不支持在浏览器中预览。",
+    "downloadPrompt": "请下载文件以查看内容。",
+    "previewNotAvailable": "此文档类型暂不支持预览。"
+  },
+  "trash": {
+    "page": {
+      "title": "回收站",
+      "description": "管理已删除文档，你可以恢复文档或执行永久删除。"
+    },
+    "action": {
+      "backToKnowledgeBases": "返回知识库",
+      "restore": "恢复",
+      "permanentDelete": "永久删除",
+      "clearFilters": "清空筛选"
+    },
+    "stats": {
+      "total": "回收站文档总数",
+      "currentPage": "当前页文档数",
+      "currentPageSize": "当前页占用大小"
+    },
+    "search": {
+      "placeholder": "搜索文档标题..."
+    },
+    "sort": {
+      "placeholder": "排序字段",
+      "deletedAt": "删除时间",
+      "title": "标题",
+      "fileSize": "文件大小",
+      "desc": "降序",
+      "asc": "升序"
+    },
+    "empty": {
+      "title": "回收站为空",
+      "description": "被删除的文档会显示在这里"
+    },
+    "table": {
+      "name": "文档名称",
+      "type": "类型",
+      "fileSize": "文件大小",
+      "deletedAt": "删除时间",
+      "actions": "操作"
+    },
+    "pagination": {
+      "showing": "当前显示 {{current}} / {{total}} 份文档"
+    },
+    "dialog": {
+      "restore": {
+        "title": "恢复文档",
+        "description": "确认恢复\"{{title}}\"吗？恢复后会回到原始目录。",
+        "confirm": "恢复"
+      },
+      "delete": {
+        "title": "永久删除文档",
+        "description": "确认永久删除\"{{title}}\"吗？该操作不可撤销，文件将从存储中移除。",
+        "confirm": "永久删除"
+      }
+    },
+    "toast": {
+      "restored": "文档已恢复",
+      "restoreFailed": "恢复文档失败",
+      "permanentlyDeleted": "文档已永久删除",
+      "deleteFailed": "删除文档失败"
+    }
+  }
+}

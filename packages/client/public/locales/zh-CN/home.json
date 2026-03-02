@@ -1,0 +1,101 @@
+{
+  "openUserMenu": "打开用户菜单",
+  "theme": {
+    "toggle": "切换主题"
+  },
+  "login": "登录",
+  "getStarted": "免费开始",
+  "hero": {
+    "badge": "为个人创作与学习打造可信的 AI 知识助手",
+    "title": "Knowledge Base Agent",
+    "titleMuted": "让你的知识可检索、可对话、可验证",
+    "description": "统一沉淀你的文档与笔记，通过语义检索和引用式回答，把知识从「难找」变成「即问即得」，让学习与创作更高效。",
+    "enterDashboard": "进入控制台",
+    "startBuilding": "开始构建知识库",
+    "loginNow": "已有账号，立即登录"
+  },
+  "metrics": {
+    "searchTime": "平均检索耗时",
+    "searchTimeValue": "< 2s",
+    "docTypes": "支持文档类型",
+    "docTypesValue": "PDF / MD / TXT",
+    "answerMode": "答案输出方式",
+    "answerModeValue": "带引用来源"
+  },
+  "capabilities": {
+    "label": "核心能力",
+    "title": "为个人创作者与小团队设计"
+  },
+  "capability": {
+    "docs": {
+      "title": "文档统一接入",
+      "description": "支持 PDF、Markdown、文本等多格式资料接入，集中管理你的文档与笔记。"
+    },
+    "search": {
+      "title": "语义检索增强",
+      "description": "不依赖关键词匹配，基于语义相似度定位内容，减少信息遗漏。"
+    },
+    "traceable": {
+      "title": "可追溯回答",
+      "description": "Agent 回答附带来源片段，结果可核验，适合学习、创作与日常使用。"
+    }
+  },
+  "workflow": {
+    "title": "3 步完成你的知识库 Agent",
+    "step1": {
+      "title": "创建知识库",
+      "description": "按主题创建知识库，让内容结构更清晰。"
+    },
+    "step2": {
+      "title": "导入文档",
+      "description": "上传后自动向量化，形成可检索上下文。"
+    },
+    "step3": {
+      "title": "开始问答",
+      "description": "通过 Agent 对话快速获取可引用答案。"
+    }
+  },
+  "cta": {
+    "title": "准备好搭建你的专属知识助手了吗？",
+    "description": "从文档整理到可引用问答，在一个界面内完成你的知识沉淀与使用闭环。",
+    "primary": {
+      "auth": "进入控制台",
+      "guest": "免费创建账号"
+    },
+    "secondary": "了解产品详情"
+  },
+  "footer": {
+    "about": "关于",
+    "console": "控制台"
+  },
+  "about": {
+    "nav": {
+      "home": "首页",
+      "dashboard": "进入控制台",
+      "getStarted": "免费开始"
+    },
+    "hero": {
+      "title": "关于 KnowledgeAgent",
+      "description": "KnowledgeAgent 致力于让企业知识「可检索、可对话、可验证」。我们把文档资产转化为可持续演进的知识系统，帮助团队在日常协作中快速获得准确答案。"
+    },
+    "action": {
+      "dashboard": "进入控制台",
+      "signup": "创建账号",
+      "viewKnowledgeBases": "查看知识库模块"
+    },
+    "principle": {
+      "trusted": {
+        "title": "可信答案优先",
+        "description": "每次回答都可回溯到来源文档，降低信息幻觉风险。"
+      },
+      "knowledge": {
+        "title": "知识持续沉淀",
+        "description": "通过知识库体系管理文档，构建可维护的组织记忆。"
+      },
+      "semantic": {
+        "title": "语义检索驱动",
+        "description": "跨关键词限制定位相关内容，提升查询效率与准确率。"
+      }
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "page": {
+    "title": "AI Model Settings",
+    "description": "Configure models and providers for chat and document analysis. Keys are stored securely."
+  },
+  "action": {
+    "backToDashboard": "Back to Dashboard"
+  },
+  "stats": {
+    "configTarget": "Configuration Target",
+    "configTargetValue": "Chat & retrieval quality",
+    "suggestion": "Suggestion",
+    "suggestionValue": "Prefer stable, available models"
+  },
+  "card": {
+    "title": "Model Configuration",
+    "description": "Configure provider, key, and model. Changes apply immediately to new Q&A requests."
+  },
+  "form": {
+    "loadError": "Failed to load configuration. Please refresh the page.",
+    "provider": "Provider",
+    "providerPlaceholder": "Select provider",
+    "providerHelper": "Select an AI chat provider",
+    "currentApiKey": "(Current: {{masked}})",
+    "apiKeyPlaceholderUpdate": "Enter new key to update",
+    "apiKeyPlaceholder": "Enter API Key",
+    "hideApiKey": "Hide API Key",
+    "showApiKey": "Show API Key",
+    "apiKeyHelperCustom": "Enter API Key and Base URL to fetch available models",
+    "apiKeyHelper": "Enter API Key to auto-fetch available models",
+    "optional": "(Optional)",
+    "baseUrlHelperOptional": "Leave empty to use default: {{defaultUrl}}",
+    "baseUrlHelper": "OpenAI-compatible API endpoint URL",
+    "model": "Model",
+    "refresh": "Refresh",
+    "modelHelper": "Select from the list or enter a custom model name",
+    "modelPlaceholder": "Select or enter model...",
+    "testConnection": "Test Connection",
+    "clearConfig": "Clear Config",
+    "clearConfirmTitle": "Clear AI configuration?",
+    "clearConfirmDescription": "This will delete your current model, key, and parameter settings. This action cannot be undone.",
+    "clearConfirm": "Confirm Clear",
+    "save": "Save Settings",
+    "modelsLoading": "Loading models...",
+    "modelsError": "Failed to load models. Please refresh.",
+    "needsApiKey": "Please enter an API Key first",
+    "needsApiKeyAndBaseUrl": "Please enter API Key and Base URL first",
+    "pressEnterToUse": "Press Enter to use \"{{model}}\"",
+    "noModels": "No available models",
+    "modelRequired": "Please select or enter a model first",
+    "apiKeyRequired": "Please enter an API Key first",
+    "apiKeyAndBaseUrlRequired": "Please enter API Key and Base URL first",
+    "testFailed": "Connection failed. Please check API Key, model, and Base URL.",
+    "testSuccessLatency": "Connection successful ({{latency}}ms)",
+    "testSuccess": "Connection successful",
+    "testError": "Connection test failed"
+  }
+}

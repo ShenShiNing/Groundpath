@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "登录会话",
+    "description": "管理你的活跃设备与登录历史，可随时撤销不安全会话。"
+  },
+  "action": {
+    "backToDashboard": "返回工作台"
+  },
+  "stats": {
+    "deviceManagement": "设备管理",
+    "deviceManagementValue": "支持按设备撤销",
+    "securityTip": "安全提示",
+    "securityTipValue": "异常会话建议立即下线"
+  },
+  "card": {
+    "title": "活跃会话列表",
+    "description": "你可以主动终止当前账号在其他设备上的登录状态。",
+    "unknownDevice": "未知设备",
+    "current": "当前",
+    "ip": "IP:",
+    "lastActive": "最后活跃:",
+    "created": "创建:",
+    "revoke": "撤销"
+  },
+  "list": {
+    "loadFailed": "加载会话失败",
+    "revoked": "会话已撤销",
+    "revokeFailed": "撤销会话失败",
+    "allRevoked": "已注销所有其他设备的登录",
+    "allRevokeFailed": "注销其他会话失败",
+    "empty": "未找到活跃会话",
+    "logoutAll": "注销所有其他设备"
+  }
+}

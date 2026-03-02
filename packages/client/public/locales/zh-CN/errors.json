@@ -1,0 +1,27 @@
+{
+  "notFound": {
+    "title": "页面不存在",
+    "description": "你访问的页面可能已移动、删除，或链接地址有误。",
+    "backToDashboard": "返回控制台",
+    "backToHome": "返回首页",
+    "goBack": "返回上一页"
+  },
+  "oauth": {
+    "processing": {
+      "title": "正在处理登录",
+      "description": "请稍候，系统正在完成身份验证..."
+    },
+    "success": {
+      "title": "登录成功",
+      "description": "正在跳转到你的工作区..."
+    },
+    "error": {
+      "title": "认证失败",
+      "defaultMessage": "登录过程中出现异常"
+    },
+    "action": {
+      "backToLogin": "返回登录",
+      "backToHome": "返回首页"
+    }
+  }
+}

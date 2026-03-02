@@ -1,0 +1,39 @@
+{
+  "quickLinks": {
+    "title": "快捷入口",
+    "profile": {
+      "label": "个人资料",
+      "description": "编辑你的资料和头像"
+    },
+    "sessions": {
+      "label": "会话管理",
+      "description": "管理当前登录会话"
+    },
+    "chat": {
+      "label": "聊天",
+      "description": "开始一段对话"
+    },
+    "settings": {
+      "label": "设置",
+      "description": "配置你的偏好与模型参数"
+    }
+  },
+  "userSummary": {
+    "joined": "加入于 {{date}}",
+    "editProfile": "编辑资料"
+  },
+  "hero": {
+    "welcome": "欢迎回来",
+    "titleWithUser": "{{username}} 的工作台",
+    "titleDefault": "KnowledgeAgent 控制台",
+    "description": "在这里统一管理知识库、文档资产与问答质量，保持团队知识可用且持续更新。",
+    "openKnowledgeBases": "打开知识库",
+    "configureModel": "配置模型参数"
+  },
+  "stats": {
+    "knowledgeBaseCount": "知识库总数",
+    "documentCount": "文档总量",
+    "systemStatus": "当前状态",
+    "systemHealthy": "系统运行正常"
+  }
+}

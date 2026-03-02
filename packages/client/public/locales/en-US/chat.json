@@ -1,0 +1,140 @@
+{
+  "conversation": {
+    "untitled": "New conversation",
+    "newConversation": "New conversation",
+    "empty": "No conversations yet",
+    "group": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "older": "Older"
+    }
+  },
+  "input": {
+    "defaultPlaceholder": "Ask a question. Enter to send, Shift+Enter for a new line...",
+    "stop": "Stop generation",
+    "send": "Send message",
+    "disclaimer": "AI can make mistakes. Verify important information.",
+    "placeholder": {
+      "withKb": "Type your question. Enter to send, Shift+Enter for a new line...",
+      "general": "General mode: ask directly now, and save useful content into a knowledge base later..."
+    }
+  },
+  "scope": {
+    "allDocuments": "All documents",
+    "selectedDocuments": "{{count}} documents",
+    "label": "Document scope",
+    "noDocuments": "No documents available",
+    "clearSelection": "Clear selection"
+  },
+  "message": {
+    "thinking": "Thinking...",
+    "copyAriaDone": "Message copied",
+    "copyAria": "Copy message",
+    "copied": "Copied",
+    "copy": "Copy",
+    "copyPlain": "Copy plain text",
+    "copyMarkdown": "Copy Markdown",
+    "regenerate": "Regenerate"
+  },
+  "markdown": {
+    "codeCopied": "Code copied"
+  },
+  "copy": {
+    "plain": {
+      "success": "Copied plain text"
+    },
+    "markdown": {
+      "success": "Copied Markdown"
+    },
+    "error": "Copy failed, please try again"
+  },
+  "kbSeed": {
+    "none": "There is no chat content to save yet"
+  },
+  "kb": {
+    "defaultName": "Chat Knowledge Base"
+  },
+  "kbName": {
+    "required": "Please enter a knowledge base name"
+  },
+  "latestAssistant": {
+    "none": "No assistant reply is available yet"
+  },
+  "content": {
+    "empty": "No content to save"
+  },
+  "kbCreate": {
+    "success": "Knowledge base created and chat content saved as a document",
+    "error": "Failed to create knowledge base, please try again"
+  },
+  "export": {
+    "transcriptTitle": "Chat Transcript",
+    "user": "User",
+    "assistant": "Assistant"
+  },
+  "seed": {
+    "documentTitle": {
+      "latestAssistant": "AI Generated Notes",
+      "transcript": "Chat Transcript"
+    },
+    "documentDescription": "Generated from chat content"
+  },
+  "skipToContent": "Skip to chat content",
+  "mode": {
+    "general": "General mode",
+    "generalNoLimit": "General chat mode is not limited by document scope"
+  },
+  "documents": {
+    "loading": "Loading documents...",
+    "searchableWithProcessing": "{{searchable}} documents searchable, {{processing}} still processing",
+    "searchableOnly": "{{searchable}} documents searchable"
+  },
+  "actions": {
+    "title": "Chat actions",
+    "newConversation": "New conversation",
+    "uploadFile": "Upload file",
+    "seedKnowledgeBase": "Save as knowledge base",
+    "viewKnowledgeBaseDetail": "View knowledge base details",
+    "clearChat": "Clear chat"
+  },
+  "empty": {
+    "title": "Start your first question",
+    "withKb": "Click \"Upload file\" first, then ask for summaries, conclusions, or source comparisons.",
+    "general": "You can chat first and save useful content into a knowledge base later."
+  },
+  "createKb": {
+    "title": "Create a knowledge base from chat",
+    "description": "Choose a content source manually and create a knowledge base. It will not trigger automatically.",
+    "name": "Knowledge base name",
+    "namePlaceholder": "My Chat Knowledge Base",
+    "descriptionLabel": "Knowledge base description",
+    "descriptionPlaceholder": "Optional: describe the purpose of this knowledge base",
+    "provider": "Embedding provider",
+    "seedSource": "Content source",
+    "seedSourceConversation": "Full conversation",
+    "seedSourceLatestAssistant": "Latest assistant reply",
+    "seedSourceLatestAssistantEmpty": "No assistant reply available yet. Complete at least one Q&A first.",
+    "switchToNewKb": "Switch to this knowledge base after creation",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "submit": "Create knowledge base and save content"
+  },
+  "upload": {
+    "title": "Upload documents to knowledge base",
+    "description": "Uploaded files are immediately available for retrieval and citation in chat. Supports PDF, Markdown, TXT, and DOCX."
+  },
+  "panel": {
+    "toggle": {
+      "hideConversations": "Hide conversations",
+      "showConversations": "Show conversations"
+    },
+    "title": "AI Chat",
+    "subtitle": "Ask questions about your documents",
+    "empty": {
+      "title": "Start a conversation",
+      "description": "Ask questions about documents in your knowledge base and get answers with citations."
+    }
+  }
+}

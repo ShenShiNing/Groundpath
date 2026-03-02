@@ -1,0 +1,20 @@
+{
+  "nav": {
+    "dashboard": "控制台",
+    "knowledgeBases": "知识库"
+  },
+  "userMenu": {
+    "newKnowledgeBase": "新建知识库",
+    "profile": "个人资料",
+    "settings": "设置",
+    "sessions": "会话管理",
+    "logOut": "退出登录"
+  },
+  "sidebar": {
+    "expand": "展开侧边栏",
+    "newChat": "新聊天",
+    "searchChat": "搜索聊天",
+    "workspace": "工作区",
+    "chatHistory": "聊天记录"
+  }
+}

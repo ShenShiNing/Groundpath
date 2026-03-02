@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Login Sessions",
+    "description": "Manage your active devices and login history. Revoke unsafe sessions at any time."
+  },
+  "action": {
+    "backToDashboard": "Back to Dashboard"
+  },
+  "stats": {
+    "deviceManagement": "Device Management",
+    "deviceManagementValue": "Revoke by device",
+    "securityTip": "Security Tip",
+    "securityTipValue": "Revoke suspicious sessions immediately"
+  },
+  "card": {
+    "title": "Active Sessions",
+    "description": "You can terminate your account's login on other devices.",
+    "unknownDevice": "Unknown device",
+    "current": "Current",
+    "ip": "IP:",
+    "lastActive": "Last active:",
+    "created": "Created:",
+    "revoke": "Revoke"
+  },
+  "list": {
+    "loadFailed": "Failed to load sessions",
+    "revoked": "Session revoked",
+    "revokeFailed": "Failed to revoke session",
+    "allRevoked": "All other sessions have been logged out",
+    "allRevokeFailed": "Failed to log out other sessions",
+    "empty": "No active sessions found",
+    "logoutAll": "Log out all other devices"
+  }
+}

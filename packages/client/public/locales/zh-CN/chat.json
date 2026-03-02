@@ -1,0 +1,140 @@
+{
+  "conversation": {
+    "untitled": "新会话",
+    "newConversation": "新会话",
+    "empty": "暂无会话",
+    "group": {
+      "today": "今天",
+      "yesterday": "昨天",
+      "last7Days": "过去 7 天",
+      "last30Days": "过去 30 天",
+      "older": "更早"
+    }
+  },
+  "input": {
+    "defaultPlaceholder": "输入你的问题，Enter 发送，Shift+Enter 换行...",
+    "stop": "停止输出",
+    "send": "发送消息",
+    "disclaimer": "AI 可能会出错，请核验重要信息。",
+    "placeholder": {
+      "withKb": "输入你的问题，Enter 发送，Shift+Enter 换行...",
+      "general": "通用聊天模式：直接提问，后续可将内容沉淀为知识库..."
+    }
+  },
+  "scope": {
+    "allDocuments": "全部文档",
+    "selectedDocuments": "{{count}} 份文档",
+    "label": "文档范围",
+    "noDocuments": "暂无可用文档",
+    "clearSelection": "清空选择"
+  },
+  "message": {
+    "thinking": "思考中...",
+    "copyAriaDone": "已复制消息",
+    "copyAria": "复制消息",
+    "copied": "已复制",
+    "copy": "复制",
+    "copyPlain": "复制纯文本",
+    "copyMarkdown": "复制 Markdown",
+    "regenerate": "重新生成"
+  },
+  "markdown": {
+    "codeCopied": "已复制代码"
+  },
+  "copy": {
+    "plain": {
+      "success": "已复制纯文本"
+    },
+    "markdown": {
+      "success": "已复制 Markdown"
+    },
+    "error": "复制失败，请重试"
+  },
+  "kbSeed": {
+    "none": "当前还没有可沉淀的聊天内容"
+  },
+  "kb": {
+    "defaultName": "聊天知识库"
+  },
+  "kbName": {
+    "required": "请输入知识库名称"
+  },
+  "latestAssistant": {
+    "none": "当前没有可用的 AI 回复内容"
+  },
+  "content": {
+    "empty": "没有可保存的内容"
+  },
+  "kbCreate": {
+    "success": "知识库创建成功，聊天内容已保存为文档",
+    "error": "创建知识库失败，请重试"
+  },
+  "export": {
+    "transcriptTitle": "聊天记录",
+    "user": "用户",
+    "assistant": "助手"
+  },
+  "seed": {
+    "documentTitle": {
+      "latestAssistant": "AI 生成笔记",
+      "transcript": "聊天记录"
+    },
+    "documentDescription": "由聊天内容生成"
+  },
+  "skipToContent": "跳转到聊天内容",
+  "mode": {
+    "general": "通用模式",
+    "generalNoLimit": "通用聊天模式不限定文档范围"
+  },
+  "documents": {
+    "loading": "文档加载中...",
+    "searchableWithProcessing": "当前可检索 {{searchable}} 份文档，另有 {{processing}} 份处理中",
+    "searchableOnly": "当前可检索 {{searchable}} 份文档"
+  },
+  "actions": {
+    "title": "聊天操作",
+    "newConversation": "新会话",
+    "uploadFile": "上传文件",
+    "seedKnowledgeBase": "沉淀为知识库",
+    "viewKnowledgeBaseDetail": "查看知识库详情",
+    "clearChat": "清空聊天"
+  },
+  "empty": {
+    "title": "开始你的第一条提问",
+    "withKb": "你可以先点击「上传文件」，然后询问摘要、结论、出处对比等问题。",
+    "general": "你可以先直接聊天，之后手动将聊天内容沉淀为知识库。"
+  },
+  "createKb": {
+    "title": "从聊天内容创建知识库",
+    "description": "手动选择内容来源并创建知识库，不会自动触发创建。",
+    "name": "知识库名称",
+    "namePlaceholder": "我的聊天知识库",
+    "descriptionLabel": "知识库描述",
+    "descriptionPlaceholder": "可选：记录该知识库用途",
+    "provider": "向量模型提供商",
+    "seedSource": "内容来源",
+    "seedSourceConversation": "完整聊天记录",
+    "seedSourceLatestAssistant": "最新 AI 回复内容",
+    "seedSourceLatestAssistantEmpty": "暂无可用 AI 回复，请先完成至少一次问答。",
+    "switchToNewKb": "创建完成后切换到该知识库",
+    "cancel": "取消",
+    "creating": "创建中...",
+    "submit": "创建知识库并保存内容"
+  },
+  "upload": {
+    "title": "上传文档到知识库",
+    "description": "上传完成后可立即用于检索和对话引用。支持 PDF、Markdown、TXT、DOCX。"
+  },
+  "panel": {
+    "toggle": {
+      "hideConversations": "隐藏会话列表",
+      "showConversations": "显示会话列表"
+    },
+    "title": "AI 对话",
+    "subtitle": "围绕你的文档进行问答",
+    "empty": {
+      "title": "开始新的对话",
+      "description": "你可以针对知识库文档提问，我会返回带引用来源的答案。"
+    }
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "page": {
+    "title": "知识库管理",
+    "description": "统一组织你的知识资产，支持按卡片或表格视图管理内容与更新状态。"
+  },
+  "breadcrumb": {
+    "workspace": "Workspace",
+    "knowledgeBases": "Knowledge Bases"
+  },
+  "stats": {
+    "totalKB": "知识库总数",
+    "totalDocs": "文档总量",
+    "totalChunks": "Chunk 总量",
+    "results": "{{count}} 个结果",
+    "documents": "{{count}} 份文档",
+    "autoSync": "最近更新自动同步"
+  },
+  "search": {
+    "placeholder": "搜索知识库名称或描述"
+  },
+  "action": {
+    "create": "创建知识库",
+    "createNew": "新建知识库",
+    "clearSearch": "清空搜索",
+    "backToDashboard": "返回工作台"
+  },
+  "empty": {
+    "title": "还没有知识库",
+    "description": "创建第一个知识库后，就可以导入文档并开始可引用问答。"
+  },
+  "noResults": {
+    "title": "未找到匹配结果",
+    "description": "没有知识库匹配 \"{{search}}\"。"
+  },
+  "table": {
+    "name": "名称",
+    "documents": "文档",
+    "chunks": "Chunks",
+    "updatedAt": "更新时间"
+  },
+  "view": {
+    "grid": "卡片视图",
+    "table": "表格视图"
+  },
+  "toast": {
+    "deleted": "知识库已删除",
+    "deleteFailed": "删除知识库失败"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}}分钟前",
+    "hoursAgo": "{{count}}小时前",
+    "daysAgo": "{{count}}天前",
+    "weeksAgo": "{{count}}周前"
+  },
+  "detail": {
+    "subtitle": "知识库详情与文档管理",
+    "notFound": {
+      "title": "知识库不存在",
+      "description": "当前知识库可能已被删除，或你没有访问权限。"
+    },
+    "tooltip": {
+      "openChat": "打开知识库问答",
+      "settings": "知识库设置",
+      "backToList": "返回知识库列表"
+    },
+    "stats": {
+      "documents": "{{count}} 份文档",
+      "chunks": "{{count}} 个 chunks"
+    },
+    "folder": {
+      "allDocuments": "全部文档",
+      "root": "根目录",
+      "newFolder": "新建文件夹"
+    },
+    "search": {
+      "placeholder": "搜索文档...",
+      "current": "当前搜索",
+      "resultCount": "共 {{count}} 条结果"
+    },
+    "view": {
+      "grid": "卡片视图",
+      "table": "表格视图"
+    },
+    "action": {
+      "upload": "上传文档",
+      "clearSearch": "清空搜索",
+      "backToList": "返回知识库列表"
+    },
+    "table": {
+      "name": "名称",
+      "type": "类型",
+      "size": "大小",
+      "status": "状态"
+    },
+    "empty": {
+      "noMatch": "没有匹配的文档",
+      "noDocuments": "知识库还没有文档",
+      "noMatchDescription": "未找到与\"{{search}}\"相关的内容。",
+      "noDocumentsDescription": "上传文档后即可开始检索与问答。"
+    },
+    "upload": {
+      "title": "上传文档"
+    },
+    "delete": {
+      "title": "删除文档",
+      "confirmSingle": "你确定要删除 \"{{title}}\" 吗？此操作不可撤销。",
+      "confirmMultiple": "你确定要删除 {{count}} 份文档吗？此操作不可撤销。"
+    }
+  },
+  "card": {
+    "open": "打开",
+    "ready": "就绪"
+  },
+  "dialog": {
+    "editTitle": "编辑知识库",
+    "createTitle": "创建知识库",
+    "editDescription": "更新名称和描述。向量模型配置创建后不可更改。",
+    "createDescription": "使用指定向量模型创建新知识库。",
+    "name": "名称",
+    "namePlaceholder": "我的知识库",
+    "description": "描述",
+    "descriptionPlaceholder": "可选描述...",
+    "embeddingProvider": "向量模型提供商",
+    "providerZhipu": "智谱 AI",
+    "providerOpenAI": "OpenAI",
+    "providerOllama": "Ollama（本地）",
+    "providerNote": "向量模型创建后不可更改。",
+    "updating": "更新中...",
+    "creating": "创建中...",
+    "toast": {
+      "updated": "知识库已更新",
+      "created": "知识库已创建",
+      "updateFailed": "更新知识库失败",
+      "createFailed": "创建知识库失败"
+    }
+  }
+}

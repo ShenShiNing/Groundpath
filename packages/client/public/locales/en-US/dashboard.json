@@ -1,0 +1,39 @@
+{
+  "quickLinks": {
+    "title": "Quick Links",
+    "profile": {
+      "label": "Profile",
+      "description": "Edit your profile and avatar"
+    },
+    "sessions": {
+      "label": "Sessions",
+      "description": "Manage active login sessions"
+    },
+    "chat": {
+      "label": "Chat",
+      "description": "Start a conversation"
+    },
+    "settings": {
+      "label": "Settings",
+      "description": "Configure your preferences and model settings"
+    }
+  },
+  "userSummary": {
+    "joined": "Joined {{date}}",
+    "editProfile": "Edit Profile"
+  },
+  "hero": {
+    "welcome": "Welcome back",
+    "titleWithUser": "{{username}}'s Workspace",
+    "titleDefault": "KnowledgeAgent Dashboard",
+    "description": "Manage knowledge bases, document assets, and answer quality in one place to keep team knowledge usable and up to date.",
+    "openKnowledgeBases": "Open Knowledge Bases",
+    "configureModel": "Configure Model"
+  },
+  "stats": {
+    "knowledgeBaseCount": "Knowledge Bases",
+    "documentCount": "Documents",
+    "systemStatus": "System Status",
+    "systemHealthy": "All systems operational"
+  }
+}

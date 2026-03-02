@@ -1,0 +1,186 @@
+{
+  "page": {
+    "title": "Document Details",
+    "subtitle": "View and edit online"
+  },
+  "loading": "Loading document...",
+  "notFound": "Document not found or no access",
+  "action": {
+    "read": "Read",
+    "edit": "Edit",
+    "download": "Download",
+    "backToList": "Back to Knowledge Bases"
+  },
+  "card": {
+    "editor": "Document Editor",
+    "preview": "Document Preview",
+    "info": "Document Info"
+  },
+  "toast": {
+    "saved": "Document saved",
+    "saveFailed": "Save failed"
+  },
+  "editor": {
+    "unsaved": "Unsaved changes",
+    "saved": "Saved",
+    "draftRestored": "Local draft restored",
+    "truncated": "Content truncated",
+    "reset": "Reset",
+    "saving": "Saving...",
+    "save": "Save"
+  },
+  "reader": {
+    "loading": "Loading",
+    "pdfNotSupported": "PDF preview is not available online",
+    "docxNotSupported": "Word document preview is not available online",
+    "downloadToView": "Click to download and view",
+    "noContent": "No content to preview"
+  },
+  "upload": {
+    "dropHere": "Drop files here...",
+    "dragAndDrop": "Drag & drop files here, or click to select",
+    "supportedTypes": "Supported: PDF, Markdown, Text, DOCX (max 21MB)",
+    "fileCount": "Files ({{count}})",
+    "uploadingProgress": "Uploading {{current}} of {{total}} ({{progress}}%)",
+    "complete": "Complete",
+    "error": "Error",
+    "overallProgress": "Overall progress",
+    "uploading": "Uploading...",
+    "retryFailed": "Retry {{count}} failed file(s)",
+    "uploadFiles": "Upload {{count}} file(s)",
+    "fileRejected": "File rejected: {{name}} - {{errors}}",
+    "fileUploaded": "Uploaded: {{name}}"
+  },
+  "info": {
+    "file": "File:",
+    "type": "Type:",
+    "size": "Size:",
+    "created": "Created:",
+    "modified": "Modified:",
+    "description": "Description"
+  },
+  "type": {
+    "pdf": "PDF Document",
+    "markdown": "Markdown File",
+    "text": "Text File",
+    "docx": "Word Document",
+    "other": "Other"
+  },
+  "status": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "filter": {
+    "searchPlaceholder": "Search documents...",
+    "typePlaceholder": "Type",
+    "allTypes": "All Types",
+    "sortCreated": "Date Created",
+    "sortModified": "Date Modified",
+    "sortTitle": "Title",
+    "sortSize": "File Size",
+    "newestFirst": "Newest first",
+    "oldestFirst": "Oldest first",
+    "clear": "Clear"
+  },
+  "list": {
+    "empty": "No documents found"
+  },
+  "folder": {
+    "allDocuments": "All Documents",
+    "action": {
+      "rename": "Rename",
+      "delete": "Delete"
+    },
+    "dialog": {
+      "editTitle": "Edit Folder",
+      "createTitle": "Create Folder",
+      "editDescription": "Update the folder name and location.",
+      "createDescription": "Create a new folder to organize your documents."
+    },
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Folder name",
+      "parentFolder": "Parent Folder",
+      "parentPlaceholder": "Select parent folder",
+      "root": "Root (no parent)",
+      "updating": "Updating...",
+      "creating": "Creating...",
+      "update": "Update",
+      "create": "Create"
+    },
+    "toast": {
+      "updated": "Folder updated",
+      "created": "Folder created",
+      "updateFailed": "Failed to update folder",
+      "createFailed": "Failed to create folder",
+      "kbIdRequired": "Knowledge base ID is required"
+    }
+  },
+  "viewer": {
+    "docxNotSupported": "Word documents cannot be previewed in the browser.",
+    "downloadPrompt": "Please download the file to view its contents.",
+    "previewNotAvailable": "Preview not available for this document type."
+  },
+  "trash": {
+    "page": {
+      "title": "Trash",
+      "description": "Manage deleted documents. You can restore or permanently delete them."
+    },
+    "action": {
+      "backToKnowledgeBases": "Back to Knowledge Bases",
+      "restore": "Restore",
+      "permanentDelete": "Permanently Delete",
+      "clearFilters": "Clear filters"
+    },
+    "stats": {
+      "total": "Total trashed documents",
+      "currentPage": "Documents on this page",
+      "currentPageSize": "Size on this page"
+    },
+    "search": {
+      "placeholder": "Search document title..."
+    },
+    "sort": {
+      "placeholder": "Sort by",
+      "deletedAt": "Deleted at",
+      "title": "Title",
+      "fileSize": "File size",
+      "desc": "Descending",
+      "asc": "Ascending"
+    },
+    "empty": {
+      "title": "Trash is empty",
+      "description": "Deleted documents will appear here"
+    },
+    "table": {
+      "name": "Document Name",
+      "type": "Type",
+      "fileSize": "File Size",
+      "deletedAt": "Deleted At",
+      "actions": "Actions"
+    },
+    "pagination": {
+      "showing": "Showing {{current}} / {{total}} documents"
+    },
+    "dialog": {
+      "restore": {
+        "title": "Restore Document",
+        "description": "Restore \"{{title}}\"? It will be moved back to its original folder.",
+        "confirm": "Restore"
+      },
+      "delete": {
+        "title": "Permanently Delete Document",
+        "description": "Permanently delete \"{{title}}\"? This action cannot be undone and the file will be removed from storage.",
+        "confirm": "Permanently Delete"
+      }
+    },
+    "toast": {
+      "restored": "Document restored",
+      "restoreFailed": "Failed to restore document",
+      "permanentlyDeleted": "Document permanently deleted",
+      "deleteFailed": "Failed to delete document"
+    }
+  }
+}

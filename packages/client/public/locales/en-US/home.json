@@ -1,0 +1,101 @@
+{
+  "openUserMenu": "Open user menu",
+  "theme": {
+    "toggle": "Toggle theme"
+  },
+  "login": "Log in",
+  "getStarted": "Get started",
+  "hero": {
+    "badge": "A trustworthy AI knowledge assistant for creators and learners",
+    "title": "Knowledge Base Agent",
+    "titleMuted": "Make your knowledge searchable, conversational, and verifiable",
+    "description": "Consolidate your documents and notes, then use semantic retrieval with cited answers to turn hard-to-find knowledge into instant responses.",
+    "enterDashboard": "Go to Dashboard",
+    "startBuilding": "Build your knowledge base",
+    "loginNow": "Already have an account? Log in"
+  },
+  "metrics": {
+    "searchTime": "Avg retrieval latency",
+    "searchTimeValue": "< 2s",
+    "docTypes": "Supported file types",
+    "docTypesValue": "PDF / MD / TXT",
+    "answerMode": "Answer format",
+    "answerModeValue": "With source citations"
+  },
+  "capabilities": {
+    "label": "Core capabilities",
+    "title": "Designed for solo creators and small teams"
+  },
+  "capability": {
+    "docs": {
+      "title": "Unified document ingestion",
+      "description": "Ingest PDF, Markdown, plain text, and more into one workspace for centralized knowledge management."
+    },
+    "search": {
+      "title": "Semantic retrieval",
+      "description": "Find relevant content by meaning instead of exact keywords to reduce missed context."
+    },
+    "traceable": {
+      "title": "Traceable answers",
+      "description": "Agent responses include source snippets so outputs are auditable and easier to trust."
+    }
+  },
+  "workflow": {
+    "title": "Build your knowledge agent in 3 steps",
+    "step1": {
+      "title": "Create a knowledge base",
+      "description": "Organize your content by topic with clear structure."
+    },
+    "step2": {
+      "title": "Import documents",
+      "description": "Uploaded files are vectorized automatically to become retrievable context."
+    },
+    "step3": {
+      "title": "Start asking",
+      "description": "Get fast answers with references through agent chat."
+    }
+  },
+  "cta": {
+    "title": "Ready to build your own knowledge assistant?",
+    "description": "From document organization to citation-backed answers, complete the full loop in one interface.",
+    "primary": {
+      "auth": "Go to Dashboard",
+      "guest": "Create a free account"
+    },
+    "secondary": "Learn more"
+  },
+  "footer": {
+    "about": "About",
+    "console": "Console"
+  },
+  "about": {
+    "nav": {
+      "home": "Home",
+      "dashboard": "Go to Dashboard",
+      "getStarted": "Get started"
+    },
+    "hero": {
+      "title": "About KnowledgeAgent",
+      "description": "KnowledgeAgent is dedicated to making enterprise knowledge searchable, conversational, and verifiable. We transform document assets into continuously evolving knowledge systems, helping teams quickly find accurate answers in daily collaboration."
+    },
+    "action": {
+      "dashboard": "Go to Dashboard",
+      "signup": "Create account",
+      "viewKnowledgeBases": "View Knowledge Bases"
+    },
+    "principle": {
+      "trusted": {
+        "title": "Trusted answers first",
+        "description": "Every answer traces back to source documents, reducing hallucination risk."
+      },
+      "knowledge": {
+        "title": "Continuous knowledge building",
+        "description": "Manage documents through a knowledge base system to build maintainable organizational memory."
+      },
+      "semantic": {
+        "title": "Semantic retrieval driven",
+        "description": "Locate relevant content beyond keyword limitations, improving query efficiency and accuracy."
+      }
+    }
+  }
+}

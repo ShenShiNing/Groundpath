@@ -1,0 +1,27 @@
+{
+  "notFound": {
+    "title": "Page Not Found",
+    "description": "The page you're looking for may have been moved, deleted, or the URL is incorrect.",
+    "backToDashboard": "Back to Dashboard",
+    "backToHome": "Back to Home",
+    "goBack": "Go back"
+  },
+  "oauth": {
+    "processing": {
+      "title": "Processing login",
+      "description": "Please wait while we complete authentication..."
+    },
+    "success": {
+      "title": "Login successful",
+      "description": "Redirecting to your workspace..."
+    },
+    "error": {
+      "title": "Authentication failed",
+      "defaultMessage": "An error occurred during login"
+    },
+    "action": {
+      "backToLogin": "Back to Login",
+      "backToHome": "Back to Home"
+    }
+  }
+}

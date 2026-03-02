@@ -1,0 +1,138 @@
+{
+  "page": {
+    "title": "Knowledge Bases",
+    "description": "Organize your knowledge assets with card or table view to manage content and update status."
+  },
+  "breadcrumb": {
+    "workspace": "Workspace",
+    "knowledgeBases": "Knowledge Bases"
+  },
+  "stats": {
+    "totalKB": "Total Knowledge Bases",
+    "totalDocs": "Total Documents",
+    "totalChunks": "Total Chunks",
+    "results": "{{count}} results",
+    "documents": "{{count}} documents",
+    "autoSync": "Auto-synced on update"
+  },
+  "search": {
+    "placeholder": "Search knowledge base name or description"
+  },
+  "action": {
+    "create": "Create Knowledge Base",
+    "createNew": "New Knowledge Base",
+    "clearSearch": "Clear search",
+    "backToDashboard": "Back to Dashboard"
+  },
+  "empty": {
+    "title": "No knowledge bases yet",
+    "description": "Create your first knowledge base to import documents and start cited Q&A."
+  },
+  "noResults": {
+    "title": "No matching results",
+    "description": "No knowledge bases match \"{{search}}\"."
+  },
+  "table": {
+    "name": "Name",
+    "documents": "Documents",
+    "chunks": "Chunks",
+    "updatedAt": "Updated"
+  },
+  "view": {
+    "grid": "Grid view",
+    "table": "Table view"
+  },
+  "toast": {
+    "deleted": "Knowledge base deleted",
+    "deleteFailed": "Failed to delete knowledge base"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "weeksAgo": "{{count}}w ago"
+  },
+  "detail": {
+    "subtitle": "Knowledge base details & document management",
+    "notFound": {
+      "title": "Knowledge base not found",
+      "description": "This knowledge base may have been deleted, or you don't have access."
+    },
+    "tooltip": {
+      "openChat": "Open knowledge base chat",
+      "settings": "Knowledge base settings",
+      "backToList": "Back to knowledge bases"
+    },
+    "stats": {
+      "documents": "{{count}} documents",
+      "chunks": "{{count}} chunks"
+    },
+    "folder": {
+      "allDocuments": "All Documents",
+      "root": "Root",
+      "newFolder": "New Folder"
+    },
+    "search": {
+      "placeholder": "Search documents...",
+      "current": "Current search",
+      "resultCount": "{{count}} results"
+    },
+    "view": {
+      "grid": "Grid view",
+      "table": "Table view"
+    },
+    "action": {
+      "upload": "Upload Document",
+      "clearSearch": "Clear search",
+      "backToList": "Back to Knowledge Bases"
+    },
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "size": "Size",
+      "status": "Status"
+    },
+    "empty": {
+      "noMatch": "No matching documents",
+      "noDocuments": "No documents yet",
+      "noMatchDescription": "No content matching \"{{search}}\" was found.",
+      "noDocumentsDescription": "Upload documents to start retrieval and Q&A."
+    },
+    "upload": {
+      "title": "Upload Document"
+    },
+    "delete": {
+      "title": "Delete Document",
+      "confirmSingle": "Are you sure you want to delete \"{{title}}\"? This action cannot be undone.",
+      "confirmMultiple": "Are you sure you want to delete {{count}} documents? This action cannot be undone."
+    }
+  },
+  "card": {
+    "open": "Open",
+    "ready": "Ready"
+  },
+  "dialog": {
+    "editTitle": "Edit Knowledge Base",
+    "createTitle": "Create Knowledge Base",
+    "editDescription": "Update the name and description. Embedding configuration cannot be changed.",
+    "createDescription": "Create a new knowledge base with an embedding provider.",
+    "name": "Name",
+    "namePlaceholder": "My Knowledge Base",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description...",
+    "embeddingProvider": "Embedding Provider",
+    "providerZhipu": "Zhipu AI",
+    "providerOpenAI": "OpenAI",
+    "providerOllama": "Ollama (Local)",
+    "providerNote": "Embedding provider cannot be changed after creation.",
+    "updating": "Updating...",
+    "creating": "Creating...",
+    "toast": {
+      "updated": "Knowledge base updated",
+      "created": "Knowledge base created",
+      "updateFailed": "Failed to update knowledge base",
+      "createFailed": "Failed to create knowledge base"
+    }
+  }
+}

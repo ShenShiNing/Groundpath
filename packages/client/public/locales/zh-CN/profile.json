@@ -1,0 +1,41 @@
+{
+  "page": {
+    "title": "个人资料",
+    "description": "更新你的头像与个人信息，保持团队协作中的身份信息一致。"
+  },
+  "action": {
+    "backToDashboard": "返回工作台"
+  },
+  "stats": {
+    "completeness": "资料完善度",
+    "completenessValue": "基础信息可编辑",
+    "accountStatus": "账号状态",
+    "accountStatusValue": "账户安全正常"
+  },
+  "card": {
+    "title": "编辑资料",
+    "description": "修改后会实时同步到当前账号。"
+  },
+  "toast": {
+    "updated": "资料更新成功"
+  },
+  "form": {
+    "username": "用户名",
+    "usernamePlaceholder": "john_doe",
+    "usernameHint": "3-50 个字符，仅限字母、数字和下划线",
+    "bio": "个人简介",
+    "bioPlaceholder": "介绍一下自己...",
+    "saving": "保存中...",
+    "save": "保存更改",
+    "updateFailed": "更新个人资料失败"
+  },
+  "avatar": {
+    "invalidType": "文件类型无效。允许: JPEG, PNG, GIF, WebP",
+    "tooLarge": "文件过大，最大 2MB",
+    "uploadFailed": "上传头像失败",
+    "alt": "头像",
+    "uploading": "上传中...",
+    "upload": "上传头像",
+    "hint": "JPEG, PNG, GIF 或 WebP，最大 2MB。"
+  }
+}

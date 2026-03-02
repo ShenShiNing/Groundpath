@@ -1,0 +1,41 @@
+{
+  "page": {
+    "title": "Profile",
+    "description": "Update your avatar and personal information to keep your identity consistent across the team."
+  },
+  "action": {
+    "backToDashboard": "Back to Dashboard"
+  },
+  "stats": {
+    "completeness": "Profile Completeness",
+    "completenessValue": "Basic info editable",
+    "accountStatus": "Account Status",
+    "accountStatusValue": "Account secure"
+  },
+  "card": {
+    "title": "Edit Profile",
+    "description": "Changes are synced to your account in real time."
+  },
+  "toast": {
+    "updated": "Profile updated successfully"
+  },
+  "form": {
+    "username": "Username",
+    "usernamePlaceholder": "john_doe",
+    "usernameHint": "3-50 characters, letters, numbers, and underscores only",
+    "bio": "Bio",
+    "bioPlaceholder": "Tell us about yourself...",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "updateFailed": "Failed to update profile"
+  },
+  "avatar": {
+    "invalidType": "Invalid file type. Allowed: JPEG, PNG, GIF, WebP",
+    "tooLarge": "File too large. Maximum size is 2MB",
+    "uploadFailed": "Failed to upload avatar",
+    "alt": "Avatar",
+    "uploading": "Uploading...",
+    "upload": "Upload Avatar",
+    "hint": "JPEG, PNG, GIF or WebP. Max 2MB."
+  }
+}
