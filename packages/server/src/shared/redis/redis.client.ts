@@ -6,6 +6,18 @@ const logger = createLogger('redis.client');
 
 let redisClient: Redis | null = null;
 
+function redactRedisUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password) {
+      parsed.password = '***';
+    }
+    return parsed.toString();
+  } catch {
+    return '[invalid-redis-url]';
+  }
+}
+
 function normalizePrefix(prefix: string): string {
   const trimmed = prefix.trim();
   if (!trimmed) {
@@ -36,13 +48,23 @@ export function getRedisClient(): Redis {
 
 export async function connectRedis(): Promise<void> {
   const client = getRedisClient();
+  const safeUrl = redactRedisUrl(redisConfig.url);
 
-  if (client.status !== 'ready') {
-    await client.connect();
+  try {
+    if (client.status !== 'ready') {
+      await client.connect();
+    }
+
+    await client.ping();
+    logger.info({ url: safeUrl }, 'Redis connected');
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('NOAUTH')) {
+      throw new Error(
+        'Redis authentication failed. Please set REDIS_URL with credentials, e.g. redis://:password@localhost:6379'
+      );
+    }
+    throw error;
   }
-
-  await client.ping();
-  logger.info({ url: redisConfig.url }, 'Redis connected');
 }
 
 export async function closeRedis(): Promise<void> {
@@ -61,4 +83,3 @@ export async function closeRedis(): Promise<void> {
 export function buildRedisKey(key: string): string {
   return `${normalizePrefix(redisConfig.prefix)}${key}`;
 }
-

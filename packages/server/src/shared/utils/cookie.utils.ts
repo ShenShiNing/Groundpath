@@ -4,7 +4,9 @@ import { authConfig, serverConfig } from '@config/env';
 
 export const REFRESH_TOKEN_COOKIE_NAME = 'refresh_token';
 export const CSRF_TOKEN_COOKIE_NAME = 'csrf_token';
-const COOKIE_PATH = '/api/auth';
+const REFRESH_COOKIE_PATH = '/api/auth';
+const CSRF_COOKIE_PATH = '/';
+const LEGACY_CSRF_COOKIE_PATH = '/api/auth';
 
 function buildRefreshCookieOptions() {
   const sameSite = authConfig.cookie.sameSite;
@@ -14,7 +16,7 @@ function buildRefreshCookieOptions() {
     httpOnly: true,
     secure,
     sameSite,
-    path: COOKIE_PATH,
+    path: REFRESH_COOKIE_PATH,
     domain: authConfig.cookie.domain,
   } as const;
 }
@@ -27,7 +29,20 @@ function buildCsrfCookieOptions() {
     httpOnly: false,
     secure,
     sameSite,
-    path: COOKIE_PATH,
+    path: CSRF_COOKIE_PATH,
+    domain: authConfig.cookie.domain,
+  } as const;
+}
+
+function buildLegacyCsrfCookieOptions() {
+  const sameSite = authConfig.cookie.sameSite;
+  const secure = serverConfig.nodeEnv === 'production' || sameSite === 'none';
+
+  return {
+    httpOnly: false,
+    secure,
+    sameSite,
+    path: LEGACY_CSRF_COOKIE_PATH,
     domain: authConfig.cookie.domain,
   } as const;
 }
@@ -40,6 +55,10 @@ function generateCsrfToken(): string {
  * Set refresh token and CSRF token cookies on the response.
  */
 export function setRefreshTokenCookie(res: Response, refreshToken: string): void {
+  // Backward compatibility: clear legacy CSRF cookie scoped to /api/auth
+  // to avoid duplicate csrf_token cookies with different paths.
+  res.clearCookie(CSRF_TOKEN_COOKIE_NAME, buildLegacyCsrfCookieOptions());
+
   const cookieOptions = buildRefreshCookieOptions();
   res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
     ...cookieOptions,
@@ -59,6 +78,7 @@ export function setRefreshTokenCookie(res: Response, refreshToken: string): void
 export function clearRefreshTokenCookie(res: Response): void {
   res.clearCookie(REFRESH_TOKEN_COOKIE_NAME, buildRefreshCookieOptions());
   res.clearCookie(CSRF_TOKEN_COOKIE_NAME, buildCsrfCookieOptions());
+  res.clearCookie(CSRF_TOKEN_COOKIE_NAME, buildLegacyCsrfCookieOptions());
 }
 
 /**

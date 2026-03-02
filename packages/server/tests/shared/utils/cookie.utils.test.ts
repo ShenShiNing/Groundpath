@@ -13,9 +13,20 @@ describe('cookie.utils', () => {
   it('should set refresh token cookie with secure options', () => {
     const res = {
       cookie: vi.fn(),
+      clearCookie: vi.fn(),
     } as unknown as Response;
 
     setRefreshTokenCookie(res, 'refresh-token-value');
+
+    expect(res.clearCookie).toHaveBeenCalledTimes(1);
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      CSRF_TOKEN_COOKIE_NAME,
+      expect.objectContaining({
+        httpOnly: false,
+        sameSite: 'strict',
+        path: '/api/auth',
+      })
+    );
 
     expect(res.cookie).toHaveBeenCalledTimes(2);
     expect(res.cookie).toHaveBeenCalledWith(
@@ -33,7 +44,7 @@ describe('cookie.utils', () => {
       expect.objectContaining({
         httpOnly: false,
         sameSite: 'strict',
-        path: '/api/auth',
+        path: '/',
       })
     );
   });
@@ -45,13 +56,21 @@ describe('cookie.utils', () => {
 
     clearRefreshTokenCookie(res);
 
-    expect(res.clearCookie).toHaveBeenCalledTimes(2);
+    expect(res.clearCookie).toHaveBeenCalledTimes(3);
     expect(res.clearCookie).toHaveBeenCalledWith(
       REFRESH_TOKEN_COOKIE_NAME,
       expect.objectContaining({
         httpOnly: true,
         sameSite: 'strict',
         path: '/api/auth',
+      })
+    );
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      CSRF_TOKEN_COOKIE_NAME,
+      expect.objectContaining({
+        httpOnly: false,
+        sameSite: 'strict',
+        path: '/',
       })
     );
     expect(res.clearCookie).toHaveBeenCalledWith(

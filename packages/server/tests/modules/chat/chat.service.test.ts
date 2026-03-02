@@ -120,9 +120,7 @@ describe('chatService.sendMessageWithSSE', () => {
 
     // Should NOT save assistant message
     const createCalls = mocks.messageService.create.mock.calls;
-    const assistantCalls = createCalls.filter(
-      (call: [{ role: string }]) => call[0]?.role === 'assistant'
-    );
+    const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
     expect(assistantCalls).toHaveLength(0);
 
     // Should send error SSE event
@@ -153,9 +151,7 @@ describe('chatService.sendMessageWithSSE', () => {
 
     // Should save assistant message
     const createCalls = mocks.messageService.create.mock.calls;
-    const assistantCalls = createCalls.filter(
-      (call: [{ role: string }]) => call[0]?.role === 'assistant'
-    );
+    const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
     expect(assistantCalls).toHaveLength(1);
     expect(assistantCalls[0]![0]).toMatchObject({
       role: 'assistant',
