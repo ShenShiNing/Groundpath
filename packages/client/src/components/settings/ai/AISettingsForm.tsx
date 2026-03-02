@@ -221,163 +221,216 @@ export function AISettingsForm() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Provider */}
-      <form.Field name="provider">
-        {(field) => (
-          <div className="space-y-2">
-            <Label htmlFor="provider">{t('form.provider')}</Label>
-            <Select
-              value={field.state.value}
-              onValueChange={(v) => handleProviderChange(v as LLMProviderType)}
-              disabled={isBusy}
-            >
-              <SelectTrigger id="provider">
-                <SelectValue placeholder={t('form.providerPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {providers.map((p) => (
-                  <SelectItem key={p.provider} value={p.provider}>
-                    {p.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{t('form.providerHelper')}</p>
-          </div>
-        )}
-      </form.Field>
+    <div className="space-y-8">
+      {/* Section: Provider & Credentials */}
+      <section>
+        <div className="mb-4">
+          <h3 className="text-base font-medium">{t('section.credentials')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('section.credentialsDescription')}
+          </p>
+        </div>
 
-      {/* API Key */}
-      {showApiKeyField && (
-        <form.Field name="apiKey">
-          {(field) => (
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">
-                API Key
-                {hasSavedKey && config?.apiKeyMasked && (
-                  <span className="ml-2 text-xs text-muted-foreground">
-                    {t('form.currentApiKey', { masked: config.apiKeyMasked })}
-                  </span>
-                )}
-              </Label>
-              <div className="relative">
-                <Input
-                  id="apiKey"
-                  type={showApiKey ? 'text' : 'password'}
+        <div className="space-y-4">
+          {/* Provider */}
+          <form.Field name="provider">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor="provider">{t('form.provider')}</Label>
+                <Select
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={() => {
-                    field.handleBlur();
-                    if (field.state.value.trim()) {
-                      setPendingApiKey(field.state.value.trim());
-                    }
-                  }}
-                  placeholder={
-                    hasSavedKey ? t('form.apiKeyPlaceholderUpdate') : t('form.apiKeyPlaceholder')
-                  }
+                  onValueChange={(v) => handleProviderChange(v as LLMProviderType)}
                   disabled={isBusy}
-                  className="pr-10"
-                  autoComplete="off"
-                />
-                <button
-                  type="button"
-                  onClick={toggleShowApiKey}
-                  disabled={isBusy}
-                  aria-label={showApiKey ? t('form.hideApiKey') : t('form.showApiKey')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+                  <SelectTrigger id="provider">
+                    <SelectValue placeholder={t('form.providerPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {providers.map((p) => (
+                      <SelectItem key={p.provider} value={p.provider}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('form.providerHelper')}</p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {values.provider === 'custom'
-                  ? t('form.apiKeyHelperCustom')
-                  : t('form.apiKeyHelper')}
-              </p>
-            </div>
-          )}
-        </form.Field>
-      )}
+            )}
+          </form.Field>
 
-      {/* Base URL */}
-      {showBaseUrlField && (
-        <form.Field name="baseUrl">
+          {/* API Key */}
+          {showApiKeyField && (
+            <form.Field name="apiKey">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor="apiKey">
+                    API Key
+                    {hasSavedKey && config?.apiKeyMasked && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {t('form.currentApiKey', { masked: config.apiKeyMasked })}
+                      </span>
+                    )}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="apiKey"
+                      type={showApiKey ? 'text' : 'password'}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={() => {
+                        field.handleBlur();
+                        if (field.state.value.trim()) {
+                          setPendingApiKey(field.state.value.trim());
+                        }
+                      }}
+                      placeholder={
+                        hasSavedKey
+                          ? t('form.apiKeyPlaceholderUpdate')
+                          : t('form.apiKeyPlaceholder')
+                      }
+                      disabled={isBusy}
+                      className="pr-10"
+                      autoComplete="off"
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleShowApiKey}
+                      disabled={isBusy}
+                      aria-label={showApiKey ? t('form.hideApiKey') : t('form.showApiKey')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {values.provider === 'custom'
+                      ? t('form.apiKeyHelperCustom')
+                      : t('form.apiKeyHelper')}
+                  </p>
+                </div>
+              )}
+            </form.Field>
+          )}
+
+          {/* Base URL */}
+          {showBaseUrlField && (
+            <form.Field name="baseUrl">
+              {(field) => (
+                <div className="space-y-2">
+                  <Label htmlFor="baseUrl">
+                    Base URL
+                    {currentProvider?.optionalBaseUrl && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {t('form.optional')}
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id="baseUrl"
+                    type="url"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={() => {
+                      field.handleBlur();
+                      if (field.state.value.trim()) {
+                        setPendingBaseUrl(field.state.value.trim());
+                      }
+                    }}
+                    placeholder={currentProvider?.defaultBaseUrl ?? 'https://api.example.com'}
+                    disabled={isBusy}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {currentProvider?.optionalBaseUrl
+                      ? t('form.baseUrlHelperOptional', {
+                          defaultUrl: currentProvider.defaultBaseUrl ?? '',
+                        })
+                      : t('form.baseUrlHelper')}
+                  </p>
+                </div>
+              )}
+            </form.Field>
+          )}
+        </div>
+      </section>
+
+      <div className="border-t" />
+
+      {/* Section: Model Selection */}
+      <section>
+        <div className="mb-4">
+          <h3 className="text-base font-medium">{t('section.model')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{t('section.modelDescription')}</p>
+        </div>
+
+        <form.Field name="model">
           {(field) => (
             <div className="space-y-2">
-              <Label htmlFor="baseUrl">
-                Base URL
-                {currentProvider?.optionalBaseUrl && (
-                  <span className="ml-2 text-xs text-muted-foreground">{t('form.optional')}</span>
-                )}
-              </Label>
-              <Input
-                id="baseUrl"
-                type="url"
+              <div className="flex items-center justify-between">
+                <Label htmlFor="model">{t('form.model')}</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshModels}
+                  disabled={modelsLoading}
+                  className="h-6 px-2 text-xs"
+                >
+                  {modelsLoading ? (
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-1 h-3 w-3" />
+                  )}
+                  {t('form.refresh')}
+                </Button>
+              </div>
+              <ModelSelector
                 value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={() => {
-                  field.handleBlur();
-                  if (field.state.value.trim()) {
-                    setPendingBaseUrl(field.state.value.trim());
-                  }
-                }}
-                placeholder={currentProvider?.defaultBaseUrl ?? 'https://api.example.com'}
+                models={models}
+                isLoading={modelsLoading}
+                isError={modelsError}
+                canFetch={canFetch}
+                requiresApiKey={!!currentProvider?.requiresApiKey}
                 disabled={isBusy}
-                autoComplete="off"
+                onValueChange={(v) => field.handleChange(v)}
               />
-              <p className="text-xs text-muted-foreground">
-                {currentProvider?.optionalBaseUrl
-                  ? t('form.baseUrlHelperOptional', {
-                      defaultUrl: currentProvider.defaultBaseUrl ?? '',
-                    })
-                  : t('form.baseUrlHelper')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('form.modelHelper')}</p>
             </div>
           )}
         </form.Field>
-      )}
+      </section>
 
-      {/* Model */}
-      <form.Field name="model">
-        {(field) => (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="model">{t('form.model')}</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleRefreshModels}
-                disabled={modelsLoading}
-                className="h-6 px-2 text-xs"
-              >
-                {modelsLoading ? (
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="mr-1 h-3 w-3" />
-                )}
-                {t('form.refresh')}
-              </Button>
-            </div>
-            <ModelSelector
-              value={field.state.value}
-              models={models}
-              isLoading={modelsLoading}
-              isError={modelsError}
-              canFetch={canFetch}
-              requiresApiKey={!!currentProvider?.requiresApiKey}
-              disabled={isBusy}
-              onValueChange={(v) => field.handleChange(v)}
-            />
-            <p className="text-xs text-muted-foreground">{t('form.modelHelper')}</p>
-          </div>
-        )}
-      </form.Field>
+      <div className="border-t" />
 
       {/* Actions */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+          <AlertDialogTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" disabled={!config || isBusy}>
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              {t('form.clearConfig')}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent size="sm">
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t('form.clearConfirmTitle')}</AlertDialogTitle>
+              <AlertDialogDescription>{t('form.clearConfirmDescription')}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isClearing}>{t('common:cancel')}</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={isClearing}
+                onClick={handleClearConfig}
+              >
+                {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {t('form.clearConfirm')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -397,32 +450,6 @@ export function AISettingsForm() {
             )}
             {t('form.testConnection')}
           </Button>
-
-          <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
-            <AlertDialogTrigger asChild>
-              <Button type="button" variant="destructive" disabled={!config || isBusy}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('form.clearConfig')}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent size="sm">
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t('form.clearConfirmTitle')}</AlertDialogTitle>
-                <AlertDialogDescription>{t('form.clearConfirmDescription')}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isClearing}>{t('common:cancel')}</AlertDialogCancel>
-                <AlertDialogAction
-                  variant="destructive"
-                  disabled={isClearing}
-                  onClick={handleClearConfig}
-                >
-                  {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {t('form.clearConfirm')}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
 
           <Button type="button" onClick={handleSave} disabled={isBusy || !hasModel}>
             {isSaving ? (

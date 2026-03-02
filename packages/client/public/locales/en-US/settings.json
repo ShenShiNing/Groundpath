@@ -7,14 +7,16 @@
     "backToDashboard": "Back to Dashboard"
   },
   "stats": {
-    "configTarget": "Configuration Target",
-    "configTargetValue": "Chat & retrieval quality",
-    "suggestion": "Suggestion",
-    "suggestionValue": "Prefer stable, available models"
+    "currentProvider": "Provider",
+    "currentModel": "Model",
+    "configured": "Configured",
+    "notConfigured": "Not Configured"
   },
-  "card": {
-    "title": "Model Configuration",
-    "description": "Configure provider, key, and model. Changes apply immediately to new Q&A requests."
+  "section": {
+    "credentials": "Provider & Credentials",
+    "credentialsDescription": "Select an AI provider and configure API credentials.",
+    "model": "Model Selection",
+    "modelDescription": "Select a model for chat and document analysis, or enter a custom model name."
   },
   "form": {
     "loadError": "Failed to load configuration. Please refresh the page.",

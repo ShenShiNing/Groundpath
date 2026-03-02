@@ -7,14 +7,16 @@
     "backToDashboard": "返回工作台"
   },
   "stats": {
-    "configTarget": "配置目标",
-    "configTargetValue": "对话与检索质量",
-    "suggestion": "建议",
-    "suggestionValue": "优先稳定可用模型"
+    "currentProvider": "当前服务商",
+    "currentModel": "当前模型",
+    "configured": "已配置",
+    "notConfigured": "未配置"
   },
-  "card": {
-    "title": "模型配置",
-    "description": "配置服务商、密钥与模型，修改后立即应用到新的问答请求中。"
+  "section": {
+    "credentials": "服务商与凭证",
+    "credentialsDescription": "选择 AI 服务商并配置 API 访问凭证。",
+    "model": "模型选择",
+    "modelDescription": "选择用于聊天与文档分析的模型，也可直接输入自定义模型名称。"
   },
   "form": {
     "loadError": "加载配置失败，请刷新页面重试",
