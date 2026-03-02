@@ -244,7 +244,7 @@ function EmptyState({
   t: TFunction<'knowledgeBase'>;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-16 text-center">
+    <div className="rounded-2xl border border-dashed px-6 py-16 text-center">
       <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
         <Database className="size-6 text-muted-foreground" />
       </div>
@@ -270,7 +270,7 @@ function NoResultsState({
   t: TFunction<'knowledgeBase'>;
 }) {
   return (
-    <div className="rounded-2xl border bg-card/50 px-6 py-16 text-center">
+    <div className="rounded-2xl border px-6 py-16 text-center">
       <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
         <Search className="size-6 text-muted-foreground" />
       </div>
@@ -294,7 +294,7 @@ function CreateKnowledgeBaseCard({
     <button
       onClick={onCreate}
       className={cn(
-        'flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed bg-card/60',
+        'flex min-h-44 flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed',
         'cursor-pointer transition-colors duration-200 hover:border-primary hover:bg-accent/40'
       )}
     >
@@ -354,135 +354,152 @@ export default function KnowledgeBasesPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 overflow-y-auto bg-background">
-        <div className="relative px-6 py-8 md:py-10">
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute left-1/2 top-0 h-72 w-160 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="shrink-0 border-b px-6 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
+                <span>{t('breadcrumb.workspace')}</span>
+                <ChevronRight className="size-4" />
+                <span className="text-foreground">{t('breadcrumb.knowledgeBases')}</span>
+              </div>
+              <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+                {t('page.title')}
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                {t('page.description')}
+              </p>
+            </div>
+            <Button className="cursor-pointer" onClick={handleCreateNew}>
+              <Plus className="size-4 mr-2" />
+              {t('action.createNew')}
+            </Button>
           </div>
 
-          <div className="mx-auto max-w-6xl space-y-6">
-            <section className="rounded-2xl border bg-card/70 p-6 md:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
-                    <span>{t('breadcrumb.workspace')}</span>
-                    <ChevronRight className="size-4" />
-                    <span className="text-foreground">{t('breadcrumb.knowledgeBases')}</span>
-                  </div>
-                  <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                    {t('page.title')}
-                  </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                    {t('page.description')}
-                  </p>
-                </div>
-                <Button className="cursor-pointer" onClick={handleCreateNew}>
-                  <Plus className="size-4 mr-2" />
-                  {t('action.createNew')}
+          <div className="mt-5 flex flex-wrap items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">{t('stats.totalKB')}</span>
+              <span className="font-display text-lg font-semibold">{knowledgeBases.length}</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">{t('stats.totalDocs')}</span>
+              <span className="font-display text-lg font-semibold">{totalDocuments}</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">{t('stats.totalChunks')}</span>
+              <span className="font-display text-lg font-semibold">{totalChunks}</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="relative w-full sm:max-w-sm">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                className="h-10 bg-background pl-9"
+                placeholder={t('search.placeholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="rounded-md border bg-background p-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'h-8 w-8 cursor-pointer rounded-sm',
+                    viewMode === 'grid' && 'bg-muted'
+                  )}
+                  onClick={() => setViewMode('grid')}
+                  aria-label="Grid view"
+                >
+                  <LayoutGrid className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    'h-8 w-8 cursor-pointer rounded-sm',
+                    viewMode === 'table' && 'bg-muted'
+                  )}
+                  onClick={() => setViewMode('table')}
+                  aria-label="Table view"
+                >
+                  <List className="size-4" />
                 </Button>
               </div>
+              <Button variant="outline" className="cursor-pointer" asChild>
+                <Link to="/dashboard">
+                  <Sparkles className="size-4 mr-2" />
+                  {t('action.backToDashboard')}
+                </Link>
+              </Button>
+            </div>
+          </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border bg-background/80 p-4">
-                  <p className="text-xs text-muted-foreground">{t('stats.totalKB')}</p>
-                  <p className="mt-2 font-display text-2xl font-semibold">
-                    {knowledgeBases.length}
-                  </p>
-                </div>
-                <div className="rounded-xl border bg-background/80 p-4">
-                  <p className="text-xs text-muted-foreground">{t('stats.totalDocs')}</p>
-                  <p className="mt-2 font-display text-2xl font-semibold">{totalDocuments}</p>
-                </div>
-                <div className="rounded-xl border bg-background/80 p-4">
-                  <p className="text-xs text-muted-foreground">{t('stats.totalChunks')}</p>
-                  <p className="mt-2 font-display text-2xl font-semibold">{totalChunks}</p>
-                </div>
+          <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <Database className="size-3.5" />
+              {t('stats.results', { count: filteredKBs.length })}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <FileText className="size-3.5" />
+              {t('stats.documents', { count: totalDocuments })}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarClock className="size-3.5" />
+              {t('stats.autoSync')}
+            </span>
+          </div>
+
+          {isLoading ? (
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-44 rounded-2xl" />
+                ))}
               </div>
-            </section>
-
-            <section className="rounded-2xl border bg-card p-4 sm:p-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="relative w-full sm:max-w-sm">
-                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    className="h-10 bg-background pl-9"
-                    placeholder={t('search.placeholder')}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+            ) : (
+              <div className="space-y-2">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-14 rounded-lg" />
+                ))}
+              </div>
+            )
+          ) : filteredKBs.length > 0 ? (
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <CreateKnowledgeBaseCard onCreate={handleCreateNew} t={t} />
+                {filteredKBs.map((kb) => (
+                  <KnowledgeBaseGridCard
+                    key={kb.id}
+                    knowledgeBase={kb}
+                    onEdit={() => handleEdit(kb)}
+                    onDelete={() => handleDelete(kb)}
+                    t={t}
                   />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="rounded-md border bg-background p-0.5">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'h-8 w-8 cursor-pointer rounded-sm',
-                        viewMode === 'grid' && 'bg-muted'
-                      )}
-                      onClick={() => setViewMode('grid')}
-                      aria-label="Grid view"
-                    >
-                      <LayoutGrid className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'h-8 w-8 cursor-pointer rounded-sm',
-                        viewMode === 'table' && 'bg-muted'
-                      )}
-                      onClick={() => setViewMode('table')}
-                      aria-label="Table view"
-                    >
-                      <List className="size-4" />
-                    </Button>
-                  </div>
-                  <Button variant="outline" className="cursor-pointer" asChild>
-                    <Link to="/dashboard">
-                      <Sparkles className="size-4 mr-2" />
-                      {t('action.backToDashboard')}
-                    </Link>
-                  </Button>
-                </div>
+                ))}
               </div>
-
-              <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5">
-                  <Database className="size-3.5" />
-                  {t('stats.results', { count: filteredKBs.length })}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <FileText className="size-3.5" />
-                  {t('stats.documents', { count: totalDocuments })}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <CalendarClock className="size-3.5" />
-                  {t('stats.autoSync')}
-                </span>
-              </div>
-
-              {isLoading ? (
-                viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {[...Array(6)].map((_, i) => (
-                      <Skeleton key={i} className="h-44 rounded-2xl" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {[...Array(6)].map((_, i) => (
-                      <Skeleton key={i} className="h-14 rounded-lg" />
-                    ))}
-                  </div>
-                )
-              ) : filteredKBs.length > 0 ? (
-                viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    <CreateKnowledgeBaseCard onCreate={handleCreateNew} t={t} />
+            ) : (
+              <div className="overflow-hidden rounded-xl border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40 hover:bg-muted/40">
+                      <TableHead className="font-medium">{t('table.name')}</TableHead>
+                      <TableHead className="w-28 font-medium">{t('table.documents')}</TableHead>
+                      <TableHead className="w-28 font-medium">{t('table.chunks')}</TableHead>
+                      <TableHead className="w-32 font-medium">{t('table.updatedAt')}</TableHead>
+                      <TableHead className="w-12" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {filteredKBs.map((kb) => (
-                      <KnowledgeBaseGridCard
+                      <KnowledgeBaseTableRow
                         key={kb.id}
                         knowledgeBase={kb}
                         onEdit={() => handleEdit(kb)}
@@ -490,40 +507,15 @@ export default function KnowledgeBasesPage() {
                         t={t}
                       />
                     ))}
-                  </div>
-                ) : (
-                  <div className="overflow-hidden rounded-xl border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/40 hover:bg-muted/40">
-                          <TableHead className="font-medium">{t('table.name')}</TableHead>
-                          <TableHead className="w-28 font-medium">{t('table.documents')}</TableHead>
-                          <TableHead className="w-28 font-medium">{t('table.chunks')}</TableHead>
-                          <TableHead className="w-32 font-medium">{t('table.updatedAt')}</TableHead>
-                          <TableHead className="w-12" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredKBs.map((kb) => (
-                          <KnowledgeBaseTableRow
-                            key={kb.id}
-                            knowledgeBase={kb}
-                            onEdit={() => handleEdit(kb)}
-                            onDelete={() => handleDelete(kb)}
-                            t={t}
-                          />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              ) : hasSearch && knowledgeBases.length > 0 ? (
-                <NoResultsState search={search} onClear={() => setSearch('')} t={t} />
-              ) : (
-                <EmptyState onCreateNew={handleCreateNew} t={t} />
-              )}
-            </section>
-          </div>
+                  </TableBody>
+                </Table>
+              </div>
+            )
+          ) : hasSearch && knowledgeBases.length > 0 ? (
+            <NoResultsState search={search} onClear={() => setSearch('')} t={t} />
+          ) : (
+            <EmptyState onCreateNew={handleCreateNew} t={t} />
+          )}
         </div>
       </div>
 

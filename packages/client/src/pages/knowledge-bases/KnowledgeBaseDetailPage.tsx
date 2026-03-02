@@ -508,26 +508,24 @@ export default function KnowledgeBaseDetailPage() {
   if (kbLoading) {
     return (
       <AppLayout>
-        <div className="flex-1 overflow-hidden bg-background px-4 py-4 md:px-6 md:py-5">
-          <div className="flex h-full flex-col">
-            <div className="rounded-2xl border bg-card/70 p-5">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-8 w-8 rounded-lg" />
-                <Skeleton className="h-6 w-48" />
-              </div>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="shrink-0 border-b px-6 py-5">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-6 w-48" />
             </div>
-            <div className="mt-3 rounded-xl border bg-card p-3">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-8 w-36" />
-                <Skeleton className="h-8 w-48 ml-auto" />
-              </div>
+          </div>
+          <div className="shrink-0 border-b px-6 py-2.5">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-36" />
+              <Skeleton className="h-8 w-48 ml-auto" />
             </div>
-            <div className="mt-3 flex-1 rounded-2xl border bg-card/70 p-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {[...Array(12)].map((_, i) => (
-                  <Skeleton key={i} className="h-36 rounded-xl" />
-                ))}
-              </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+              {[...Array(12)].map((_, i) => (
+                <Skeleton key={i} className="h-36 rounded-xl" />
+              ))}
             </div>
           </div>
         </div>
@@ -540,7 +538,7 @@ export default function KnowledgeBaseDetailPage() {
     return (
       <AppLayout>
         <div className="flex-1 flex items-center justify-center px-6">
-          <div className="w-full max-w-xl rounded-2xl border bg-card/70 p-8 text-center">
+          <div className="w-full max-w-xl p-8 text-center">
             <h2 className="mb-2 text-xl font-semibold">{t('detail.notFound.title')}</h2>
             <p className="mb-5 text-sm text-muted-foreground">{t('detail.notFound.description')}</p>
             <Button className="cursor-pointer" asChild>
@@ -554,352 +552,342 @@ export default function KnowledgeBaseDetailPage() {
 
   return (
     <AppLayout>
-      <div className="relative flex-1 overflow-hidden bg-background px-4 py-4 md:px-6 md:py-5">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 h-72 w-160 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-        </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="shrink-0 border-b px-6 py-4">
+          <div className="flex flex-wrap items-start gap-3 md:gap-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 shrink-0 cursor-pointer"
+                  asChild
+                >
+                  <Link to="/knowledge-bases">
+                    <ArrowLeft className="size-4" />
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('detail.tooltip.backToList')}</TooltipContent>
+            </Tooltip>
 
-        <div className="flex h-full flex-col">
-          <header className="rounded-2xl border bg-card/70 p-4 md:p-5">
-            <div className="flex flex-wrap items-start gap-3 md:gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Layers className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-display truncate text-xl font-semibold leading-tight">
+                  {knowledgeBase.name}
+                </h1>
+                <p className="mt-1 text-xs text-muted-foreground">{t('detail.subtitle')}</p>
+              </div>
+            </div>
+
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={isChatOpen ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="size-8 cursor-pointer"
+                    onClick={handleOpenChat}
+                  >
+                    <MessageSquare className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('detail.tooltip.openChat')}</TooltipContent>
+              </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-8 shrink-0 cursor-pointer"
-                    asChild
+                    className="size-8 cursor-pointer"
+                    onClick={() => setEditDialogOpen(true)}
                   >
-                    <Link to="/knowledge-bases">
-                      <ArrowLeft className="size-4" />
-                    </Link>
+                    <Settings className="size-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('detail.tooltip.backToList')}</TooltipContent>
+                <TooltipContent>{t('detail.tooltip.settings')}</TooltipContent>
               </Tooltip>
-
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Layers className="size-4" />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="font-display truncate text-xl font-semibold leading-tight">
-                    {knowledgeBase.name}
-                  </h1>
-                  <p className="mt-1 text-xs text-muted-foreground">{t('detail.subtitle')}</p>
-                </div>
-              </div>
-
-              <div className="ml-auto flex shrink-0 items-center gap-1.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={isChatOpen ? 'secondary' : 'ghost'}
-                      size="icon"
-                      className="size-8 cursor-pointer"
-                      onClick={handleOpenChat}
-                    >
-                      <MessageSquare className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('detail.tooltip.openChat')}</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 cursor-pointer"
-                      onClick={() => setEditDialogOpen(true)}
-                    >
-                      <Settings className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('detail.tooltip.settings')}</TooltipContent>
-                </Tooltip>
-              </div>
             </div>
+          </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <FileText className="size-3.5" />
-                {t('detail.stats.documents', { count: knowledgeBase.documentCount })}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Layers className="size-3.5" />
-                {t('detail.stats.chunks', { count: knowledgeBase.totalChunks })}
-              </span>
-            </div>
-          </header>
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <FileText className="size-3.5" />
+              {t('detail.stats.documents', { count: knowledgeBase.documentCount })}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Layers className="size-3.5" />
+              {t('detail.stats.chunks', { count: knowledgeBase.totalChunks })}
+            </span>
+          </div>
+        </header>
 
-          <div className="mt-3 rounded-xl border bg-card p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <Popover open={folderPopoverOpen} onOpenChange={setFolderPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 shrink-0 cursor-pointer gap-1.5 text-sm font-medium"
-                    >
-                      <Folder className="size-3.5 text-muted-foreground" />
-                      {currentFolderName}
-                      <ChevronDown className="size-3.5 text-muted-foreground" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-64 p-1.5">
-                    <ScrollArea className="max-h-72">
-                      <button
-                        className={cn(
-                          'flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left cursor-pointer',
-                          'hover:bg-accent',
-                          currentFolderId === null && 'bg-accent font-medium'
-                        )}
-                        onClick={() => handleFolderSelect(null)}
-                      >
-                        <Home className="size-3.5" />
-                        <span>{t('detail.folder.allDocuments')}</span>
-                        <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                          {knowledgeBase.documentCount}
-                        </span>
-                      </button>
-
-                      {folderTree && folderTree.length > 0 && (
-                        <>
-                          <Separator className="my-1" />
-                          {folderTree.map((folder) => (
-                            <FolderTreeItem
-                              key={folder.id}
-                              folder={folder}
-                              level={0}
-                              currentFolderId={currentFolderId}
-                              expandedIds={expandedFolderIds}
-                              onSelect={(folderId) => handleFolderSelect(folderId)}
-                              onToggle={handleFolderToggle}
-                            />
-                          ))}
-                        </>
-                      )}
-
-                      <Separator className="my-1" />
-                      <button
-                        className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-                        onClick={() => {
-                          setFolderPopoverOpen(false);
-                          setFolderDialogOpen(true);
-                        }}
-                      >
-                        <FolderPlus className="size-3.5" />
-                        <span>{t('detail.folder.newFolder')}</span>
-                      </button>
-                    </ScrollArea>
-                  </PopoverContent>
-                </Popover>
-
-                {folderPath.length > 0 && (
-                  <nav className="flex min-w-0 items-center gap-0.5 text-sm text-muted-foreground">
-                    <ChevronRight className="size-3.5 shrink-0" />
+        <div className="shrink-0 border-b px-6 py-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Popover open={folderPopoverOpen} onOpenChange={setFolderPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 shrink-0 cursor-pointer gap-1.5 text-sm font-medium"
+                  >
+                    <Folder className="size-3.5 text-muted-foreground" />
+                    {currentFolderName}
+                    <ChevronDown className="size-3.5 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-64 p-1.5">
+                  <ScrollArea className="max-h-72">
                     <button
-                      className="truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
-                      onClick={() => handleFolderNavigate(null)}
+                      className={cn(
+                        'flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left cursor-pointer',
+                        'hover:bg-accent',
+                        currentFolderId === null && 'bg-accent font-medium'
+                      )}
+                      onClick={() => handleFolderSelect(null)}
                     >
-                      {t('detail.folder.root')}
+                      <Home className="size-3.5" />
+                      <span>{t('detail.folder.allDocuments')}</span>
+                      <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                        {knowledgeBase.documentCount}
+                      </span>
                     </button>
-                    {folderPath.slice(0, -1).map((folder) => (
-                      <div key={folder.id} className="flex min-w-0 items-center gap-0.5">
-                        <ChevronRight className="size-3.5 shrink-0" />
-                        <button
-                          className="truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
-                          onClick={() => handleFolderNavigate(folder.id)}
-                        >
-                          {folder.name}
-                        </button>
-                      </div>
-                    ))}
-                  </nav>
+
+                    {folderTree && folderTree.length > 0 && (
+                      <>
+                        <Separator className="my-1" />
+                        {folderTree.map((folder) => (
+                          <FolderTreeItem
+                            key={folder.id}
+                            folder={folder}
+                            level={0}
+                            currentFolderId={currentFolderId}
+                            expandedIds={expandedFolderIds}
+                            onSelect={(folderId) => handleFolderSelect(folderId)}
+                            onToggle={handleFolderToggle}
+                          />
+                        ))}
+                      </>
+                    )}
+
+                    <Separator className="my-1" />
+                    <button
+                      className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+                      onClick={() => {
+                        setFolderPopoverOpen(false);
+                        setFolderDialogOpen(true);
+                      }}
+                    >
+                      <FolderPlus className="size-3.5" />
+                      <span>{t('detail.folder.newFolder')}</span>
+                    </button>
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
+
+              {folderPath.length > 0 && (
+                <nav className="flex min-w-0 items-center gap-0.5 text-sm text-muted-foreground">
+                  <ChevronRight className="size-3.5 shrink-0" />
+                  <button
+                    className="truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
+                    onClick={() => handleFolderNavigate(null)}
+                  >
+                    {t('detail.folder.root')}
+                  </button>
+                  {folderPath.slice(0, -1).map((folder) => (
+                    <div key={folder.id} className="flex min-w-0 items-center gap-0.5">
+                      <ChevronRight className="size-3.5 shrink-0" />
+                      <button
+                        className="truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
+                        onClick={() => handleFolderNavigate(folder.id)}
+                      >
+                        {folder.name}
+                      </button>
+                    </div>
+                  ))}
+                </nav>
+              )}
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              <div className="relative w-52 max-w-[60vw]">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                <Input
+                  className="h-8 pl-8 text-sm"
+                  placeholder={t('detail.search.placeholder')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                    onClick={() => setSearch('')}
+                  >
+                    <X className="size-3.5" />
+                  </button>
                 )}
               </div>
 
-              <div className="ml-auto flex items-center gap-2">
-                <div className="relative w-52 max-w-[60vw]">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                  <Input
-                    className="h-8 pl-8 text-sm"
-                    placeholder={t('detail.search.placeholder')}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  {search && (
-                    <button
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+              <div className="flex items-center rounded-lg border p-0.5">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-7 w-7 rounded-md cursor-pointer',
+                        viewMode === 'grid' && 'bg-muted'
+                      )}
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <LayoutGrid className="size-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('detail.view.grid')}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn(
+                        'h-7 w-7 rounded-md cursor-pointer',
+                        viewMode === 'table' && 'bg-muted'
+                      )}
+                      onClick={() => setViewMode('table')}
+                    >
+                      <List className="size-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('detail.view.table')}</TooltipContent>
+                </Tooltip>
+              </div>
+
+              <Button size="sm" className="h-8 cursor-pointer" onClick={() => setUploadOpen(true)}>
+                <Upload className="size-3.5 mr-1.5" />
+                {t('detail.action.upload')}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="px-6 py-5">
+              {search && (
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {t('detail.search.current')}
+                  </span>
+                  <Badge variant="secondary" className="gap-1">
+                    "{search}"
+                    <button className="cursor-pointer" onClick={() => setSearch('')}>
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {t('detail.search.resultCount', { count: filteredDocuments.length })}
+                  </span>
+                </div>
+              )}
+
+              {docsLoading ? (
+                viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                    {[...Array(12)].map((_, i) => (
+                      <Skeleton key={i} className="h-36 rounded-xl" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {[...Array(8)].map((_, i) => (
+                      <Skeleton key={i} className="h-14 rounded-lg" />
+                    ))}
+                  </div>
+                )
+              ) : filteredDocuments.length > 0 ? (
+                viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                    {filteredDocuments.map((doc) => (
+                      <DocumentGridCard
+                        key={doc.id}
+                        document={doc}
+                        onSelect={() => handleDocumentClick(doc)}
+                        onEdit={() => handleDocumentClick(doc)}
+                        onDelete={() => handleDeleteDocument(doc)}
+                        onDownload={() => handleDownloadDocument(doc)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-xl border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                          <TableHead className="font-medium">{t('detail.table.name')}</TableHead>
+                          <TableHead className="font-medium w-24">
+                            {t('detail.table.type')}
+                          </TableHead>
+                          <TableHead className="font-medium w-24">
+                            {t('detail.table.size')}
+                          </TableHead>
+                          <TableHead className="font-medium w-32">
+                            {t('detail.table.status')}
+                          </TableHead>
+                          <TableHead className="w-12" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredDocuments.map((doc) => (
+                          <DocumentTableRow
+                            key={doc.id}
+                            document={doc}
+                            onSelect={() => handleDocumentClick(doc)}
+                            onEdit={() => handleDocumentClick(doc)}
+                            onDelete={() => handleDeleteDocument(doc)}
+                            onDownload={() => handleDownloadDocument(doc)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
+              ) : (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-muted">
+                    <Upload className="size-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="mb-1.5 text-base font-semibold">
+                    {search ? t('detail.empty.noMatch') : t('detail.empty.noDocuments')}
+                  </h3>
+                  <p className="mb-5 max-w-sm text-sm text-muted-foreground">
+                    {search
+                      ? t('detail.empty.noMatchDescription', { search })
+                      : t('detail.empty.noDocumentsDescription')}
+                  </p>
+                  {search ? (
+                    <Button
+                      variant="outline"
+                      className="cursor-pointer"
                       onClick={() => setSearch('')}
                     >
-                      <X className="size-3.5" />
-                    </button>
+                      {t('detail.action.clearSearch')}
+                    </Button>
+                  ) : (
+                    <Button className="cursor-pointer" onClick={() => setUploadOpen(true)}>
+                      <Upload className="size-4 mr-2" />
+                      {t('detail.action.upload')}
+                    </Button>
                   )}
                 </div>
-
-                <div className="flex items-center rounded-lg border p-0.5">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          'h-7 w-7 rounded-md cursor-pointer',
-                          viewMode === 'grid' && 'bg-muted'
-                        )}
-                        onClick={() => setViewMode('grid')}
-                      >
-                        <LayoutGrid className="size-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('detail.view.grid')}</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          'h-7 w-7 rounded-md cursor-pointer',
-                          viewMode === 'table' && 'bg-muted'
-                        )}
-                        onClick={() => setViewMode('table')}
-                      >
-                        <List className="size-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{t('detail.view.table')}</TooltipContent>
-                  </Tooltip>
-                </div>
-
-                <Button
-                  size="sm"
-                  className="h-8 cursor-pointer"
-                  onClick={() => setUploadOpen(true)}
-                >
-                  <Upload className="size-3.5 mr-1.5" />
-                  {t('detail.action.upload')}
-                </Button>
-              </div>
+              )}
             </div>
-          </div>
-
-          <div className="mt-3 flex-1 overflow-hidden rounded-2xl border bg-card/70">
-            <ScrollArea className="h-full">
-              <div className="p-5 md:p-6">
-                {search && (
-                  <div className="mb-4 flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      {t('detail.search.current')}
-                    </span>
-                    <Badge variant="secondary" className="gap-1">
-                      "{search}"
-                      <button className="cursor-pointer" onClick={() => setSearch('')}>
-                        <X className="size-3" />
-                      </button>
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {t('detail.search.resultCount', { count: filteredDocuments.length })}
-                    </span>
-                  </div>
-                )}
-
-                {docsLoading ? (
-                  viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                      {[...Array(12)].map((_, i) => (
-                        <Skeleton key={i} className="h-36 rounded-xl" />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {[...Array(8)].map((_, i) => (
-                        <Skeleton key={i} className="h-14 rounded-lg" />
-                      ))}
-                    </div>
-                  )
-                ) : filteredDocuments.length > 0 ? (
-                  viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                      {filteredDocuments.map((doc) => (
-                        <DocumentGridCard
-                          key={doc.id}
-                          document={doc}
-                          onSelect={() => handleDocumentClick(doc)}
-                          onEdit={() => handleDocumentClick(doc)}
-                          onDelete={() => handleDeleteDocument(doc)}
-                          onDownload={() => handleDownloadDocument(doc)}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="overflow-hidden rounded-xl border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-muted/50 hover:bg-muted/50">
-                            <TableHead className="font-medium">{t('detail.table.name')}</TableHead>
-                            <TableHead className="font-medium w-24">
-                              {t('detail.table.type')}
-                            </TableHead>
-                            <TableHead className="font-medium w-24">
-                              {t('detail.table.size')}
-                            </TableHead>
-                            <TableHead className="font-medium w-32">
-                              {t('detail.table.status')}
-                            </TableHead>
-                            <TableHead className="w-12" />
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredDocuments.map((doc) => (
-                            <DocumentTableRow
-                              key={doc.id}
-                              document={doc}
-                              onSelect={() => handleDocumentClick(doc)}
-                              onEdit={() => handleDocumentClick(doc)}
-                              onDelete={() => handleDeleteDocument(doc)}
-                              onDownload={() => handleDownloadDocument(doc)}
-                            />
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-24 text-center">
-                    <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-muted">
-                      <Upload className="size-6 text-muted-foreground" />
-                    </div>
-                    <h3 className="mb-1.5 text-base font-semibold">
-                      {search ? t('detail.empty.noMatch') : t('detail.empty.noDocuments')}
-                    </h3>
-                    <p className="mb-5 max-w-sm text-sm text-muted-foreground">
-                      {search
-                        ? t('detail.empty.noMatchDescription', { search })
-                        : t('detail.empty.noDocumentsDescription')}
-                    </p>
-                    {search ? (
-                      <Button
-                        variant="outline"
-                        className="cursor-pointer"
-                        onClick={() => setSearch('')}
-                      >
-                        {t('detail.action.clearSearch')}
-                      </Button>
-                    ) : (
-                      <Button className="cursor-pointer" onClick={() => setUploadOpen(true)}>
-                        <Upload className="size-4 mr-2" />
-                        {t('detail.action.upload')}
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+          </ScrollArea>
         </div>
       </div>
 

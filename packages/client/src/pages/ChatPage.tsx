@@ -358,7 +358,7 @@ export function ChatPage() {
     return (
       <AppLayout>
         <div className="flex-1 overflow-hidden bg-background px-6 py-8">
-          <div className="mx-auto flex h-full max-w-6xl flex-col gap-4">
+          <div className="flex h-full flex-col gap-4">
             <Skeleton className="h-32 rounded-2xl" />
             <Skeleton className="h-112 rounded-2xl" />
           </div>
@@ -376,12 +376,8 @@ export function ChatPage() {
         {t('skipToContent')}
       </a>
 
-      <div className="relative flex-1 overflow-hidden bg-background">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 h-64 w-2xl -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-        </div>
-
-        <div className="mx-auto flex h-full w-full max-w-6xl flex-col">
+      <div className="flex-1 overflow-hidden bg-background">
+        <div className="flex h-full w-full flex-col">
           <section id="chat-main" className="flex min-h-0 flex-1 flex-col">
             <div className="flex h-full min-h-88 flex-col">
               <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 md:px-6">

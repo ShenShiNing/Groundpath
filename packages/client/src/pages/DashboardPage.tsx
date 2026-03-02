@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router';
 import { ArrowUpRight, Database, FileText, Sparkles } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserSummary, QuickLinks } from '@/components/dashboard';
 import { useKnowledgeBases } from '@/hooks';
 import { useTranslation } from 'react-i18next';
@@ -16,96 +15,58 @@ export function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="flex-1 overflow-y-auto bg-background">
-        <div className="mx-auto w-full max-w-6xl px-6 py-8 md:py-10">
-          <section className="rounded-2xl border bg-card/70 p-6 md:p-8">
-            <p className="text-sm text-muted-foreground">{t('hero.welcome')}</p>
-            <h1 className="font-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {user?.username
-                ? t('hero.titleWithUser', { username: user.username })
-                : t('hero.titleDefault')}
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              {t('hero.description')}
-            </p>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="shrink-0 border-b px-6 py-5">
+          <p className="text-sm text-muted-foreground">{t('hero.welcome')}</p>
+          <h1 className="font-display mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+            {user?.username
+              ? t('hero.titleWithUser', { username: user.username })
+              : t('hero.titleDefault')}
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            {t('hero.description')}
+          </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button className="cursor-pointer" asChild>
-                <Link to="/knowledge-bases">
-                  {t('hero.openKnowledgeBases')}
-                  <ArrowUpRight className="ml-1 size-4" />
-                </Link>
-              </Button>
-              <Button variant="outline" className="cursor-pointer" asChild>
-                <Link to="/settings/ai">{t('hero.configureModel')}</Link>
-              </Button>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button className="cursor-pointer" asChild>
+              <Link to="/knowledge-bases">
+                {t('hero.openKnowledgeBases')}
+                <ArrowUpRight className="ml-1 size-4" />
+              </Link>
+            </Button>
+            <Button variant="outline" className="cursor-pointer" asChild>
+              <Link to="/settings/ai">{t('hero.configureModel')}</Link>
+            </Button>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <Database className="size-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{t('stats.knowledgeBaseCount')}</span>
+              <span className="font-display text-lg font-semibold">{knowledgeBases.length}</span>
             </div>
-          </section>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <FileText className="size-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{t('stats.documentCount')}</span>
+              <span className="font-display text-lg font-semibold">{totalDocuments}</span>
+            </div>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-muted-foreground" />
+              <span className="text-muted-foreground">{t('stats.systemStatus')}</span>
+              <span className="font-medium">{t('stats.systemHealthy')}</span>
+            </div>
+          </div>
+        </header>
 
-          <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('stats.knowledgeBaseCount')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <p className="font-display text-3xl font-semibold">{knowledgeBases.length}</p>
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                    <Database className="size-4" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('stats.documentCount')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <p className="font-display text-3xl font-semibold">{totalDocuments}</p>
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                    <FileText className="size-4" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="sm:col-span-2 lg:col-span-1">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {t('stats.systemStatus')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <p className="text-base font-medium">{t('stats.systemHealthy')}</p>
-                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                    <Sparkles className="size-4" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <section>
+            <UserSummary />
           </section>
 
           <section className="mt-6">
-            <Card>
-              <CardContent className="p-6">
-                <UserSummary />
-              </CardContent>
-            </Card>
-          </section>
-
-          <section className="mt-6">
-            <Card>
-              <CardContent className="p-6">
-                <QuickLinks />
-              </CardContent>
-            </Card>
+            <QuickLinks />
           </section>
         </div>
       </div>

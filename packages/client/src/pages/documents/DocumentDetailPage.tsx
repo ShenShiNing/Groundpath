@@ -6,7 +6,6 @@ import { ArrowLeft, Download, Eye, FileText, PencilLine } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DocumentReader, DocumentInfo } from '@/components/documents';
 import { useDocument, useDocumentContent, useSaveDocumentContent } from '@/hooks';
 import { documentsApi } from '@/api';
@@ -110,101 +109,93 @@ export function DocumentDetailPage() {
 
   return (
     <AppLayout>
-      <div className="relative flex-1 overflow-y-auto bg-background px-6 py-8 md:py-10">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 h-72 w-152 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-        </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="shrink-0 border-b px-6 py-5">
+          <div className="flex flex-wrap items-start gap-3">
+            <Button variant="ghost" size="icon" className="size-8 cursor-pointer" asChild>
+              <Link to="/knowledge-bases">
+                <ArrowLeft className="size-4" />
+              </Link>
+            </Button>
 
-        <div className="mx-auto w-full max-w-7xl space-y-6">
-          <section className="rounded-2xl border bg-card/70 p-6 md:p-8">
-            <div className="flex flex-wrap items-start gap-3">
-              <Button variant="ghost" size="icon" className="size-8 cursor-pointer" asChild>
-                <Link to="/knowledge-bases">
-                  <ArrowLeft className="size-4" />
-                </Link>
-              </Button>
+            <div className="min-w-0 flex-1">
+              <h1 className="font-display truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+                {isPageLoading
+                  ? t('loading')
+                  : (content?.title ?? document?.title ?? t('page.title'))}
+              </h1>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <FileText className="size-3.5" />
+                  {document?.documentType?.toUpperCase() ?? 'DOCUMENT'}
+                </span>
+                <span>{t('page.subtitle')}</span>
+              </div>
+            </div>
 
-              <div className="min-w-0 flex-1">
-                <h1 className="font-display truncate text-2xl font-semibold tracking-tight sm:text-3xl">
-                  {isPageLoading
-                    ? t('loading')
-                    : (content?.title ?? document?.title ?? t('page.title'))}
-                </h1>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <FileText className="size-3.5" />
-                    {document?.documentType?.toUpperCase() ?? 'DOCUMENT'}
-                  </span>
-                  <span>{t('page.subtitle')}</span>
-                </div>
+            {document && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant={mode === 'read' ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                  onClick={() => handleModeChange('read')}
+                >
+                  <Eye className="size-4 mr-1.5" />
+                  {t('action.read')}
+                </Button>
+
+                {isEditable && (
+                  <Button
+                    variant={mode === 'edit' ? 'default' : 'outline'}
+                    className="cursor-pointer"
+                    onClick={() => handleModeChange('edit')}
+                  >
+                    <PencilLine className="size-4 mr-1.5" />
+                    {t('action.edit')}
+                  </Button>
+                )}
+
+                <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
+                  <Download className="size-4 mr-1.5" />
+                  {t('action.download')}
+                </Button>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {(document || isPageLoading) && (
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_320px]">
+              <div className="px-6 py-6">
+                <h2 className="mb-4 text-lg font-semibold">
+                  {mode === 'edit' ? t('card.editor') : t('card.preview')}
+                </h2>
+                {renderContent()}
               </div>
 
               {document && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant={mode === 'read' ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => handleModeChange('read')}
-                  >
-                    <Eye className="size-4 mr-1.5" />
-                    {t('action.read')}
-                  </Button>
-
-                  {isEditable && (
-                    <Button
-                      variant={mode === 'edit' ? 'default' : 'outline'}
-                      className="cursor-pointer"
-                      onClick={() => handleModeChange('edit')}
-                    >
-                      <PencilLine className="size-4 mr-1.5" />
-                      {t('action.edit')}
-                    </Button>
-                  )}
-
-                  <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
-                    <Download className="size-4 mr-1.5" />
-                    {t('action.download')}
-                  </Button>
+                <div className="border-l px-6 py-6">
+                  <h2 className="mb-4 text-lg font-semibold">{t('card.info')}</h2>
+                  <DocumentInfo document={document} />
                 </div>
               )}
             </div>
-          </section>
+          </div>
+        )}
 
-          {(document || isPageLoading) && (
-            <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <Card className="lg:col-span-2 bg-card/80">
-                <CardHeader>
-                  <CardTitle>{mode === 'edit' ? t('card.editor') : t('card.preview')}</CardTitle>
-                </CardHeader>
-                <CardContent>{renderContent()}</CardContent>
-              </Card>
-
-              {document && (
-                <Card className="bg-card/80">
-                  <CardHeader>
-                    <CardTitle>{t('card.info')}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DocumentInfo document={document} />
-                  </CardContent>
-                </Card>
-              )}
-            </section>
-          )}
-
-          {!isPageLoading && !document && (
-            <Card className="bg-card/80">
-              <CardContent className="py-14 text-center">
-                <p className="text-muted-foreground">{t('notFound')}</p>
-                <Link to="/knowledge-bases" className="mt-4 inline-block">
-                  <Button variant="outline" className="cursor-pointer">
-                    {t('action.backToList')}
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        {!isPageLoading && !document && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="py-14 text-center">
+              <p className="text-muted-foreground">{t('notFound')}</p>
+              <Link to="/knowledge-bases" className="mt-4 inline-block">
+                <Button variant="outline" className="cursor-pointer">
+                  {t('action.backToList')}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
