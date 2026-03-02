@@ -41,7 +41,10 @@ function generateVerificationToken(email: string, type: EmailVerificationCodeTyp
     purpose: 'email_verified',
   };
 
-  return generateEmailVerificationToken(payload, `${emailConfig.verification.tokenExpiresInMinutes}m`);
+  return generateEmailVerificationToken(
+    payload,
+    `${emailConfig.verification.tokenExpiresInMinutes}m`
+  );
 }
 
 /**

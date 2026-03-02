@@ -721,4 +721,3 @@ describe('authService > login', () => {
     expect(calledDeviceInfo?.browser).toBeUndefined();
   });
 });
-

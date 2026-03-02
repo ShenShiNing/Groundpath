@@ -22,7 +22,10 @@ function getRefreshTokenCacheKey(tokenId: string): string {
   return `${REFRESH_TOKEN_CACHE_PREFIX}${tokenId}`;
 }
 
-interface CachedRefreshToken extends Omit<RefreshToken, 'expiresAt' | 'createdAt' | 'lastUsedAt' | 'revokedAt'> {
+interface CachedRefreshToken extends Omit<
+  RefreshToken,
+  'expiresAt' | 'createdAt' | 'lastUsedAt' | 'revokedAt'
+> {
   expiresAt: string | Date;
   createdAt: string | Date;
   lastUsedAt: string | Date;

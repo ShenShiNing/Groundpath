@@ -1,10 +1,4 @@
-import {
-  mysqlTable,
-  varchar,
-  timestamp,
-  foreignKey,
-  index,
-} from 'drizzle-orm/mysql-core';
+import { mysqlTable, varchar, timestamp, foreignKey, index } from 'drizzle-orm/mysql-core';
 import { users } from '../user/users.schema';
 
 export const userTokenStates = mysqlTable(

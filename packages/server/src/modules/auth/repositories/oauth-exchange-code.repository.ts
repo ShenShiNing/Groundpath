@@ -31,9 +31,7 @@ export const oauthExchangeCodeRepository = {
         expiresAt: oauthExchangeCodes.expiresAt,
       })
       .from(oauthExchangeCodes)
-      .where(
-        and(eq(oauthExchangeCodes.codeHash, codeHash), eq(oauthExchangeCodes.userId, userId))
-      )
+      .where(and(eq(oauthExchangeCodes.codeHash, codeHash), eq(oauthExchangeCodes.userId, userId)))
       .limit(1);
 
     const row = record[0];
@@ -67,9 +65,7 @@ export const oauthExchangeCodeRepository = {
     const candidates = await db
       .select({ codeHash: oauthExchangeCodes.codeHash })
       .from(oauthExchangeCodes)
-      .where(
-        or(lt(oauthExchangeCodes.expiresAt, now()), isNotNull(oauthExchangeCodes.consumedAt))
-      )
+      .where(or(lt(oauthExchangeCodes.expiresAt, now()), isNotNull(oauthExchangeCodes.consumedAt)))
       .limit(batchSize);
 
     if (candidates.length === 0) {

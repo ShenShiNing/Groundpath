@@ -71,7 +71,13 @@ class CacheService {
     let cursor = '0';
 
     do {
-      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', this.pattern(prefix), 'COUNT', 200);
+      const [nextCursor, keys] = await redis.scan(
+        cursor,
+        'MATCH',
+        this.pattern(prefix),
+        'COUNT',
+        200
+      );
       cursor = nextCursor;
 
       if (keys.length === 0) {
@@ -145,4 +151,3 @@ export const shortCache = new CacheService({
 });
 
 export { CacheService };
-

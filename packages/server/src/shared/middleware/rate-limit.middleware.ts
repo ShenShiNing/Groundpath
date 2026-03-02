@@ -208,4 +208,3 @@ export async function incrementAccountRateLimit(email: string): Promise<void> {
   const key = `ratelimit:account:${email.toLowerCase().trim()}`;
   await incrementCounter(key, ACCOUNT_WINDOW_MS);
 }
-
