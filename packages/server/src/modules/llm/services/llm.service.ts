@@ -38,17 +38,11 @@ export const llmService = {
   },
 
   /**
-   * Get generation options from user's config.
+   * Get generation options for a user.
+   * Returns empty options so each provider uses its own API/SDK defaults.
    */
-  async getOptionsForUser(userId: string): Promise<GenerateOptions> {
-    const config = await llmConfigService.getFullConfig(userId);
-    if (!config) return {};
-
-    return {
-      temperature: config.temperature,
-      maxTokens: config.maxTokens,
-      topP: config.topP,
-    };
+  async getOptionsForUser(_userId: string): Promise<GenerateOptions> {
+    return {};
   },
 
   /**
