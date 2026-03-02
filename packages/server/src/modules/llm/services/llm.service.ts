@@ -6,6 +6,25 @@ import type { LLMProvider, GenerateOptions } from '../providers/llm-provider.int
 import { Errors } from '@shared/errors';
 import { logger } from '@shared/logger';
 
+function getDefaultModelForProvider(provider: LLMProviderType): string {
+  switch (provider) {
+    case 'openai':
+      return 'gpt-4o-mini';
+    case 'anthropic':
+      return 'claude-3-5-haiku-latest';
+    case 'zhipu':
+      return 'glm-4-flash';
+    case 'deepseek':
+      return 'deepseek-chat';
+    case 'ollama':
+      return 'llama3.2';
+    case 'custom':
+      return 'gpt-4o-mini';
+    default:
+      return 'gpt-4o-mini';
+  }
+}
+
 export const llmService = {
   /**
    * Get an LLM provider configured for the given user.
@@ -71,7 +90,10 @@ export const llmService = {
         // Test with provided overrides
         const config = await llmConfigService.getFullConfig(userId);
         const finalProvider = overrides.provider ?? config?.provider ?? 'openai';
-        const finalModel = overrides.model ?? config?.model ?? 'gpt-4o-mini';
+        const savedModelForSameProvider =
+          config?.provider === finalProvider ? config.model : undefined;
+        const finalModel =
+          overrides.model ?? savedModelForSameProvider ?? getDefaultModelForProvider(finalProvider);
         const finalApiKey = overrides.apiKey ?? config?.apiKey ?? undefined;
         const finalBaseUrl = overrides.baseUrl ?? config?.baseUrl ?? undefined;
 
