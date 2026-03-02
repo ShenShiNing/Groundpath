@@ -48,22 +48,26 @@ describe('parseSSEStream', () => {
   });
 
   it('does not swallow handler errors as JSON parse errors', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const handlerError = new Error('handler bug');
+    let callCount = 0;
 
     const handlers: SSEEventHandlers<{ type: string }> = {
       onEvent: () => {
+        callCount++;
         throw handlerError;
       },
       onError: vi.fn(),
     };
 
-    const reader = createReader(['data: {"type":"chunk"}\n\n']);
+    // Two events — both should be dispatched even though handler throws each time
+    const reader = createReader(['data: {"type":"a"}\n\ndata: {"type":"b"}\n\n']);
 
     await parseSSEStream(reader, handlers);
 
-    expect(consoleSpy).toHaveBeenCalledWith('[SSE] Event handler error:', handlerError);
-    consoleSpy.mockRestore();
+    // Handler was invoked for each event (errors swallowed, stream stayed alive)
+    expect(callCount).toBe(2);
+    // Stream-level onError should NOT be called for handler errors
+    expect(handlers.onError).not.toHaveBeenCalled();
   });
 
   it('processes remaining buffer data after stream ends', async () => {

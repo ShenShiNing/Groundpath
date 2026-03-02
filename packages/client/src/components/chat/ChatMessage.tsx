@@ -1,14 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Bot,
-  Copy,
-  RefreshCw,
-  Loader2,
-  Check,
-  ChevronDown,
-  AlignLeft,
-  FileCode2,
-} from 'lucide-react';
+import { Copy, RefreshCw, Loader2, Check, ChevronDown, AlignLeft, FileCode2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -95,10 +86,7 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
   // Assistant message (loading with no content yet)
   if (message.isLoading && !message.content) {
     return (
-      <div className="mb-5 flex gap-3">
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <Bot className="size-4" />
-        </div>
+      <div className="mb-5">
         <div className="flex items-center gap-2 py-2">
           <Loader2 className="size-4 text-muted-foreground animate-spin" />
           <span className="text-sm text-muted-foreground">Thinking...</span>
@@ -109,10 +97,7 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
 
   // Assistant message (streaming or complete)
   return (
-    <div className="mb-6 flex gap-3">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-        <Bot className="size-4" />
-      </div>
+    <div className="mb-6">
       <div className="flex-1 min-w-0">
         <div className="text-sm">
           <ChatMarkdown
@@ -133,6 +118,9 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
         {/* Actions */}
         {!message.isLoading && (
           <div className="flex items-center gap-1 mt-2">
+            <span className="text-[10px] text-muted-foreground mr-1">
+              {formatTime(message.timestamp)}
+            </span>
             {onCopy && !isPureCodeBlock && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -180,9 +168,6 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
                 Regenerate
               </Button>
             )}
-            <span className="text-[10px] text-muted-foreground ml-auto">
-              {formatTime(message.timestamp)}
-            </span>
           </div>
         )}
       </div>

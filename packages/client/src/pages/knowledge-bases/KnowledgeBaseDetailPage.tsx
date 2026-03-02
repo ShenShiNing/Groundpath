@@ -475,8 +475,8 @@ export default function KnowledgeBaseDetailPage() {
       await Promise.all(docsToDelete.map((doc) => deleteDocumentMutation.mutateAsync(doc.id)));
       queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeBases.documents(id, {}) });
       queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeBases.detail(id) });
-    } catch (error) {
-      console.error('Failed to delete documents:', error);
+    } catch {
+      // deletion failed — query will refetch
     } finally {
       setDeleteDialog({ open: false, documents: [] });
     }

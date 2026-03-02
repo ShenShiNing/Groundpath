@@ -31,8 +31,8 @@ function processLine<T>(line: string, handlers: SSEEventHandlers<T>): void {
 
   try {
     handlers.onEvent(event);
-  } catch (handlerError) {
-    console.error('[SSE] Event handler error:', handlerError);
+  } catch {
+    // swallow handler errors to keep the SSE stream alive
   }
 }
 

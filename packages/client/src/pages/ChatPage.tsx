@@ -319,8 +319,7 @@ export function ChatPage() {
 
       setCreateKbDialogOpen(false);
       toast.success('知识库创建成功，聊天内容已保存为文档');
-    } catch (error) {
-      console.error('Failed to create knowledge base from chat:', error);
+    } catch {
       toast.error('创建知识库失败，请重试');
     } finally {
       setIsCreatingKb(false);

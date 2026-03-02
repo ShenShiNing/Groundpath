@@ -57,8 +57,8 @@ export function ConversationList({
       queryClient.invalidateQueries({
         queryKey: queryKeys.knowledgeBases.conversations(knowledgeBaseId ?? '__global__'),
       });
-    } catch (error) {
-      console.error('Failed to delete conversation:', error);
+    } catch {
+      // deletion failed — query will refetch to show current state
     }
   };
 

@@ -151,8 +151,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         convId = conversation.id;
         set({ conversationId: convId });
         invalidateConversationQueries();
-      } catch (error) {
-        console.error('Failed to create conversation:', error);
+      } catch {
         addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
@@ -267,8 +266,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         knowledgeBaseId: conversation.knowledgeBaseId,
         messages,
       });
-    } catch (error) {
-      console.error('Failed to load conversation:', error);
+    } catch {
+      // silently fail — caller can retry
     }
   },
 

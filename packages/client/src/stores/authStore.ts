@@ -97,9 +97,8 @@ export const useAuthStore = create<AuthState>()(
           if (isAuthenticated) {
             await authApi.logout();
           }
-        } catch (error) {
+        } catch {
           // 登出失败也要继续清除本地状态
-          console.error('[Auth] Logout API failed:', error);
         } finally {
           set({
             user: null,
@@ -116,9 +115,8 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           await authApi.logoutAll();
-        } catch (error) {
+        } catch {
           // 登出失败也要继续清除本地状态
-          console.error('[Auth] Logout all API failed:', error);
         } finally {
           set({
             user: null,
@@ -180,11 +178,9 @@ setTokenAccessors({
   getAccessToken: () => useAuthStore.getState().accessToken,
   isAuthenticated: () => useAuthStore.getState().isAuthenticated,
   onTokenRefreshed: (accessToken) => {
-    console.log('[Auth] Token refreshed automatically');
     useAuthStore.setState({ accessToken });
   },
   onAuthError: () => {
-    console.warn('[Auth] Authentication error, clearing session');
     useAuthStore.getState().clearAuth();
   },
 });
