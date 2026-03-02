@@ -1,6 +1,16 @@
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpRight, Bot, CheckCircle2, CircleSlash, Cpu } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Bot,
+  CheckCircle2,
+  CircleSlash,
+  Cpu,
+  Info,
+  KeyRound,
+  Lightbulb,
+  ShieldCheck,
+} from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { AISettingsForm } from '@/components/settings';
@@ -73,8 +83,104 @@ export function AISettingsPage() {
         </header>
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-2xl">
-            <AISettingsForm />
+          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[1fr_20rem] xl:gap-12">
+            {/* Left: Settings Form */}
+            <div className="min-w-0 max-w-2xl">
+              <AISettingsForm />
+            </div>
+
+            {/* Right: Contextual Sidebar */}
+            <aside className="hidden space-y-6 xl:block">
+              {/* Status Overview */}
+              <div className="rounded-lg border bg-muted/30 p-5">
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <Info className="size-4 text-primary" />
+                  {t('sidebar.statusTitle')}
+                </h3>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{t('sidebar.provider')}</span>
+                    <span className="font-medium">{currentProviderName ?? t('sidebar.unset')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{t('sidebar.model')}</span>
+                    <span className="max-w-[10rem] truncate font-mono text-xs font-medium">
+                      {config?.model ?? t('sidebar.unset')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{t('sidebar.apiKey')}</span>
+                    {config?.hasApiKey ? (
+                      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                        <ShieldCheck className="size-3.5" />
+                        {t('sidebar.saved')}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">{t('sidebar.unset')}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{t('sidebar.status')}</span>
+                    {isConfigured ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="size-3" />
+                        {t('sidebar.ready')}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                        <CircleSlash className="size-3" />
+                        {t('sidebar.incomplete')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Guide */}
+              <div className="rounded-lg border p-5">
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <Lightbulb className="size-4 text-amber-500" />
+                  {t('sidebar.guideTitle')}
+                </h3>
+                <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
+                  <li className="flex gap-2.5">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      1
+                    </span>
+                    <span>{t('sidebar.step1')}</span>
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      2
+                    </span>
+                    <span>{t('sidebar.step2')}</span>
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      3
+                    </span>
+                    <span>{t('sidebar.step3')}</span>
+                  </li>
+                  <li className="flex gap-2.5">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      4
+                    </span>
+                    <span>{t('sidebar.step4')}</span>
+                  </li>
+                </ol>
+              </div>
+
+              {/* Security Note */}
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-5">
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <KeyRound className="size-4 text-primary" />
+                  {t('sidebar.securityTitle')}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {t('sidebar.securityDescription')}
+                </p>
+              </div>
+            </aside>
           </div>
         </div>
       </div>

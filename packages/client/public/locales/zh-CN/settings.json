@@ -56,5 +56,23 @@
     "testSuccessLatency": "连接成功 ({{latency}}ms)",
     "testSuccess": "连接成功",
     "testError": "连接测试失败"
+  },
+  "sidebar": {
+    "statusTitle": "配置概览",
+    "provider": "服务商",
+    "model": "模型",
+    "apiKey": "API 密钥",
+    "status": "状态",
+    "unset": "未设置",
+    "saved": "已保存",
+    "ready": "就绪",
+    "incomplete": "待完善",
+    "guideTitle": "快速指引",
+    "step1": "选择 AI 服务商（OpenAI、Anthropic 等）",
+    "step2": "填写对应的 API Key 和端点地址",
+    "step3": "从列表选择模型，或输入自定义名称",
+    "step4": "点击「测试连接」验证后保存",
+    "securityTitle": "安全说明",
+    "securityDescription": "API 密钥使用加密存储，仅用于服务端与 AI 服务商通信，不会暴露至前端或日志中。"
   }
 }

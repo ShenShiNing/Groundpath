@@ -56,5 +56,23 @@
     "testSuccessLatency": "Connection successful ({{latency}}ms)",
     "testSuccess": "Connection successful",
     "testError": "Connection test failed"
+  },
+  "sidebar": {
+    "statusTitle": "Configuration Overview",
+    "provider": "Provider",
+    "model": "Model",
+    "apiKey": "API Key",
+    "status": "Status",
+    "unset": "Not set",
+    "saved": "Saved",
+    "ready": "Ready",
+    "incomplete": "Incomplete",
+    "guideTitle": "Quick Guide",
+    "step1": "Select an AI provider (OpenAI, Anthropic, etc.)",
+    "step2": "Enter the corresponding API Key and endpoint URL",
+    "step3": "Choose a model from the list, or enter a custom name",
+    "step4": "Click \"Test Connection\" to verify, then save",
+    "securityTitle": "Security Note",
+    "securityDescription": "API keys are stored with encryption and only used for server-side communication with AI providers. They are never exposed to the frontend or logs."
   }
 }
