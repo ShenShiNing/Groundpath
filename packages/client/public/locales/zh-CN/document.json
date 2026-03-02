@@ -87,6 +87,12 @@
   "list": {
     "empty": "未找到文档"
   },
+  "cardAction": {
+    "download": "下载",
+    "edit": "编辑",
+    "moveToFolder": "移动到文件夹",
+    "delete": "删除"
+  },
   "folder": {
     "allDocuments": "全部文档",
     "action": {

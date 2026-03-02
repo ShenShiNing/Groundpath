@@ -1,11 +1,14 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowUpRight, MonitorCheck, ShieldAlert } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { SessionList } from '@/components/sessions';
 
 export function SessionsPage() {
+  const { t } = useTranslation('session');
+
   return (
     <AppLayout>
       <div className="relative flex-1 overflow-y-auto bg-background px-6 py-8 md:py-10">
@@ -18,15 +21,13 @@ export function SessionsPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                  登录会话
+                  {t('page.title')}
                 </h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  管理你的活跃设备与登录历史，可随时撤销不安全会话。
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('page.description')}</p>
               </div>
               <Button variant="outline" className="cursor-pointer" asChild>
                 <Link to="/dashboard">
-                  返回工作台
+                  {t('action.backToDashboard')}
                   <ArrowUpRight className="ml-1 size-4" />
                 </Link>
               </Button>
@@ -34,17 +35,17 @@ export function SessionsPage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">设备管理</p>
+                <p className="text-xs text-muted-foreground">{t('stats.deviceManagement')}</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 font-display text-xl font-semibold">
                   <MonitorCheck className="size-4 text-primary" />
-                  支持按设备撤销
+                  {t('stats.deviceManagementValue')}
                 </p>
               </div>
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">安全提示</p>
+                <p className="text-xs text-muted-foreground">{t('stats.securityTip')}</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 font-display text-xl font-semibold">
                   <ShieldAlert className="size-4 text-primary" />
-                  异常会话建议立即下线
+                  {t('stats.securityTipValue')}
                 </p>
               </div>
             </div>
@@ -52,8 +53,8 @@ export function SessionsPage() {
 
           <Card className="bg-card/80">
             <CardHeader>
-              <CardTitle>活跃会话列表</CardTitle>
-              <CardDescription>你可以主动终止当前账号在其他设备上的登录状态。</CardDescription>
+              <CardTitle>{t('card.title')}</CardTitle>
+              <CardDescription>{t('card.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               <SessionList />

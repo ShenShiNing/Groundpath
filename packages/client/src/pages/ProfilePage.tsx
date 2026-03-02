@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowUpRight, UserRound, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -7,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { ProfileForm } from '@/components/profile';
 
 export function ProfilePage() {
+  const { t } = useTranslation('profile');
+
   return (
     <AppLayout>
       <div className="relative flex-1 overflow-y-auto bg-background px-6 py-8 md:py-10">
@@ -19,15 +22,13 @@ export function ProfilePage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                  个人资料
+                  {t('page.title')}
                 </h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  更新你的头像与个人信息，保持团队协作中的身份信息一致。
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('page.description')}</p>
               </div>
               <Button variant="outline" className="cursor-pointer" asChild>
                 <Link to="/dashboard">
-                  返回工作台
+                  {t('action.backToDashboard')}
                   <ArrowUpRight className="ml-1 size-4" />
                 </Link>
               </Button>
@@ -35,17 +36,17 @@ export function ProfilePage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">资料完善度</p>
+                <p className="text-xs text-muted-foreground">{t('stats.completeness')}</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 font-display text-xl font-semibold">
                   <UserRound className="size-4 text-primary" />
-                  基础信息可编辑
+                  {t('stats.completenessValue')}
                 </p>
               </div>
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">账号状态</p>
+                <p className="text-xs text-muted-foreground">{t('stats.accountStatus')}</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 font-display text-xl font-semibold">
                   <ShieldCheck className="size-4 text-primary" />
-                  账户安全正常
+                  {t('stats.accountStatusValue')}
                 </p>
               </div>
             </div>
@@ -53,13 +54,13 @@ export function ProfilePage() {
 
           <Card className="bg-card/80">
             <CardHeader>
-              <CardTitle>编辑资料</CardTitle>
-              <CardDescription>修改后会实时同步到当前账号。</CardDescription>
+              <CardTitle>{t('card.title')}</CardTitle>
+              <CardDescription>{t('card.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfileForm
                 onSuccess={() => {
-                  toast.success('资料更新成功');
+                  toast.success(t('toast.updated'));
                 }}
               />
             </CardContent>

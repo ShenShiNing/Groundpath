@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useForm } from '@tanstack/react-form';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Eye, EyeOff, RefreshCw, Zap, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ import { useAISettingsStore, canFetchModels } from '@/stores/aiSettingsStore';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 
 export function AISettingsForm() {
+  const { t } = useTranslation('settings');
   const [clearDialogOpen, setClearDialogOpen] = React.useState(false);
   const { data: config, isLoading, isError } = useLLMConfig();
   const { data: providers = [] } = useLLMProviders();
@@ -74,13 +76,11 @@ export function AISettingsForm() {
 
   const values = form.state.values;
 
-  // 当前 provider 信息
   const currentProvider = useMemo(
     () => providers.find((p) => p.provider === values.provider),
     [providers, values.provider]
   );
 
-  // 是否可以获取模型
   const canFetch = canFetchModels(
     values.provider,
     !!(config?.hasApiKey && config.provider === values.provider),
@@ -89,7 +89,6 @@ export function AISettingsForm() {
     pendingBaseUrl
   );
 
-  // 获取模型列表
   const showBaseUrlField = !!currentProvider?.requiresBaseUrl || !!currentProvider?.optionalBaseUrl;
 
   const {
@@ -105,7 +104,6 @@ export function AISettingsForm() {
 
   const models = modelsData?.models ?? [];
 
-  // Loading 状态
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -117,7 +115,7 @@ export function AISettingsForm() {
   if (isError) {
     return (
       <div className="flex items-center justify-center py-12 text-destructive">
-        加载配置失败，请刷新页面重试
+        {t('form.loadError')}
       </div>
     );
   }
@@ -137,7 +135,6 @@ export function AISettingsForm() {
     resetPendingCredentials();
   }
 
-  // Provider 切换
   function handleProviderChange(newProvider: LLMProviderType) {
     form.setFieldValue('provider', newProvider);
     form.setFieldValue('model', '');
@@ -148,15 +145,7 @@ export function AISettingsForm() {
     resetPendingCredentials();
   }
 
-  // 测试连接
   function handleTest() {
-    const normalizeTestMessage = (message: string) => {
-      if (message === 'Provider health check failed') {
-        return '连接失败，请检查 API Key、模型与 Base URL 配置';
-      }
-      return message;
-    };
-
     testMutation.mutate(
       {
         ...(values.model && { model: values.model }),
@@ -168,24 +157,29 @@ export function AISettingsForm() {
         onSuccess: (result) => {
           if (result.success) {
             toast.success(
-              result.latencyMs !== undefined ? `连接成功 (${result.latencyMs}ms)` : '连接成功'
+              result.latencyMs !== undefined
+                ? t('form.testSuccessLatency', { latency: result.latencyMs })
+                : t('form.testSuccess')
             );
           } else {
-            toast.error(normalizeTestMessage(result.message));
+            toast.error(
+              result.message === 'Provider health check failed'
+                ? t('form.testFailed')
+                : result.message
+            );
           }
         },
         onError: (error) => {
-          const message = error instanceof Error ? error.message : '连接测试失败';
-          toast.error(normalizeTestMessage(message));
+          const message = error instanceof Error ? error.message : t('form.testError');
+          toast.error(message === 'Provider health check failed' ? t('form.testFailed') : message);
         },
       }
     );
   }
 
-  // 保存设置
   function handleSave() {
     if (!values.model) {
-      toast.error('请先选择或输入模型');
+      toast.error(t('form.modelRequired'));
       return;
     }
 
@@ -205,14 +199,13 @@ export function AISettingsForm() {
     );
   }
 
-  // 刷新模型列表
   function handleRefreshModels() {
     if (canFetch) {
       refetchModels();
     } else if (currentProvider?.requiresApiKey && currentProvider?.requiresBaseUrl) {
-      toast.error('请先填写 API Key 和 Base URL');
+      toast.error(t('form.apiKeyAndBaseUrlRequired'));
     } else if (currentProvider?.requiresApiKey) {
-      toast.error('请先填写 API Key');
+      toast.error(t('form.apiKeyRequired'));
     }
   }
 
@@ -229,18 +222,18 @@ export function AISettingsForm() {
 
   return (
     <div className="space-y-6">
-      {/* Provider 选择 */}
+      {/* Provider */}
       <form.Field name="provider">
         {(field) => (
           <div className="space-y-2">
-            <Label htmlFor="provider">服务商</Label>
+            <Label htmlFor="provider">{t('form.provider')}</Label>
             <Select
               value={field.state.value}
               onValueChange={(v) => handleProviderChange(v as LLMProviderType)}
               disabled={isBusy}
             >
               <SelectTrigger id="provider">
-                <SelectValue placeholder="选择服务商" />
+                <SelectValue placeholder={t('form.providerPlaceholder')} />
               </SelectTrigger>
               <SelectContent>
                 {providers.map((p) => (
@@ -250,7 +243,7 @@ export function AISettingsForm() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">选择 AI 聊天服务商</p>
+            <p className="text-xs text-muted-foreground">{t('form.providerHelper')}</p>
           </div>
         )}
       </form.Field>
@@ -264,7 +257,7 @@ export function AISettingsForm() {
                 API Key
                 {hasSavedKey && config?.apiKeyMasked && (
                   <span className="ml-2 text-xs text-muted-foreground">
-                    (当前: {config.apiKeyMasked})
+                    {t('form.currentApiKey', { masked: config.apiKeyMasked })}
                   </span>
                 )}
               </Label>
@@ -280,7 +273,9 @@ export function AISettingsForm() {
                       setPendingApiKey(field.state.value.trim());
                     }
                   }}
-                  placeholder={hasSavedKey ? '输入新 Key 以更新' : '输入 API Key'}
+                  placeholder={
+                    hasSavedKey ? t('form.apiKeyPlaceholderUpdate') : t('form.apiKeyPlaceholder')
+                  }
                   disabled={isBusy}
                   className="pr-10"
                   autoComplete="off"
@@ -289,7 +284,7 @@ export function AISettingsForm() {
                   type="button"
                   onClick={toggleShowApiKey}
                   disabled={isBusy}
-                  aria-label={showApiKey ? '隐藏 API Key' : '显示 API Key'}
+                  aria-label={showApiKey ? t('form.hideApiKey') : t('form.showApiKey')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -297,8 +292,8 @@ export function AISettingsForm() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {values.provider === 'custom'
-                  ? '填写 API Key 和 Base URL 后可获取模型列表'
-                  : '输入 API Key 后自动获取可用模型'}
+                  ? t('form.apiKeyHelperCustom')
+                  : t('form.apiKeyHelper')}
               </p>
             </div>
           )}
@@ -313,7 +308,7 @@ export function AISettingsForm() {
               <Label htmlFor="baseUrl">
                 Base URL
                 {currentProvider?.optionalBaseUrl && (
-                  <span className="ml-2 text-xs text-muted-foreground">(可选)</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{t('form.optional')}</span>
                 )}
               </Label>
               <Input
@@ -333,20 +328,22 @@ export function AISettingsForm() {
               />
               <p className="text-xs text-muted-foreground">
                 {currentProvider?.optionalBaseUrl
-                  ? `留空则使用默认地址 ${currentProvider.defaultBaseUrl ?? ''}`
-                  : 'OpenAI 兼容的 API 端点地址'}
+                  ? t('form.baseUrlHelperOptional', {
+                      defaultUrl: currentProvider.defaultBaseUrl ?? '',
+                    })
+                  : t('form.baseUrlHelper')}
               </p>
             </div>
           )}
         </form.Field>
       )}
 
-      {/* 模型选择 */}
+      {/* Model */}
       <form.Field name="model">
         {(field) => (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="model">模型</Label>
+              <Label htmlFor="model">{t('form.model')}</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -360,7 +357,7 @@ export function AISettingsForm() {
                 ) : (
                   <RefreshCw className="mr-1 h-3 w-3" />
                 )}
-                刷新
+                {t('form.refresh')}
               </Button>
             </div>
             <ModelSelector
@@ -373,12 +370,12 @@ export function AISettingsForm() {
               disabled={isBusy}
               onValueChange={(v) => field.handleChange(v)}
             />
-            <p className="text-xs text-muted-foreground">从列表选择或输入自定义模型名称</p>
+            <p className="text-xs text-muted-foreground">{t('form.modelHelper')}</p>
           </div>
         )}
       </form.Field>
 
-      {/* 操作区 */}
+      {/* Actions */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
@@ -398,32 +395,30 @@ export function AISettingsForm() {
             ) : (
               <Zap className="mr-2 h-4 w-4" />
             )}
-            测试连接
+            {t('form.testConnection')}
           </Button>
 
           <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
             <AlertDialogTrigger asChild>
               <Button type="button" variant="destructive" disabled={!config || isBusy}>
                 <Trash2 className="mr-2 h-4 w-4" />
-                清空配置
+                {t('form.clearConfig')}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent size="sm">
               <AlertDialogHeader>
-                <AlertDialogTitle>确认清空 AI 配置？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  此操作将删除当前模型、密钥与参数配置，且不可撤销。
-                </AlertDialogDescription>
+                <AlertDialogTitle>{t('form.clearConfirmTitle')}</AlertDialogTitle>
+                <AlertDialogDescription>{t('form.clearConfirmDescription')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={isClearing}>取消</AlertDialogCancel>
+                <AlertDialogCancel disabled={isClearing}>{t('common:cancel')}</AlertDialogCancel>
                 <AlertDialogAction
                   variant="destructive"
                   disabled={isClearing}
                   onClick={handleClearConfig}
                 >
                   {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  确认清空
+                  {t('form.clearConfirm')}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -435,7 +430,7 @@ export function AISettingsForm() {
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            保存设置
+            {t('form.save')}
           </Button>
         </div>
       </div>
@@ -443,7 +438,6 @@ export function AISettingsForm() {
   );
 }
 
-// 模型选择器（内联组件）
 interface ModelSelectorProps {
   value: string;
   models: { id: string; name?: string }[];
@@ -465,6 +459,7 @@ function ModelSelector({
   disabled,
   onValueChange,
 }: ModelSelectorProps) {
+  const { t } = useTranslation('settings');
   const [open, setOpen] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState('');
 
@@ -476,19 +471,17 @@ function ModelSelector({
     );
   }, [models, searchInput]);
 
-  // 找到选中模型的显示名称
   const selectedModel = models.find((m) => m.id === value);
-  // 下拉框打开时显示搜索内容，关闭时显示选中值
   const displayValue = open ? searchInput : (selectedModel?.name ?? value);
 
   function getEmptyMessage() {
-    if (isLoading) return '加载模型中...';
-    if (isError) return '加载失败，请刷新重试';
+    if (isLoading) return t('form.modelsLoading');
+    if (isError) return t('form.modelsError');
     if (!canFetch) {
-      return requiresApiKey ? '请先输入 API Key' : '请先输入 API Key 和 Base URL';
+      return requiresApiKey ? t('form.needsApiKey') : t('form.needsApiKeyAndBaseUrl');
     }
-    if (searchInput.trim()) return `按 Enter 使用 "${searchInput.trim()}"`;
-    return '无可用模型';
+    if (searchInput.trim()) return t('form.pressEnterToUse', { model: searchInput.trim() });
+    return t('form.noModels');
   }
 
   return (
@@ -502,14 +495,14 @@ function ModelSelector({
       onOpenChange={(isOpen) => {
         setOpen(isOpen);
         if (isOpen) {
-          setSearchInput(''); // 打开时清空搜索框以显示所有选项
+          setSearchInput('');
         }
       }}
       disabled={disabled || isLoading}
     >
       <ComboboxInput
         id="model"
-        placeholder="选择或输入模型..."
+        placeholder={t('form.modelPlaceholder')}
         value={displayValue}
         onChange={(e) => setSearchInput(e.target.value)}
         onKeyDown={(e) => {

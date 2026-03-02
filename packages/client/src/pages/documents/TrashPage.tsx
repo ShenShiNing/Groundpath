@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ArrowUpRight, CalendarClock, RotateCcw, Search, Trash, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { TrashDocumentListItem } from '@knowledge-agent/shared/types';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -37,6 +38,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { formatBytes } from '@/lib/utils';
 
 export function TrashPage() {
+  const { t } = useTranslation(['document', 'common']);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'deletedAt' | 'title' | 'fileSize'>('deletedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -75,9 +77,9 @@ export function TrashPage() {
     if (!selectedDocument) return;
     try {
       await restoreMutation.mutateAsync(selectedDocument.id);
-      toast.success('文档已恢复');
+      toast.success(t('trash.toast.restored'));
     } catch {
-      toast.error('恢复文档失败');
+      toast.error(t('trash.toast.restoreFailed'));
     }
     setRestoreDialogOpen(false);
     setSelectedDocument(null);
@@ -92,9 +94,9 @@ export function TrashPage() {
     if (!selectedDocument) return;
     try {
       await permanentDeleteMutation.mutateAsync(selectedDocument.id);
-      toast.success('文档已永久删除');
+      toast.success(t('trash.toast.permanentlyDeleted'));
     } catch {
-      toast.error('删除文档失败');
+      toast.error(t('trash.toast.deleteFailed'));
     }
     setDeleteDialogOpen(false);
     setSelectedDocument(null);
@@ -118,15 +120,13 @@ export function TrashPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                  回收站
+                  {t('trash.page.title')}
                 </h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  管理已删除文档，你可以恢复文档或执行永久删除。
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('trash.page.description')}</p>
               </div>
               <Button variant="outline" className="cursor-pointer" asChild>
                 <Link to="/knowledge-bases">
-                  返回知识库
+                  {t('trash.action.backToKnowledgeBases')}
                   <ArrowUpRight className="ml-1 size-4" />
                 </Link>
               </Button>
@@ -134,15 +134,15 @@ export function TrashPage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">回收站文档总数</p>
+                <p className="text-xs text-muted-foreground">{t('trash.stats.total')}</p>
                 <p className="mt-2 font-display text-2xl font-semibold">{pagination.total}</p>
               </div>
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">当前页文档数</p>
+                <p className="text-xs text-muted-foreground">{t('trash.stats.currentPage')}</p>
                 <p className="mt-2 font-display text-2xl font-semibold">{trashDocuments.length}</p>
               </div>
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">当前页占用大小</p>
+                <p className="text-xs text-muted-foreground">{t('trash.stats.currentPageSize')}</p>
                 <p className="mt-2 font-display text-2xl font-semibold">
                   {formatBytes(currentPageSize)}
                 </p>
@@ -157,7 +157,7 @@ export function TrashPage() {
                 <Input
                   type="text"
                   className="h-10 bg-background pl-9"
-                  placeholder="搜索文档标题..."
+                  placeholder={t('trash.search.placeholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -169,12 +169,12 @@ export function TrashPage() {
                   onValueChange={(value: 'deletedAt' | 'title' | 'fileSize') => setSortBy(value)}
                 >
                   <SelectTrigger className="w-full sm:w-40">
-                    <SelectValue placeholder="排序字段" />
+                    <SelectValue placeholder={t('trash.sort.placeholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="deletedAt">删除时间</SelectItem>
-                    <SelectItem value="title">标题</SelectItem>
-                    <SelectItem value="fileSize">文件大小</SelectItem>
+                    <SelectItem value="deletedAt">{t('trash.sort.deletedAt')}</SelectItem>
+                    <SelectItem value="title">{t('trash.sort.title')}</SelectItem>
+                    <SelectItem value="fileSize">{t('trash.sort.fileSize')}</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -186,13 +186,13 @@ export function TrashPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="desc">降序</SelectItem>
-                    <SelectItem value="asc">升序</SelectItem>
+                    <SelectItem value="desc">{t('trash.sort.desc')}</SelectItem>
+                    <SelectItem value="asc">{t('trash.sort.asc')}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Button variant="outline" className="cursor-pointer" onClick={handleClearFilters}>
-                  清空筛选
+                  {t('trash.action.clearFilters')}
                 </Button>
               </div>
             </div>
@@ -209,18 +209,24 @@ export function TrashPage() {
                   <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
                     <Trash2 className="size-6 text-muted-foreground" />
                   </div>
-                  <p className="mb-1 text-lg font-semibold">回收站为空</p>
-                  <p className="text-sm text-muted-foreground">被删除的文档会显示在这里</p>
+                  <p className="mb-1 text-lg font-semibold">{t('trash.empty.title')}</p>
+                  <p className="text-sm text-muted-foreground">{t('trash.empty.description')}</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40 hover:bg-muted/40">
-                      <TableHead className="font-medium">文档名称</TableHead>
-                      <TableHead className="w-28 font-medium">类型</TableHead>
-                      <TableHead className="w-32 font-medium">文件大小</TableHead>
-                      <TableHead className="w-40 font-medium">删除时间</TableHead>
-                      <TableHead className="w-48 text-right font-medium">操作</TableHead>
+                      <TableHead className="font-medium">{t('trash.table.name')}</TableHead>
+                      <TableHead className="w-28 font-medium">{t('trash.table.type')}</TableHead>
+                      <TableHead className="w-32 font-medium">
+                        {t('trash.table.fileSize')}
+                      </TableHead>
+                      <TableHead className="w-40 font-medium">
+                        {t('trash.table.deletedAt')}
+                      </TableHead>
+                      <TableHead className="w-48 text-right font-medium">
+                        {t('trash.table.actions')}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -250,7 +256,7 @@ export function TrashPage() {
                               onClick={() => handleRestore(doc)}
                             >
                               <RotateCcw className="size-4 mr-1" />
-                              恢复
+                              {t('trash.action.restore')}
                             </Button>
                             <Button
                               variant="destructive"
@@ -259,7 +265,7 @@ export function TrashPage() {
                               onClick={() => handlePermanentDelete(doc)}
                             >
                               <Trash className="size-4 mr-1" />
-                              永久删除
+                              {t('trash.action.permanentDelete')}
                             </Button>
                           </div>
                         </TableCell>
@@ -272,7 +278,10 @@ export function TrashPage() {
 
             {pagination.total > 0 && (
               <div className="mt-4 text-center text-sm text-muted-foreground">
-                当前显示 {trashDocuments.length} / {pagination.total} 份文档
+                {t('trash.pagination.showing', {
+                  current: trashDocuments.length,
+                  total: pagination.total,
+                })}
               </div>
             )}
           </section>
@@ -282,15 +291,17 @@ export function TrashPage() {
       <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>恢复文档</AlertDialogTitle>
+            <AlertDialogTitle>{t('trash.dialog.restore.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              确认恢复“{selectedDocument?.title}”吗？恢复后会回到原始目录。
+              {t('trash.dialog.restore.description', { title: selectedDocument?.title ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">取消</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">
+              {t('cancel', { ns: 'common' })}
+            </AlertDialogCancel>
             <AlertDialogAction className="cursor-pointer" onClick={confirmRestore}>
-              恢复
+              {t('trash.dialog.restore.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -299,18 +310,20 @@ export function TrashPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>永久删除文档</AlertDialogTitle>
+            <AlertDialogTitle>{t('trash.dialog.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              确认永久删除“{selectedDocument?.title}”吗？该操作不可撤销，文件将从存储中移除。
+              {t('trash.dialog.delete.description', { title: selectedDocument?.title ?? '' })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">取消</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">
+              {t('cancel', { ns: 'common' })}
+            </AlertDialogCancel>
             <AlertDialogAction
               className="cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmPermanentDelete}
             >
-              永久删除
+              {t('trash.dialog.delete.confirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

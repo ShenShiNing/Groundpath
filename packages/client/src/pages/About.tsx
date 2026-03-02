@@ -1,27 +1,29 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Brain, Database, FileSearch, ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores';
 
 const principles = [
   {
-    title: '可信答案优先',
-    description: '每次回答都可回溯到来源文档，降低信息幻觉风险。',
+    titleKey: 'about.principle.trusted.title',
+    descriptionKey: 'about.principle.trusted.description',
     icon: ShieldCheck,
   },
   {
-    title: '知识持续沉淀',
-    description: '通过知识库体系管理文档，构建可维护的组织记忆。',
+    titleKey: 'about.principle.knowledge.title',
+    descriptionKey: 'about.principle.knowledge.description',
     icon: Database,
   },
   {
-    title: '语义检索驱动',
-    description: '跨关键词限制定位相关内容，提升查询效率与准确率。',
+    titleKey: 'about.principle.semantic.title',
+    descriptionKey: 'about.principle.semantic.description',
     icon: FileSearch,
   },
 ] as const;
 
 export default function AboutPage() {
+  const { t } = useTranslation('home');
   const { accessToken, isAuthenticated } = useAuthStore();
   const hasAuthSession = isAuthenticated || !!accessToken;
 
@@ -44,11 +46,11 @@ export default function AboutPage() {
             </Link>
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" className="cursor-pointer" asChild>
-                <Link to="/">首页</Link>
+                <Link to="/">{t('about.nav.home')}</Link>
               </Button>
               <Button size="sm" className="cursor-pointer" asChild>
                 <Link to={hasAuthSession ? '/dashboard' : '/auth/signup'}>
-                  {hasAuthSession ? '进入控制台' : '免费开始'}
+                  {hasAuthSession ? t('about.nav.dashboard') : t('about.nav.getStarted')}
                 </Link>
               </Button>
             </div>
@@ -59,34 +61,33 @@ export default function AboutPage() {
       <main className="container pt-36 pb-16 md:pt-44 md:pb-24">
         <section className="mx-auto max-w-5xl">
           <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
-            关于 KnowledgeAgent
+            {t('about.hero.title')}
           </h1>
           <p className="mt-6 max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
-            KnowledgeAgent
-            致力于让企业知识“可检索、可对话、可验证”。我们把文档资产转化为可持续演进的知识系统，帮助团队在日常协作中快速获得准确答案。
+            {t('about.hero.description')}
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Button className="cursor-pointer" asChild>
               <Link to={hasAuthSession ? '/dashboard' : '/auth/signup'}>
-                {hasAuthSession ? '进入控制台' : '创建账号'}
+                {hasAuthSession ? t('about.action.dashboard') : t('about.action.signup')}
                 <ArrowRight className="ml-1.5 size-4" />
               </Link>
             </Button>
             <Button variant="outline" className="cursor-pointer" asChild>
-              <Link to="/knowledge-bases">查看知识库模块</Link>
+              <Link to="/knowledge-bases">{t('about.action.viewKnowledgeBases')}</Link>
             </Button>
           </div>
         </section>
 
         <section className="mx-auto mt-12 grid max-w-6xl gap-4 md:grid-cols-3">
-          {principles.map(({ title, description, icon: Icon }) => (
-            <article key={title} className="rounded-2xl border bg-card/80 p-6">
+          {principles.map(({ titleKey, descriptionKey, icon: Icon }) => (
+            <article key={titleKey} className="rounded-2xl border bg-card/80 p-6">
               <div className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Icon className="size-5" />
               </div>
-              <h2 className="text-base font-semibold">{title}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+              <h2 className="text-base font-semibold">{t(titleKey)}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{t(descriptionKey)}</p>
             </article>
           ))}
         </section>

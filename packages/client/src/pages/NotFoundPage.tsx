@@ -1,10 +1,12 @@
 import { useNavigate } from '@tanstack/react-router';
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/stores';
 
 export function NotFoundPage() {
+  const { t } = useTranslation('errors');
   const navigate = useNavigate();
   const { accessToken, isAuthenticated } = useAuthStore();
   const hasAuthSession = isAuthenticated || !!accessToken;
@@ -32,8 +34,8 @@ export function NotFoundPage() {
             <AlertCircle className="h-12 w-12 text-destructive" />
           </div>
           <p className="text-sm font-medium text-muted-foreground">404</p>
-          <CardTitle>页面不存在</CardTitle>
-          <CardDescription>你访问的页面可能已移动、删除，或链接地址有误。</CardDescription>
+          <CardTitle>{t('notFound.title')}</CardTitle>
+          <CardDescription>{t('notFound.description')}</CardDescription>
         </CardHeader>
 
         <CardContent className="flex flex-col gap-3">
@@ -41,10 +43,10 @@ export function NotFoundPage() {
             className="w-full cursor-pointer"
             onClick={() => navigate({ to: primaryActionTarget })}
           >
-            {hasAuthSession ? '返回控制台' : '返回首页'}
+            {hasAuthSession ? t('notFound.backToDashboard') : t('notFound.backToHome')}
           </Button>
           <Button variant="outline" className="w-full cursor-pointer" onClick={handleBack}>
-            返回上一页
+            {t('notFound.goBack')}
           </Button>
         </CardContent>
       </Card>

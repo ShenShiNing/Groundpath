@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import { ArrowUpRight, Bot, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -6,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { AISettingsForm } from '@/components/settings';
 
 export function AISettingsPage() {
+  const { t } = useTranslation('settings');
+
   return (
     <AppLayout>
       <div className="relative flex-1 overflow-y-auto bg-background px-6 py-8 md:py-10">
@@ -18,15 +21,13 @@ export function AISettingsPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                  AI 模型设置
+                  {t('page.title')}
                 </h1>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  配置聊天与文档分析使用的模型与提供商，密钥将被安全存储。
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{t('page.description')}</p>
               </div>
               <Button variant="outline" className="cursor-pointer" asChild>
                 <Link to="/dashboard">
-                  返回工作台
+                  {t('action.backToDashboard')}
                   <ArrowUpRight className="ml-1 size-4" />
                 </Link>
               </Button>
@@ -34,17 +35,17 @@ export function AISettingsPage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">配置目标</p>
+                <p className="text-xs text-muted-foreground">{t('stats.configTarget')}</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 font-display text-xl font-semibold">
                   <Bot className="size-4 text-primary" />
-                  对话与检索质量
+                  {t('stats.configTargetValue')}
                 </p>
               </div>
               <div className="rounded-xl border bg-background/80 p-4">
-                <p className="text-xs text-muted-foreground">建议</p>
+                <p className="text-xs text-muted-foreground">{t('stats.suggestion')}</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 font-display text-xl font-semibold">
                   <Sparkles className="size-4 text-primary" />
-                  优先稳定可用模型
+                  {t('stats.suggestionValue')}
                 </p>
               </div>
             </div>
@@ -52,10 +53,8 @@ export function AISettingsPage() {
 
           <Card className="bg-card/80">
             <CardHeader>
-              <CardTitle>模型配置</CardTitle>
-              <CardDescription>
-                配置服务商、密钥与模型，修改后立即应用到新的问答请求中。
-              </CardDescription>
+              <CardTitle>{t('card.title')}</CardTitle>
+              <CardDescription>{t('card.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               <AISettingsForm />

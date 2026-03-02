@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Loader2, FileWarning } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { cn } from '@/lib/utils';
 
@@ -204,6 +205,7 @@ export function DocumentReader({
   isLoading,
   className,
 }: DocumentReaderProps) {
+  const { t } = useTranslation('document');
   const rendered = useMemo(
     () => (textContent ? renderMarkdownSafe(textContent) : null),
     [textContent]
@@ -212,7 +214,10 @@ export function DocumentReader({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 aria-label="正在加载" className="h-8 w-8 animate-spin text-muted-foreground" />
+        <Loader2
+          aria-label={t('reader.loading')}
+          className="h-8 w-8 animate-spin text-muted-foreground"
+        />
       </div>
     );
   }
@@ -223,7 +228,7 @@ export function DocumentReader({
       <div className={cn('text-center py-12 border rounded-lg bg-muted/30 space-y-3', className)}>
         <p className="text-muted-foreground flex items-center justify-center gap-2">
           <FileWarning className="h-4 w-4" aria-hidden="true" />
-          PDF 文档暂不支持在线预览
+          {t('reader.pdfNotSupported')}
         </p>
         {storageUrl && (
           <a
@@ -232,7 +237,7 @@ export function DocumentReader({
             target="_blank"
             rel="noopener noreferrer"
           >
-            点击下载查看
+            {t('reader.downloadToView')}
           </a>
         )}
       </div>
@@ -245,7 +250,7 @@ export function DocumentReader({
       <div className={cn('text-center py-12 border rounded-lg bg-muted/30 space-y-3', className)}>
         <p className="text-muted-foreground flex items-center justify-center gap-2">
           <FileWarning className="h-4 w-4" aria-hidden="true" />
-          Word 文档暂不支持在线预览
+          {t('reader.docxNotSupported')}
         </p>
         {storageUrl && (
           <a
@@ -254,7 +259,7 @@ export function DocumentReader({
             target="_blank"
             rel="noopener noreferrer"
           >
-            点击下载查看
+            {t('reader.downloadToView')}
           </a>
         )}
       </div>
@@ -276,7 +281,7 @@ export function DocumentReader({
 
   return (
     <div className={cn('text-center py-12 border rounded-lg bg-muted/30', className)}>
-      <p className="text-muted-foreground">暂无可预览内容</p>
+      <p className="text-muted-foreground">{t('reader.noContent')}</p>
     </div>
   );
 }

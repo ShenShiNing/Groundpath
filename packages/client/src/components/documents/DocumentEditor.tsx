@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import MDEditor from '@uiw/react-md-editor/nohighlight';
 import { Save, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/components/theme/theme-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +35,7 @@ export function DocumentEditor({
   onError,
   className,
 }: DocumentEditorProps) {
+  const { t } = useTranslation('document');
   const { theme } = useTheme();
   const draftKey = useMemo(() => `document-draft:${documentId}`, [documentId]);
   const initialState = useMemo(() => {
@@ -124,20 +126,20 @@ export function DocumentEditor({
     <div className={cn('space-y-3', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground space-x-2">
-          <span>{isDirty ? '未保存更改' : '已保存'}</span>
-          {draftRestored && <span>已恢复本地草稿</span>}
-          {isTruncated && <span className="text-destructive">内容已截断</span>}
+          <span>{isDirty ? t('editor.unsaved') : t('editor.saved')}</span>
+          {draftRestored && <span>{t('editor.draftRestored')}</span>}
+          {isTruncated && <span className="text-destructive">{t('editor.truncated')}</span>}
         </div>
         <div className="flex items-center gap-2">
           {isDirty && (
             <Button variant="ghost" size="sm" onClick={handleReset}>
               <RotateCcw className="h-4 w-4 mr-2" />
-              重置
+              {t('editor.reset')}
             </Button>
           )}
           <Button size="sm" onClick={handleSave} disabled={isSaving || !isDirty}>
             <Save className="h-4 w-4 mr-2" />
-            {isSaving ? '保存中...' : '保存'}
+            {isSaving ? t('editor.saving') : t('editor.save')}
           </Button>
         </div>
       </div>

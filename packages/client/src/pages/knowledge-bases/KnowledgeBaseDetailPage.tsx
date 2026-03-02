@@ -63,6 +63,7 @@ import { FolderDialog } from '@/components/documents/FolderDialog';
 import { queryKeys } from '@/lib/query';
 import { formatBytes, cn, openInNewTab } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { useChatPanelStore } from '@/stores';
 import type {
   FolderTreeNode,
@@ -204,6 +205,7 @@ function DocumentGridCard({
   onDelete: () => void;
   onDownload: () => void;
 }) {
+  const { t } = useTranslation(['knowledgeBase', 'common']);
   const config = documentTypeConfig[document.documentType];
 
   return (
@@ -240,7 +242,7 @@ function DocumentGridCard({
               }}
             >
               <Pencil className="size-4 mr-2" />
-              编辑
+              {t('edit', { ns: 'common' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer"
@@ -250,7 +252,7 @@ function DocumentGridCard({
               }}
             >
               <Download className="size-4 mr-2" />
-              下载
+              {t('download', { ns: 'common' })}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -262,7 +264,7 @@ function DocumentGridCard({
               }}
             >
               <Trash2 className="size-4 mr-2" />
-              删除
+              {t('delete', { ns: 'common' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -305,6 +307,7 @@ function DocumentTableRow({
   onDelete: () => void;
   onDownload: () => void;
 }) {
+  const { t } = useTranslation(['knowledgeBase', 'common']);
   const config = documentTypeConfig[document.documentType];
 
   return (
@@ -346,16 +349,16 @@ function DocumentTableRow({
           <DropdownMenuContent align="end">
             <DropdownMenuItem className="cursor-pointer" onClick={onEdit}>
               <Pencil className="size-4 mr-2" />
-              编辑
+              {t('edit', { ns: 'common' })}
             </DropdownMenuItem>
             <DropdownMenuItem className="cursor-pointer" onClick={onDownload}>
               <Download className="size-4 mr-2" />
-              下载
+              {t('download', { ns: 'common' })}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" className="cursor-pointer" onClick={onDelete}>
               <Trash2 className="size-4 mr-2" />
-              删除
+              {t('delete', { ns: 'common' })}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -369,6 +372,7 @@ function DocumentTableRow({
 // ============================================================================
 
 export default function KnowledgeBaseDetailPage() {
+  const { t } = useTranslation(['knowledgeBase', 'common']);
   const { id } = useParams({ from: '/knowledge-bases/$id' });
   const navigate = useNavigate();
 
@@ -418,10 +422,10 @@ export default function KnowledgeBaseDetailPage() {
   }, [folderTree, currentFolderId]);
 
   const currentFolderName = useMemo(() => {
-    if (!currentFolderId) return '全部文档';
+    if (!currentFolderId) return t('detail.folder.allDocuments');
     const last = folderPath[folderPath.length - 1];
-    return last?.name ?? '全部文档';
-  }, [currentFolderId, folderPath]);
+    return last?.name ?? t('detail.folder.allDocuments');
+  }, [currentFolderId, folderPath, t]);
 
   // Handlers
   const handleUploadSuccess = useCallback(() => {
@@ -537,12 +541,10 @@ export default function KnowledgeBaseDetailPage() {
       <AppLayout>
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="w-full max-w-xl rounded-2xl border bg-card/70 p-8 text-center">
-            <h2 className="mb-2 text-xl font-semibold">知识库不存在</h2>
-            <p className="mb-5 text-sm text-muted-foreground">
-              当前知识库可能已被删除，或你没有访问权限。
-            </p>
+            <h2 className="mb-2 text-xl font-semibold">{t('detail.notFound.title')}</h2>
+            <p className="mb-5 text-sm text-muted-foreground">{t('detail.notFound.description')}</p>
             <Button className="cursor-pointer" asChild>
-              <Link to="/knowledge-bases">返回知识库列表</Link>
+              <Link to="/knowledge-bases">{t('detail.action.backToList')}</Link>
             </Button>
           </div>
         </div>
@@ -573,7 +575,7 @@ export default function KnowledgeBaseDetailPage() {
                     </Link>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>返回知识库列表</TooltipContent>
+                <TooltipContent>{t('detail.tooltip.backToList')}</TooltipContent>
               </Tooltip>
 
               <div className="flex min-w-0 items-center gap-3">
@@ -584,7 +586,7 @@ export default function KnowledgeBaseDetailPage() {
                   <h1 className="font-display truncate text-xl font-semibold leading-tight">
                     {knowledgeBase.name}
                   </h1>
-                  <p className="mt-1 text-xs text-muted-foreground">知识库详情与文档管理</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('detail.subtitle')}</p>
                 </div>
               </div>
 
@@ -600,7 +602,7 @@ export default function KnowledgeBaseDetailPage() {
                       <MessageSquare className="size-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>打开知识库问答</TooltipContent>
+                  <TooltipContent>{t('detail.tooltip.openChat')}</TooltipContent>
                 </Tooltip>
 
                 <Tooltip>
@@ -614,7 +616,7 @@ export default function KnowledgeBaseDetailPage() {
                       <Settings className="size-4" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>知识库设置</TooltipContent>
+                  <TooltipContent>{t('detail.tooltip.settings')}</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -622,11 +624,11 @@ export default function KnowledgeBaseDetailPage() {
             <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <FileText className="size-3.5" />
-                {knowledgeBase.documentCount} 份文档
+                {t('detail.stats.documents', { count: knowledgeBase.documentCount })}
               </span>
               <span className="inline-flex items-center gap-1">
                 <Layers className="size-3.5" />
-                {knowledgeBase.totalChunks} 个 chunks
+                {t('detail.stats.chunks', { count: knowledgeBase.totalChunks })}
               </span>
             </div>
           </header>
@@ -657,7 +659,7 @@ export default function KnowledgeBaseDetailPage() {
                         onClick={() => handleFolderSelect(null)}
                       >
                         <Home className="size-3.5" />
-                        <span>全部文档</span>
+                        <span>{t('detail.folder.allDocuments')}</span>
                         <span className="ml-auto text-xs text-muted-foreground tabular-nums">
                           {knowledgeBase.documentCount}
                         </span>
@@ -689,7 +691,7 @@ export default function KnowledgeBaseDetailPage() {
                         }}
                       >
                         <FolderPlus className="size-3.5" />
-                        <span>新建文件夹</span>
+                        <span>{t('detail.folder.newFolder')}</span>
                       </button>
                     </ScrollArea>
                   </PopoverContent>
@@ -702,7 +704,7 @@ export default function KnowledgeBaseDetailPage() {
                       className="truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
                       onClick={() => handleFolderNavigate(null)}
                     >
-                      根目录
+                      {t('detail.folder.root')}
                     </button>
                     {folderPath.slice(0, -1).map((folder) => (
                       <div key={folder.id} className="flex min-w-0 items-center gap-0.5">
@@ -724,7 +726,7 @@ export default function KnowledgeBaseDetailPage() {
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                   <Input
                     className="h-8 pl-8 text-sm"
-                    placeholder="搜索文档..."
+                    placeholder={t('detail.search.placeholder')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -753,7 +755,7 @@ export default function KnowledgeBaseDetailPage() {
                         <LayoutGrid className="size-3.5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>卡片视图</TooltipContent>
+                    <TooltipContent>{t('detail.view.grid')}</TooltipContent>
                   </Tooltip>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -769,7 +771,7 @@ export default function KnowledgeBaseDetailPage() {
                         <List className="size-3.5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>表格视图</TooltipContent>
+                    <TooltipContent>{t('detail.view.table')}</TooltipContent>
                   </Tooltip>
                 </div>
 
@@ -779,7 +781,7 @@ export default function KnowledgeBaseDetailPage() {
                   onClick={() => setUploadOpen(true)}
                 >
                   <Upload className="size-3.5 mr-1.5" />
-                  上传文档
+                  {t('detail.action.upload')}
                 </Button>
               </div>
             </div>
@@ -790,7 +792,9 @@ export default function KnowledgeBaseDetailPage() {
               <div className="p-5 md:p-6">
                 {search && (
                   <div className="mb-4 flex flex-wrap items-center gap-2">
-                    <span className="text-sm text-muted-foreground">当前搜索</span>
+                    <span className="text-sm text-muted-foreground">
+                      {t('detail.search.current')}
+                    </span>
                     <Badge variant="secondary" className="gap-1">
                       "{search}"
                       <button className="cursor-pointer" onClick={() => setSearch('')}>
@@ -798,7 +802,7 @@ export default function KnowledgeBaseDetailPage() {
                       </button>
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      共 {filteredDocuments.length} 条结果
+                      {t('detail.search.resultCount', { count: filteredDocuments.length })}
                     </span>
                   </div>
                 )}
@@ -836,10 +840,16 @@ export default function KnowledgeBaseDetailPage() {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/50 hover:bg-muted/50">
-                            <TableHead className="font-medium">名称</TableHead>
-                            <TableHead className="font-medium w-24">类型</TableHead>
-                            <TableHead className="font-medium w-24">大小</TableHead>
-                            <TableHead className="font-medium w-32">状态</TableHead>
+                            <TableHead className="font-medium">{t('detail.table.name')}</TableHead>
+                            <TableHead className="font-medium w-24">
+                              {t('detail.table.type')}
+                            </TableHead>
+                            <TableHead className="font-medium w-24">
+                              {t('detail.table.size')}
+                            </TableHead>
+                            <TableHead className="font-medium w-32">
+                              {t('detail.table.status')}
+                            </TableHead>
                             <TableHead className="w-12" />
                           </TableRow>
                         </TableHeader>
@@ -864,12 +874,12 @@ export default function KnowledgeBaseDetailPage() {
                       <Upload className="size-6 text-muted-foreground" />
                     </div>
                     <h3 className="mb-1.5 text-base font-semibold">
-                      {search ? '没有匹配的文档' : '知识库还没有文档'}
+                      {search ? t('detail.empty.noMatch') : t('detail.empty.noDocuments')}
                     </h3>
                     <p className="mb-5 max-w-sm text-sm text-muted-foreground">
                       {search
-                        ? `未找到与“${search}”相关的内容。`
-                        : '上传文档后即可开始检索与问答。'}
+                        ? t('detail.empty.noMatchDescription', { search })
+                        : t('detail.empty.noDocumentsDescription')}
                     </p>
                     {search ? (
                       <Button
@@ -877,12 +887,12 @@ export default function KnowledgeBaseDetailPage() {
                         className="cursor-pointer"
                         onClick={() => setSearch('')}
                       >
-                        清空搜索
+                        {t('detail.action.clearSearch')}
                       </Button>
                     ) : (
                       <Button className="cursor-pointer" onClick={() => setUploadOpen(true)}>
                         <Upload className="size-4 mr-2" />
-                        上传文档
+                        {t('detail.action.upload')}
                       </Button>
                     )}
                   </div>
@@ -905,14 +915,14 @@ export default function KnowledgeBaseDetailPage() {
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card border rounded-xl shadow-lg max-w-lg w-full p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">上传文档</h3>
+              <h3 className="text-lg font-semibold">{t('detail.upload.title')}</h3>
               <Button
                 variant="ghost"
                 size="sm"
                 className="cursor-pointer"
                 onClick={() => setUploadOpen(false)}
               >
-                关闭
+                {t('close', { ns: 'common' })}
               </Button>
             </div>
             <DocumentUpload
@@ -943,25 +953,29 @@ export default function KnowledgeBaseDetailPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {deleteDialog.documents.length > 1 ? '删除文档' : '删除文档'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{t('detail.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteDialog.documents.length === 1 ? (
-                <>你确定要删除 “{deleteDialog.documents[0]?.title}” 吗？此操作不可撤销。</>
+                <>
+                  {t('detail.delete.confirmSingle', {
+                    title: deleteDialog.documents[0]?.title ?? '',
+                  })}
+                </>
               ) : (
-                <>你确定要删除 {deleteDialog.documents.length} 份文档吗？此操作不可撤销。</>
+                <>{t('detail.delete.confirmMultiple', { count: deleteDialog.documents.length })}</>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">取消</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">
+              {t('cancel', { ns: 'common' })}
+            </AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               className="cursor-pointer"
               onClick={confirmDelete}
             >
-              删除
+              {t('delete', { ns: 'common' })}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

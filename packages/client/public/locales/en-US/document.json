@@ -87,6 +87,12 @@
   "list": {
     "empty": "No documents found"
   },
+  "cardAction": {
+    "download": "Download",
+    "edit": "Edit",
+    "moveToFolder": "Move to folder",
+    "delete": "Delete"
+  },
   "folder": {
     "allDocuments": "All Documents",
     "action": {

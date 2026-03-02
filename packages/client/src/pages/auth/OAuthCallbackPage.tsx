@@ -1,10 +1,12 @@
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useOAuthCallback } from '@/hooks';
 
 export function OAuthCallbackPage() {
+  const { t } = useTranslation('errors');
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
   const { status, errorMessage } = useOAuthCallback({
@@ -25,8 +27,8 @@ export function OAuthCallbackPage() {
               <div className="mb-4 flex justify-center">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
               </div>
-              <CardTitle>正在处理登录</CardTitle>
-              <CardDescription>请稍候，系统正在完成身份验证...</CardDescription>
+              <CardTitle>{t('oauth.processing.title')}</CardTitle>
+              <CardDescription>{t('oauth.processing.description')}</CardDescription>
             </>
           )}
 
@@ -35,8 +37,8 @@ export function OAuthCallbackPage() {
               <div className="mb-4 flex justify-center">
                 <CheckCircle className="h-12 w-12 text-emerald-500" />
               </div>
-              <CardTitle>登录成功</CardTitle>
-              <CardDescription>正在跳转到你的工作区...</CardDescription>
+              <CardTitle>{t('oauth.success.title')}</CardTitle>
+              <CardDescription>{t('oauth.success.description')}</CardDescription>
             </>
           )}
 
@@ -45,8 +47,8 @@ export function OAuthCallbackPage() {
               <div className="mb-4 flex justify-center">
                 <AlertCircle className="h-12 w-12 text-destructive" />
               </div>
-              <CardTitle>认证失败</CardTitle>
-              <CardDescription>{errorMessage || '登录过程中出现异常'}</CardDescription>
+              <CardTitle>{t('oauth.error.title')}</CardTitle>
+              <CardDescription>{errorMessage || t('oauth.error.defaultMessage')}</CardDescription>
             </>
           )}
         </CardHeader>
@@ -57,14 +59,14 @@ export function OAuthCallbackPage() {
               className="w-full cursor-pointer"
               onClick={() => navigate({ to: '/auth/login' })}
             >
-              返回登录
+              {t('oauth.action.backToLogin')}
             </Button>
             <Button
               variant="outline"
               className="w-full cursor-pointer"
               onClick={() => navigate({ to: '/' })}
             >
-              返回首页
+              {t('oauth.action.backToHome')}
             </Button>
           </CardContent>
         )}

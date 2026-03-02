@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { ArrowLeft, Download, Eye, FileText, PencilLine } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ const LazyDocumentEditor = lazy(async () => {
 });
 
 export function DocumentDetailPage() {
+  const { t } = useTranslation('document');
   const { id } = useParams({ from: '/documents/$id' });
   const { data: document, isLoading } = useDocument(id);
   const { data: content, isLoading: isContentLoading } = useDocumentContent(id);
@@ -54,11 +56,11 @@ export function DocumentDetailPage() {
 
   const handleSaveContent = async (value: string) => {
     await saveContent({ id, data: { content: value } });
-    toast.success('文档已保存');
+    toast.success(t('toast.saved'));
   };
 
   const handleSaveError = (error: unknown) => {
-    toast.error(error instanceof Error ? error.message : '保存失败');
+    toast.error(error instanceof Error ? error.message : t('toast.saveFailed'));
   };
 
   const handleModeChange = (nextMode: ViewMode) => {
@@ -125,15 +127,15 @@ export function DocumentDetailPage() {
               <div className="min-w-0 flex-1">
                 <h1 className="font-display truncate text-2xl font-semibold tracking-tight sm:text-3xl">
                   {isPageLoading
-                    ? '文档加载中...'
-                    : (content?.title ?? document?.title ?? '文档详情')}
+                    ? t('loading')
+                    : (content?.title ?? document?.title ?? t('page.title'))}
                 </h1>
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <FileText className="size-3.5" />
                     {document?.documentType?.toUpperCase() ?? 'DOCUMENT'}
                   </span>
-                  <span>支持阅读与在线编辑</span>
+                  <span>{t('page.subtitle')}</span>
                 </div>
               </div>
 
@@ -145,7 +147,7 @@ export function DocumentDetailPage() {
                     onClick={() => handleModeChange('read')}
                   >
                     <Eye className="size-4 mr-1.5" />
-                    阅读
+                    {t('action.read')}
                   </Button>
 
                   {isEditable && (
@@ -155,13 +157,13 @@ export function DocumentDetailPage() {
                       onClick={() => handleModeChange('edit')}
                     >
                       <PencilLine className="size-4 mr-1.5" />
-                      编辑
+                      {t('action.edit')}
                     </Button>
                   )}
 
                   <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
                     <Download className="size-4 mr-1.5" />
-                    下载
+                    {t('action.download')}
                   </Button>
                 </div>
               )}
@@ -172,7 +174,7 @@ export function DocumentDetailPage() {
             <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
               <Card className="lg:col-span-2 bg-card/80">
                 <CardHeader>
-                  <CardTitle>{mode === 'edit' ? '文档编辑器' : '文档预览'}</CardTitle>
+                  <CardTitle>{mode === 'edit' ? t('card.editor') : t('card.preview')}</CardTitle>
                 </CardHeader>
                 <CardContent>{renderContent()}</CardContent>
               </Card>
@@ -180,7 +182,7 @@ export function DocumentDetailPage() {
               {document && (
                 <Card className="bg-card/80">
                   <CardHeader>
-                    <CardTitle>文档信息</CardTitle>
+                    <CardTitle>{t('card.info')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <DocumentInfo document={document} />
@@ -193,10 +195,10 @@ export function DocumentDetailPage() {
           {!isPageLoading && !document && (
             <Card className="bg-card/80">
               <CardContent className="py-14 text-center">
-                <p className="text-muted-foreground">文档不存在或无访问权限</p>
+                <p className="text-muted-foreground">{t('notFound')}</p>
                 <Link to="/knowledge-bases" className="mt-4 inline-block">
                   <Button variant="outline" className="cursor-pointer">
-                    返回知识库列表
+                    {t('action.backToList')}
                   </Button>
                 </Link>
               </CardContent>
