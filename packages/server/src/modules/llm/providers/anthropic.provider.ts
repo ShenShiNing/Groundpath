@@ -77,23 +77,13 @@ export class AnthropicProvider implements LLMProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const result = await this.generate([{ role: 'user', content: 'hi' }], { maxTokens: 5 });
-      return !!result;
+      await this.generate([{ role: 'user', content: 'hi' }], { maxTokens: 5 });
+      // Reaching provider API without exception means credentials/model are usable.
+      return true;
     } catch (error) {
-      const errorObj = error as { status?: number; message?: string };
-
-      // If we got an HTTP response (any status code), the connection is valid
-      // Only network errors (DNS, timeout, connection refused) should fail
-      if (errorObj.status !== undefined) {
-        logger.info(
-          { status: errorObj.status, provider: 'anthropic' },
-          'Health check passed (API reachable)'
-        );
-        return true;
-      }
-
-      logger.warn({ error, provider: 'anthropic' }, 'Health check failed');
-      return false;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn({ errorMessage, provider: 'anthropic' }, 'Health check failed');
+      throw new Error(errorMessage);
     }
   }
 }

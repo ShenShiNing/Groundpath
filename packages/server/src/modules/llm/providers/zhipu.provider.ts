@@ -125,11 +125,31 @@ export class ZhipuProvider implements LLMProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const result = await this.generate([{ role: 'user', content: 'hi' }], { maxTokens: 5 });
-      return !!result;
+      const response = await fetch(ZHIPU_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [{ role: 'user', content: 'hi' }],
+          max_tokens: 5,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Zhipu API error: ${response.status}${errorText ? ` - ${errorText.slice(0, 300)}` : ''}`
+        );
+      }
+
+      return true;
     } catch (error) {
-      logger.warn({ error, provider: 'zhipu' }, 'Health check failed');
-      return false;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn({ errorMessage, provider: 'zhipu' }, 'Health check failed');
+      throw new Error(errorMessage);
     }
   }
 }

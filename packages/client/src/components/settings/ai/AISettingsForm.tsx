@@ -216,16 +216,16 @@ export function AISettingsForm() {
                 : t('form.testSuccess')
             );
           } else {
-            toast.error(
-              result.message === 'Provider health check failed'
-                ? t('form.testFailed')
-                : result.message
-            );
+            toast.error(t('form.testFailed'), {
+              description: result.message,
+            });
           }
         },
         onError: (error) => {
-          const message = error instanceof Error ? error.message : t('form.testError');
-          toast.error(message === 'Provider health check failed' ? t('form.testFailed') : message);
+          const detail = error instanceof Error ? error.message : undefined;
+          toast.error(t('form.testError'), {
+            description: detail,
+          });
         },
       }
     );

@@ -116,7 +116,7 @@ export class DeepSeekProvider implements LLMProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      // Make direct API call to check both content and reasoning_content
+      // Make a lightweight chat call to validate credentials/model.
       const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: {
@@ -131,13 +131,13 @@ export class DeepSeekProvider implements LLMProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(
+          `DeepSeek API error: ${response.status}${errorText ? ` - ${errorText.slice(0, 300)}` : ''}`
+        );
       }
 
-      const data = (await response.json()) as DeepSeekResponse;
-      const message = data.choices[0]?.message;
-      // For health check, accept either content or reasoning_content
-      return !!(message?.content || message?.reasoning_content);
+      return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const cause = error instanceof Error && error.cause ? String(error.cause) : undefined;
@@ -145,7 +145,7 @@ export class DeepSeekProvider implements LLMProvider {
         { errorMessage, cause, baseUrl: this.baseUrl, provider: 'deepseek' },
         'Health check failed'
       );
-      return false;
+      throw new Error(errorMessage);
     }
   }
 }

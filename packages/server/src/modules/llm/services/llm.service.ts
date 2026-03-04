@@ -113,7 +113,9 @@ export const llmService = {
       if (healthy) {
         return { success: true, message: 'Connection successful', latencyMs };
       }
-      return { success: false, message: 'Provider health check failed' };
+      // All providers should throw on failure, but guard against unexpected false returns.
+      logger.warn({ provider: provider.name }, 'healthCheck returned false without throwing');
+      return { success: false, message: 'Provider health check failed', latencyMs };
     } catch (error) {
       const latencyMs = Date.now() - start;
       const message = error instanceof Error ? error.message : 'Connection failed';

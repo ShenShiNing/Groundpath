@@ -107,10 +107,14 @@ export class OllamaProvider implements LLMProvider {
   async healthCheck(): Promise<boolean> {
     try {
       const response = await fetch(`${this.baseUrl}/api/tags`);
-      return response.ok;
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      }
+      return true;
     } catch (error) {
-      logger.warn({ error, provider: 'ollama' }, 'Health check failed');
-      return false;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn({ errorMessage, provider: 'ollama' }, 'Health check failed');
+      throw new Error(errorMessage);
     }
   }
 }

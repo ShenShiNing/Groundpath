@@ -58,15 +58,17 @@ export class OpenAIProvider implements LLMProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.client.chat.completions.create({
+      await this.client.chat.completions.create({
         model: this.model,
         messages: [{ role: 'user', content: 'hi' }],
         max_tokens: 5,
       });
-      return !!response.choices[0]?.message?.content;
+      // Reaching provider API without exception means credentials/model are usable.
+      return true;
     } catch (error) {
-      logger.warn({ error, provider: 'openai' }, 'Health check failed');
-      return false;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.warn({ errorMessage, provider: 'openai' }, 'Health check failed');
+      throw new Error(errorMessage);
     }
   }
 }
