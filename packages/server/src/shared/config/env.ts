@@ -97,7 +97,6 @@ const oauthSchema = z.object({
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GITHUB_CALLBACK_URL: z.string().default('http://localhost:3000/api/auth/oauth/github/callback'),
-  OAUTH_STATE_SECRET: z.string().default(''),
 });
 
 // -------------------- Storage --------------------
@@ -291,7 +290,6 @@ export const oauthConfig = {
     clientSecret: validatedEnv.GITHUB_CLIENT_SECRET,
     callbackUrl: validatedEnv.GITHUB_CALLBACK_URL,
   },
-  stateSecret: validatedEnv.OAUTH_STATE_SECRET || validatedEnv.ENCRYPTION_KEY,
 } as const;
 
 /** Storage configuration */

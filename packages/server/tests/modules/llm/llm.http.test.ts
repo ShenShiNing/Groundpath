@@ -13,7 +13,7 @@ const { authenticateMock, llmConfigControllerMock } = vi.hoisted(() => {
         authHeader.some((value) => value.replace(/^Bearer\s+/i, '') === 'valid-access'));
 
     if (isAuthorized) {
-      req.user = { sub: 'user-1' };
+      req.user = { sub: 'user-1', sid: 'sid-1', email: 'user-1@example.com', username: 'user1', status: 'active', emailVerified: true };
       next();
       return;
     }
@@ -73,7 +73,7 @@ describe('llm.routes http behavior', () => {
     app.use('/llm', llmRoutes);
 
     await new Promise<void>((resolve) => {
-      server = app.listen(0, resolve);
+      server = app.listen(0, () => resolve());
     });
 
     const address = server.address();
@@ -101,7 +101,7 @@ describe('llm.routes http behavior', () => {
 
   it('should reject unauthenticated get-config request', async () => {
     const response = await fetch(`${baseUrl}/llm/config`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -112,7 +112,7 @@ describe('llm.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/llm/config`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-get-config');
@@ -128,7 +128,7 @@ describe('llm.routes http behavior', () => {
       },
       body: JSON.stringify({ provider: 'openai', apiKey: 'sk-test' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-update-config');
@@ -144,7 +144,7 @@ describe('llm.routes http behavior', () => {
       },
       body: JSON.stringify({ provider: 'openai', model: 'gpt-4o-mini' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-test-connection');
@@ -155,7 +155,7 @@ describe('llm.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/llm/providers`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-get-providers');
@@ -171,7 +171,7 @@ describe('llm.routes http behavior', () => {
       },
       body: JSON.stringify({ provider: 'openai' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-fetch-models');

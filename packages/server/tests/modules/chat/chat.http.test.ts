@@ -14,7 +14,7 @@ const { authenticateMock, conversationServiceMock, messageServiceMock, chatServi
           authHeader.some((value) => value.replace(/^Bearer\s+/i, '') === 'valid-access'));
 
       if (isAuthorized) {
-        req.user = { sub: 'user-1' };
+        req.user = { sub: 'user-1', sid: 'sid-1', email: 'user-1@example.com', username: 'user1', status: 'active', emailVerified: true };
         next();
         return;
       }
@@ -95,7 +95,7 @@ describe('chat.routes http behavior', () => {
     app.use('/chat', chatRoutes);
 
     await new Promise<void>((resolve) => {
-      server = app.listen(0, resolve);
+      server = app.listen(0, () => resolve());
     });
 
     const address = server.address();
@@ -123,7 +123,7 @@ describe('chat.routes http behavior', () => {
 
   it('should reject unauthenticated list conversations request', async () => {
     const response = await fetch(`${baseUrl}/chat/conversations`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -139,7 +139,7 @@ describe('chat.routes http behavior', () => {
       },
       body: JSON.stringify({ knowledgeBaseId: 'not-a-uuid' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -155,7 +155,7 @@ describe('chat.routes http behavior', () => {
       },
       body: JSON.stringify({ title: 'New Chat' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(201);
     expect(body.success).toBe(true);
@@ -166,7 +166,7 @@ describe('chat.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/chat/conversations?limit=0`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -177,7 +177,7 @@ describe('chat.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/chat/conversations/search?query=a`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -188,7 +188,7 @@ describe('chat.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/chat/conversations/conv-1`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -205,7 +205,7 @@ describe('chat.routes http behavior', () => {
       },
       body: JSON.stringify({ title: '' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -217,7 +217,7 @@ describe('chat.routes http behavior', () => {
       method: 'DELETE',
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -233,7 +233,7 @@ describe('chat.routes http behavior', () => {
       },
       body: JSON.stringify({ content: '' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -253,7 +253,7 @@ describe('chat.routes http behavior', () => {
         documentIds: ['123e4567-e89b-12d3-a456-426614174000'],
       }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -265,7 +265,7 @@ describe('chat.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/chat/conversations/conv-1/messages?offset=-1`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -279,7 +279,7 @@ describe('chat.routes http behavior', () => {
         headers: { authorization: 'Bearer valid-access' },
       }
     );
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);

@@ -95,7 +95,7 @@ describe('document.routes http behavior', () => {
     app.use('/documents', documentRoutes);
 
     await new Promise<void>((resolve) => {
-      server = app.listen(0, resolve);
+      server = app.listen(0, () => resolve());
     });
 
     const address = server.address();
@@ -123,7 +123,7 @@ describe('document.routes http behavior', () => {
 
   it('should reject unauthenticated list request', async () => {
     const response = await fetch(`${baseUrl}/documents`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -134,7 +134,7 @@ describe('document.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/documents?page=0&pageSize=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -145,7 +145,7 @@ describe('document.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/documents?page=1&pageSize=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('list');
@@ -165,7 +165,7 @@ describe('document.routes http behavior', () => {
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('INVALID_FILE_TYPE');
@@ -181,7 +181,7 @@ describe('document.routes http behavior', () => {
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('FILE_TOO_LARGE');
@@ -199,7 +199,7 @@ describe('document.routes http behavior', () => {
         content: 'x'.repeat(500001),
       }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');

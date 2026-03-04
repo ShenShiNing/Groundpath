@@ -114,7 +114,7 @@ describe('auth.routes http behavior', () => {
     app.use('/auth', authRoutes);
 
     await new Promise<void>((resolve) => {
-      server = app.listen(0, resolve);
+      server = app.listen(0, () => resolve());
     });
 
     const address = server.address();
@@ -146,7 +146,7 @@ describe('auth.routes http behavior', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email: 'bad-email', password: '123456' }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.success).toBe(false);
@@ -165,7 +165,7 @@ describe('auth.routes http behavior', () => {
         confirmPassword: 'abc12345',
       }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(201);
     expect(body.route).toBe('register');
@@ -176,7 +176,7 @@ describe('auth.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/auth/logout`, {
       method: 'POST',
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(403);
     expect(body.error.code).toBe('CSRF_TOKEN_REQUIRED');
@@ -191,7 +191,7 @@ describe('auth.routes http behavior', () => {
         'x-csrf-token': 'csrf-ok',
       },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED_REFRESH');
@@ -207,7 +207,7 @@ describe('auth.routes http behavior', () => {
         cookie: 'refreshToken=valid-refresh',
       },
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('logout');
@@ -216,7 +216,7 @@ describe('auth.routes http behavior', () => {
 
   it('should require access token for /me', async () => {
     const response = await fetch(`${baseUrl}/auth/me`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -236,7 +236,7 @@ describe('auth.routes http behavior', () => {
         confirmPassword: 'not-match',
       }),
     });
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');

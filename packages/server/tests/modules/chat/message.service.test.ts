@@ -62,7 +62,16 @@ describe('messageService', () => {
 
   it('should preserve provided id and metadata on create', async () => {
     const createdAt = new Date('2026-03-03T13:10:00.000Z');
-    const metadata = { citations: [{ documentId: 'doc-1', title: 'Doc', snippet: 'Snippet' }] };
+    const metadata = {
+      citations: [
+        {
+          documentId: 'doc-1',
+          documentTitle: 'Doc',
+          chunkIndex: 0,
+          content: 'Snippet',
+        },
+      ],
+    };
     mocks.messageRepository.create.mockResolvedValue({
       id: 'custom-id',
       conversationId: 'conv-1',

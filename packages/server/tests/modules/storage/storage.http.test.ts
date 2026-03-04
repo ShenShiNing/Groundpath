@@ -80,7 +80,7 @@ describe('storage.routes http behavior', () => {
     );
 
     await new Promise<void>((resolve) => {
-      server = app.listen(0, resolve);
+      server = app.listen(0, () => resolve());
     });
 
     const address = server.address();
@@ -116,7 +116,7 @@ describe('storage.routes http behavior', () => {
 
   it('should reject request when signature is missing', async () => {
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('INVALID_CREDENTIALS');
@@ -125,7 +125,7 @@ describe('storage.routes http behavior', () => {
 
   it('should reject request when expiration format is invalid', async () => {
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt?sig=ok&exp=abc`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('INVALID_CREDENTIALS');
@@ -136,7 +136,7 @@ describe('storage.routes http behavior', () => {
     verifySignatureMock.mockReturnValueOnce(false);
 
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt?sig=bad&exp=12345`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('INVALID_CREDENTIALS');
@@ -145,7 +145,7 @@ describe('storage.routes http behavior', () => {
 
   it('should reject path traversal key', async () => {
     const response = await fetch(`${baseUrl}/storage/files/..%2Fsecret.txt?sig=ok&exp=12345`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -154,7 +154,6 @@ describe('storage.routes http behavior', () => {
 
   it('should reject invalid key encoding', async () => {
     const response = await fetch(`${baseUrl}/storage/files/%25E0%A4%A?sig=ok&exp=12345`);
-    const body = await response.json();
 
     expect(response.status).toBeGreaterThanOrEqual(400);
     expect(storageProviderMock.getStream).not.toHaveBeenCalled();
@@ -166,7 +165,7 @@ describe('storage.routes http behavior', () => {
     );
 
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt?sig=ok&exp=12345`);
-    const body = await response.json();
+    const body: any = await response.json();
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe('NOT_FOUND');

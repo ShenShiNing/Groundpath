@@ -5,6 +5,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { serverConfig, storageConfig } from '@config/env';
 import { Errors, handleError } from '@shared/errors';
+import type { AccessTokenPayload, RefreshTokenContext } from '@shared/types';
 import { getCsrfTokenFromRequest } from '@shared/utils/cookie.utils';
 
 // ============================================================================
@@ -210,6 +211,8 @@ declare global {
   namespace Express {
     interface Request {
       requestId: string;
+      user?: AccessTokenPayload;
+      refreshContext?: RefreshTokenContext;
     }
   }
 }
