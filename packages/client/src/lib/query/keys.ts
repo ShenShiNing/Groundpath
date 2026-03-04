@@ -18,17 +18,6 @@ export const queryKeys = {
     list: (params: Record<string, unknown>) => [...queryKeys.trash.lists(), params] as const,
   },
 
-  // Folders
-  folders: {
-    all: ['folders'] as const,
-    lists: () => [...queryKeys.folders.all, 'list'] as const,
-    tree: () => [...queryKeys.folders.all, 'tree'] as const,
-    details: () => [...queryKeys.folders.all, 'detail'] as const,
-    detail: (id: string) => [...queryKeys.folders.details(), id] as const,
-    children: (parentId: string | null) =>
-      [...queryKeys.folders.all, 'children', parentId ?? 'root'] as const,
-  },
-
   // Knowledge Bases
   knowledgeBases: {
     all: ['knowledgeBases'] as const,
@@ -37,10 +26,6 @@ export const queryKeys = {
     detail: (id: string) => [...queryKeys.knowledgeBases.details(), id] as const,
     documents: (kbId: string, params: Record<string, unknown>) =>
       [...queryKeys.knowledgeBases.detail(kbId), 'documents', params] as const,
-    documentTree: (kbId: string) =>
-      [...queryKeys.knowledgeBases.detail(kbId), 'documentTree'] as const,
-    folders: (kbId: string) => [...queryKeys.knowledgeBases.detail(kbId), 'folders'] as const,
-    folderTree: (kbId: string) => [...queryKeys.knowledgeBases.detail(kbId), 'folderTree'] as const,
     conversations: (kbId: string) =>
       [...queryKeys.knowledgeBases.detail(kbId), 'conversations'] as const,
   },
@@ -56,5 +41,11 @@ export const queryKeys = {
     providers: ['llm', 'providers'] as const,
     models: (provider: string, hasKey: boolean, baseUrl: string | null) =>
       ['llm', 'models', provider, hasKey, baseUrl] as const,
+  },
+
+  // Chat
+  chat: {
+    searchConversations: (params: Record<string, unknown>) =>
+      ['chat', 'searchConversations', params] as const,
   },
 };

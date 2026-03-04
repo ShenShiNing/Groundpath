@@ -1,14 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import {
-  FileText,
-  FileType,
-  File,
-  MoreVertical,
-  Download,
-  Pencil,
-  Trash2,
-  FolderInput,
-} from 'lucide-react';
+import { FileText, FileType, File, MoreVertical, Download, Pencil, Trash2 } from 'lucide-react';
 import type { DocumentListItem, DocumentType } from '@knowledge-agent/shared/types';
 import { cn, openInNewTab } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,7 +18,6 @@ interface DocumentCardProps {
   document: DocumentListItem;
   onEdit?: (document: DocumentListItem) => void;
   onDelete?: (document: DocumentListItem) => void;
-  onMove?: (document: DocumentListItem) => void;
   className?: string;
 }
 
@@ -61,7 +51,7 @@ function formatDate(date: Date): string {
   });
 }
 
-export function DocumentCard({ document, onEdit, onDelete, onMove, className }: DocumentCardProps) {
+export function DocumentCard({ document, onEdit, onDelete, className }: DocumentCardProps) {
   const { t } = useTranslation('document');
   const Icon = documentTypeIcons[document.documentType];
   const iconColor = documentTypeColors[document.documentType];
@@ -120,12 +110,6 @@ export function DocumentCard({ document, onEdit, onDelete, onMove, className }: 
                 <DropdownMenuItem onClick={() => onEdit(document)}>
                   <Pencil className="mr-2 h-4 w-4" />
                   {t('cardAction.edit')}
-                </DropdownMenuItem>
-              )}
-              {onMove && (
-                <DropdownMenuItem onClick={() => onMove(document)}>
-                  <FolderInput className="mr-2 h-4 w-4" />
-                  {t('cardAction.moveToFolder')}
                 </DropdownMenuItem>
               )}
               {onDelete && (

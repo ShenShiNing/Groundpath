@@ -1,113 +1,294 @@
 # Knowledge Agent
 
-A RAG (Retrieval-Augmented Generation) application for building and querying knowledge bases. Upload documents, automatically extract and embed text, then perform semantic search across your knowledge.
+English version: [README.en.md](./README.en.md)
 
-## Tech Stack
+Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieval-Augmented Generation）应用。它支持从文档入库、分块向量化、语义检索到多轮对话与引用回溯的完整闭环，并提供文档 AI（摘要/分析/生成）能力。
 
-### Frontend
+仓库采用 `pnpm` monorepo：
 
-- React 19, Vite, TypeScript
-- Tailwind CSS, shadcn/ui
-- TanStack Router & Query
-- Zustand for state management
+- `packages/client`：React + Vite 前端
+- `packages/server`：Express + TypeScript 后端
+- `packages/shared`：前后端共享类型、常量、Zod 契约与工具
 
-### Backend
+## 1. 功能详解
 
-- Express 5, TypeScript
-- Drizzle ORM with MySQL
-- Qdrant for vector storage
-- JWT authentication with OAuth (GitHub, Google)
+### 1.1 账号与安全
 
-### Shared
+- 邮箱密码注册/登录、刷新 token、登出、全设备登出
+- 邮箱验证码（发送/校验）与验证码注册、密码重置
+- OAuth 登录（GitHub、Google）
+- 会话管理：查看当前账号所有活跃会话、按设备撤销
+- 安全机制：
+  - Access Token + Refresh Token
+  - Refresh Token Rotation（刷新时轮换）
+  - CSRF 防护（双重提交 token）
+  - Redis 限流（登录/注册/刷新/验证码等）
+  - Helmet 安全头、请求清洗、统一错误码返回
 
-- Common types, constants, Zod schemas, and utilities
+### 1.2 知识库与文档管理
 
-## Prerequisites
+- 知识库 CRUD，按知识库隔离检索范围
+- 知识库维度嵌入配置（provider/model/dimensions），创建后保持稳定
+- 文档能力：
+  - 上传：`pdf / docx / md / txt`
+  - 元信息编辑（标题/描述/目录）
+  - 内容编辑（Markdown/TXT）
+  - 下载与预览
+  - 版本历史、上传新版本、恢复到历史版本
+  - 回收站、恢复、永久删除
+- 目录树（Folder）管理，支持知识库内层级组织
+
+### 1.3 RAG 检索与对话
+
+- 文档异步处理流水线：分块 -> 向量化 -> 写入 Qdrant
+- 检索过滤：按 `userId / knowledgeBaseId / documentIds / scoreThreshold` 过滤
+- 多轮对话：
+  - 会话创建、列表、重命名、删除
+  - 消息流式返回（SSE）
+  - 引用来源（sources）回传与文档跳转
+  - 可限定“文档范围”提问
+
+### 1.4 Document AI
+
+- 文档摘要：同步 + SSE 流式
+- 长文分层摘要（自动分块后汇总）
+- 文档分析：关键词、实体、主题、结构化信息
+- 文档生成：按 prompt/template/style 生成
+- 文档扩写：基于已有文档内容进行 before/after/replace 扩展
+
+### 1.5 模型与存储扩展
+
+- LLM Provider：`openai / anthropic / zhipu / deepseek / ollama / custom`
+- Embedding Provider：`zhipu / openai / ollama`
+- 存储后端：`local` 或 `Cloudflare R2`
+- 文件访问支持签名 URL（开发环境可关闭签名便于调试）
+
+### 1.6 日志与运维能力
+
+- 登录日志、操作日志、系统日志
+- 定时任务（UTC）：
+  - 日志清理
+  - 刷新 token 清理
+  - 向量软删除清理
+  - 可选计数器同步
+- 服务优雅停机（关闭 HTTP、MySQL、Redis 连接）
+
+## 2. 部署流程（详细）
+
+当前仓库未内置 Docker 编排文件，推荐按以下方式部署。
+
+### 2.1 环境准备
+
+必须依赖：
 
 - Node.js >= 18
 - pnpm >= 9
-- MySQL 8.0+
-- Qdrant (local or cloud)
+- MySQL 8+
+- Redis 6+
+- Qdrant（本地或云）
 
-## Getting Started
+可选依赖：
 
-1. Install dependencies:
+- Ollama（本地模型）
+- SMTP 服务（邮箱验证码/重置密码）
+- Cloudflare R2（生产文件存储）
+
+### 2.2 拉取与安装
 
 ```bash
 pnpm install
 ```
 
-2. Set up environment variables:
+### 2.3 配置环境变量
+
+后端会从 `packages/server` 目录读取：
+
+- `.env.{NODE_ENV}.local`
+- `.env.{NODE_ENV}`
+- `.env`
+
+创建配置文件：
 
 ```bash
+# Linux/macOS
 cp packages/server/.env.example packages/server/.env
-# Edit .env with your database, Qdrant, and API keys
+
+# Windows PowerShell
+Copy-Item packages/server/.env.example packages/server/.env
 ```
 
-3. Initialize database:
+最低可启动配置（必须设置）：
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `JWT_SECRET`（至少 32 字符）
+- `ENCRYPTION_KEY`（至少 32 字符）
+- `EMAIL_VERIFICATION_SECRET`
+
+常用关键项：
+
+- `FRONTEND_URL`（CORS 与签名 URL 域名基准）
+- `QDRANT_URL`
+- `STORAGE_TYPE=local|r2`
+- `EMBEDDING_PROVIDER=zhipu|openai|ollama`
+- `ZHIPU_API_KEY` / `OPENAI_API_KEY`（对应 provider 时需要）
+
+### 2.4 初始化数据库
+
+开发环境快速同步 schema：
 
 ```bash
-cd packages/server
-pnpm db:push
+pnpm -F @knowledge-agent/server db:push
 ```
 
-4. Start development servers:
+生产环境建议使用迁移：
+
+```bash
+pnpm -F @knowledge-agent/server db:migrate
+```
+
+### 2.5 启动开发环境
 
 ```bash
 pnpm dev
 ```
 
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3000
+默认端口：
 
-## Scripts
+- 前端：`http://localhost:5173`
+- 后端：`http://localhost:3000`
 
-| Command           | Description                            |
-| ----------------- | -------------------------------------- |
-| `pnpm dev`        | Run both client and server in parallel |
-| `pnpm dev:client` | Run only Vite dev server               |
-| `pnpm dev:server` | Run only Express server                |
-| `pnpm build`      | Build all packages                     |
-| `pnpm lint`       | Run ESLint                             |
-| `pnpm format`     | Format code with Prettier              |
+说明：开发模式下 Vite 已代理 `/api` 到 `http://localhost:3000`。
 
-### Server-specific
+### 2.6 构建与生产启动
 
-| Command            | Description         |
-| ------------------ | ------------------- |
-| `pnpm test`        | Run tests           |
-| `pnpm db:generate` | Generate migrations |
-| `pnpm db:migrate`  | Run migrations      |
-| `pnpm db:push`     | Push schema (dev)   |
-| `pnpm db:studio`   | Open Drizzle Studio |
+1. 构建所有包：
 
-## Project Structure
-
-```
-packages/
-├── client/         # React frontend
-├── server/         # Express backend
-│   └── src/
-│       ├── modules/    # Feature modules (auth, document, rag, etc.)
-│       └── shared/     # Config, DB, errors, middleware, utils
-└── shared/         # Shared types, constants, schemas
+```bash
+pnpm build
 ```
 
-## Features
+2. 启动后端：
 
-- **Knowledge Bases** — Create isolated knowledge bases with configurable embedding providers
-- **Document Management** — Upload PDF, DOCX, Markdown, and text files with version history
-- **Folder Organization** — Organize documents in hierarchical folders
-- **Text Extraction** — Automatic text extraction from uploaded documents
-- **Vector Embeddings** — Support for OpenAI, Zhipu, and Ollama embedding providers
-- **Semantic Search** — Query documents using natural language
-- **Authentication** — JWT-based auth with OAuth (GitHub, Google) and email verification
-- **Multi-device Sessions** — Track and manage login sessions across devices
+```bash
+pnpm -F @knowledge-agent/server start
+```
 
-## Documentation
+3. 发布前端静态资源：
 
-- PDF annotation implementation: `docs/pdf-annotation-implementation.md`
+- 构建产物目录：`packages/client/dist`
+- 使用 Nginx/Caddy/静态托管服务提供该目录
 
-## License
+### 2.7 生产反向代理建议（Nginx 示例）
 
-MIT
+前端使用相对路径访问 `/api`，推荐同域部署：
+
+```nginx
+server {
+  listen 80;
+  server_name your-domain.com;
+
+  root /var/www/knowledge-agent/client-dist;
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # SSE 需要关闭代理缓冲
+    proxy_buffering off;
+  }
+}
+```
+
+如果部署在反向代理后，请设置 `TRUST_PROXY`（例如 `1` 或 `true`），保证限流与审计 IP 正确。
+
+### 2.8 部署后验证清单
+
+- `GET /api/hello` 可返回成功
+- 登录后能创建知识库
+- 上传文档后 `processingStatus` 最终变为 `completed`
+- 对话页面可以收到 SSE 流式响应
+- 回收站恢复/永久删除流程正常
+- 定时清理任务日志正常输出
+
+## 3. 工作原理
+
+### 3.1 核心组件职责
+
+- MySQL（Drizzle）：
+  - 用户、会话、知识库、文档、版本、分块、聊天、日志等结构化数据
+- Redis：
+  - 限流计数、缓存与会话相关辅助能力
+- Qdrant：
+  - 文档分块向量存储与相似度搜索
+- Storage（Local/R2）：
+  - 原始文件与版本文件存储
+- LLM/Embedding Provider：
+  - 文本生成、摘要分析、向量嵌入
+
+### 3.2 核心链路 A：文档入库到可检索
+
+1. 用户上传文档（`/api/documents` 或 `/api/knowledge-bases/:id/documents`）。
+2. 后端完成类型校验、存储写入、`document + document_version` 事务落库。
+3. 文档状态置为 `pending`，异步触发 RAG 处理。
+4. RAG 服务读取当前版本文本，执行分块和向量化。
+5. 采用“先写新向量，再删旧向量”策略，降低处理窗口内检索中断风险。
+6. 同步更新 chunk 与知识库计数器，最终状态变更为 `completed`。
+
+### 3.3 核心链路 B：检索增强对话（SSE）
+
+1. 客户端发送消息到 `/api/chat/conversations/:id/messages`。
+2. 服务端在知识库范围内执行语义检索（可叠加文档过滤）。
+3. 组装系统提示词 + 历史消息 + 检索上下文。
+4. 调用用户配置的 LLM，按 SSE 连续返回：
+   - `sources`：引用来源
+   - `chunk`：增量文本
+   - `done`：结束事件
+   - `error`：错误事件
+5. 完成后写入 assistant 消息并保存 citations 元数据。
+
+### 3.4 核心链路 C：文档 AI
+
+- 摘要：短文直出，长文采用分层摘要（chunk summary -> merge summary）
+- 分析：关键词/实体/主题使用 LLM，结构分析走本地计算
+- 生成/扩写：支持结合知识库检索上下文增强生成效果
+
+### 3.5 一致性与容错设计
+
+- 文档写入关键步骤使用 MySQL 事务
+- 存储已上传但事务失败时执行补偿删除
+- 向量物理删除失败时降级为软删除并由定时任务清理
+- 处理过程使用“内存锁 + 数据库状态”避免并发重复处理
+
+## 4. 常用命令
+
+| 命令                                               | 说明                   |
+| -------------------------------------------------- | ---------------------- |
+| `pnpm dev`                                         | 同时启动前后端开发服务 |
+| `pnpm dev:client`                                  | 仅启动前端             |
+| `pnpm dev:server`                                  | 仅启动后端             |
+| `pnpm build`                                       | 构建全部包             |
+| `pnpm lint`                                        | ESLint 检查            |
+| `pnpm test`                                        | 运行测试               |
+| `pnpm test:coverage`                               | 测试覆盖率             |
+| `pnpm -F @knowledge-agent/server db:push`          | 开发环境同步数据库结构 |
+| `pnpm -F @knowledge-agent/server db:migrate`       | 执行迁移               |
+| `pnpm -F @knowledge-agent/server db:sync-counters` | 手动同步知识库计数器   |
+
+## 5. 开源协议
+
+本项目采用 **MIT License**。
+
+- 你可以在保留版权与许可声明的前提下自由使用、修改、分发。
+- 项目按“现状”提供，不对特定用途适配性与潜在风险提供担保。
+
+如用于生产环境，请自行评估并承担由配置、数据安全与第三方服务产生的风险。

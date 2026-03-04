@@ -7,7 +7,6 @@ import { Errors } from '@shared/errors';
 import { documentConfig } from '@config/env';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
-import { folderRepository } from '../repositories/folder.repository';
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@shared/logger';
 import { logOperation } from '@shared/logger/operation-logger';
@@ -31,7 +30,6 @@ export function toDocumentInfo(doc: Document): DocumentInfo {
   return {
     id: doc.id,
     userId: doc.userId,
-    folderId: doc.folderId,
     title: doc.title,
     description: doc.description,
     fileName: doc.fileName,
@@ -63,7 +61,6 @@ export interface UploadFileInput {
 export interface UploadOptions {
   title?: string;
   description?: string;
-  folderId?: string;
   knowledgeBaseId?: string;
 }
 
@@ -103,25 +100,6 @@ export const documentUploadService = {
         validation.error!,
         400
       );
-    }
-
-    // Validate folder if specified (must belong to same KB)
-    if (options?.folderId) {
-      const folder = await folderRepository.findByIdAndUser(options.folderId, userId);
-      if (!folder) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
-          'Target folder not found',
-          404
-        );
-      }
-      if (folder.knowledgeBaseId !== knowledgeBaseId) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
-          'Folder does not belong to this knowledge base',
-          400
-        );
-      }
     }
 
     // Upload to storage (outside transaction - will be cleaned up on failure)
@@ -178,7 +156,6 @@ export const documentUploadService = {
           {
             id: docId,
             userId,
-            folderId: options?.folderId ?? null,
             knowledgeBaseId,
             title,
             description: options?.description ?? null,
@@ -223,7 +200,6 @@ export const documentUploadService = {
         fileSize: file.size,
         mimeType: resolvedMimeType,
         documentType,
-        folderId: options?.folderId ?? null,
         knowledgeBaseId,
       },
       ipAddress: ctx?.ipAddress ?? null,

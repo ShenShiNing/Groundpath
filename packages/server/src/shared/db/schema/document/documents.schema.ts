@@ -10,7 +10,6 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
-import { folders } from './folders.schema';
 import { documentVersions } from './document-versions.schema';
 import { documentChunks } from './document-chunks.schema';
 import { knowledgeBases } from './knowledge-bases.schema';
@@ -22,7 +21,6 @@ export const documents = mysqlTable(
 
     // Ownership
     userId: varchar('user_id', { length: 36 }).notNull(),
-    folderId: varchar('folder_id', { length: 36 }),
 
     // Knowledge base association
     knowledgeBaseId: varchar('knowledge_base_id', { length: 36 }).notNull(),
@@ -65,7 +63,6 @@ export const documents = mysqlTable(
   },
   (table) => [
     index('user_id_idx').on(table.userId),
-    index('folder_id_idx').on(table.folderId),
     index('knowledge_base_id_idx').on(table.knowledgeBaseId),
     index('processing_status_idx').on(table.processingStatus),
     index('deleted_at_idx').on(table.deletedAt),
@@ -78,10 +75,6 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   user: one(users, {
     fields: [documents.userId],
     references: [users.id],
-  }),
-  folder: one(folders, {
-    fields: [documents.folderId],
-    references: [folders.id],
   }),
   knowledgeBase: one(knowledgeBases, {
     fields: [documents.knowledgeBaseId],

@@ -18,7 +18,6 @@ export interface UploadQueueStats {
 
 export interface StartUploadOptions {
   knowledgeBaseId?: string;
-  folderId?: string;
   title?: string;
   description?: string;
   onFileComplete?: (fileId: string, file: File) => void;
@@ -88,7 +87,6 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
     const formData = new FormData();
     formData.append('file', nextFile.file);
     const opts = uploadOptionsRef.current;
-    if (opts.folderId) formData.append('folderId', opts.folderId);
     if (opts.title) formData.append('title', opts.title);
     if (opts.description) formData.append('description', opts.description);
 

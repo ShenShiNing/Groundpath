@@ -32,7 +32,7 @@ void i18n
     supportedLngs: supportedLanguages,
     fallbackLng: defaultLanguage,
     defaultNS,
-    ns: ['common', 'language', 'app'],
+    ns: allNamespaces,
     partialBundledLanguages: true,
 
     interpolation: {
@@ -50,7 +50,7 @@ void i18n
     },
 
     react: {
-      useSuspense: true,
+      useSuspense: false,
     },
   });
 

@@ -131,7 +131,6 @@ export const cacheKeys = {
   knowledgeBaseEmbeddingConfig: (kbId: string) => `kb:${kbId}:embedding`,
   userKnowledgeBases: (userId: string) => `kb:user:${userId}`,
   document: (docId: string) => `doc:${docId}`,
-  folder: (folderId: string) => `folder:${folderId}`,
 };
 
 export const invalidatePatterns = {

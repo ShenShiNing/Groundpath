@@ -12,7 +12,6 @@ import { useTranslation } from 'react-i18next';
 
 interface DocumentUploadProps {
   knowledgeBaseId?: string;
-  folderId?: string | null;
   onSuccess?: () => void;
   className?: string;
 }
@@ -26,12 +25,7 @@ const ACCEPTED_TYPES = {
 
 const MAX_SIZE = 21 * 1024 * 1024; // 21 MiB (allows files that Windows shows as ~20MB)
 
-export function DocumentUpload({
-  knowledgeBaseId,
-  folderId,
-  onSuccess,
-  className,
-}: DocumentUploadProps) {
+export function DocumentUpload({ knowledgeBaseId, onSuccess, className }: DocumentUploadProps) {
   const { t } = useTranslation('document');
   const queryClient = useQueryClient();
   const queue = useUploadQueue({ maxConcurrent: 3 });
@@ -65,7 +59,6 @@ export function DocumentUpload({
   const handleUpload = () => {
     queue.startUpload({
       knowledgeBaseId: knowledgeBaseId ?? undefined,
-      folderId: folderId ?? undefined,
       onFileComplete: (_, file) => {
         toast.success(t('upload.fileUploaded', { name: file.name }));
       },

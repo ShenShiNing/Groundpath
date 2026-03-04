@@ -90,39 +90,7 @@
   "cardAction": {
     "download": "下载",
     "edit": "编辑",
-    "moveToFolder": "移动到文件夹",
     "delete": "删除"
-  },
-  "folder": {
-    "allDocuments": "全部文档",
-    "action": {
-      "rename": "重命名",
-      "delete": "删除"
-    },
-    "dialog": {
-      "editTitle": "编辑文件夹",
-      "createTitle": "创建文件夹",
-      "editDescription": "更新文件夹名称和位置。",
-      "createDescription": "创建新文件夹来组织文档。"
-    },
-    "form": {
-      "name": "名称",
-      "namePlaceholder": "文件夹名称",
-      "parentFolder": "父文件夹",
-      "parentPlaceholder": "选择父文件夹",
-      "root": "根目录（无父文件夹）",
-      "updating": "更新中...",
-      "creating": "创建中...",
-      "update": "更新",
-      "create": "创建"
-    },
-    "toast": {
-      "updated": "文件夹已更新",
-      "created": "文件夹已创建",
-      "updateFailed": "更新文件夹失败",
-      "createFailed": "创建文件夹失败",
-      "kbIdRequired": "需要知识库 ID"
-    }
   },
   "viewer": {
     "docxNotSupported": "Word 文档暂不支持在浏览器中预览。",
@@ -138,7 +106,8 @@
       "backToKnowledgeBases": "返回知识库",
       "restore": "恢复",
       "permanentDelete": "永久删除",
-      "clearFilters": "清空筛选"
+      "clearFilters": "清空筛选",
+      "clearAll": "清空全部"
     },
     "stats": {
       "total": "回收站文档总数",
@@ -173,20 +142,28 @@
     "dialog": {
       "restore": {
         "title": "恢复文档",
-        "description": "确认恢复\"{{title}}\"吗？恢复后会回到原始目录。",
+        "description": "确认恢复\"{{title}}\"吗？恢复后会回到知识库文档列表。",
         "confirm": "恢复"
       },
       "delete": {
         "title": "永久删除文档",
         "description": "确认永久删除\"{{title}}\"吗？该操作不可撤销，文件将从存储中移除。",
         "confirm": "永久删除"
+      },
+      "clearAll": {
+        "title": "清空回收站",
+        "description": "确认永久删除回收站中的全部文档吗？该操作不可撤销。",
+        "confirm": "确认清空"
       }
     },
     "toast": {
       "restored": "文档已恢复",
       "restoreFailed": "恢复文档失败",
       "permanentlyDeleted": "文档已永久删除",
-      "deleteFailed": "删除文档失败"
+      "deleteFailed": "删除文档失败",
+      "emptied": "回收站已清空",
+      "emptyPartial": "已清理 {{deletedCount}} 项，另有 {{failedCount}} 项失败",
+      "emptyFailed": "清空回收站失败"
     }
   }
 }

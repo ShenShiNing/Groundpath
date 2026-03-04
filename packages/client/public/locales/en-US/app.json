@@ -1,19 +1,29 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "knowledgeBases": "Knowledge Bases"
+    "knowledgeBases": "Knowledge Bases",
+    "trash": "Trash"
   },
   "userMenu": {
     "newKnowledgeBase": "New Knowledge Base",
     "profile": "Profile",
     "settings": "Settings",
     "sessions": "Sessions",
+    "switchTheme": "Switch theme",
+    "switchLanguage": "Switch language",
+    "themeSystem": "System",
+    "themeLight": "Light",
+    "themeDark": "Dark",
     "logOut": "Log out"
   },
   "sidebar": {
     "expand": "Expand sidebar",
     "newChat": "New chat",
     "searchChat": "Search chats",
+    "searchChatDescription": "Search and open previous chats, or start a new one.",
+    "searchPlaceholder": "Search chat content...",
+    "searchLoading": "Loading chat history...",
+    "searchEmpty": "No matching chats found",
     "workspace": "Workspace",
     "chatHistory": "Chat history"
   }

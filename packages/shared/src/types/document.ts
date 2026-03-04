@@ -17,7 +17,6 @@ export type VersionSource = (typeof VERSION_SOURCE)[number];
 export interface DocumentInfo {
   id: string;
   userId: string;
-  folderId: string | null;
   title: string;
   description: string | null;
   fileName: string;
@@ -41,7 +40,6 @@ export interface DocumentListItem {
   fileSize: number;
   fileExtension: string;
   documentType: DocumentType;
-  folderId: string | null;
   processingStatus: ProcessingStatus;
   createdAt: Date;
   updatedAt: Date;
@@ -52,41 +50,9 @@ export interface TrashDocumentListItem extends DocumentListItem {
   deletedAt: Date;
 }
 
-/** Document with folder info */
-export interface DocumentWithFolder extends DocumentInfo {
-  folder: FolderInfo | null;
-}
-
-// ==================== Folder Interfaces ====================
-
-/** Folder info returned from API */
-export interface FolderInfo {
-  id: string;
-  userId: string;
-  parentId: string | null;
-  name: string;
-  path: string;
-  knowledgeBaseId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-/** Folder with children count */
-export interface FolderWithCounts extends FolderInfo {
-  documentCount: number;
-  childFolderCount: number;
-}
-
-/** Folder tree node for navigation */
-export interface FolderTreeNode extends FolderInfo {
-  children: FolderTreeNode[];
-}
-
 // ==================== Request Types ====================
 
 export type {
-  CreateFolderRequest,
-  UpdateFolderRequest,
   UpdateDocumentRequest,
   SaveDocumentContentRequest,
   DocumentListParams,

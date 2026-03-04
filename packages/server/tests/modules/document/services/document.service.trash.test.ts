@@ -31,6 +31,7 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
     softDelete: vi.fn(),
     findDeletedByIdAndUser: vi.fn(),
     listDeleted: vi.fn(),
+    listDeletedIds: vi.fn(),
     restore: vi.fn(),
     hardDelete: vi.fn(),
     moveAllFromFolderToRoot: vi.fn(),
@@ -49,12 +50,6 @@ vi.mock('@modules/document/repositories/document-version.repository', () => ({
 vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
   documentChunkRepository: {
     deleteByDocumentId: vi.fn(),
-  },
-}));
-
-vi.mock('@modules/document/repositories/folder.repository', () => ({
-  folderRepository: {
-    findByIdAndUser: vi.fn(),
   },
 }));
 
@@ -120,6 +115,7 @@ import { documentService } from '@modules/document';
 import { documentRepository } from '@modules/document';
 import { documentVersionRepository } from '@modules/document';
 import { documentStorageService } from '@modules/document';
+import { documentTrashService } from '@modules/document';
 
 // ==================== listTrash ====================
 // 场景：查询已删除的文档（回收站）
@@ -341,5 +337,51 @@ describe('documentService > permanentDelete', () => {
     expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND);
     expect(documentStorageService.deleteDocument).not.toHaveBeenCalled();
     expect(documentRepository.hardDelete).not.toHaveBeenCalled();
+  });
+});
+
+// ==================== clearTrash ====================
+// 场景：批量清空回收站
+describe('documentService > clearTrash', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should return zero counts when trash is empty', async () => {
+    vi.mocked(documentRepository.listDeletedIds).mockResolvedValue([]);
+
+    const result = await documentService.clearTrash(mockUserId);
+
+    expect(result.deletedCount).toBe(0);
+    expect(result.failedCount).toBe(0);
+  });
+
+  it('should clear all trash documents successfully', async () => {
+    vi.mocked(documentRepository.listDeletedIds).mockResolvedValue(['doc-1', 'doc-2']);
+    const permanentDeleteSpy = vi
+      .spyOn(documentTrashService, 'permanentDelete')
+      .mockResolvedValue(undefined);
+
+    const result = await documentService.clearTrash(mockUserId);
+
+    expect(permanentDeleteSpy).toHaveBeenCalledTimes(2);
+    expect(permanentDeleteSpy).toHaveBeenCalledWith('doc-1', mockUserId, undefined);
+    expect(permanentDeleteSpy).toHaveBeenCalledWith('doc-2', mockUserId, undefined);
+    expect(result.deletedCount).toBe(2);
+    expect(result.failedCount).toBe(0);
+  });
+
+  it('should continue deleting when one document fails', async () => {
+    vi.mocked(documentRepository.listDeletedIds).mockResolvedValue(['doc-1', 'doc-2', 'doc-3']);
+    const permanentDeleteSpy = vi
+      .spyOn(documentTrashService, 'permanentDelete')
+      .mockRejectedValueOnce(new Error('Delete failed'))
+      .mockResolvedValue(undefined);
+
+    const result = await documentService.clearTrash(mockUserId);
+
+    expect(permanentDeleteSpy).toHaveBeenCalledTimes(3);
+    expect(result.deletedCount).toBe(2);
+    expect(result.failedCount).toBe(1);
   });
 });

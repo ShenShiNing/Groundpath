@@ -85,7 +85,7 @@ export const operationLogService = {
    * Get operation history for a specific resource
    */
   async getResourceHistory(
-    resourceType: 'document' | 'folder' | 'user' | 'session',
+    resourceType: 'document' | 'knowledge_base' | 'user' | 'session',
     resourceId: string,
     userId: string,
     limit: number = 50

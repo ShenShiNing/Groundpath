@@ -19,6 +19,7 @@ import { systemLogger } from '@shared/logger/system-logger';
 import { initializeScheduler } from '@shared/scheduler';
 import { closeDatabase } from '@shared/db';
 import { closeRedis, connectRedis } from '@shared/redis';
+import { createShutdownHandler } from '@shared/server/shutdown';
 import router from './router';
 
 // ==================== App Setup ====================
@@ -104,45 +105,6 @@ function onServerStart(): void {
 }
 
 /**
- * Graceful shutdown handler
- */
-function createShutdownHandler(server: Server): (signal: string) => void {
-  return (signal: string) => {
-    logger.info({ signal }, 'Received shutdown signal, closing server gracefully');
-
-    server.close(async (err) => {
-      if (err) {
-        logger.error({ err }, 'Error during server shutdown');
-        process.exit(1);
-      }
-
-      // Close database connection pool
-      try {
-        await closeDatabase();
-        logger.info('Database connections closed');
-      } catch (dbErr) {
-        logger.error({ err: dbErr }, 'Error closing database connections');
-      }
-
-      try {
-        await closeRedis();
-      } catch (redisErr) {
-        logger.error({ err: redisErr }, 'Error closing Redis connection');
-      }
-
-      logger.info('Server closed successfully');
-      process.exit(0);
-    });
-
-    // Force exit after timeout
-    setTimeout(() => {
-      logger.warn('Forced shutdown due to timeout');
-      process.exit(1);
-    }, serverConfig.shutdownTimeout);
-  };
-}
-
-/**
  * Start the HTTP server
  */
 async function startServer(): Promise<void> {
@@ -156,7 +118,13 @@ async function startServer(): Promise<void> {
   server.listen(serverConfig.port, onServerStart);
 
   // Register shutdown handlers
-  const shutdown = createShutdownHandler(server);
+  const shutdown = createShutdownHandler(server, {
+    closeDatabase,
+    closeRedis,
+    logger,
+    shutdownTimeout: serverConfig.shutdownTimeout,
+    exit: (code) => process.exit(code),
+  });
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 }

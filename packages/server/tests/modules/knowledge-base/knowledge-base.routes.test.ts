@@ -19,14 +19,11 @@ const {
   knowledgeBaseControllerMock,
   createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchemaMock,
-  createFolderRequestSchemaMock,
   documentListParamsSchemaMock,
   createKbValidatorMock,
   updateKbValidatorMock,
-  createFolderValidatorMock,
   documentListValidatorMock,
   documentServiceMock,
-  folderServiceMock,
   sendSuccessResponseMock,
   requireUserIdMock,
   getParamIdMock,
@@ -63,12 +60,10 @@ const {
 
   const createKbSchema = { type: 'create-kb-schema' };
   const updateKbSchema = { type: 'update-kb-schema' };
-  const createFolderSchema = { type: 'create-folder-schema' };
   const listParamsSchema = { type: 'document-list-schema' };
 
   const createKbValidator = vi.fn();
   const updateKbValidator = vi.fn();
-  const createFolderValidator = vi.fn();
   const listValidator = vi.fn();
   const sanitizeMultipartFields = vi.fn();
   const getValidatedQuery = vi.fn();
@@ -92,11 +87,6 @@ const {
     upload: vi.fn(),
     list: vi.fn(),
   };
-  const folderService = {
-    listByKnowledgeBase: vi.fn(),
-    getTreeByKnowledgeBase: vi.fn(),
-    create: vi.fn(),
-  };
 
   return {
     mockRouter: hoistedRouter,
@@ -108,9 +98,6 @@ const {
       }
       if (schema === updateKbSchema) {
         return updateKbValidator;
-      }
-      if (schema === createFolderSchema) {
-        return createFolderValidator;
       }
       return vi.fn();
     }),
@@ -138,14 +125,11 @@ const {
     },
     createKnowledgeBaseSchemaMock: createKbSchema,
     updateKnowledgeBaseSchemaMock: updateKbSchema,
-    createFolderRequestSchemaMock: createFolderSchema,
     documentListParamsSchemaMock: listParamsSchema,
     createKbValidatorMock: createKbValidator,
     updateKbValidatorMock: updateKbValidator,
-    createFolderValidatorMock: createFolderValidator,
     documentListValidatorMock: listValidator,
     documentServiceMock: documentService,
-    folderServiceMock: folderService,
     sendSuccessResponseMock: sendSuccessResponse,
     requireUserIdMock: requireUserId,
     getParamIdMock: getParamId,
@@ -184,13 +168,11 @@ vi.mock('@shared/middleware', () => ({
 vi.mock('@knowledge-agent/shared/schemas', () => ({
   createKnowledgeBaseSchema: createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchema: updateKnowledgeBaseSchemaMock,
-  createFolderRequestSchema: createFolderRequestSchemaMock,
   documentListParamsSchema: documentListParamsSchemaMock,
 }));
 
 vi.mock('@modules/document', () => ({
   documentService: documentServiceMock,
-  folderService: folderServiceMock,
 }));
 
 vi.mock('@shared/errors', () => ({
@@ -218,7 +200,7 @@ vi.mock('@knowledge-agent/shared', () => ({
 }));
 
 import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
-import { documentService, folderService } from '@modules/document';
+import { documentService } from '@modules/document';
 import { sendSuccessResponse } from '@shared/errors';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils';
 import { getValidatedQuery } from '@shared/middleware';
@@ -249,21 +231,6 @@ function getDocumentListHandler() {
   return listRouteCall?.[2] as ((req: Request, res: Response) => Promise<void>) | undefined;
 }
 
-function getFolderListHandler() {
-  const listRouteCall = mockRouter.get.mock.calls.find((call) => call[0] === '/:id/folders');
-  return listRouteCall?.[1] as ((req: Request, res: Response) => Promise<void>) | undefined;
-}
-
-function getFolderTreeHandler() {
-  const treeRouteCall = mockRouter.get.mock.calls.find((call) => call[0] === '/:id/folders/tree');
-  return treeRouteCall?.[1] as ((req: Request, res: Response) => Promise<void>) | undefined;
-}
-
-function getCreateFolderHandler() {
-  const createRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/folders');
-  return createRouteCall?.[2] as ((req: Request, res: Response) => Promise<void>) | undefined;
-}
-
 describe('knowledge-base.routes', () => {
   it('should create router and export it', () => {
     expect(RouterMock).toHaveBeenCalledTimes(1);
@@ -285,7 +252,6 @@ describe('knowledge-base.routes', () => {
   it('should register knowledge base crud routes with validators', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(createKnowledgeBaseSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(updateKnowledgeBaseSchemaMock);
-    expect(validateBodyMock).toHaveBeenCalledWith(createFolderRequestSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(documentListParamsSchemaMock);
 
     expect(mockRouter.post).toHaveBeenCalledWith(
@@ -303,7 +269,7 @@ describe('knowledge-base.routes', () => {
     expect(mockRouter.delete).toHaveBeenCalledWith('/:id', knowledgeBaseControllerMock.delete);
   });
 
-  it('should register document and folder routes with async handlers', () => {
+  it('should register document routes with async handlers', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/documents',
       expect.any(Function),
@@ -315,15 +281,7 @@ describe('knowledge-base.routes', () => {
       documentListValidatorMock,
       expect.any(Function)
     );
-
-    expect(mockRouter.get).toHaveBeenCalledWith('/:id/folders', expect.any(Function));
-    expect(mockRouter.get).toHaveBeenCalledWith('/:id/folders/tree', expect.any(Function));
-    expect(mockRouter.post).toHaveBeenCalledWith(
-      '/:id/folders',
-      createFolderValidatorMock,
-      expect.any(Function)
-    );
-    expect(asyncHandlerMock).toHaveBeenCalledTimes(5);
+    expect(asyncHandlerMock).toHaveBeenCalledTimes(2);
   });
 
   it('should return file-size error when multer emits LIMIT_FILE_SIZE', () => {
@@ -387,37 +345,12 @@ describe('knowledge-base.routes', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('should pass unknown upload errors to next', () => {
-    const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-    const uploadMiddleware = uploadRouteCall?.[1] as
-      | ((req: Request, res: Response, next: NextFunction) => void)
-      | undefined;
-
-    expect(uploadMiddleware).toBeTypeOf('function');
-
-    const unknownError = new Error('network error');
-    multerSingleMock.mockReturnValueOnce(
-      (_req: Request, _res: Response, cb: (err?: unknown) => void) => cb(unknownError)
-    );
-
-    const req = {} as Request;
-    const res = createMockResponse();
-    const next = vi.fn();
-
-    uploadMiddleware!(req, res, next);
-
-    expect(next).toHaveBeenCalledWith(unknownError);
-  });
-
   describe('business handlers', () => {
     const validKbId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
     beforeEach(() => {
       vi.mocked(documentService.upload).mockReset();
       vi.mocked(documentService.list).mockReset();
-      vi.mocked(folderService.listByKnowledgeBase).mockReset();
-      vi.mocked(folderService.getTreeByKnowledgeBase).mockReset();
-      vi.mocked(folderService.create).mockReset();
       vi.mocked(sendSuccessResponse).mockReset();
       vi.mocked(requireUserId).mockReset();
       vi.mocked(getParamId).mockReset();
@@ -446,7 +379,6 @@ describe('knowledge-base.routes', () => {
         body: {
           title: 't',
           description: 'd',
-          folderId: 'folder-1',
         },
         headers: { 'user-agent': 'vitest-agent' },
       });
@@ -464,7 +396,6 @@ describe('knowledge-base.routes', () => {
         {
           title: 't',
           description: 'd',
-          folderId: 'folder-1',
           knowledgeBaseId: validKbId,
         },
         { ipAddress: '127.0.0.1', userAgent: 'vitest-agent' }
@@ -558,104 +489,6 @@ describe('knowledge-base.routes', () => {
         statusCode: 400,
       });
       expect(documentService.list).not.toHaveBeenCalled();
-    });
-
-    it('should list folders and tree successfully', async () => {
-      const listHandler = getFolderListHandler();
-      const treeHandler = getFolderTreeHandler();
-      expect(listHandler).toBeTypeOf('function');
-      expect(treeHandler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue(validKbId);
-      vi.mocked(folderService.listByKnowledgeBase).mockResolvedValue([{ id: 'f-1' }] as never);
-      vi.mocked(folderService.getTreeByKnowledgeBase).mockResolvedValue([
-        { id: 'root', children: [] },
-      ] as never);
-
-      const req = createMockRequest({ params: { id: validKbId } });
-      const res = createMockResponse();
-
-      await listHandler!(req, res);
-      await treeHandler!(req, res);
-
-      expect(folderService.listByKnowledgeBase).toHaveBeenCalledWith(validKbId, 'user-1');
-      expect(folderService.getTreeByKnowledgeBase).toHaveBeenCalledWith(validKbId, 'user-1');
-      expect(sendSuccessResponse).toHaveBeenCalledWith(res, [{ id: 'f-1' }]);
-      expect(sendSuccessResponse).toHaveBeenCalledWith(res, [{ id: 'root', children: [] }]);
-    });
-
-    it('should throw validation error when listing folders with invalid kb id', async () => {
-      const listHandler = getFolderListHandler();
-      const treeHandler = getFolderTreeHandler();
-      expect(listHandler).toBeTypeOf('function');
-      expect(treeHandler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue('');
-
-      const req = createMockRequest({ params: { id: '' } });
-      const res = createMockResponse();
-
-      await expect(listHandler!(req, res)).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR',
-        statusCode: 400,
-      });
-      await expect(treeHandler!(req, res)).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR',
-        statusCode: 400,
-      });
-    });
-
-    it('should create folder successfully and override knowledgeBaseId from URL', async () => {
-      const handler = getCreateFolderHandler();
-      expect(handler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue(validKbId);
-      vi.mocked(getClientIp).mockReturnValue('10.0.0.1');
-      vi.mocked(folderService.create).mockResolvedValue({ id: 'f-new' } as never);
-
-      const req = createMockRequest({
-        params: { id: validKbId },
-        body: {
-          name: 'Folder A',
-          parentId: null,
-          knowledgeBaseId: 'wrong-kb',
-        },
-        headers: {},
-      });
-      const res = createMockResponse();
-
-      await handler!(req, res);
-
-      expect(folderService.create).toHaveBeenCalledWith(
-        'user-1',
-        {
-          name: 'Folder A',
-          parentId: null,
-          knowledgeBaseId: validKbId,
-        },
-        { ipAddress: '10.0.0.1', userAgent: null }
-      );
-      expect(sendSuccessResponse).toHaveBeenCalledWith(res, { id: 'f-new' }, 201);
-    });
-
-    it('should throw validation error when creating folder with invalid kb id', async () => {
-      const handler = getCreateFolderHandler();
-      expect(handler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue('bad-id');
-
-      const req = createMockRequest({ params: { id: 'bad-id' }, body: { name: 'Folder A' } });
-      const res = createMockResponse();
-
-      await expect(handler!(req, res)).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR',
-        statusCode: 400,
-      });
-      expect(folderService.create).not.toHaveBeenCalled();
     });
   });
 });

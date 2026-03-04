@@ -11,6 +11,7 @@ router.use(authenticate);
 // Conversation endpoints
 router.post('/conversations', conversationController.create);
 router.get('/conversations', conversationController.list);
+router.get('/conversations/search', conversationController.search);
 router.get('/conversations/:id', conversationController.getById);
 router.patch('/conversations/:id', conversationController.update);
 router.delete('/conversations/:id', conversationController.delete);

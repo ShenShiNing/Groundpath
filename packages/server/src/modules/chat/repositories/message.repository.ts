@@ -1,6 +1,60 @@
-import { eq, asc, desc, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { messages, type Message, type NewMessage } from '@shared/db/schema/ai/messages.schema';
+import { conversations } from '@shared/db/schema/ai/conversations.schema';
+import type { ConversationSearchItem } from '@knowledge-agent/shared/types';
+
+function buildBooleanSearchQuery(query: string): string {
+  const normalized = query.trim();
+  if (!normalized) return query;
+
+  // For CJK queries, keep exact phrase (wildcard tends to hurt precision).
+  if (/[\u3400-\u9fff]/u.test(normalized)) {
+    return normalized
+      .replace(/[+\-<>()~*"@]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  const tokens = query
+    .split(/\s+/)
+    .map((token) => token.trim().replace(/[+\-<>()~*"@]/g, ''))
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) return query;
+  return tokens.map((token) => `${token}*`).join(' ');
+}
+
+function isMissingFulltextIndexError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+
+  const record = error as { message?: unknown; code?: unknown; cause?: unknown };
+  const message = typeof record.message === 'string' ? record.message : '';
+  const code = typeof record.code === 'string' ? record.code : '';
+
+  if (
+    code === 'ER_FT_MATCHING_KEY_NOT_FOUND' ||
+    message.includes("Can't find FULLTEXT index matching the column list")
+  ) {
+    return true;
+  }
+
+  return isMissingFulltextIndexError(record.cause);
+}
+
+function buildSnippetExpr(query: string) {
+  const positionExpr = sql<number>`LOCATE(LOWER(${query}), LOWER(${messages.content}))`;
+  const snippetExpr = sql<string>`TRIM(REPLACE(REPLACE(
+    CASE
+      WHEN ${positionExpr} > 0 THEN SUBSTRING(${messages.content}, GREATEST(1, ${positionExpr} - 40), 220)
+      ELSE SUBSTRING(${messages.content}, 1, 220)
+    END,
+    '\n',
+    ' '
+  ), '\r', ' '))`;
+
+  return { positionExpr, snippetExpr };
+}
 
 export const messageRepository = {
   /**
@@ -131,5 +185,128 @@ export const messageRepository = {
     }
 
     return statsMap;
+  },
+
+  /**
+   * Search messages by content for a specific user.
+   * Uses FULLTEXT search first, then falls back to LIKE for short tokens/CJK.
+   */
+  async searchByContent(
+    userId: string,
+    params: {
+      query: string;
+      knowledgeBaseId?: string;
+      limit: number;
+      offset: number;
+    }
+  ): Promise<{ items: ConversationSearchItem[]; total: number }> {
+    const { query, knowledgeBaseId, limit, offset } = params;
+    const booleanQuery = buildBooleanSearchQuery(query);
+    const fulltextScoreExpr = sql<number>`MATCH(${messages.content}) AGAINST (${booleanQuery} IN BOOLEAN MODE)`;
+    const { positionExpr: exactPositionExpr, snippetExpr } = buildSnippetExpr(query);
+    const baseConditions = [
+      eq(conversations.userId, userId),
+      isNull(conversations.deletedAt),
+      inArray(messages.role, ['user', 'assistant']),
+    ];
+
+    if (knowledgeBaseId) {
+      baseConditions.push(eq(conversations.knowledgeBaseId, knowledgeBaseId));
+    }
+
+    const fulltextCondition = and(...baseConditions, sql`${fulltextScoreExpr} > 0`);
+
+    try {
+      const fulltextRows = await db
+        .select({
+          conversationId: conversations.id,
+          conversationTitle: conversations.title,
+          knowledgeBaseId: conversations.knowledgeBaseId,
+          messageId: messages.id,
+          role: messages.role,
+          snippet: snippetExpr,
+          matchedAt: messages.createdAt,
+          score: fulltextScoreExpr,
+        })
+        .from(messages)
+        .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+        .where(fulltextCondition)
+        .orderBy(
+          sql`CASE WHEN ${exactPositionExpr} > 0 THEN 0 ELSE 1 END`,
+          desc(fulltextScoreExpr),
+          desc(messages.createdAt)
+        )
+        .limit(limit)
+        .offset(offset);
+
+      if (fulltextRows.length > 0) {
+        const totalResult = await db
+          .select({ total: count() })
+          .from(messages)
+          .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+          .where(fulltextCondition);
+
+        return {
+          items: fulltextRows.map((row) => ({
+            conversationId: row.conversationId,
+            conversationTitle: row.conversationTitle,
+            knowledgeBaseId: row.knowledgeBaseId,
+            messageId: row.messageId,
+            role: row.role,
+            snippet: row.snippet,
+            matchedAt: row.matchedAt,
+            score: row.score,
+          })),
+          total: totalResult[0]?.total ?? 0,
+        };
+      }
+    } catch (error) {
+      if (!isMissingFulltextIndexError(error)) {
+        throw error;
+      }
+    }
+
+    const likePattern = `%${query}%`;
+    const likeCondition = and(
+      ...baseConditions,
+      sql`LOWER(${messages.content}) LIKE LOWER(${likePattern})`
+    );
+
+    const likeRows = await db
+      .select({
+        conversationId: conversations.id,
+        conversationTitle: conversations.title,
+        knowledgeBaseId: conversations.knowledgeBaseId,
+        messageId: messages.id,
+        role: messages.role,
+        snippet: snippetExpr,
+        matchedAt: messages.createdAt,
+      })
+      .from(messages)
+      .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+      .where(likeCondition)
+      .orderBy(asc(exactPositionExpr), desc(messages.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const totalLikeResult = await db
+      .select({ total: count() })
+      .from(messages)
+      .innerJoin(conversations, eq(messages.conversationId, conversations.id))
+      .where(likeCondition);
+
+    return {
+      items: likeRows.map((row) => ({
+        conversationId: row.conversationId,
+        conversationTitle: row.conversationTitle,
+        knowledgeBaseId: row.knowledgeBaseId,
+        messageId: row.messageId,
+        role: row.role,
+        snippet: row.snippet,
+        matchedAt: row.matchedAt,
+        score: null,
+      })),
+      total: totalLikeResult[0]?.total ?? 0,
+    };
   },
 };

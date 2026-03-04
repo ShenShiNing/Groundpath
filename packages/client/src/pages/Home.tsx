@@ -228,7 +228,7 @@ const HomePage = () => {
             {t('hero.badge')}
           </div>
 
-          <h1 className="font-display mt-6 max-w-4xl text-4xl font-bold tracking-tight text-balance sm:text-5xl md:text-6xl">
+          <h1 className="font-display mt-6 max-w-4xl text-4xl font-bold leading-[1.15] tracking-tight text-balance sm:text-5xl md:text-6xl">
             {t('hero.title')}
             <span className="text-muted-foreground"> {t('hero.titleMuted')}</span>
           </h1>

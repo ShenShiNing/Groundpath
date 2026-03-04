@@ -11,7 +11,7 @@ import {
 import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
 
-export const resourceTypes = ['document', 'folder', 'knowledge_base', 'user', 'session'] as const;
+export const resourceTypes = ['document', 'knowledge_base', 'user', 'session'] as const;
 export type ResourceType = (typeof resourceTypes)[number];
 
 export const operationActions = [
@@ -24,10 +24,6 @@ export const operationActions = [
   'document.download',
   'document.upload_version',
   'document.restore_version',
-  // Folder actions
-  'folder.create',
-  'folder.update',
-  'folder.delete',
   // Knowledge base actions
   'knowledge_base.create',
   'knowledge_base.update',

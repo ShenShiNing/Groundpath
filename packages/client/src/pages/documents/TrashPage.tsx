@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Link } from '@tanstack/react-router';
-import { ArrowUpRight, CalendarClock, RotateCcw, Search, Trash, Trash2 } from 'lucide-react';
+import { CalendarClock, RotateCcw, Search, Trash, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { TrashDocumentListItem } from '@knowledge-agent/shared/types';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -33,7 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useTrashDocuments, useRestoreDocument, usePermanentDeleteDocument } from '@/hooks';
+import {
+  useTrashDocuments,
+  useRestoreDocument,
+  usePermanentDeleteDocument,
+  useClearTrash,
+} from '@/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { formatBytes } from '@/lib/utils';
 
@@ -45,6 +48,7 @@ export function TrashPage() {
 
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<TrashDocumentListItem | null>(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -63,6 +67,7 @@ export function TrashPage() {
   const { data: trashData, isLoading } = useTrashDocuments(queryParams);
   const restoreMutation = useRestoreDocument();
   const permanentDeleteMutation = usePermanentDeleteDocument();
+  const clearTrashMutation = useClearTrash();
 
   const trashDocuments = trashData?.documents ?? [];
   const pagination = trashData?.pagination ?? { page: 1, pageSize: 20, total: 0, totalPages: 0 };
@@ -108,23 +113,33 @@ export function TrashPage() {
     setSortOrder('desc');
   };
 
+  const confirmClearTrash = async () => {
+    try {
+      const result = await clearTrashMutation.mutateAsync();
+      if (result.failedCount > 0) {
+        toast.error(
+          t('trash.toast.emptyPartial', {
+            deletedCount: result.deletedCount,
+            failedCount: result.failedCount,
+          })
+        );
+      } else {
+        toast.success(t('trash.toast.emptied'));
+      }
+    } catch {
+      toast.error(t('trash.toast.emptyFailed'));
+    }
+    setClearDialogOpen(false);
+  };
+
   return (
-    <AppLayout>
+    <>
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="shrink-0 border-b px-6 py-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                {t('trash.page.title')}
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground">{t('trash.page.description')}</p>
-            </div>
-            <Button variant="outline" className="cursor-pointer" asChild>
-              <Link to="/knowledge-bases">
-                {t('trash.action.backToKnowledgeBases')}
-                <ArrowUpRight className="ml-1 size-4" />
-              </Link>
-            </Button>
+          <div>
+            <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
+              {t('trash.page.title')}
+            </h1>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-6 text-sm">
@@ -160,7 +175,7 @@ export function TrashPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:w-auto">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 lg:w-auto">
               <Select
                 value={sortBy}
                 onValueChange={(value: 'deletedAt' | 'title' | 'fileSize') => setSortBy(value)}
@@ -190,6 +205,15 @@ export function TrashPage() {
 
               <Button variant="outline" className="cursor-pointer" onClick={handleClearFilters}>
                 {t('trash.action.clearFilters')}
+              </Button>
+              <Button
+                variant="destructive"
+                className="cursor-pointer"
+                disabled={pagination.total === 0 || clearTrashMutation.isPending}
+                onClick={() => setClearDialogOpen(true)}
+              >
+                <Trash2 className="mr-1 size-4" />
+                {t('trash.action.clearAll')}
               </Button>
             </div>
           </div>
@@ -320,7 +344,29 @@ export function TrashPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppLayout>
+
+      <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('trash.dialog.clearAll.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('trash.dialog.clearAll.description')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">
+              {t('cancel', { ns: 'common' })}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="cursor-pointer bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmClearTrash}
+            >
+              {t('trash.dialog.clearAll.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

@@ -33,7 +33,7 @@ export type LoginLogQueryParams = z.infer<typeof loginLogQuerySchema>;
  * Operation log query params
  */
 export const operationLogQuerySchema = paginationSchema.extend(dateRangeSchema.shape).extend({
-  resourceType: z.enum(['document', 'folder', 'user', 'session']).optional(),
+  resourceType: z.enum(['document', 'knowledge_base', 'user', 'session']).optional(),
   action: z
     .enum([
       'document.upload',
@@ -44,9 +44,9 @@ export const operationLogQuerySchema = paginationSchema.extend(dateRangeSchema.s
       'document.download',
       'document.upload_version',
       'document.restore_version',
-      'folder.create',
-      'folder.update',
-      'folder.delete',
+      'knowledge_base.create',
+      'knowledge_base.update',
+      'knowledge_base.delete',
       'user.change_password',
       'session.logout',
       'session.logout_all',

@@ -48,12 +48,6 @@ vi.mock('@modules/document/repositories/document-version.repository', () => ({
   },
 }));
 
-vi.mock('@modules/document/repositories/folder.repository', () => ({
-  folderRepository: {
-    findByIdAndUser: vi.fn(),
-  },
-}));
-
 vi.mock('@modules/document/services/document-storage.service', () => ({
   documentStorageService: {
     validateFile: vi.fn(),

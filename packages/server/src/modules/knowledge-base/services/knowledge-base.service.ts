@@ -260,7 +260,7 @@ export const knowledgeBaseService = {
 
   /**
    * Delete knowledge base (soft delete)
-   * Note: Cascade deletion of folders, documents, and vectors should be handled by the caller
+   * Note: Cascade deletion of documents and vectors should be handled by the caller
    */
   async delete(kbId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();

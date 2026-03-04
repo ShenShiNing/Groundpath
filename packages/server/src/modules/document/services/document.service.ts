@@ -17,7 +17,6 @@ import { Errors } from '@shared/errors';
 import { buildPagination } from '@shared/utils';
 import { documentRepository } from '../repositories/document.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
-import { folderRepository } from '../repositories/folder.repository';
 import { createLogger } from '@shared/logger';
 import { logOperation } from '@shared/logger/operation-logger';
 import { vectorRepository } from '@modules/vector';
@@ -43,7 +42,6 @@ function toDocumentListItem(doc: Document): DocumentListItem {
     fileSize: doc.fileSize,
     fileExtension: doc.fileExtension,
     documentType: doc.documentType,
-    folderId: doc.folderId,
     processingStatus: doc.processingStatus,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -123,37 +121,15 @@ export const documentService = {
       );
     }
 
-    // Validate target folder if changing
-    if (data.folderId !== undefined && data.folderId !== null) {
-      const folder = await folderRepository.findByIdAndUser(data.folderId, userId);
-      if (!folder) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND as 'FOLDER_NOT_FOUND',
-          'Target folder not found',
-          404
-        );
-      }
-      // Ensure folder belongs to the same knowledge base as the document
-      if (folder.knowledgeBaseId !== document.knowledgeBaseId) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
-          'Folder does not belong to the same knowledge base as the document',
-          400
-        );
-      }
-    }
-
     // Capture old values for logging
     const oldValue = {
       title: document.title,
       description: document.description,
-      folderId: document.folderId,
     };
 
     const updated = await documentRepository.update(documentId, {
       ...(data.title !== undefined && { title: data.title }),
       ...(data.description !== undefined && { description: data.description }),
-      ...(data.folderId !== undefined && { folderId: data.folderId }),
       updatedBy: userId,
     });
 
@@ -169,7 +145,6 @@ export const documentService = {
       newValue: {
         title: data.title ?? document.title,
         description: data.description ?? document.description,
-        folderId: data.folderId ?? document.folderId,
       },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
@@ -305,6 +280,16 @@ export const documentService = {
    */
   permanentDelete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
     return documentTrashService.permanentDelete(documentId, userId, ctx);
+  },
+
+  /**
+   * Permanently delete all documents in trash
+   */
+  clearTrash(
+    userId: string,
+    ctx?: RequestContext
+  ): Promise<{ deletedCount: number; failedCount: number }> {
+    return documentTrashService.clearTrash(userId, ctx);
   },
 
   // ==================== Version Operations (delegated) ====================

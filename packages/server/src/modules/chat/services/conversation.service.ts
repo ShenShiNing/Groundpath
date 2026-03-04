@@ -1,5 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { ConversationInfo, ConversationListItem } from '@knowledge-agent/shared/types';
+import type {
+  ConversationInfo,
+  ConversationListItem,
+  ConversationSearchResponse,
+} from '@knowledge-agent/shared/types';
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { conversationRepository } from '../repositories/conversation.repository';
 import { messageRepository } from '../repositories/message.repository';
@@ -73,6 +77,47 @@ export const conversationService = {
         createdAt: conv.createdAt,
       };
     });
+  },
+
+  /**
+   * Search conversations by message content
+   */
+  async search(
+    userId: string,
+    options: {
+      query: string;
+      knowledgeBaseId?: string;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<ConversationSearchResponse> {
+    const query = options.query.trim();
+    if (query.length < 2) {
+      throw Errors.auth(
+        CHAT_ERROR_CODES.CHAT_SEARCH_INVALID_QUERY,
+        'Search query must be at least 2 characters',
+        400
+      );
+    }
+
+    const limit = options.limit ?? 20;
+    const offset = options.offset ?? 0;
+    const { items, total } = await messageRepository.searchByContent(userId, {
+      query,
+      knowledgeBaseId: options.knowledgeBaseId,
+      limit,
+      offset,
+    });
+
+    return {
+      items,
+      pagination: {
+        limit,
+        offset,
+        total,
+        hasMore: offset + items.length < total,
+      },
+    };
   },
 
   /**

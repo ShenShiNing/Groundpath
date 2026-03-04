@@ -12,17 +12,16 @@ import {
 import {
   createKnowledgeBaseSchema,
   updateKnowledgeBaseSchema,
-  createFolderRequestSchema,
   documentListParamsSchema,
 } from '@knowledge-agent/shared/schemas';
-import { documentService, folderService } from '@modules/document';
+import { documentService } from '@modules/document';
 import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils';
 import { getValidatedQuery } from '@shared/middleware';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
-import type { DocumentListParams, CreateFolderRequest } from '@knowledge-agent/shared/types';
+import type { DocumentListParams } from '@knowledge-agent/shared/types';
 
 const router = express.Router();
 
@@ -147,10 +146,9 @@ router.post(
       throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
     }
 
-    const { title, description, folderId } = req.body as {
+    const { title, description } = req.body as {
       title?: string;
       description?: string;
-      folderId?: string;
     };
 
     const document = await documentService.upload(
@@ -161,7 +159,7 @@ router.post(
         originalname: decodeFilename(file.originalname),
         size: file.size,
       },
-      { title, description, folderId, knowledgeBaseId: kbId },
+      { title, description, knowledgeBaseId: kbId },
       getRequestContext(req)
     );
 
@@ -189,64 +187,6 @@ router.get(
 
     const result = await documentService.list(userId, { ...params, knowledgeBaseId: kbId });
     sendSuccessResponse(res, result);
-  })
-);
-
-// ==================== Folder Routes (under knowledge base) ====================
-
-// List folders in knowledge base
-router.get(
-  '/:id/folders',
-  asyncHandler(async (req: Request, res: Response) => {
-    const userId = requireUserId(req);
-    const kbId = getParamId(req, 'id');
-
-    if (!kbId || !isValidUuid(kbId)) {
-      throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
-    }
-
-    const folders = await folderService.listByKnowledgeBase(kbId, userId);
-    sendSuccessResponse(res, folders);
-  })
-);
-
-// Get folder tree for knowledge base
-router.get(
-  '/:id/folders/tree',
-  asyncHandler(async (req: Request, res: Response) => {
-    const userId = requireUserId(req);
-    const kbId = getParamId(req, 'id');
-
-    if (!kbId || !isValidUuid(kbId)) {
-      throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
-    }
-
-    const tree = await folderService.getTreeByKnowledgeBase(kbId, userId);
-    sendSuccessResponse(res, tree);
-  })
-);
-
-// Create folder in knowledge base
-router.post(
-  '/:id/folders',
-  validateBody(createFolderRequestSchema),
-  asyncHandler(async (req: Request, res: Response) => {
-    const userId = requireUserId(req);
-    const kbId = getParamId(req, 'id');
-
-    if (!kbId || !isValidUuid(kbId)) {
-      throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
-    }
-
-    const data = req.body as CreateFolderRequest;
-    // Override knowledgeBaseId with the one from URL
-    const folder = await folderService.create(
-      userId,
-      { ...data, knowledgeBaseId: kbId },
-      getRequestContext(req)
-    );
-
-    sendSuccessResponse(res, folder, HTTP_STATUS.CREATED);
   })
 );
 

@@ -1,7 +1,6 @@
 import { mysqlTable, varchar, timestamp, index, text, int } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
-import { folders } from './folders.schema';
 import { documents } from './documents.schema';
 
 export const knowledgeBases = mysqlTable(
@@ -42,7 +41,6 @@ export const knowledgeBasesRelations = relations(knowledgeBases, ({ one, many })
     fields: [knowledgeBases.userId],
     references: [users.id],
   }),
-  folders: many(folders),
   documents: many(documents),
 }));
 

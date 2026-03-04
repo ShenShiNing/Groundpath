@@ -46,7 +46,6 @@ const SANITIZE_FIELDS = new Set([
   // Titles and names (displayed prominently)
   'title',
   'name',
-  'folderName',
   // Search queries (reflected in UI)
   'search',
   'q',

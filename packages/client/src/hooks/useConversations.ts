@@ -1,7 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { conversationApi } from '@/api';
 import { queryKeys } from '@/lib/query';
-import type { ConversationListItem } from '@knowledge-agent/shared/types';
+import type {
+  ConversationListItem,
+  ConversationSearchResponse,
+} from '@knowledge-agent/shared/types';
 
 // ============================================================================
 // Query Hooks
@@ -17,6 +20,39 @@ export function useConversations(knowledgeBaseId: string | undefined) {
     queryFn: () =>
       conversationApi.list(scopeKey === '__global__' ? undefined : { knowledgeBaseId: scopeKey }),
     enabled: true,
+  });
+}
+
+/**
+ * Search conversations by message content
+ */
+export function useSearchConversations(
+  query: string,
+  options?: {
+    knowledgeBaseId?: string;
+    limit?: number;
+    offset?: number;
+    enabled?: boolean;
+  }
+) {
+  const normalizedQuery = query.trim();
+  const enabled = options?.enabled ?? true;
+
+  return useQuery<ConversationSearchResponse>({
+    queryKey: queryKeys.chat.searchConversations({
+      query: normalizedQuery,
+      knowledgeBaseId: options?.knowledgeBaseId,
+      limit: options?.limit ?? 20,
+      offset: options?.offset ?? 0,
+    }),
+    queryFn: () =>
+      conversationApi.search({
+        query: normalizedQuery,
+        knowledgeBaseId: options?.knowledgeBaseId,
+        limit: options?.limit ?? 20,
+        offset: options?.offset ?? 0,
+      }),
+    enabled: enabled && normalizedQuery.length >= 2,
   });
 }
 

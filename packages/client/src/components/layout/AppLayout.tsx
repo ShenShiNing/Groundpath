@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link, useRouter, useLocation } from '@tanstack/react-router';
 import {
   Brain,
@@ -6,14 +6,16 @@ import {
   PanelLeft,
   PanelLeftClose,
   LayoutDashboard,
-  MessageSquare,
   User,
   Settings,
   Monitor,
   Database,
+  Trash2,
   ChevronDown,
   Search,
   Plus,
+  Languages,
+  Sun,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -24,15 +26,19 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LanguageToggle } from '@/components/i18n/LanguageToggle';
-import { ModeToggle } from '@/components/theme/mode-toggle';
+import { useTheme } from '@/components/theme/theme-provider';
 import { useTranslation } from 'react-i18next';
-import { ConversationList } from '@/components/chat';
+import { ChatSearchDialog, ConversationList } from '@/components/chat';
 import { useAuthStore, useChatPanelStore } from '@/stores';
 import { authApi } from '@/api';
 
@@ -45,7 +51,7 @@ interface AppLayoutProps {
   showSidebar?: boolean;
 }
 
-type NavItemLabelKey = 'nav.dashboard' | 'nav.knowledgeBases';
+type NavItemLabelKey = 'nav.dashboard' | 'nav.knowledgeBases' | 'nav.trash';
 
 interface NavItem {
   labelKey: NavItemLabelKey;
@@ -63,6 +69,11 @@ const mainNavItems: NavItem[] = [
     labelKey: 'nav.knowledgeBases',
     to: '/knowledge-bases',
     icon: <Database className="size-4" />,
+  },
+  {
+    labelKey: 'nav.trash',
+    to: '/trash',
+    icon: <Trash2 className="size-4" />,
   },
 ];
 
@@ -89,13 +100,22 @@ function SidebarNavItem({
   isCollapsed: boolean;
   isActive: boolean;
 }) {
-  const { t } = useTranslation('app');
-  const label = String(t(item.labelKey));
+  const { t } = useTranslation(['app', 'document']);
+  const label =
+    item.labelKey === 'nav.trash'
+      ? String(
+          t('nav.trash', {
+            ns: 'app',
+            defaultValue: t('trash.page.title', { ns: 'document' }),
+          })
+        )
+      : String(t(item.labelKey, { ns: 'app' }));
   const content = (
     <Link
       to={item.to}
       className={cn(
-        'flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors',
+        'flex items-center rounded-lg text-sm transition-colors',
+        isCollapsed ? 'h-9 w-full justify-center px-0 py-0' : 'gap-2 px-2.5 py-2',
         isActive
           ? 'bg-muted text-foreground'
           : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
@@ -123,18 +143,34 @@ function SidebarNavItem({
 // ============================================================================
 
 function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed: boolean }) {
-  const { t } = useTranslation(['app', 'common']);
+  const { t, i18n } = useTranslation(['app', 'common', 'language']);
+  const { theme, setTheme } = useTheme();
   const user = useAuthStore((s) => s.user);
   const userInitials = getUserInitials(user?.username, user?.email);
   const displayName = user?.username ?? t('user', { ns: 'common' });
+  const currentLanguage =
+    i18n.resolvedLanguage === 'en-US' || i18n.language === 'en-US' ? 'en-US' : 'zh-CN';
+
+  const handleThemeChange = (value: string) => {
+    if (value === 'system' || value === 'dark' || value === 'light') {
+      setTheme(value);
+    }
+  };
+
+  const handleLanguageChange = (value: string) => {
+    if (value !== 'zh-CN' && value !== 'en-US') return;
+    void i18n.changeLanguage(value);
+    localStorage.setItem('knowledge-agent.language', value);
+    document.documentElement.lang = value;
+  };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            'flex items-center gap-3 w-full rounded-md px-3 py-2 text-sm transition-colors',
-            'hover:bg-accent text-left'
+            'flex w-full items-center rounded-md text-sm transition-colors hover:bg-accent',
+            isCollapsed ? 'justify-center px-0 py-2' : 'gap-3 px-3 py-2 text-left'
           )}
         >
           <Avatar size="sm">
@@ -165,21 +201,9 @@ function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to="/knowledge-bases">
-              <Plus className="size-4 mr-2" />
-              {t('userMenu.newKnowledgeBase')}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
             <Link to="/profile">
               <User className="size-4 mr-2" />
               {t('userMenu.profile')}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link to="/settings/ai">
-              <Settings className="size-4 mr-2" />
-              {t('userMenu.settings')}
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
@@ -188,7 +212,49 @@ function UserMenu({ onLogout, isCollapsed }: { onLogout: () => void; isCollapsed
               {t('userMenu.sessions')}
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/settings/ai">
+              <Settings className="size-4 mr-2" />
+              {t('userMenu.settings')}
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Sun className="size-4" />
+            {t('theme', { ns: 'common' })}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-40">
+            <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
+              <DropdownMenuRadioItem value="system">
+                {t('userMenu.themeSystem', { ns: 'app' })}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="dark">
+                {t('userMenu.themeDark', { ns: 'app' })}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="light">
+                {t('userMenu.themeLight', { ns: 'app' })}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Languages className="size-4" />
+            {t('language', { ns: 'common' })}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-40">
+            <DropdownMenuRadioGroup value={currentLanguage} onValueChange={handleLanguageChange}>
+              <DropdownMenuRadioItem value="zh-CN">
+                {t('zh', { ns: 'language' })}
+              </DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="en-US">
+                {t('en', { ns: 'language' })}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
           <LogOut className="size-4 mr-2" />
@@ -215,19 +281,25 @@ function Sidebar({
   const { t } = useTranslation(['app', 'common']);
   const router = useRouter();
   const location = useLocation();
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const storeIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const conversationId = useChatPanelStore((s) => s.conversationId);
   const switchConversation = useChatPanelStore((s) => s.switchConversation);
   const startNewConversation = useChatPanelStore((s) => s.startNewConversation);
-  const isAuthenticated = !!accessToken;
   const isChatPage = location.pathname === '/chat' || location.pathname.startsWith('/chat/');
+  const [chatSearchOpen, setChatSearchOpen] = useState(false);
 
   const isActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  const handleSelectConversation = async (selectedConversationId: string) => {
-    await switchConversation(selectedConversationId);
+  const handleSelectConversation = async (
+    selectedConversationId: string,
+    options?: { focusMessageId?: string; focusKeyword?: string }
+  ) => {
+    await switchConversation(selectedConversationId, {
+      focusMessageId: options?.focusMessageId ?? null,
+      focusKeyword: options?.focusKeyword ?? null,
+    });
     if (!isChatPage) {
       await router.navigate({ to: '/chat' });
     }
@@ -244,7 +316,23 @@ function Sidebar({
     startNewConversation();
   };
 
-  if (!isAuthenticated) return null;
+  const handleOpenChatSearch = () => {
+    setChatSearchOpen(true);
+  };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setChatSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  if (!storeIsAuthenticated) return null;
 
   return (
     <aside
@@ -327,6 +415,7 @@ function Sidebar({
           <Button
             variant="ghost"
             className="h-10 w-full justify-start rounded-lg text-muted-foreground font-normal hover:bg-muted/60"
+            onClick={handleOpenChatSearch}
           >
             <Search className="size-4 mr-2" />
             {t('sidebar.searchChat')}
@@ -339,7 +428,12 @@ function Sidebar({
         <div className="p-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-full h-9">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-full h-9"
+                onClick={handleOpenChatSearch}
+              >
                 <Search className="size-4" />
               </Button>
             </TooltipTrigger>
@@ -349,7 +443,7 @@ function Sidebar({
       )}
 
       {/* Workspace Navigation */}
-      <div className={cn('px-2 pb-2', isCollapsed && 'px-1')}>
+      <div className="px-2 pb-2">
         {!isCollapsed && (
           <p className="px-2 pb-1 text-xs text-muted-foreground">{t('sidebar.workspace')}</p>
         )}
@@ -368,16 +462,14 @@ function Sidebar({
       {/* Chat History */}
       <div className={cn('flex-1 min-h-0', isCollapsed ? 'p-2' : 'px-2 pb-2')}>
         {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="w-full h-9 rounded-lg" asChild>
-                <Link to="/chat">
-                  <MessageSquare className="size-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">{t('sidebar.chatHistory')}</TooltipContent>
-          </Tooltip>
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-label={t('sidebar.expand')}
+            className="h-full w-full rounded-lg transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="sr-only">{t('sidebar.expand')}</span>
+          </button>
         ) : (
           <div className="flex h-full min-h-0 flex-col">
             <div className="px-2 pb-2 pt-1 text-xs text-muted-foreground">
@@ -399,35 +491,17 @@ function Sidebar({
 
       {/* Bottom Section */}
       <div className="border-t p-2">
-        {/* Theme Toggle */}
-        <div className={cn('flex items-center mb-2', isCollapsed ? 'justify-center' : 'px-1')}>
-          {isCollapsed ? (
-            <ModeToggle />
-          ) : (
-            <div className="flex items-center justify-between w-full">
-              <span className="text-xs text-muted-foreground px-2">
-                {t('theme', { ns: 'common' })}
-              </span>
-              <ModeToggle />
-            </div>
-          )}
-        </div>
-        <div className={cn('flex items-center mb-2', isCollapsed ? 'justify-center' : 'px-1')}>
-          {isCollapsed ? (
-            <LanguageToggle compact />
-          ) : (
-            <div className="flex items-center justify-between w-full">
-              <span className="text-xs text-muted-foreground px-2">
-                {t('language', { ns: 'common' })}
-              </span>
-              <LanguageToggle />
-            </div>
-          )}
-        </div>
-
         {/* User Menu */}
         <UserMenu onLogout={onLogout} isCollapsed={isCollapsed} />
       </div>
+
+      <ChatSearchDialog
+        open={chatSearchOpen}
+        onOpenChange={setChatSearchOpen}
+        currentConversationId={conversationId}
+        onSelectConversation={handleSelectConversation}
+        onNewConversation={handleNewConversation}
+      />
     </aside>
   );
 }
@@ -437,13 +511,15 @@ function Sidebar({
 // ============================================================================
 
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
+  const sidebarCollapsedStorageKey = 'knowledge-agent.sidebar-collapsed';
   const router = useRouter();
-  const accessToken = useAuthStore((s) => s.accessToken);
   const storeIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
-  const isAuthenticated = !!accessToken;
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(sidebarCollapsedStorageKey) === 'true';
+  });
 
   const handleLogout = useCallback(async () => {
     try {
@@ -457,11 +533,15 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
   }, [storeIsAuthenticated, clearAuth, router]);
 
   const handleToggleSidebar = useCallback(() => {
-    setSidebarCollapsed((prev) => !prev);
-  }, []);
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(sidebarCollapsedStorageKey, String(next));
+      return next;
+    });
+  }, [sidebarCollapsedStorageKey]);
 
   // Non-authenticated layout (landing pages, auth pages)
-  if (!isAuthenticated) {
+  if (!storeIsAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <main className="flex-1">{children}</main>

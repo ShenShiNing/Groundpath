@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Database, Ellipsis, FileText, Loader2, Sparkles, Trash2, Upload } from 'lucide-react';
 import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -79,10 +79,29 @@ function buildConversationMarkdown(
   return `# ${labels.transcript}\n\n${body}`.trim();
 }
 
+function findFirstMatchingTextElement(container: HTMLElement, keyword: string): HTMLElement | null {
+  const normalizedKeyword = keyword.trim().toLocaleLowerCase();
+  if (!normalizedKeyword) return null;
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      const text = node.textContent?.trim();
+      if (!text) return NodeFilter.FILTER_SKIP;
+      return text.toLocaleLowerCase().includes(normalizedKeyword)
+        ? NodeFilter.FILTER_ACCEPT
+        : NodeFilter.FILTER_SKIP;
+    },
+  });
+
+  const firstMatch = walker.nextNode();
+  return firstMatch instanceof Text ? firstMatch.parentElement : null;
+}
+
 export function ChatPage() {
   const { t } = useTranslation('chat');
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const skipNextAutoScrollRef = useRef(false);
 
   const [selectedKnowledgeBaseId, setSelectedKnowledgeBaseId] = useState<string | undefined>(
     useChatPanelStore.getState().knowledgeBaseId ?? undefined
@@ -98,6 +117,7 @@ export function ChatPage() {
   const [seedSource, setSeedSource] = useState<KnowledgeSeedSource>('conversation');
   const [switchToNewKb, setSwitchToNewKb] = useState(true);
   const [isCreatingKb, setIsCreatingKb] = useState(false);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   const { data: knowledgeBases = [], isLoading: kbLoading } = useKnowledgeBases();
   const createKnowledgeBase = useCreateKnowledgeBase();
@@ -111,6 +131,8 @@ export function ChatPage() {
   const knowledgeBaseId = useChatPanelStore((s) => s.knowledgeBaseId);
   const conversationId = useChatPanelStore((s) => s.conversationId);
   const messages = useChatPanelStore((s) => s.messages);
+  const focusMessageId = useChatPanelStore((s) => s.focusMessageId);
+  const focusKeyword = useChatPanelStore((s) => s.focusKeyword);
   const selectedDocumentIds = useChatPanelStore((s) => s.selectedDocumentIds);
   const isLoading = useChatPanelStore((s) => s.isLoading);
   const open = useChatPanelStore((s) => s.open);
@@ -119,6 +141,7 @@ export function ChatPage() {
   const setDocumentScope = useChatPanelStore((s) => s.setDocumentScope);
   const clearMessages = useChatPanelStore((s) => s.clearMessages);
   const startNewConversation = useChatPanelStore((s) => s.startNewConversation);
+  const clearFocusMessageId = useChatPanelStore((s) => s.clearFocusMessageId);
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
   const searchableDocuments = useMemo(
@@ -210,8 +233,46 @@ export function ChatPage() {
   }, [searchableDocuments, selectedDocumentIds, setDocumentScope]);
 
   useEffect(() => {
+    if (focusMessageId || skipNextAutoScrollRef.current) {
+      if (skipNextAutoScrollRef.current) {
+        skipNextAutoScrollRef.current = false;
+      }
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [focusMessageId, messages]);
+
+  useEffect(() => {
+    if (!focusMessageId || messages.length === 0) return;
+
+    const targetElement = document.getElementById(`chat-message-${focusMessageId}`);
+    if (!targetElement) {
+      clearFocusMessageId();
+      return;
+    }
+
+    const keywordTarget = focusKeyword
+      ? findFirstMatchingTextElement(targetElement, focusKeyword)
+      : null;
+
+    if (keywordTarget) {
+      keywordTarget.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    } else {
+      targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    setHighlightedMessageId(focusMessageId);
+    skipNextAutoScrollRef.current = true;
+    clearFocusMessageId();
+
+    const timer = window.setTimeout(() => {
+      setHighlightedMessageId((current) => (current === focusMessageId ? null : current));
+    }, 2200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [clearFocusMessageId, focusKeyword, focusMessageId, messages]);
 
   const getAccessToken = useCallback(() => useAuthStore.getState().accessToken, []);
 
@@ -359,19 +420,19 @@ export function ChatPage() {
 
   if (kbLoading) {
     return (
-      <AppLayout>
+      <>
         <div className="flex-1 overflow-hidden bg-background px-6 py-8">
           <div className="flex h-full flex-col gap-4">
             <Skeleton className="h-32 rounded-2xl" />
             <Skeleton className="h-112 rounded-2xl" />
           </div>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <a
         href="#chat-main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
@@ -484,12 +545,22 @@ export function ChatPage() {
                   <ScrollArea className="h-full">
                     <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6">
                       {messages.map((message) => (
-                        <ChatMessage
+                        <div
                           key={message.id}
-                          message={message}
-                          onCitationClick={handleCitationClick}
-                          onCopy={(format) => handleCopyMessage(message.content, format)}
-                        />
+                          id={`chat-message-${message.id}`}
+                          className={cn(
+                            'scroll-mt-24 rounded-lg transition-colors duration-700',
+                            highlightedMessageId === message.id
+                              ? 'bg-transparent ring-2 ring-primary/45 ring-offset-2 ring-offset-background'
+                              : 'bg-transparent'
+                          )}
+                        >
+                          <ChatMessage
+                            message={message}
+                            onCitationClick={handleCitationClick}
+                            onCopy={(format) => handleCopyMessage(message.content, format)}
+                          />
+                        </div>
                       ))}
                       <div ref={messagesEndRef} />
                     </div>
@@ -639,7 +710,7 @@ export function ChatPage() {
         onOpenChange={setPreviewOpen}
         onOpenDocument={handleOpenDocumentFromCitation}
       />
-    </AppLayout>
+    </>
   );
 }
 

@@ -1,12 +1,10 @@
 import type { Document } from '@shared/db/schema/document/documents.schema';
-import type { Folder } from '@shared/db/schema/document/folders.schema';
 import type { DocumentVersion } from '@shared/db/schema/document/document-versions.schema';
 import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
 
 // ==================== Shared Test Data ====================
 
 export const mockUserId = 'user-123';
-export const mockFolderId = 'folder-456';
 export const mockDocumentId = 'doc-789';
 export const mockVersionId = 'version-101';
 export const mockKnowledgeBaseId = 'kb-123';
@@ -29,55 +27,9 @@ export const mockKnowledgeBase: KnowledgeBase = {
   deletedAt: null,
 };
 
-export const mockFolder: Folder = {
-  id: mockFolderId,
-  userId: mockUserId,
-  knowledgeBaseId: mockKnowledgeBaseId,
-  parentId: null,
-  name: 'Test Folder',
-  path: '/',
-  createdBy: mockUserId,
-  createdAt: new Date('2024-01-01'),
-  updatedBy: null,
-  updatedAt: new Date('2024-01-01'),
-  deletedBy: null,
-  deletedAt: null,
-};
-
-export const mockChildFolder: Folder = {
-  id: 'folder-child-1',
-  userId: mockUserId,
-  knowledgeBaseId: mockKnowledgeBaseId,
-  parentId: mockFolderId,
-  name: 'Child Folder',
-  path: `/${mockFolderId}/`,
-  createdBy: mockUserId,
-  createdAt: new Date('2024-01-02'),
-  updatedBy: null,
-  updatedAt: new Date('2024-01-02'),
-  deletedBy: null,
-  deletedAt: null,
-};
-
-export const mockGrandchildFolder: Folder = {
-  id: 'folder-grandchild-1',
-  userId: mockUserId,
-  knowledgeBaseId: mockKnowledgeBaseId,
-  parentId: 'folder-child-1',
-  name: 'Grandchild Folder',
-  path: `/${mockFolderId}/folder-child-1/`,
-  createdBy: mockUserId,
-  createdAt: new Date('2024-01-03'),
-  updatedBy: null,
-  updatedAt: new Date('2024-01-03'),
-  deletedBy: null,
-  deletedAt: null,
-};
-
 export const mockDocument: Document = {
   id: mockDocumentId,
   userId: mockUserId,
-  folderId: mockFolderId,
   knowledgeBaseId: mockKnowledgeBaseId,
   title: 'Test Document',
   description: 'Test document description',

@@ -6,7 +6,6 @@ import {
   mockDocumentId,
   mockDocument,
   mockDocumentVersion,
-  mockFolder,
   logTestInfo,
 } from '@tests/__mocks__/document.mocks';
 
@@ -50,12 +49,6 @@ vi.mock('@modules/document/repositories/document-version.repository', () => ({
 vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
   documentChunkRepository: {
     deleteByDocumentId: vi.fn(),
-  },
-}));
-
-vi.mock('@modules/document/repositories/folder.repository', () => ({
-  folderRepository: {
-    findByIdAndUser: vi.fn(),
   },
 }));
 
@@ -111,7 +104,6 @@ vi.mock('@shared/logger', () => ({
 import { documentService } from '@modules/document';
 import { documentRepository } from '@modules/document';
 import { documentVersionRepository } from '@modules/document';
-import { folderRepository } from '@modules/document';
 import { documentStorageService } from '@modules/document';
 
 // ==================== getById ====================
@@ -297,82 +289,7 @@ describe('documentService > update', () => {
     );
   });
 
-  // 场景 2：移动文档到另一个文件夹
-  it('should move document to another folder', async () => {
-    const newFolderId = 'folder-new-789';
-    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(mockDocument);
-    vi.mocked(folderRepository.findByIdAndUser).mockResolvedValue({
-      ...mockFolder,
-      id: newFolderId,
-    });
-    vi.mocked(documentRepository.update).mockResolvedValue({
-      ...mockDocument,
-      folderId: newFolderId,
-    });
-
-    const result = await documentService.update(mockDocumentId, mockUserId, {
-      folderId: newFolderId,
-    });
-
-    logTestInfo(
-      { folderId: newFolderId },
-      { folderId: newFolderId },
-      { folderId: result.folderId }
-    );
-
-    expect(result.folderId).toBe(newFolderId);
-    expect(folderRepository.findByIdAndUser).toHaveBeenCalledWith(newFolderId, mockUserId);
-  });
-
-  // 场景 3：移动文档到根目录（folderId = null）
-  // 不应验证目标文件夹
-  it('should allow moving document to root (folderId: null)', async () => {
-    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(mockDocument);
-    vi.mocked(documentRepository.update).mockResolvedValue({
-      ...mockDocument,
-      folderId: null,
-    });
-
-    await documentService.update(mockDocumentId, mockUserId, { folderId: null });
-
-    logTestInfo(
-      { folderId: null },
-      { folderValidated: false },
-      { folderValidated: vi.mocked(folderRepository.findByIdAndUser).mock.calls.length > 0 }
-    );
-
-    expect(folderRepository.findByIdAndUser).not.toHaveBeenCalled();
-    expect(documentRepository.update).toHaveBeenCalledWith(
-      mockDocumentId,
-      expect.objectContaining({ folderId: null })
-    );
-  });
-
-  // 场景 4：目标文件夹不存在
-  it('should throw FOLDER_NOT_FOUND when target folder does not exist', async () => {
-    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(mockDocument);
-    vi.mocked(folderRepository.findByIdAndUser).mockResolvedValue(undefined);
-
-    let actual: { code: string } | null = null;
-    try {
-      await documentService.update(mockDocumentId, mockUserId, {
-        folderId: 'nonexistent-folder',
-      });
-    } catch (error) {
-      actual = { code: (error as AppError).code };
-    }
-
-    logTestInfo(
-      { folderId: 'nonexistent-folder' },
-      { code: DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND },
-      actual
-    );
-
-    expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND);
-    expect(documentRepository.update).not.toHaveBeenCalled();
-  });
-
-  // 场景 5：文档不存在
+  // 场景 2：文档不存在
   it('should throw DOCUMENT_NOT_FOUND when document does not exist', async () => {
     vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(undefined);
 

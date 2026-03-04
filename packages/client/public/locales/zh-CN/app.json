@@ -1,19 +1,29 @@
 {
   "nav": {
     "dashboard": "控制台",
-    "knowledgeBases": "知识库"
+    "knowledgeBases": "知识库",
+    "trash": "回收站"
   },
   "userMenu": {
     "newKnowledgeBase": "新建知识库",
     "profile": "个人资料",
     "settings": "设置",
     "sessions": "会话管理",
+    "switchTheme": "切换主题",
+    "switchLanguage": "切换语言",
+    "themeSystem": "系统",
+    "themeLight": "浅色",
+    "themeDark": "深色",
     "logOut": "退出登录"
   },
   "sidebar": {
     "expand": "展开侧边栏",
     "newChat": "新聊天",
     "searchChat": "搜索聊天",
+    "searchChatDescription": "搜索并打开历史聊天，或直接创建新聊天。",
+    "searchPlaceholder": "输入关键词，搜索聊天内容...",
+    "searchLoading": "正在加载聊天记录...",
+    "searchEmpty": "没有匹配的聊天记录",
     "workspace": "工作区",
     "chatHistory": "聊天记录"
   }

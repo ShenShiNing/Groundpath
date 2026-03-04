@@ -68,11 +68,6 @@
       "documents": "{{count}} 份文档",
       "chunks": "{{count}} 个 chunks"
     },
-    "folder": {
-      "allDocuments": "全部文档",
-      "root": "根目录",
-      "newFolder": "新建文件夹"
-    },
     "search": {
       "placeholder": "搜索文档...",
       "current": "当前搜索",

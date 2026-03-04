@@ -124,6 +124,9 @@ router.use(authenticate);
 // List trash documents
 router.get('/trash', validateQuery(trashListParamsSchema), documentController.listTrash);
 
+// Clear trash (permanently delete all)
+router.delete('/trash', documentController.clearTrash);
+
 // Restore document from trash
 router.post('/:id/restore', documentController.restore);
 

@@ -29,6 +29,11 @@ interface RequestContext {
   userAgent: string | null;
 }
 
+interface ClearTrashResult {
+  deletedCount: number;
+  failedCount: number;
+}
+
 /**
  * Convert database document to API document info
  */
@@ -36,7 +41,6 @@ function toDocumentInfo(doc: Document): DocumentInfo {
   return {
     id: doc.id,
     userId: doc.userId,
-    folderId: doc.folderId,
     title: doc.title,
     description: doc.description,
     fileName: doc.fileName,
@@ -64,7 +68,6 @@ function toDocumentListItem(doc: Document) {
     fileSize: doc.fileSize,
     fileExtension: doc.fileExtension,
     documentType: doc.documentType,
-    folderId: doc.folderId,
     processingStatus: doc.processingStatus,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -229,5 +232,34 @@ export const documentTrashService = {
       userAgent: ctx?.userAgent ?? null,
       durationMs: Date.now() - startTime,
     });
+  },
+
+  /**
+   * Permanently delete all documents in trash.
+   * Best effort: continue deleting remaining documents when a single document fails.
+   */
+  async clearTrash(userId: string, ctx?: RequestContext): Promise<ClearTrashResult> {
+    const deletedIds = await documentRepository.listDeletedIds(userId);
+    if (deletedIds.length === 0) {
+      return { deletedCount: 0, failedCount: 0 };
+    }
+
+    let deletedCount = 0;
+    let failedCount = 0;
+
+    for (const documentId of deletedIds) {
+      try {
+        await this.permanentDelete(documentId, userId, ctx);
+        deletedCount += 1;
+      } catch (err) {
+        failedCount += 1;
+        logger.warn(
+          { userId, documentId, err },
+          'Failed to permanently delete document in clearTrash'
+        );
+      }
+    }
+
+    return { deletedCount, failedCount };
   },
 };

@@ -68,11 +68,6 @@
       "documents": "{{count}} documents",
       "chunks": "{{count}} chunks"
     },
-    "folder": {
-      "allDocuments": "All Documents",
-      "root": "Root",
-      "newFolder": "New Folder"
-    },
     "search": {
       "placeholder": "Search documents...",
       "current": "Current search",

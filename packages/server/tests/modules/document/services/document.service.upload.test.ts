@@ -3,10 +3,8 @@ import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
 import { AppError } from '@shared/errors';
 import {
   mockUserId,
-  mockFolderId,
   mockDocument,
   mockDocumentVersion,
-  mockFolder,
   mockFile,
   mockTextFile,
   mockMarkdownFile,
@@ -54,12 +52,6 @@ vi.mock('@modules/document/repositories/document-version.repository', () => ({
   },
 }));
 
-vi.mock('@modules/document/repositories/folder.repository', () => ({
-  folderRepository: {
-    findByIdAndUser: vi.fn(),
-  },
-}));
-
 vi.mock('@modules/document/services/document-storage.service', () => ({
   documentStorageService: {
     validateFile: vi.fn(),
@@ -102,13 +94,12 @@ vi.mock('@shared/logger', () => ({
 import { documentService } from '@modules/document';
 import { documentRepository } from '@modules/document';
 import { documentVersionRepository } from '@modules/document';
-import { folderRepository } from '@modules/document';
 import { documentStorageService } from '@modules/document';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
 // ==================== upload ====================
 // 场景：用户上传新文档
-// 职责：文件验证 → 知识库验证 → 文件夹验证 → 上传到R2 → 文本提取 → 创建数据库记录
+// 职责：文件验证 → 知识库验证 → 上传到R2 → 文本提取 → 创建数据库记录
 describe('documentService > upload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -116,11 +107,10 @@ describe('documentService > upload', () => {
     vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(mockKnowledgeBase);
   });
 
-  // 场景 1：成功上传 PDF 文档到指定文件夹
+  // 场景 1：成功上传 PDF 文档
   // 应返回包含完整信息的 DocumentInfo
-  it('should upload PDF document to specified folder successfully', async () => {
+  it('should upload PDF document successfully', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
-    vi.mocked(folderRepository.findByIdAndUser).mockResolvedValue(mockFolder);
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
     vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
       text: 'Extracted PDF text',
@@ -134,12 +124,11 @@ describe('documentService > upload', () => {
     const result = await documentService.upload(mockUserId, mockFile, {
       title: 'My PDF',
       description: 'A test PDF',
-      folderId: mockFolderId,
       knowledgeBaseId: mockKnowledgeBaseId,
     });
 
     logTestInfo(
-      { userId: mockUserId, folderId: mockFolderId, fileName: mockFile.originalname },
+      { userId: mockUserId, fileName: mockFile.originalname },
       { id: 'generated-uuid-123', title: 'My PDF' },
       { id: result.id, title: result.title }
     );
@@ -149,13 +138,11 @@ describe('documentService > upload', () => {
       mockUserId
     );
     expect(documentStorageService.validateFile).toHaveBeenCalledWith(mockFile);
-    expect(folderRepository.findByIdAndUser).toHaveBeenCalledWith(mockFolderId, mockUserId);
     expect(documentStorageService.uploadDocument).toHaveBeenCalledWith(mockUserId, mockFile);
     expect(documentRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'generated-uuid-123',
         userId: mockUserId,
-        folderId: mockFolderId,
         knowledgeBaseId: mockKnowledgeBaseId,
         title: 'My PDF',
         description: 'A test PDF',
@@ -166,40 +153,7 @@ describe('documentService > upload', () => {
     expect(result.id).toBe('generated-uuid-123');
   });
 
-  // 场景 2：上传到根目录（无 folderId）
-  // 不应验证文件夹，folderId 应为 null
-  it('should upload document to root when no folderId specified', async () => {
-    vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
-    vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
-    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
-      text: null,
-      truncated: false,
-    });
-    vi.mocked(documentRepository.create).mockResolvedValue({
-      ...mockDocument,
-      id: 'generated-uuid-123',
-      folderId: null,
-    });
-
-    await documentService.upload(mockUserId, mockFile, { knowledgeBaseId: mockKnowledgeBaseId });
-
-    logTestInfo(
-      { folderId: 'undefined' },
-      { folderValidated: false, folderIdInCreate: null },
-      {
-        folderValidated: vi.mocked(folderRepository.findByIdAndUser).mock.calls.length > 0,
-        folderIdInCreate: vi.mocked(documentRepository.create).mock.calls[0]?.[0]?.folderId,
-      }
-    );
-
-    expect(folderRepository.findByIdAndUser).not.toHaveBeenCalled();
-    expect(documentRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({ folderId: null }),
-      expect.anything() // transaction
-    );
-  });
-
-  // 场景 3：标题自动从文件名提取（去除扩展名）
+  // 场景 2：标题自动从文件名提取（去除扩展名）
   // 未提供 title 时，应从 originalname 中去除扩展名作为标题
   it('should extract title from filename when not provided', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
@@ -226,7 +180,7 @@ describe('documentService > upload', () => {
     expect(createdTitle).toBe('test');
   });
 
-  // 场景 4：上传纯文本文件 — 直接从 buffer 提取文本
+  // 场景 3：上传纯文本文件 — 直接从 buffer 提取文本
   // text/plain 类型应直接 buffer.toString('utf-8')
   it('should extract text content directly for text files', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
@@ -258,7 +212,7 @@ describe('documentService > upload', () => {
     expect(documentStorageService.extractTextContent).not.toHaveBeenCalled();
   });
 
-  // 场景 5：上传 Markdown 文件 — 直接从 buffer 提取文本
+  // 场景 4：上传 Markdown 文件 — 直接从 buffer 提取文本
   it('should extract text content directly for markdown files', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockMarkdownStorageResult);
@@ -287,7 +241,7 @@ describe('documentService > upload', () => {
     expect(documentStorageService.extractTextContent).not.toHaveBeenCalled();
   });
 
-  // 场景 6：上传 PDF 文件 — 通过 storage service 提取文本
+  // 场景 5：上传 PDF 文件 — 通过 storage service 提取文本
   it('should use extractTextContent for PDF files', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
@@ -318,7 +272,7 @@ describe('documentService > upload', () => {
     );
   });
 
-  // 场景 7：文本内容超过 TEXT_CONTENT_MAX_LENGTH 时截断
+  // 场景 6：文本内容超过 TEXT_CONTENT_MAX_LENGTH 时截断
   // 默认限制为 500000 字符（可编辑文件）
   it('should truncate text content exceeding TEXT_CONTENT_MAX_LENGTH', async () => {
     const maxLength = 500000; // env.TEXT_CONTENT_MAX_LENGTH default
@@ -355,7 +309,7 @@ describe('documentService > upload', () => {
     expect(versionCreateCall?.textContent?.length).toBe(maxLength);
   });
 
-  // 场景 8：不支持的文件类型 — validateFile 返回无效
+  // 场景 7：不支持的文件类型 — validateFile 返回无效
   // 应抛出 INVALID_FILE_TYPE 错误
   it('should throw INVALID_FILE_TYPE for unsupported MIME types', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({
@@ -389,35 +343,7 @@ describe('documentService > upload', () => {
     expect(actual?.statusCode).toBe(400);
   });
 
-  // 场景 9：目标文件夹不存在
-  // 应抛出 FOLDER_NOT_FOUND 错误
-  it('should throw FOLDER_NOT_FOUND when target folder does not exist', async () => {
-    vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
-    vi.mocked(folderRepository.findByIdAndUser).mockResolvedValue(undefined);
-
-    let actual: { code: string; statusCode: number } | null = null;
-    try {
-      await documentService.upload(mockUserId, mockFile, {
-        folderId: 'nonexistent-folder',
-        knowledgeBaseId: mockKnowledgeBaseId,
-      });
-    } catch (error) {
-      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
-    }
-
-    logTestInfo(
-      { folderId: 'nonexistent-folder' },
-      { code: DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND, statusCode: 404 },
-      actual
-    );
-
-    expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.FOLDER_NOT_FOUND);
-    expect(actual?.statusCode).toBe(404);
-    // 不应尝试上传文件
-    expect(documentStorageService.uploadDocument).not.toHaveBeenCalled();
-  });
-
-  // 场景 10：currentVersion 初始值为 1
+  // 场景 8：currentVersion 初始值为 1
   it('should set initial currentVersion to 1', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);

@@ -39,7 +39,10 @@ export const operationLogController = {
     const resourceType = getParamId(req, 'resourceType') as ResourceType | undefined;
     const resourceId = getParamId(req, 'resourceId');
 
-    if (!resourceType || !['document', 'folder', 'user', 'session'].includes(resourceType)) {
+    if (
+      !resourceType ||
+      !['document', 'knowledge_base', 'user', 'session'].includes(resourceType)
+    ) {
       throw new AppError('VALIDATION_ERROR', 'Invalid resource type', 400);
     }
 
@@ -50,7 +53,7 @@ export const operationLogController = {
     const params = getValidatedQuery<ResourceHistoryParams>(res);
 
     const logs = await operationLogService.getResourceHistory(
-      resourceType as 'document' | 'folder' | 'user' | 'session',
+      resourceType as 'document' | 'knowledge_base' | 'user' | 'session',
       resourceId,
       userId,
       params.limit

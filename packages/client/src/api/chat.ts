@@ -3,12 +3,14 @@ import type {
   ConversationInfo,
   ConversationListItem,
   ConversationWithMessages,
+  ConversationSearchResponse,
   MessageInfo,
   Citation,
   SSEEvent,
 } from '@knowledge-agent/shared/types';
 import type {
   CreateConversationInput,
+  SearchConversationsInput,
   UpdateConversationInput,
   SendMessageInput,
 } from '@knowledge-agent/shared/schemas';
@@ -49,6 +51,17 @@ export const conversationApi = {
   }): Promise<ConversationListItem[]> {
     const response = await apiClient.get<ApiResponse<ConversationListItem[]>>(
       '/api/chat/conversations',
+      { params }
+    );
+    return unwrapResponse(response.data);
+  },
+
+  /**
+   * Search conversations by message content
+   */
+  async search(params: SearchConversationsInput): Promise<ConversationSearchResponse> {
+    const response = await apiClient.get<ApiResponse<ConversationSearchResponse>>(
+      '/api/chat/conversations/search',
       { params }
     );
     return unwrapResponse(response.data);

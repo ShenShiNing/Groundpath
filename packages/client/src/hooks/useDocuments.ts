@@ -81,7 +81,6 @@ export function useUploadDocument() {
       options?: {
         title?: string;
         description?: string;
-        folderId?: string;
         onProgress?: (progress: number) => void;
         signal?: AbortSignal;
       };
@@ -90,7 +89,6 @@ export function useUploadDocument() {
       formData.append('file', file);
       if (options?.title) formData.append('title', options.title);
       if (options?.description) formData.append('description', options.description);
-      if (options?.folderId) formData.append('folderId', options.folderId);
 
       return documentsApi.upload(formData, {
         onUploadProgress: options?.onProgress
@@ -183,6 +181,20 @@ export function usePermanentDeleteDocument() {
 
   return useMutation({
     mutationFn: (documentId: string) => documentsApi.permanentDelete(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.trash.lists() });
+    },
+  });
+}
+
+/**
+ * Clear all documents in trash
+ */
+export function useClearTrash() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => documentsApi.clearTrash(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.trash.lists() });
     },

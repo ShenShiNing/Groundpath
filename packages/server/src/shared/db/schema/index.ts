@@ -15,7 +15,6 @@ export * from './system/system-logs.schema';
 
 // Document schemas
 export * from './document/knowledge-bases.schema';
-export * from './document/folders.schema';
 export * from './document/documents.schema';
 export * from './document/document-versions.schema';
 export * from './document/document-chunks.schema';

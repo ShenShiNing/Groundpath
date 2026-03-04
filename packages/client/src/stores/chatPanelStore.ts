@@ -30,6 +30,8 @@ export interface ChatPanelState {
   isOpen: boolean;
   knowledgeBaseId: string | null;
   conversationId: string | null;
+  focusMessageId: string | null;
+  focusKeyword: string | null;
   messages: ChatMessage[];
   selectedDocumentIds: string[];
   isLoading: boolean;
@@ -52,7 +54,11 @@ export interface ChatPanelState {
   // Sidebar actions
   toggleSidebar: () => void;
   startNewConversation: () => void;
-  switchConversation: (conversationId: string) => Promise<void>;
+  switchConversation: (
+    conversationId: string,
+    options?: { focusMessageId?: string | null; focusKeyword?: string | null }
+  ) => Promise<void>;
+  clearFocusMessageId: () => void;
 }
 
 // Helper to convert API citation to store citation
@@ -85,6 +91,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
   isOpen: false,
   knowledgeBaseId: null,
   conversationId: null,
+  focusMessageId: null,
+  focusKeyword: null,
   messages: [],
   selectedDocumentIds: [],
   isLoading: false,
@@ -100,6 +108,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         isOpen: true,
         knowledgeBaseId: normalizedKbId,
         conversationId: null,
+        focusMessageId: null,
+        focusKeyword: null,
         messages: [],
         selectedDocumentIds: [],
       });
@@ -248,7 +258,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
   },
 
   clearMessages: () => {
-    set({ messages: [], conversationId: null });
+    set({ messages: [], conversationId: null, focusMessageId: null, focusKeyword: null });
   },
 
   loadConversation: async (conversationId: string) => {
@@ -310,13 +320,26 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
   startNewConversation: () => {
     set({
       conversationId: null,
+      focusMessageId: null,
+      focusKeyword: null,
       messages: [],
       selectedDocumentIds: [],
     });
   },
 
-  switchConversation: async (conversationId: string) => {
+  switchConversation: async (
+    conversationId: string,
+    options?: { focusMessageId?: string | null; focusKeyword?: string | null }
+  ) => {
     const { loadConversation } = get();
+    set({
+      focusMessageId: options?.focusMessageId ?? null,
+      focusKeyword: options?.focusKeyword?.trim() || null,
+    });
     await loadConversation(conversationId);
+  },
+
+  clearFocusMessageId: () => {
+    set({ focusMessageId: null, focusKeyword: null });
   },
 }));

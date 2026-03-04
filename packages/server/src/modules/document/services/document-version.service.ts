@@ -29,7 +29,6 @@ function toDocumentInfo(doc: Document): DocumentInfo {
   return {
     id: doc.id,
     userId: doc.userId,
-    folderId: doc.folderId,
     title: doc.title,
     description: doc.description,
     fileName: doc.fileName,

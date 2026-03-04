@@ -107,10 +107,9 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
     }
 
-    const { title, description, folderId, knowledgeBaseId } = req.body as {
+    const { title, description, knowledgeBaseId } = req.body as {
       title?: string;
       description?: string;
-      folderId?: string;
       knowledgeBaseId?: string;
     };
 
@@ -126,7 +125,7 @@ export const documentController = {
         originalname: decodeFilename(file.originalname),
         size: file.size,
       },
-      { title, description, folderId, knowledgeBaseId },
+      { title, description, knowledgeBaseId },
       getRequestContext(req)
     );
 
@@ -278,6 +277,18 @@ export const documentController = {
 
     await documentService.permanentDelete(documentId, userId, getRequestContext(req));
     sendSuccessResponse(res, { message: 'Document permanently deleted' });
+  }),
+
+  /**
+   * DELETE /api/documents/trash
+   */
+  clearTrash: asyncHandler(async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const result = await documentService.clearTrash(userId, getRequestContext(req));
+    sendSuccessResponse(res, {
+      ...result,
+      message: 'Trash cleared successfully',
+    });
   }),
 
   // ==================== Version Operations ====================

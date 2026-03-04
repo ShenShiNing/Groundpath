@@ -11,41 +11,30 @@ export {
   useDeleteDocument,
   useRestoreDocument,
   usePermanentDeleteDocument,
+  useClearTrash,
   useUploadNewVersion,
   useRestoreVersion,
 } from './useDocuments';
-
-// Folder hooks
-export {
-  useFolders,
-  useFolderTree,
-  useFolder,
-  useFolderChildren,
-  useCreateFolder,
-  useUpdateFolder,
-  useDeleteFolder,
-} from './useFolders';
 
 // Knowledge Base hooks
 export {
   useKnowledgeBases,
   useKnowledgeBase,
   useKBDocuments,
-  useKBFolders,
-  useKBFolderTree,
-  useKBDocumentTree,
   useCreateKnowledgeBase,
   useUpdateKnowledgeBase,
   useDeleteKnowledgeBase,
   useUploadToKB,
-  useCreateFolderInKB,
   useDeleteDocuments,
-  useMoveDocuments,
-  type DocumentTreeNode,
 } from './useKnowledgeBases';
 
 // Conversation hooks
-export { useConversations, useDeleteConversation, useUpdateConversation } from './useConversations';
+export {
+  useConversations,
+  useSearchConversations,
+  useDeleteConversation,
+  useUpdateConversation,
+} from './useConversations';
 
 // Utility hooks
 export { useDebouncedValue } from './useDebouncedValue';

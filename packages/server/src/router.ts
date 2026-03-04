@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import express from 'express';
 import { authRoutes, emailRoutes, oauthRoutes } from './modules/auth';
 import { userRoutes } from './modules/user';
-import { documentRoutes, folderRoutes } from './modules/document';
+import { documentRoutes } from './modules/document';
 import { knowledgeBaseRoutes } from './modules/knowledge-base';
 import { logsRoutes } from './modules/logs';
 import { ragRoutes } from './modules/rag';
@@ -47,9 +47,6 @@ router.use('/api/user', userRoutes);
 
 // Document routes
 router.use('/api/documents', documentRoutes);
-
-// Folder routes
-router.use('/api/folders', folderRoutes);
 
 // Knowledge base routes
 router.use('/api/knowledge-bases', knowledgeBaseRoutes);

@@ -28,8 +28,16 @@ export const listMessagesSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+export const searchConversationsSchema = z.object({
+  query: z.string().trim().min(2, 'Search query must be at least 2 characters').max(100),
+  knowledgeBaseId: z.string().uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 export type CreateConversationInput = z.infer<typeof createConversationSchema>;
 export type UpdateConversationInput = z.infer<typeof updateConversationSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export type ListConversationsInput = z.infer<typeof listConversationsSchema>;
 export type ListMessagesInput = z.infer<typeof listMessagesSchema>;
+export type SearchConversationsInput = z.infer<typeof searchConversationsSchema>;

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowUpRight,
   CalendarClock,
-  ChevronRight,
   CirclePlus,
   Database,
   FileText,
@@ -14,9 +13,7 @@ import {
   Plus,
   Search,
   MoreHorizontal,
-  Sparkles,
 } from 'lucide-react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -353,27 +350,15 @@ export default function KnowledgeBasesPage() {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="shrink-0 border-b px-6 py-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <div className="mb-2 flex items-center gap-1 text-sm text-muted-foreground">
-                <span>{t('breadcrumb.workspace')}</span>
-                <ChevronRight className="size-4" />
-                <span className="text-foreground">{t('breadcrumb.knowledgeBases')}</span>
-              </div>
               <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                {t('page.title')}
+                知识库
               </h1>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                {t('page.description')}
-              </p>
             </div>
-            <Button className="cursor-pointer" onClick={handleCreateNew}>
-              <Plus className="size-4 mr-2" />
-              {t('action.createNew')}
-            </Button>
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-6 text-sm">
@@ -396,14 +381,20 @@ export default function KnowledgeBasesPage() {
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="h-10 bg-background pl-9"
-                placeholder={t('search.placeholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+              <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  className="h-10 bg-background pl-9"
+                  placeholder={t('search.placeholder')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <Button className="cursor-pointer" onClick={handleCreateNew}>
+                <Plus className="size-4 mr-2" />
+                {t('action.createNew')}
+              </Button>
             </div>
 
             <div className="flex items-center gap-2">
@@ -433,12 +424,6 @@ export default function KnowledgeBasesPage() {
                   <List className="size-4" />
                 </Button>
               </div>
-              <Button variant="outline" className="cursor-pointer" asChild>
-                <Link to="/dashboard">
-                  <Sparkles className="size-4 mr-2" />
-                  {t('action.backToDashboard')}
-                </Link>
-              </Button>
             </div>
           </div>
 
@@ -524,6 +509,6 @@ export default function KnowledgeBasesPage() {
         onOpenChange={handleDialogClose}
         knowledgeBase={editingKB}
       />
-    </AppLayout>
+    </>
   );
 }

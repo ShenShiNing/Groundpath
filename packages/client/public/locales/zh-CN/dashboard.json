@@ -26,14 +26,11 @@
     "welcome": "欢迎回来",
     "titleWithUser": "{{username}} 的工作台",
     "titleDefault": "KnowledgeAgent 控制台",
-    "description": "在这里统一管理知识库、文档资产与问答质量，保持团队知识可用且持续更新。",
     "openKnowledgeBases": "打开知识库",
     "configureModel": "配置模型参数"
   },
   "stats": {
     "knowledgeBaseCount": "知识库总数",
-    "documentCount": "文档总量",
-    "systemStatus": "当前状态",
-    "systemHealthy": "系统运行正常"
+    "documentCount": "文档总量"
   }
 }

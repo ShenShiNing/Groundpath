@@ -1,10 +1,8 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-import { rootRoute } from './__root';
-import { requireAuth } from './guards/auth.guard';
+import { authenticatedRoute } from './authenticated.route';
 
 export const trashRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/trash',
-  beforeLoad: requireAuth,
   component: lazyRouteComponent(() => import('@/pages/documents/TrashPage')),
 });

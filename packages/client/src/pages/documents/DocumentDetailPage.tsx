@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { ArrowLeft, Download, Eye, FileText, PencilLine } from 'lucide-react';
 import { toast } from 'sonner';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { DocumentReader, DocumentInfo } from '@/components/documents';
 import { useDocument, useDocumentContent, useSaveDocumentContent } from '@/hooks';
@@ -108,96 +107,94 @@ export function DocumentDetailPage() {
   };
 
   return (
-    <AppLayout>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="shrink-0 border-b px-6 py-5">
-          <div className="flex flex-wrap items-start gap-3">
-            <Button variant="ghost" size="icon" className="size-8 cursor-pointer" asChild>
-              <Link to="/knowledge-bases">
-                <ArrowLeft className="size-4" />
-              </Link>
-            </Button>
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <header className="shrink-0 border-b px-6 py-5">
+        <div className="flex flex-wrap items-start gap-3">
+          <Button variant="ghost" size="icon" className="size-8 cursor-pointer" asChild>
+            <Link to="/knowledge-bases">
+              <ArrowLeft className="size-4" />
+            </Link>
+          </Button>
 
-            <div className="min-w-0 flex-1">
-              <h1 className="font-display truncate text-2xl font-semibold tracking-tight sm:text-3xl">
-                {isPageLoading
-                  ? t('loading')
-                  : (content?.title ?? document?.title ?? t('page.title'))}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <FileText className="size-3.5" />
-                  {document?.documentType?.toUpperCase() ?? 'DOCUMENT'}
-                </span>
-                <span>{t('page.subtitle')}</span>
-              </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+              {isPageLoading
+                ? t('loading')
+                : (content?.title ?? document?.title ?? t('page.title'))}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <FileText className="size-3.5" />
+                {document?.documentType?.toUpperCase() ?? 'DOCUMENT'}
+              </span>
+              <span>{t('page.subtitle')}</span>
+            </div>
+          </div>
+
+          {document && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={mode === 'read' ? 'default' : 'outline'}
+                className="cursor-pointer"
+                onClick={() => handleModeChange('read')}
+              >
+                <Eye className="size-4 mr-1.5" />
+                {t('action.read')}
+              </Button>
+
+              {isEditable && (
+                <Button
+                  variant={mode === 'edit' ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                  onClick={() => handleModeChange('edit')}
+                >
+                  <PencilLine className="size-4 mr-1.5" />
+                  {t('action.edit')}
+                </Button>
+              )}
+
+              <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
+                <Download className="size-4 mr-1.5" />
+                {t('action.download')}
+              </Button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {(document || isPageLoading) && (
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_320px]">
+            <div className="px-6 py-6">
+              <h2 className="mb-4 text-lg font-semibold">
+                {mode === 'edit' ? t('card.editor') : t('card.preview')}
+              </h2>
+              {renderContent()}
             </div>
 
             {document && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant={mode === 'read' ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => handleModeChange('read')}
-                >
-                  <Eye className="size-4 mr-1.5" />
-                  {t('action.read')}
-                </Button>
-
-                {isEditable && (
-                  <Button
-                    variant={mode === 'edit' ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => handleModeChange('edit')}
-                  >
-                    <PencilLine className="size-4 mr-1.5" />
-                    {t('action.edit')}
-                  </Button>
-                )}
-
-                <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
-                  <Download className="size-4 mr-1.5" />
-                  {t('action.download')}
-                </Button>
+              <div className="border-l px-6 py-6">
+                <h2 className="mb-4 text-lg font-semibold">{t('card.info')}</h2>
+                <DocumentInfo document={document} />
               </div>
             )}
           </div>
-        </header>
+        </div>
+      )}
 
-        {(document || isPageLoading) && (
-          <div className="flex-1 overflow-y-auto">
-            <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_320px]">
-              <div className="px-6 py-6">
-                <h2 className="mb-4 text-lg font-semibold">
-                  {mode === 'edit' ? t('card.editor') : t('card.preview')}
-                </h2>
-                {renderContent()}
-              </div>
-
-              {document && (
-                <div className="border-l px-6 py-6">
-                  <h2 className="mb-4 text-lg font-semibold">{t('card.info')}</h2>
-                  <DocumentInfo document={document} />
-                </div>
-              )}
-            </div>
+      {!isPageLoading && !document && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="py-14 text-center">
+            <p className="text-muted-foreground">{t('notFound')}</p>
+            <Link to="/knowledge-bases" className="mt-4 inline-block">
+              <Button variant="outline" className="cursor-pointer">
+                {t('action.backToList')}
+              </Button>
+            </Link>
           </div>
-        )}
-
-        {!isPageLoading && !document && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="py-14 text-center">
-              <p className="text-muted-foreground">{t('notFound')}</p>
-              <Link to="/knowledge-bases" className="mt-4 inline-block">
-                <Button variant="outline" className="cursor-pointer">
-                  {t('action.backToList')}
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
-      </div>
-    </AppLayout>
+        </div>
+      )}
+    </div>
   );
 }
 

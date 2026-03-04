@@ -6,9 +6,6 @@ import type {
   DocumentListResponse,
   DocumentListParams,
   DocumentInfo,
-  FolderInfo,
-  FolderTreeNode,
-  CreateFolderRequest,
 } from '@knowledge-agent/shared/types';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
@@ -98,40 +95,6 @@ export const knowledgeBasesApi = {
           ? (e) => options.onUploadProgress!(e.loaded, e.total ?? 0)
           : undefined,
       }
-    );
-    return unwrapResponse(response.data);
-  },
-
-  /**
-   * List folders in a knowledge base
-   */
-  async listFolders(kbId: string): Promise<FolderInfo[]> {
-    const response = await apiClient.get<ApiResponse<FolderInfo[]>>(
-      `/api/knowledge-bases/${kbId}/folders`
-    );
-    return unwrapResponse(response.data);
-  },
-
-  /**
-   * Get folder tree for a knowledge base
-   */
-  async getFolderTree(kbId: string): Promise<FolderTreeNode[]> {
-    const response = await apiClient.get<ApiResponse<FolderTreeNode[]>>(
-      `/api/knowledge-bases/${kbId}/folders/tree`
-    );
-    return unwrapResponse(response.data);
-  },
-
-  /**
-   * Create folder in a knowledge base
-   */
-  async createFolder(
-    kbId: string,
-    data: Omit<CreateFolderRequest, 'knowledgeBaseId'>
-  ): Promise<FolderInfo> {
-    const response = await apiClient.post<ApiResponse<FolderInfo>>(
-      `/api/knowledge-bases/${kbId}/folders`,
-      { ...data, knowledgeBaseId: kbId }
     );
     return unwrapResponse(response.data);
   },

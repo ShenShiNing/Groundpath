@@ -90,39 +90,7 @@
   "cardAction": {
     "download": "Download",
     "edit": "Edit",
-    "moveToFolder": "Move to folder",
     "delete": "Delete"
-  },
-  "folder": {
-    "allDocuments": "All Documents",
-    "action": {
-      "rename": "Rename",
-      "delete": "Delete"
-    },
-    "dialog": {
-      "editTitle": "Edit Folder",
-      "createTitle": "Create Folder",
-      "editDescription": "Update the folder name and location.",
-      "createDescription": "Create a new folder to organize your documents."
-    },
-    "form": {
-      "name": "Name",
-      "namePlaceholder": "Folder name",
-      "parentFolder": "Parent Folder",
-      "parentPlaceholder": "Select parent folder",
-      "root": "Root (no parent)",
-      "updating": "Updating...",
-      "creating": "Creating...",
-      "update": "Update",
-      "create": "Create"
-    },
-    "toast": {
-      "updated": "Folder updated",
-      "created": "Folder created",
-      "updateFailed": "Failed to update folder",
-      "createFailed": "Failed to create folder",
-      "kbIdRequired": "Knowledge base ID is required"
-    }
   },
   "viewer": {
     "docxNotSupported": "Word documents cannot be previewed in the browser.",
@@ -138,7 +106,8 @@
       "backToKnowledgeBases": "Back to Knowledge Bases",
       "restore": "Restore",
       "permanentDelete": "Permanently Delete",
-      "clearFilters": "Clear filters"
+      "clearFilters": "Clear filters",
+      "clearAll": "Clear All"
     },
     "stats": {
       "total": "Total trashed documents",
@@ -173,20 +142,28 @@
     "dialog": {
       "restore": {
         "title": "Restore Document",
-        "description": "Restore \"{{title}}\"? It will be moved back to its original folder.",
+        "description": "Restore \"{{title}}\"? It will return to the knowledge base document list.",
         "confirm": "Restore"
       },
       "delete": {
         "title": "Permanently Delete Document",
         "description": "Permanently delete \"{{title}}\"? This action cannot be undone and the file will be removed from storage.",
         "confirm": "Permanently Delete"
+      },
+      "clearAll": {
+        "title": "Empty Trash",
+        "description": "Permanently delete all documents in trash? This action cannot be undone.",
+        "confirm": "Confirm Empty"
       }
     },
     "toast": {
       "restored": "Document restored",
       "restoreFailed": "Failed to restore document",
       "permanentlyDeleted": "Document permanently deleted",
-      "deleteFailed": "Failed to delete document"
+      "deleteFailed": "Failed to delete document",
+      "emptied": "Trash emptied",
+      "emptyPartial": "Deleted {{deletedCount}} items, {{failedCount}} failed",
+      "emptyFailed": "Failed to empty trash"
     }
   }
 }

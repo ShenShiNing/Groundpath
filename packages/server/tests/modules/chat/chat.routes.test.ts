@@ -22,6 +22,7 @@ const {
     conversationControllerMock: {
       create: vi.fn(),
       list: vi.fn(),
+      search: vi.fn(),
       getById: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -68,6 +69,10 @@ describe('chat.routes', () => {
     );
     expect(mockRouter.get).toHaveBeenCalledWith('/conversations', conversationControllerMock.list);
     expect(mockRouter.get).toHaveBeenCalledWith(
+      '/conversations/search',
+      conversationControllerMock.search
+    );
+    expect(mockRouter.get).toHaveBeenCalledWith(
       '/conversations/:id',
       conversationControllerMock.getById
     );
@@ -79,6 +84,14 @@ describe('chat.routes', () => {
       '/conversations/:id',
       conversationControllerMock.delete
     );
+
+    const getCalls = mockRouter.get.mock.calls.map((call) => call[0]);
+    expect(getCalls).toEqual([
+      '/conversations',
+      '/conversations/search',
+      '/conversations/:id',
+      '/conversations/:id/messages',
+    ]);
   });
 
   it('should register message endpoints', () => {

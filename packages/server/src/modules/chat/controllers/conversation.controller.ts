@@ -3,6 +3,7 @@ import {
   createConversationSchema,
   updateConversationSchema,
   listConversationsSchema,
+  searchConversationsSchema,
 } from '@knowledge-agent/shared/schemas';
 import { conversationService } from '../services/conversation.service';
 import { messageService } from '../services/message.service';
@@ -38,6 +39,20 @@ export const conversationController = {
       sendSuccessResponse(res, conversations);
     } catch (error) {
       handleError(error, res, 'List conversations');
+    }
+  },
+
+  /**
+   * GET /api/chat/conversations/search - Search conversations by message content
+   */
+  async search(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.sub;
+      const parsed = searchConversationsSchema.parse(req.query);
+      const result = await conversationService.search(userId, parsed);
+      sendSuccessResponse(res, result);
+    } catch (error) {
+      handleError(error, res, 'Search conversations');
     }
   },
 

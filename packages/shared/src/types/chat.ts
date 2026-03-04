@@ -60,6 +60,27 @@ export interface ConversationListItem {
   createdAt: Date;
 }
 
+export interface ConversationSearchItem {
+  conversationId: string;
+  conversationTitle: string;
+  knowledgeBaseId: string | null;
+  messageId: string;
+  role: MessageRole;
+  snippet: string;
+  matchedAt: Date;
+  score: number | null;
+}
+
+export interface ConversationSearchResponse {
+  items: ConversationSearchItem[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+    hasMore: boolean;
+  };
+}
+
 // Create conversation request
 export interface CreateConversationRequest {
   knowledgeBaseId?: string;

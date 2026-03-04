@@ -54,8 +54,7 @@ export const documentRepository = {
     userId: string,
     params: DocumentListParams
   ): Promise<{ documents: Document[]; total: number }> {
-    const { page, pageSize, folderId, knowledgeBaseId, documentType, search, sortBy, sortOrder } =
-      params;
+    const { page, pageSize, knowledgeBaseId, documentType, search, sortBy, sortOrder } = params;
     const offset = (page - 1) * pageSize;
 
     // Build where conditions
@@ -63,12 +62,6 @@ export const documentRepository = {
 
     if (knowledgeBaseId) {
       conditions.push(eq(documents.knowledgeBaseId, knowledgeBaseId));
-    }
-
-    if (folderId === null) {
-      conditions.push(isNull(documents.folderId));
-    } else if (folderId) {
-      conditions.push(eq(documents.folderId, folderId));
     }
 
     if (documentType) {
@@ -117,7 +110,6 @@ export const documentRepository = {
         Document,
         | 'title'
         | 'description'
-        | 'folderId'
         | 'currentVersion'
         | 'fileName'
         | 'mimeType'
@@ -149,59 +141,6 @@ export const documentRepository = {
         deletedBy,
       })
       .where(eq(documents.id, id));
-  },
-
-  /**
-   * Count documents in a folder
-   */
-  async countByFolderId(folderId: string): Promise<number> {
-    const result = await db
-      .select({ count: count() })
-      .from(documents)
-      .where(and(eq(documents.folderId, folderId), isNull(documents.deletedAt)));
-    return result[0]?.count ?? 0;
-  },
-
-  /**
-   * Move documents to another folder (or root)
-   */
-  async moveToFolder(
-    documentIds: string[],
-    folderId: string | null,
-    userId: string
-  ): Promise<void> {
-    if (documentIds.length === 0) return;
-
-    await db
-      .update(documents)
-      .set({ folderId })
-      .where(
-        and(
-          sql`${documents.id} IN (${sql.join(
-            documentIds.map((id) => sql`${id}`),
-            sql`, `
-          )})`,
-          eq(documents.userId, userId),
-          isNull(documents.deletedAt)
-        )
-      );
-  },
-
-  /**
-   * Move all documents from one folder to root
-   */
-  async moveAllFromFolderToRoot(folderId: string, userId: string, tx?: Transaction): Promise<void> {
-    const ctx = getDbContext(tx);
-    await ctx
-      .update(documents)
-      .set({ folderId: null })
-      .where(
-        and(
-          eq(documents.folderId, folderId),
-          eq(documents.userId, userId),
-          isNull(documents.deletedAt)
-        )
-      );
   },
 
   /**
@@ -260,6 +199,18 @@ export const documentRepository = {
       .offset(offset);
 
     return { documents: result, total };
+  },
+
+  /**
+   * List all deleted document IDs for a user (for bulk trash cleanup)
+   */
+  async listDeletedIds(userId: string): Promise<string[]> {
+    const result = await db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(and(eq(documents.userId, userId), isNotNull(documents.deletedAt)));
+
+    return result.map((row) => row.id);
   },
 
   /**

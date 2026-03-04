@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1769513874918,
-      "tag": "0000_eminent_captain_universe",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1769781632326,
-      "tag": "0001_regular_wolf_cub",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1769876709036,
-      "tag": "0002_faithful_wilson_fisk",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1770109927945,
-      "tag": "0003_gorgeous_vin_gonzales",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1770461116460,
-      "tag": "0004_minor_wither",
+      "when": 1772541424229,
+      "tag": "0000_sad_bucky",
       "breakpoints": true
     }
   ]

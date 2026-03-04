@@ -7,3 +7,4 @@ export { CitationPreview, type CitationPreviewProps } from './CitationPreview';
 export { DocumentScopeSelector, type DocumentScopeSelectorProps } from './DocumentScopeSelector';
 export { ConversationList, type ConversationListProps } from './ConversationList';
 export { ConversationItem, type ConversationItemProps } from './ConversationItem';
+export { ChatSearchDialog, type ChatSearchDialogProps } from './ChatSearchDialog';

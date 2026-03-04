@@ -7,10 +7,15 @@ import { Toaster } from '@/components/ui/sonner';
 import { I18nProvider } from '@/i18n';
 import { queryClient } from '@/lib/query';
 import { routeTree } from './routes';
+import { RoutePending } from './routes/RoutePending';
 import './i18n/i18n';
 import './index.css';
 
-const router = createRouter({ routeTree });
+const router = createRouter({
+  routeTree,
+  defaultPendingComponent: RoutePending,
+  defaultPendingMs: 120,
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

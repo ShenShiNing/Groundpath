@@ -141,6 +141,17 @@ export const documentsApi = {
     unwrapResponse(response.data);
   },
 
+  /**
+   * Permanently delete all documents in trash
+   */
+  async clearTrash(): Promise<{ deletedCount: number; failedCount: number; message: string }> {
+    const response =
+      await apiClient.delete<
+        ApiResponse<{ deletedCount: number; failedCount: number; message: string }>
+      >('/api/documents/trash');
+    return unwrapResponse(response.data);
+  },
+
   // ==================== Version Operations ====================
 
   /**

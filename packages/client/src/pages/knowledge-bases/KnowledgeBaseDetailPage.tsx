@@ -1,27 +1,20 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams, Link } from '@tanstack/react-router';
 import {
-  MessageSquare,
   Settings,
   Layers,
   FileText,
-  ChevronRight,
   ArrowLeft,
   Upload,
-  FolderPlus,
   LayoutGrid,
   List,
-  Home,
   MoreHorizontal,
   Trash2,
   Pencil,
   Download,
   Search,
-  Folder,
-  ChevronDown,
   X,
 } from 'lucide-react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,9 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 import {
   Table,
   TableBody,
@@ -55,22 +46,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useKnowledgeBase, useKBFolderTree, useKBDocuments, useDeleteDocument } from '@/hooks';
+import { useKnowledgeBase, useKBDocuments, useDeleteDocument } from '@/hooks';
 import { KnowledgeBaseDialog, ChatPanel } from '@/components/knowledge-bases';
 import { ProcessingStatusBadge } from '@/components/documents/ProcessingStatusBadge';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
-import { FolderDialog } from '@/components/documents/FolderDialog';
 import { queryKeys } from '@/lib/query';
 import { formatBytes, cn, openInNewTab } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useChatPanelStore } from '@/stores';
-import type {
-  FolderTreeNode,
-  DocumentListItem,
-  FolderInfo,
-  DocumentType,
-} from '@knowledge-agent/shared/types';
+import type { DocumentListItem, DocumentType } from '@knowledge-agent/shared/types';
 
 // ============================================================================
 // Types
@@ -83,29 +67,6 @@ interface DeleteDialogState {
   documents: DocumentListItem[];
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function buildFolderPath(
-  folderTree: FolderTreeNode[],
-  targetId: string | null,
-  path: FolderInfo[] = []
-): FolderInfo[] {
-  if (!targetId) return path;
-
-  for (const folder of folderTree) {
-    if (folder.id === targetId) {
-      return [...path, folder];
-    }
-    const found = buildFolderPath(folder.children, targetId, [...path, folder]);
-    if (found.length > path.length + 1 || found[found.length - 1]?.id === targetId) {
-      return found;
-    }
-  }
-  return path;
-}
-
 const documentTypeConfig: Record<DocumentType, { color: string; bgColor: string }> = {
   pdf: { color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-50 dark:bg-red-500/10' },
   markdown: {
@@ -116,81 +77,6 @@ const documentTypeConfig: Record<DocumentType, { color: string; bgColor: string 
   docx: { color: 'text-blue-600 dark:text-blue-400', bgColor: 'bg-blue-50 dark:bg-blue-500/10' },
   other: { color: 'text-gray-500 dark:text-gray-400', bgColor: 'bg-gray-50 dark:bg-gray-400/10' },
 };
-
-// ============================================================================
-// Folder Tree Item (for popover)
-// ============================================================================
-
-function FolderTreeItem({
-  folder,
-  level,
-  currentFolderId,
-  expandedIds,
-  onSelect,
-  onToggle,
-}: {
-  folder: FolderTreeNode;
-  level: number;
-  currentFolderId: string | null;
-  expandedIds: Set<string>;
-  onSelect: (id: string) => void;
-  onToggle: (id: string) => void;
-}) {
-  const hasChildren = folder.children.length > 0;
-  const isExpanded = expandedIds.has(folder.id);
-  const isSelected = currentFolderId === folder.id;
-
-  return (
-    <div>
-      <button
-        className={cn(
-          'flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left cursor-pointer',
-          'hover:bg-accent',
-          isSelected && 'bg-accent font-medium'
-        )}
-        style={{ paddingLeft: `${8 + level * 16}px` }}
-        onClick={() => onSelect(folder.id)}
-      >
-        {hasChildren ? (
-          <ChevronRight
-            className={cn(
-              'size-3.5 text-muted-foreground transition-transform shrink-0 cursor-pointer',
-              isExpanded && 'rotate-90'
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggle(folder.id);
-            }}
-          />
-        ) : (
-          <span className="w-3.5 shrink-0" />
-        )}
-        <Folder className="size-3.5 text-amber-500 shrink-0" />
-        <span className="truncate">{folder.name}</span>
-      </button>
-
-      {isExpanded && hasChildren && (
-        <div>
-          {folder.children.map((child) => (
-            <FolderTreeItem
-              key={child.id}
-              folder={child}
-              level={level + 1}
-              currentFolderId={currentFolderId}
-              expandedIds={expandedIds}
-              onSelect={onSelect}
-              onToggle={onToggle}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// Document Grid Card
-// ============================================================================
 
 function DocumentGridCard({
   document,
@@ -217,7 +103,6 @@ function DocumentGridCard({
       )}
       onClick={onSelect}
     >
-      {/* File icon + actions */}
       <div className="flex items-start justify-between mb-3">
         <div className={cn('size-10 rounded-lg flex items-center justify-center', config.bgColor)}>
           <FileText className={cn('size-5', config.color)} />
@@ -270,29 +155,22 @@ function DocumentGridCard({
         </DropdownMenu>
       </div>
 
-      {/* Title */}
       <h4 className="font-medium text-sm leading-snug truncate mb-1.5" title={document.title}>
         {document.title}
       </h4>
 
-      {/* Meta */}
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
         <span className="font-mono uppercase">{document.fileExtension}</span>
         <span className="text-muted-foreground/50">/</span>
         <span>{formatBytes(document.fileSize)}</span>
       </div>
 
-      {/* Status */}
       <div className="mt-auto">
         <ProcessingStatusBadge status={document.processingStatus} />
       </div>
     </div>
   );
 }
-
-// ============================================================================
-// Document Table Row
-// ============================================================================
 
 function DocumentTableRow({
   document,
@@ -367,48 +245,29 @@ function DocumentTableRow({
   );
 }
 
-// ============================================================================
-// Main Component
-// ============================================================================
-
 export default function KnowledgeBaseDetailPage() {
   const { t } = useTranslation(['knowledgeBase', 'common']);
   const { id } = useParams({ from: '/knowledge-bases/$id' });
   const navigate = useNavigate();
 
-  // UI State
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [folderDialogOpen, setFolderDialogOpen] = useState(false);
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
-  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
-  const [folderPopoverOpen, setFolderPopoverOpen] = useState(false);
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
     open: false,
     documents: [],
   });
 
-  // Chat panel store
-  const openChat = useChatPanelStore((s) => s.open);
-  const isChatOpen = useChatPanelStore((s) => s.isOpen);
-
-  // Query client for manual invalidation
   const queryClient = useQueryClient();
 
-  // Data
   const { data: knowledgeBase, isLoading: kbLoading } = useKnowledgeBase(id);
-  const { data: folderTree } = useKBFolderTree(id);
   const { data: documentsResponse, isLoading: docsLoading } = useKBDocuments(id, {
-    folderId: currentFolderId,
     pageSize: 100,
   });
 
-  // Mutations
   const deleteDocumentMutation = useDeleteDocument();
 
-  // Derived state
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
 
   const filteredDocuments = useMemo(() => {
@@ -417,18 +276,6 @@ export default function KnowledgeBaseDetailPage() {
     return documents.filter((doc) => doc.title.toLowerCase().includes(searchLower));
   }, [documents, search]);
 
-  const folderPath = useMemo(() => {
-    if (!folderTree || !currentFolderId) return [];
-    return buildFolderPath(folderTree, currentFolderId);
-  }, [folderTree, currentFolderId]);
-
-  const currentFolderName = useMemo(() => {
-    if (!currentFolderId) return t('detail.folder.allDocuments');
-    const last = folderPath[folderPath.length - 1];
-    return last?.name ?? t('detail.folder.allDocuments');
-  }, [currentFolderId, folderPath, t]);
-
-  // Handlers
   const handleUploadSuccess = useCallback(() => {
     setUploadOpen(false);
     queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeBases.documents(id, {}) });
@@ -444,29 +291,6 @@ export default function KnowledgeBaseDetailPage() {
     },
     [navigate]
   );
-
-  const handleFolderSelect = useCallback((folderId: string | null) => {
-    setCurrentFolderId(folderId);
-    setSearch('');
-    setFolderPopoverOpen(false);
-  }, []);
-
-  const handleFolderToggle = useCallback((folderId: string) => {
-    setExpandedFolderIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(folderId)) {
-        next.delete(folderId);
-      } else {
-        next.add(folderId);
-      }
-      return next;
-    });
-  }, []);
-
-  const handleFolderNavigate = useCallback((folderId: string | null) => {
-    setCurrentFolderId(folderId);
-    setSearch('');
-  }, []);
 
   const handleDeleteDocument = useCallback((doc: DocumentListItem) => {
     setDeleteDialog({ open: true, documents: [doc] });
@@ -491,10 +315,6 @@ export default function KnowledgeBaseDetailPage() {
     openInNewTab(`/api/documents/${doc.id}/download`);
   }, []);
 
-  const handleOpenChat = useCallback(() => {
-    openChat(id);
-  }, [id, openChat]);
-
   const handleOpenDocumentFromChat = useCallback(
     (documentId: string) => {
       void navigate({
@@ -505,10 +325,9 @@ export default function KnowledgeBaseDetailPage() {
     [navigate]
   );
 
-  // Loading state
   if (kbLoading) {
     return (
-      <AppLayout>
+      <>
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="shrink-0 border-b px-6 py-5">
             <div className="flex items-center gap-4">
@@ -530,14 +349,13 @@ export default function KnowledgeBaseDetailPage() {
             </div>
           </div>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
-  // Not found state
   if (!knowledgeBase) {
     return (
-      <AppLayout>
+      <>
         <div className="flex-1 flex items-center justify-center px-6">
           <div className="w-full max-w-xl p-8 text-center">
             <h2 className="mb-2 text-xl font-semibold">{t('detail.notFound.title')}</h2>
@@ -547,12 +365,12 @@ export default function KnowledgeBaseDetailPage() {
             </Button>
           </div>
         </div>
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="shrink-0 border-b px-6 py-4">
           <div className="flex flex-wrap items-start gap-3 md:gap-4">
@@ -588,20 +406,6 @@ export default function KnowledgeBaseDetailPage() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
-                    variant={isChatOpen ? 'secondary' : 'ghost'}
-                    size="icon"
-                    className="size-8 cursor-pointer"
-                    onClick={handleOpenChat}
-                  >
-                    <MessageSquare className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('detail.tooltip.openChat')}</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
                     variant="ghost"
                     size="icon"
                     className="size-8 cursor-pointer"
@@ -629,92 +433,6 @@ export default function KnowledgeBaseDetailPage() {
 
         <div className="shrink-0 border-b px-6 py-2.5">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <Popover open={folderPopoverOpen} onOpenChange={setFolderPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 shrink-0 cursor-pointer gap-1.5 text-sm font-medium"
-                  >
-                    <Folder className="size-3.5 text-muted-foreground" />
-                    {currentFolderName}
-                    <ChevronDown className="size-3.5 text-muted-foreground" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-64 p-1.5">
-                  <ScrollArea className="max-h-72">
-                    <button
-                      className={cn(
-                        'flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left cursor-pointer',
-                        'hover:bg-accent',
-                        currentFolderId === null && 'bg-accent font-medium'
-                      )}
-                      onClick={() => handleFolderSelect(null)}
-                    >
-                      <Home className="size-3.5" />
-                      <span>{t('detail.folder.allDocuments')}</span>
-                      <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                        {knowledgeBase.documentCount}
-                      </span>
-                    </button>
-
-                    {folderTree && folderTree.length > 0 && (
-                      <>
-                        <Separator className="my-1" />
-                        {folderTree.map((folder) => (
-                          <FolderTreeItem
-                            key={folder.id}
-                            folder={folder}
-                            level={0}
-                            currentFolderId={currentFolderId}
-                            expandedIds={expandedFolderIds}
-                            onSelect={(folderId) => handleFolderSelect(folderId)}
-                            onToggle={handleFolderToggle}
-                          />
-                        ))}
-                      </>
-                    )}
-
-                    <Separator className="my-1" />
-                    <button
-                      className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded-md transition-colors text-left text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-                      onClick={() => {
-                        setFolderPopoverOpen(false);
-                        setFolderDialogOpen(true);
-                      }}
-                    >
-                      <FolderPlus className="size-3.5" />
-                      <span>{t('detail.folder.newFolder')}</span>
-                    </button>
-                  </ScrollArea>
-                </PopoverContent>
-              </Popover>
-
-              {folderPath.length > 0 && (
-                <nav className="flex min-w-0 items-center gap-0.5 text-sm text-muted-foreground">
-                  <ChevronRight className="size-3.5 shrink-0" />
-                  <button
-                    className="truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
-                    onClick={() => handleFolderNavigate(null)}
-                  >
-                    {t('detail.folder.root')}
-                  </button>
-                  {folderPath.slice(0, -1).map((folder) => (
-                    <div key={folder.id} className="flex min-w-0 items-center gap-0.5">
-                      <ChevronRight className="size-3.5 shrink-0" />
-                      <button
-                        className="truncate rounded px-1.5 py-0.5 transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
-                        onClick={() => handleFolderNavigate(folder.id)}
-                      >
-                        {folder.name}
-                      </button>
-                    </div>
-                  ))}
-                </nav>
-              )}
-            </div>
-
             <div className="ml-auto flex items-center gap-2">
               <div className="relative w-52 max-w-[60vw]">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
@@ -892,14 +610,12 @@ export default function KnowledgeBaseDetailPage() {
         </div>
       </div>
 
-      {/* Chat Panel */}
       <ChatPanel
         knowledgeBaseId={id}
         documents={documentsResponse?.documents ?? []}
         onOpenDocument={handleOpenDocumentFromChat}
       />
 
-      {/* Upload Dialog */}
       {uploadOpen && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card border rounded-xl shadow-lg max-w-lg w-full p-6">
@@ -914,28 +630,17 @@ export default function KnowledgeBaseDetailPage() {
                 {t('close', { ns: 'common' })}
               </Button>
             </div>
-            <DocumentUpload
-              knowledgeBaseId={id}
-              folderId={currentFolderId}
-              onSuccess={handleUploadSuccess}
-            />
+            <DocumentUpload knowledgeBaseId={id} onSuccess={handleUploadSuccess} />
           </div>
         </div>
       )}
 
-      {/* Dialogs */}
       <KnowledgeBaseDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         knowledgeBase={knowledgeBase}
       />
-      <FolderDialog
-        open={folderDialogOpen}
-        onOpenChange={setFolderDialogOpen}
-        knowledgeBaseId={id}
-      />
 
-      {/* Delete Confirmation */}
       <AlertDialog
         open={deleteDialog.open}
         onOpenChange={(open) => !open && setDeleteDialog({ open: false, documents: [] })}
@@ -969,6 +674,6 @@ export default function KnowledgeBaseDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppLayout>
+    </>
   );
 }

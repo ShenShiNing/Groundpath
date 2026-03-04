@@ -1,10 +1,8 @@
 import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
-import { rootRoute } from './__root';
-import { requireAuth } from './guards/auth.guard';
+import { authenticatedRoute } from './authenticated.route';
 
 export const sessionsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => authenticatedRoute,
   path: '/sessions',
-  beforeLoad: requireAuth,
   component: lazyRouteComponent(() => import('@/pages/SessionsPage')),
 });
