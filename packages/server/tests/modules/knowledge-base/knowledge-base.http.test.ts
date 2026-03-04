@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
+import type { HttpTestBody } from '@tests/helpers/http';
 
 const {
   authenticateMock,
@@ -18,7 +19,14 @@ const {
         authHeader.some((value) => value.replace(/^Bearer\s+/i, '') === 'valid-access'));
 
     if (isAuthorized) {
-      req.user = { sub: 'user-1', sid: 'sid-1', email: 'user-1@example.com', username: 'user1', status: 'active', emailVerified: true };
+      req.user = {
+        sub: 'user-1',
+        sid: 'sid-1',
+        email: 'user-1@example.com',
+        username: 'user1',
+        status: 'active',
+        emailVerified: true,
+      };
       next();
       return;
     }
@@ -147,7 +155,7 @@ describe('knowledge-base.routes http behavior', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: 'kb-1' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -163,7 +171,7 @@ describe('knowledge-base.routes http behavior', () => {
       },
       body: JSON.stringify({ name: '' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -179,7 +187,7 @@ describe('knowledge-base.routes http behavior', () => {
       },
       body: JSON.stringify({ name: 'kb-main', embeddingProvider: 'openai' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(201);
     expect(body.route).toBe('kb-create');
@@ -195,7 +203,7 @@ describe('knowledge-base.routes http behavior', () => {
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -210,7 +218,7 @@ describe('knowledge-base.routes http behavior', () => {
         headers: { authorization: 'Bearer valid-access' },
       }
     );
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -229,7 +237,7 @@ describe('knowledge-base.routes http behavior', () => {
         body: formData,
       }
     );
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('FILE_TOO_LARGE');
@@ -243,7 +251,7 @@ describe('knowledge-base.routes http behavior', () => {
         headers: { authorization: 'Bearer valid-access' },
       }
     );
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -257,7 +265,7 @@ describe('knowledge-base.routes http behavior', () => {
         headers: { authorization: 'Bearer valid-access' },
       }
     );
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);

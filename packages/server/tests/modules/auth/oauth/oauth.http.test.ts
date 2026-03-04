@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
+import type { HttpTestBody } from '@tests/helpers/http';
 
 const { requireCsrfProtectionMock, oauthControllerMock } = vi.hoisted(() => {
   const requireCsrfProtection: RequestHandler = (req, res, next) => {
@@ -119,7 +120,7 @@ describe('oauth.routes http behavior', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ code: 'exchange-code' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(403);
     expect(body.error.code).toBe('CSRF_TOKEN_REQUIRED');
@@ -135,7 +136,7 @@ describe('oauth.routes http behavior', () => {
       },
       body: JSON.stringify({ code: '' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -151,7 +152,7 @@ describe('oauth.routes http behavior', () => {
       },
       body: JSON.stringify({ code: 'valid-exchange-code' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('exchange');

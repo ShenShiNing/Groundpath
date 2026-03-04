@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
+import type { HttpTestBody } from '@tests/helpers/http';
 
 const { authenticateMock, userControllerMock, uploadControllerMock } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
@@ -13,7 +14,14 @@ const { authenticateMock, userControllerMock, uploadControllerMock } = vi.hoiste
         authHeader.some((value) => value.replace(/^Bearer\s+/i, '') === 'valid-access'));
 
     if (isAuthorized) {
-      req.user = { sub: 'user-1', sid: 'sid-1', email: 'user-1@example.com', username: 'user1', status: 'active', emailVerified: true };
+      req.user = {
+        sub: 'user-1',
+        sid: 'sid-1',
+        email: 'user-1@example.com',
+        username: 'user1',
+        status: 'active',
+        emailVerified: true,
+      };
       next();
       return;
     }
@@ -99,7 +107,7 @@ describe('user.routes http behavior', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ username: 'new_name' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -115,7 +123,7 @@ describe('user.routes http behavior', () => {
       },
       body: JSON.stringify({ username: 'bad name with spaces' }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -134,7 +142,7 @@ describe('user.routes http behavior', () => {
         bio: 'updated bio',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('profile-updated');
@@ -153,7 +161,7 @@ describe('user.routes http behavior', () => {
       },
       body: formData,
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('FILE_TOO_LARGE');
@@ -171,7 +179,7 @@ describe('user.routes http behavior', () => {
       },
       body: formData,
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('avatar-uploaded');

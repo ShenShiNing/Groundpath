@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
+import type { HttpTestBody } from '@tests/helpers/http';
 
 const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock } = vi.hoisted(
   () => {
@@ -123,7 +124,7 @@ describe('document.routes http behavior', () => {
 
   it('should reject unauthenticated list request', async () => {
     const response = await fetch(`${baseUrl}/documents`);
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -134,7 +135,7 @@ describe('document.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/documents?page=0&pageSize=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -145,7 +146,7 @@ describe('document.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/documents?page=1&pageSize=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('list');
@@ -165,7 +166,7 @@ describe('document.routes http behavior', () => {
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('INVALID_FILE_TYPE');
@@ -181,7 +182,7 @@ describe('document.routes http behavior', () => {
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('FILE_TOO_LARGE');
@@ -199,7 +200,7 @@ describe('document.routes http behavior', () => {
         content: 'x'.repeat(500001),
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');

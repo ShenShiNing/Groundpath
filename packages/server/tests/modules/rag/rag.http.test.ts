@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
+import type { HttpTestBody } from '@tests/helpers/http';
 
 const {
   authenticateMock,
@@ -26,7 +27,14 @@ const {
         authHeader.some((value) => value.replace(/^Bearer\s+/i, '') === 'valid-access'));
 
     if (isAuthorized) {
-      req.user = { sub: 'user-1', sid: 'sid-1', email: 'user-1@example.com', username: 'user1', status: 'active', emailVerified: true };
+      req.user = {
+        sub: 'user-1',
+        sid: 'sid-1',
+        email: 'user-1@example.com',
+        username: 'user1',
+        status: 'active',
+        emailVerified: true,
+      };
       next();
       return;
     }
@@ -138,7 +146,7 @@ describe('rag.routes http behavior', () => {
         knowledgeBaseId: '123e4567-e89b-12d3-a456-426614174000',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -157,7 +165,7 @@ describe('rag.routes http behavior', () => {
         knowledgeBaseId: 'not-a-uuid',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -178,7 +186,7 @@ describe('rag.routes http behavior', () => {
         scoreThreshold: 1.5,
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -199,7 +207,7 @@ describe('rag.routes http behavior', () => {
         scoreThreshold: 0.2,
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -224,7 +232,7 @@ describe('rag.routes http behavior', () => {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -240,7 +248,7 @@ describe('rag.routes http behavior', () => {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe('DOCUMENT_NOT_FOUND');
@@ -251,7 +259,7 @@ describe('rag.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/rag/status/doc-1`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -266,7 +274,7 @@ describe('rag.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/rag/status/missing-doc`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe('DOCUMENT_NOT_FOUND');

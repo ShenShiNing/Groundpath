@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
+import type { HttpTestBody } from '@tests/helpers/http';
 
 const { emailSendRateLimiterMock, emailVerifyRateLimiterMock, emailControllerMock } = vi.hoisted(
   () => {
@@ -100,7 +101,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -119,7 +120,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(429);
     expect(body.error.code).toBe('TOO_MANY_REQUESTS');
@@ -135,7 +136,7 @@ describe('email.routes http behavior', () => {
         type: 'reset_password',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('send-code');
@@ -152,7 +153,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -172,7 +173,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(429);
     expect(body.error.code).toBe('TOO_MANY_REQUESTS');
@@ -189,7 +190,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: any = await response.json();
+    const body: HttpTestBody = await response.json();
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('verify-code');
