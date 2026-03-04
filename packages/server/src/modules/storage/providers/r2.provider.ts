@@ -85,7 +85,7 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   // R2 uses public bucket URL, no signing needed (handled by Cloudflare)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   getPublicUrl(key: string, _options?: SignedUrlOptions): string {
     return `${storageConfig.r2.publicUrl}/${key}`;
   }
