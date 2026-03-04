@@ -247,7 +247,9 @@ function DocumentTableRow({
 
 export default function KnowledgeBaseDetailPage() {
   const { t } = useTranslation(['knowledgeBase', 'common']);
-  const { id } = useParams({ from: '/knowledge-bases/$id' });
+  const { id } = useParams({ strict: false });
+  const knowledgeBaseId = typeof id === 'string' ? id : undefined;
+  const safeKnowledgeBaseId = knowledgeBaseId ?? '';
   const navigate = useNavigate();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -261,8 +263,8 @@ export default function KnowledgeBaseDetailPage() {
 
   const queryClient = useQueryClient();
 
-  const { data: knowledgeBase, isLoading: kbLoading } = useKnowledgeBase(id);
-  const { data: documentsResponse, isLoading: docsLoading } = useKBDocuments(id, {
+  const { data: knowledgeBase, isLoading: kbLoading } = useKnowledgeBase(knowledgeBaseId);
+  const { data: documentsResponse, isLoading: docsLoading } = useKBDocuments(knowledgeBaseId, {
     pageSize: 100,
   });
 
@@ -278,9 +280,13 @@ export default function KnowledgeBaseDetailPage() {
 
   const handleUploadSuccess = useCallback(() => {
     setUploadOpen(false);
-    queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeBases.documents(id, {}) });
-    queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeBases.detail(id) });
-  }, [id, queryClient]);
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.knowledgeBases.documents(safeKnowledgeBaseId, {}),
+    });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.knowledgeBases.detail(safeKnowledgeBaseId),
+    });
+  }, [queryClient, safeKnowledgeBaseId]);
 
   const handleDocumentClick = useCallback(
     (doc: DocumentListItem) => {
@@ -302,14 +308,18 @@ export default function KnowledgeBaseDetailPage() {
 
     try {
       await Promise.all(docsToDelete.map((doc) => deleteDocumentMutation.mutateAsync(doc.id)));
-      queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeBases.documents(id, {}) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.knowledgeBases.detail(id) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledgeBases.documents(safeKnowledgeBaseId, {}),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.knowledgeBases.detail(safeKnowledgeBaseId),
+      });
     } catch {
       // deletion failed — query will refetch
     } finally {
       setDeleteDialog({ open: false, documents: [] });
     }
-  }, [deleteDialog, deleteDocumentMutation, id, queryClient]);
+  }, [deleteDialog, deleteDocumentMutation, queryClient, safeKnowledgeBaseId]);
 
   const handleDownloadDocument = useCallback((doc: DocumentListItem) => {
     openInNewTab(`/api/documents/${doc.id}/download`);
@@ -324,6 +334,20 @@ export default function KnowledgeBaseDetailPage() {
     },
     [navigate]
   );
+
+  if (!knowledgeBaseId) {
+    return (
+      <div className="flex-1 flex items-center justify-center px-6">
+        <div className="w-full max-w-xl p-8 text-center">
+          <h2 className="mb-2 text-xl font-semibold">{t('detail.notFound.title')}</h2>
+          <p className="mb-5 text-sm text-muted-foreground">{t('detail.notFound.description')}</p>
+          <Button className="cursor-pointer" asChild>
+            <Link to="/knowledge-bases">{t('detail.action.backToList')}</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (kbLoading) {
     return (
@@ -611,7 +635,7 @@ export default function KnowledgeBaseDetailPage() {
       </div>
 
       <ChatPanel
-        knowledgeBaseId={id}
+        knowledgeBaseId={knowledgeBaseId}
         documents={documentsResponse?.documents ?? []}
         onOpenDocument={handleOpenDocumentFromChat}
       />
@@ -630,7 +654,7 @@ export default function KnowledgeBaseDetailPage() {
                 {t('close', { ns: 'common' })}
               </Button>
             </div>
-            <DocumentUpload knowledgeBaseId={id} onSuccess={handleUploadSuccess} />
+            <DocumentUpload knowledgeBaseId={knowledgeBaseId} onSuccess={handleUploadSuccess} />
           </div>
         </div>
       )}

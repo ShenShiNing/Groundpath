@@ -20,6 +20,33 @@
     "saved": "Document saved",
     "saveFailed": "Save failed"
   },
+  "versions": {
+    "title": "Version History",
+    "description": "Review previous versions and restore when needed.",
+    "loading": "Loading version history...",
+    "empty": "No version history yet",
+    "current": "Current",
+    "currentNumber": "Current version v{{version}}",
+    "currentPending": "Loading current version",
+    "action": {
+      "restore": "Restore this version"
+    },
+    "dialog": {
+      "title": "Restore Historical Version",
+      "description": "Restore this document to v{{version}}? This will create a new current version.",
+      "confirm": "Restore"
+    },
+    "toast": {
+      "restored": "Restored to v{{version}}",
+      "restoreFailed": "Failed to restore version"
+    },
+    "source": {
+      "upload": "Source: Upload",
+      "edit": "Source: Online edit",
+      "ai_generate": "Source: AI generation",
+      "restore": "Source: Version restore"
+    }
+  },
   "editor": {
     "unsaved": "Unsaved changes",
     "saved": "Saved",
@@ -54,6 +81,7 @@
   "info": {
     "file": "File:",
     "type": "Type:",
+    "version": "Version:",
     "size": "Size:",
     "created": "Created:",
     "modified": "Modified:",

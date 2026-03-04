@@ -1,7 +1,16 @@
 import { Component } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+
+interface ErrorBoundaryBaseProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+  title: string;
+  defaultMessage: string;
+  retryLabel: string;
+}
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -13,8 +22,8 @@ interface ErrorBoundaryState {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+class ErrorBoundaryBase extends Component<ErrorBoundaryBaseProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryBaseProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
@@ -38,17 +47,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-8 text-center">
+        <div className="flex min-h-100 flex-col items-center justify-center gap-4 p-8 text-center">
           <AlertCircle className="size-10 text-destructive" />
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold">Something went wrong</h2>
+            <h2 className="text-lg font-semibold">{this.props.title}</h2>
             <p className="max-w-md text-sm text-muted-foreground">
-              {this.state.error?.message ?? 'An unexpected error occurred'}
+              {this.state.error?.message ?? this.props.defaultMessage}
             </p>
           </div>
           <Button variant="outline" onClick={this.handleReset}>
             <RefreshCw className="mr-2 size-4" />
-            Try again
+            {this.props.retryLabel}
           </Button>
         </div>
       );
@@ -56,4 +65,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     return this.props.children;
   }
+}
+
+export function ErrorBoundary({ children, fallback }: ErrorBoundaryProps) {
+  const { t } = useTranslation('errors');
+
+  return (
+    <ErrorBoundaryBase
+      fallback={fallback}
+      title={t('boundary.title')}
+      defaultMessage={t('boundary.defaultMessage')}
+      retryLabel={t('boundary.retry')}
+    >
+      {children}
+    </ErrorBoundaryBase>
+  );
 }

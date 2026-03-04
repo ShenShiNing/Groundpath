@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
 import type { AxiosError } from 'axios';
 import type { ApiResponse, UserPublicInfo } from '@knowledge-agent/shared/types';
+import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuthStore, useUserStore } from '@/stores';
@@ -14,6 +15,7 @@ const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_SIZE = 2 * 1024 * 1024; // 2MB
 
 export function AvatarUpload({ onUploadSuccess }: AvatarUploadProps) {
+  const { t } = useTranslation('profile');
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const { uploadAvatar, isUploadingAvatar } = useUserStore();
@@ -26,10 +28,10 @@ export function AvatarUpload({ onUploadSuccess }: AvatarUploadProps) {
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP';
+      return t('avatar.invalidType');
     }
     if (file.size > MAX_SIZE) {
-      return 'File too large. Maximum size is 2MB';
+      return t('avatar.tooLarge');
     }
     return null;
   };
@@ -60,7 +62,7 @@ export function AvatarUpload({ onUploadSuccess }: AvatarUploadProps) {
       onUploadSuccess?.(updatedUser);
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      const errorMessage = axiosError.response?.data?.error?.message || 'Failed to upload avatar';
+      const errorMessage = axiosError.response?.data?.error?.message || t('avatar.uploadFailed');
       setError(errorMessage);
       // Revert preview on error
       setPreviewUrl(null);
@@ -80,7 +82,7 @@ export function AvatarUpload({ onUploadSuccess }: AvatarUploadProps) {
       <div className="flex items-center gap-4">
         <div className="relative">
           <Avatar className="size-20">
-            <AvatarImage src={displayUrl} alt="Avatar" />
+            <AvatarImage src={displayUrl} alt={t('avatar.alt')} />
             <AvatarFallback className="text-xl">{userInitials}</AvatarFallback>
           </Avatar>
           {isUploadingAvatar && (
@@ -106,9 +108,9 @@ export function AvatarUpload({ onUploadSuccess }: AvatarUploadProps) {
             disabled={isUploadingAvatar}
           >
             <Upload className="mr-2 size-4" />
-            {isUploadingAvatar ? 'Uploading...' : 'Upload Avatar'}
+            {isUploadingAvatar ? t('avatar.uploading') : t('avatar.upload')}
           </Button>
-          <p className="text-xs text-muted-foreground">JPEG, PNG, GIF or WebP. Max 2MB.</p>
+          <p className="text-xs text-muted-foreground">{t('avatar.hint')}</p>
         </div>
       </div>
       {error && <p className="text-xs text-destructive">{error}</p>}
