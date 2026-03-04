@@ -101,7 +101,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -120,7 +120,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(429);
     expect(body.error.code).toBe('TOO_MANY_REQUESTS');
@@ -136,7 +136,7 @@ describe('email.routes http behavior', () => {
         type: 'reset_password',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('send-code');
@@ -153,7 +153,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -173,7 +173,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(429);
     expect(body.error.code).toBe('TOO_MANY_REQUESTS');
@@ -190,7 +190,7 @@ describe('email.routes http behavior', () => {
         type: 'register',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('verify-code');

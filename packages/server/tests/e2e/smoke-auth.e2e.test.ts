@@ -1,14 +1,7 @@
 import type { Server } from 'node:http';
-import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
-import { passthrough, startTestServer, stopTestServer } from './helpers/e2e.helpers';
-
-// ─── Shared mock state ───
-const registeredUser: {
-  email: string;
-  tokens?: { accessToken: string; refreshToken: string };
-} | null = null;
+import { startTestServer, stopTestServer } from './helpers/e2e.helpers';
 
 const {
   rateLimiterMock,
@@ -16,7 +9,6 @@ const {
   authenticateRefreshTokenMock,
   requireCsrfProtectionMock,
   authServiceMock,
-  tokenServiceMock,
 } = vi.hoisted(() => {
   const passthroughMw: RequestHandler = (_req, _res, next) => next();
 
@@ -85,7 +77,7 @@ const {
           csrfToken: 'test-csrf',
         },
       })),
-      login: vi.fn(async () => ({
+      login: vi.fn(async (_data: Record<string, unknown>) => ({
         user: { id: 'user-e2e', email: 'e2e@example.com', username: 'e2e_user' },
         tokens: {
           accessToken: 'test-access-token',
@@ -101,13 +93,6 @@ const {
         },
       })),
       logout: vi.fn(async () => undefined),
-    },
-    tokenServiceMock: {
-      generateTokenPair: vi.fn(async () => ({
-        accessToken: 'test-access-token',
-        refreshToken: 'test-refresh-token',
-        csrfToken: 'test-csrf',
-      })),
     },
   };
 });
@@ -216,8 +201,8 @@ describe('E2E Smoke: Auth Journey', () => {
     expect(tokens.accessToken).toBeDefined();
     expect(tokens.refreshToken).toBeDefined();
 
-    accessToken = tokens.accessToken;
-    refreshToken = tokens.refreshToken;
+    accessToken = tokens.accessToken!;
+    refreshToken = tokens.refreshToken!;
   });
 
   // Step 2: Register with invalid data should fail validation
@@ -257,8 +242,8 @@ describe('E2E Smoke: Auth Journey', () => {
 
     const data = body.data as Record<string, unknown>;
     const tokens = data.tokens as Record<string, string>;
-    accessToken = tokens.accessToken;
-    refreshToken = tokens.refreshToken;
+    accessToken = tokens.accessToken!;
+    refreshToken = tokens.refreshToken!;
   });
 
   // Step 4: Access protected route /me

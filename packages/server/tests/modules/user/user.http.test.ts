@@ -107,7 +107,7 @@ describe('user.routes http behavior', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ username: 'new_name' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -123,7 +123,7 @@ describe('user.routes http behavior', () => {
       },
       body: JSON.stringify({ username: 'bad name with spaces' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -142,7 +142,7 @@ describe('user.routes http behavior', () => {
         bio: 'updated bio',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('profile-updated');
@@ -161,7 +161,7 @@ describe('user.routes http behavior', () => {
       },
       body: formData,
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('FILE_TOO_LARGE');
@@ -179,7 +179,7 @@ describe('user.routes http behavior', () => {
       },
       body: formData,
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('avatar-uploaded');

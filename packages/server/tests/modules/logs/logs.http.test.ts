@@ -131,7 +131,7 @@ describe('logs.routes http behavior', () => {
 
   it('should reject unauthenticated login-log request', async () => {
     const response = await fetch(`${baseUrl}/logs/login`);
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -142,7 +142,7 @@ describe('logs.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/logs/login?page=0&pageSize=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -156,7 +156,7 @@ describe('logs.routes http behavior', () => {
         headers: { authorization: 'Bearer valid-access' },
       }
     );
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -175,7 +175,7 @@ describe('logs.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/logs/login/recent?limit=999`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -186,7 +186,7 @@ describe('logs.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/logs/operations?action=not-supported`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -200,7 +200,7 @@ describe('logs.routes http behavior', () => {
         headers: { authorization: 'Bearer valid-access' },
       }
     );
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
@@ -219,7 +219,7 @@ describe('logs.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/logs/operations/resource/invalid/doc-1?limit=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -230,7 +230,7 @@ describe('logs.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/logs/operations/resource/document/doc-1?limit=101`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -241,7 +241,7 @@ describe('logs.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/logs/operations/resource/document/doc-1?limit=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);

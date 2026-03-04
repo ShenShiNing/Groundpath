@@ -19,12 +19,12 @@
 
 结果：
 
-- `69` 个测试文件通过，`547` 个测试用例通过。
+- `79` 个测试文件通过，`648` 个测试用例通过。
 - 覆盖率（最新）：
-  - Statements: `38.46%` (`1907/4958`)
-  - Functions: `36.50%` (`330/904`)
-  - Branches: `32.05%` (`770/2402`)
-  - Lines: `38.97%` (`1877/4816`)
+  - Statements: `44.14%` (`2190/4958`)
+  - Functions: `42.42%` (`384/904`)
+  - Branches: `35.79%` (`860/2402`)
+  - Lines: `44.57%` (`2146/4816`)
 
 ### 2.2 现有用例优点
 
@@ -143,28 +143,26 @@
 
 1. `ops` 当前为单元级覆盖，仍缺少进程级集成验证（真实 `SIGTERM/SIGINT`、监听端口关闭、资源释放顺序）。
 2. `chat` 模块 repository 与 `chat.service` 深层失败分支仍是高风险区（消息持久化、流式中断恢复、外部依赖失败降级）。
-3. `llm/vector/storage/rag` 仍缺少外部依赖异常注入与重试/降级策略验证（timeout、5xx、网络抖动）。
-4. 前端缺少页面级测试和 E2E：
+3. 前端缺少页面级测试和 E2E：
    - 路由总数约 `20`，当前仅少量 store/lib 单测。
-5. 缺少迁移后数据完整性自动化检查。
 
 ### 5.3 已实现功能覆盖检查（模块维度）
 
-| 功能域                    | 自动化覆盖现状                                | 常规场景 | 非常规边界                                                      | 结论     |
-| ------------------------- | --------------------------------------------- | -------- | --------------------------------------------------------------- | -------- |
-| Auth（含会话/CSRF）       | service + routes + HTTP                       | 已覆盖   | 已覆盖（非法参数、缺 token、CSRF 缺失）                         | 基本达标 |
-| OAuth / 邮箱验证码        | routes + controller/service + HTTP            | 已覆盖   | 已覆盖（回调缺参、CSRF、验证码格式、限流）                      | 基本达标 |
-| User                      | routes + HTTP                                 | 已覆盖   | 部分覆盖（非法用户名、头像超限；文件类型/恶意文件名可继续加强） | 部分达标 |
-| Knowledge Base            | controller/repository/service + routes + HTTP | 已覆盖   | 已覆盖（非法 UUID、上传缺参/超限、分页非法）                    | 基本达标 |
-| Document                  | services + routes + HTTP                      | 已覆盖   | 已覆盖（文件类型/大小、内容超长、回收站）                       | 基本达标 |
-| Chat                      | service + controller + routes + HTTP          | 已覆盖   | 部分覆盖（SSE 中断/恢复、流式异常链路仍可加强）                 | 部分达标 |
-| Document AI               | services + controllers + routes + HTTP        | 已覆盖   | 部分覆盖（流式中断/异常链路可继续加强）                         | 部分达标 |
-| LLM                       | factory/provider + routes + HTTP              | 已覆盖   | 部分覆盖（接口鉴权与端点行为已覆盖；超时/5xx/重试仍需加强）     | 部分达标 |
-| Embedding / Vector        | factory + cleanup service                     | 部分覆盖 | 边界覆盖不足（维度不匹配/provider 异常）                        | 待加强   |
-| RAG                       | routes + HTTP                                 | 已覆盖   | 部分覆盖（处理中断恢复与重试策略可继续加强）                    | 部分达标 |
-| Storage                   | routes + HTTP                                 | 已覆盖   | 部分覆盖（签名过期/权限/磁盘异常可继续加强）                    | 部分达标 |
-| Logs                      | routes + HTTP                                 | 已覆盖   | 部分覆盖（越权资源查询可继续加强）                              | 部分达标 |
-| Ops（scheduler/shutdown） | scheduler + shutdown 单元测试                 | 已覆盖   | 部分覆盖（缺少进程级信号集成验证）                              | 部分达标 |
+| 功能域                    | 自动化覆盖现状                                     | 常规场景 | 非常规边界                                                         | 结论     |
+| ------------------------- | -------------------------------------------------- | -------- | ------------------------------------------------------------------ | -------- |
+| Auth（含会话/CSRF）       | service + routes + HTTP                            | 已覆盖   | 已覆盖（非法参数、缺 token、CSRF 缺失）                            | 基本达标 |
+| OAuth / 邮箱验证码        | routes + controller/service + HTTP                 | 已覆盖   | 已覆盖（回调缺参、CSRF、验证码格式、限流）                         | 基本达标 |
+| User                      | routes + HTTP                                      | 已覆盖   | 部分覆盖（非法用户名、头像超限；文件类型/恶意文件名可继续加强）    | 部分达标 |
+| Knowledge Base            | controller/repository/service + routes + HTTP      | 已覆盖   | 已覆盖（非法 UUID、上传缺参/超限、分页非法）                       | 基本达标 |
+| Document                  | services + routes + HTTP                           | 已覆盖   | 已覆盖（文件类型/大小、内容超长、回收站）                          | 基本达标 |
+| Chat                      | service + controller + routes + HTTP               | 已覆盖   | 部分覆盖（SSE 中断/恢复、流式异常链路仍可加强）                    | 部分达标 |
+| Document AI               | services + controllers + routes + HTTP             | 已覆盖   | 部分覆盖（流式中断/异常链路可继续加强）                            | 部分达标 |
+| LLM                       | factory/provider + routes + HTTP + error-injection | 已覆盖   | 已覆盖（超时/5xx/401/网络中断/空响应/流中断/PII 不泄露）           | 基本达标 |
+| Embedding / Vector        | factory + cleanup + error-injection                | 已覆盖   | 已覆盖（超时/429/空响应/batch fallback/upsert+search+delete 异常） | 基本达标 |
+| RAG                       | routes + HTTP + error-injection                    | 已覆盖   | 已覆盖（embedding 失败/向量存储失败/锁竞争/双重错误/旧向量清理）   | 基本达标 |
+| Storage                   | routes + HTTP + error-injection                    | 已覆盖   | 已覆盖（路径穿越/ENOENT/EACCES/ENOSPC/403/空 Body）                | 基本达标 |
+| Logs                      | routes + HTTP                                      | 已覆盖   | 部分覆盖（越权资源查询可继续加强）                                 | 部分达标 |
+| Ops（scheduler/shutdown） | scheduler + shutdown 单元测试                      | 已覆盖   | 部分覆盖（缺少进程级信号集成验证）                                 | 部分达标 |
 
 ## 6. 推荐执行顺序（上线前）
 
@@ -242,4 +240,5 @@
 
 1. `2026-03-03`：补齐 `oauth/email/user/document-ai/llm` HTTP 行为级测试并更新基线。
 2. `2026-03-03`：补齐 `scheduler/shutdown` 自动化测试并更新 `ops` 覆盖结论。
-3. `2026-03-03`：新增“下一步执行清单（上线前）”。
+3. `2026-03-03`：新增”下一步执行清单（上线前）”。
+4. `2026-03-04`：完成 Task 8.1-8.4，新增 DB 一致性检查脚本、冒烟 E2E（32 用例）、异常注入回归（67 用例），更新基线至 79 文件/648 用例/44.57% 行覆盖率。

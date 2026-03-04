@@ -117,7 +117,7 @@ describe('storage.routes http behavior', () => {
 
   it('should reject request when signature is missing', async () => {
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt`);
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('INVALID_CREDENTIALS');
@@ -126,7 +126,7 @@ describe('storage.routes http behavior', () => {
 
   it('should reject request when expiration format is invalid', async () => {
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt?sig=ok&exp=abc`);
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('INVALID_CREDENTIALS');
@@ -137,7 +137,7 @@ describe('storage.routes http behavior', () => {
     verifySignatureMock.mockReturnValueOnce(false);
 
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt?sig=bad&exp=12345`);
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('INVALID_CREDENTIALS');
@@ -146,7 +146,7 @@ describe('storage.routes http behavior', () => {
 
   it('should reject path traversal key', async () => {
     const response = await fetch(`${baseUrl}/storage/files/..%2Fsecret.txt?sig=ok&exp=12345`);
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -166,7 +166,7 @@ describe('storage.routes http behavior', () => {
     );
 
     const response = await fetch(`${baseUrl}/storage/files/docs/a.txt?sig=ok&exp=12345`);
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe('NOT_FOUND');

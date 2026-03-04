@@ -134,7 +134,7 @@ describe('document-ai.routes http behavior', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ length: 'short' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -150,7 +150,7 @@ describe('document-ai.routes http behavior', () => {
       },
       body: JSON.stringify({ length: 'very-long' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -169,7 +169,7 @@ describe('document-ai.routes http behavior', () => {
         maxKeywords: 51,
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -180,7 +180,7 @@ describe('document-ai.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/document-ai/doc-1/analyze/structure`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('structure');
@@ -196,7 +196,7 @@ describe('document-ai.routes http behavior', () => {
       },
       body: JSON.stringify({ prompt: '' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -212,7 +212,7 @@ describe('document-ai.routes http behavior', () => {
       },
       body: JSON.stringify({ prompt: 'hello', maxLength: 99 }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -231,7 +231,7 @@ describe('document-ai.routes http behavior', () => {
         position: 'middle',
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -252,7 +252,7 @@ describe('document-ai.routes http behavior', () => {
         contextDocumentIds: ['123e4567-e89b-12d3-a456-426614174000'],
       }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('generate');

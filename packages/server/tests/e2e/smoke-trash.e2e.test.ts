@@ -1,5 +1,4 @@
 import type { Server } from 'node:http';
-import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
 import { startTestServer, stopTestServer } from './helpers/e2e.helpers';
@@ -35,7 +34,7 @@ const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock }
       authenticateMock: vi.fn(authenticate),
       createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
       documentControllerMock: {
-        upload: vi.fn((req, res) => {
+        upload: vi.fn((_req, res) => {
           docCounter++;
           const doc = { id: `doc-${docCounter}`, title: `Document ${docCounter}`, deleted: false };
           docs.set(doc.id, doc);
@@ -61,10 +60,10 @@ const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock }
         update: vi.fn((req, res) => {
           res.status(200).json({ success: true, data: { document: { id: req.params.id } } });
         }),
-        getContent: vi.fn((req, res) => {
+        getContent: vi.fn((_req, res) => {
           res.status(200).json({ success: true, data: { content: 'file content' } });
         }),
-        saveContent: vi.fn((req, res) => {
+        saveContent: vi.fn((_req, res) => {
           res.status(200).json({ success: true, data: { message: 'Saved' } });
         }),
         // Soft delete (move to trash)

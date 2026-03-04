@@ -120,7 +120,7 @@ describe('oauth.routes http behavior', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ code: 'exchange-code' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(403);
     expect(body.error.code).toBe('CSRF_TOKEN_REQUIRED');
@@ -136,7 +136,7 @@ describe('oauth.routes http behavior', () => {
       },
       body: JSON.stringify({ code: '' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
@@ -152,7 +152,7 @@ describe('oauth.routes http behavior', () => {
       },
       body: JSON.stringify({ code: 'valid-exchange-code' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('exchange');

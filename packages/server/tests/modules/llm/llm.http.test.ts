@@ -109,7 +109,7 @@ describe('llm.routes http behavior', () => {
 
   it('should reject unauthenticated get-config request', async () => {
     const response = await fetch(`${baseUrl}/llm/config`);
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
@@ -120,7 +120,7 @@ describe('llm.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/llm/config`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-get-config');
@@ -136,7 +136,7 @@ describe('llm.routes http behavior', () => {
       },
       body: JSON.stringify({ provider: 'openai', apiKey: 'sk-test' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-update-config');
@@ -152,7 +152,7 @@ describe('llm.routes http behavior', () => {
       },
       body: JSON.stringify({ provider: 'openai', model: 'gpt-4o-mini' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-test-connection');
@@ -163,7 +163,7 @@ describe('llm.routes http behavior', () => {
     const response = await fetch(`${baseUrl}/llm/providers`, {
       headers: { authorization: 'Bearer valid-access' },
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-get-providers');
@@ -179,7 +179,7 @@ describe('llm.routes http behavior', () => {
       },
       body: JSON.stringify({ provider: 'openai' }),
     });
-    const body: HttpTestBody = await response.json();
+    const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-fetch-models');
