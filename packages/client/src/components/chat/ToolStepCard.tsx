@@ -85,7 +85,7 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
         )}
 
         <div className="flex flex-1 items-center gap-1.5 min-w-0">
-          {step.toolCalls.map((tc) => {
+          {[...new Map(step.toolCalls.map((tc) => [tc.name, tc])).values()].map((tc) => {
             const Icon = TOOL_ICONS[tc.name] ?? Search;
             return (
               <span key={tc.id} className="flex items-center gap-1 text-muted-foreground">
