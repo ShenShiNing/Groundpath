@@ -269,7 +269,7 @@ export const chatService = {
               logger.info({ conversationId }, 'LLM stream aborted due to client disconnect');
               return;
             }
-            logger.error({ error, conversationId }, 'LLM streaming error');
+            logger.error({ err: error, conversationId }, 'LLM streaming error');
             sendSSE(res, {
               type: 'error',
               data: {
@@ -325,7 +325,13 @@ export const chatService = {
 
       res.end();
     } catch (error) {
-      logger.error({ error, conversationId }, 'Chat service error');
+      // Abort errors from client disconnect are expected, not real failures
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.info({ conversationId }, 'Chat request aborted');
+        return;
+      }
+
+      logger.error({ err: error, conversationId }, 'Chat service error');
 
       // Send error via SSE if possible
       if (!res.headersSent) {

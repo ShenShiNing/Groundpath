@@ -57,10 +57,22 @@ export async function executeAgentLoop(
       break;
     }
 
-    const result = await provider.generateWithTools(agentMessages, {
-      ...genOptions,
-      tools: toolDefinitions,
-    });
+    let result;
+    try {
+      result = await provider.generateWithTools(agentMessages, {
+        ...genOptions,
+        tools: toolDefinitions,
+      });
+    } catch (error) {
+      // Re-throw AbortErrors as-is so callers can distinguish client disconnects
+      if (error instanceof Error && error.name === 'AbortError') throw error;
+
+      logger.error(
+        { err: error, step, provider: provider.name, messageCount: agentMessages.length },
+        'LLM generateWithTools call failed'
+      );
+      throw error;
+    }
 
     if (result.finishReason === 'text') {
       return {

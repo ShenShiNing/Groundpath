@@ -164,19 +164,37 @@ export function sendMessageWithSSE(
       return;
     }
 
+    let receivedTerminalEvent = false;
+    const wrapTerminal =
+      <T>(fn: (data: T) => void) =>
+      (data: T) => {
+        receivedTerminalEvent = true;
+        fn(data);
+      };
+
     const dispatcher = createSSEDispatcher<SSEEvent>(
       {
         chunk: handlers.onChunk,
         sources: handlers.onSources,
-        done: handlers.onDone,
-        error: handlers.onError,
+        done: wrapTerminal(handlers.onDone),
+        error: wrapTerminal(handlers.onError),
         tool_start: handlers.onToolStart,
         tool_end: handlers.onToolEnd,
       },
-      handlers.onError
+      wrapTerminal(handlers.onError)
     );
 
-    await parseSSEStream(result.reader, dispatcher);
+    await parseSSEStream(result.reader, dispatcher, {
+      onComplete: () => {
+        // Safety net: if stream ended without done/error event, reset loading state
+        if (!receivedTerminalEvent) {
+          handlers.onError({
+            code: 'STREAM_ENDED_UNEXPECTEDLY',
+            message: 'Response stream ended without completion signal',
+          });
+        }
+      },
+    });
   };
 
   run().catch((error) => {
