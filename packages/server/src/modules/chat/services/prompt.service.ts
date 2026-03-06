@@ -25,6 +25,22 @@ Guidelines:
 - Use markdown formatting when appropriate
 - Respond in the same language as the user's question`;
 
+const AGENT_SYSTEM_PROMPT = `You are a helpful AI assistant with access to tools.
+
+IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
+
+When to use tools:
+- Use knowledge_base_search when the user's question might be answered by uploaded documents
+- Use web_search when you need real-time information, current events, or data not in the knowledge base
+- If you can answer confidently without tools, do so directly
+
+Guidelines:
+- After using knowledge_base_search, cite sources using [1], [2], etc.
+- After using web_search, include relevant source URLs
+- Be concise and direct
+- Use markdown formatting when appropriate
+- Respond in the same language as the user's question`;
+
 export interface SearchResult {
   documentId: string;
   documentTitle: string;
@@ -126,5 +142,12 @@ export const promptService = {
     }
 
     return result;
+  },
+
+  /**
+   * Build system prompt for agent mode (with tool access)
+   */
+  buildAgentSystemPrompt(): string {
+    return AGENT_SYSTEM_PROMPT;
   },
 };

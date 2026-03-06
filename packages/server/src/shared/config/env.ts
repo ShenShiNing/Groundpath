@@ -150,6 +150,14 @@ const llmSchema = z.object({
   MODEL_FETCH_TIMEOUT: z.coerce.number().default(15000), // 15s for fetching model lists
 });
 
+// -------------------- Agent / Web Search --------------------
+const agentSchema = z.object({
+  TAVILY_API_KEY: z.string().optional(),
+  AGENT_MAX_ITERATIONS: z.coerce.number().int().min(1).max(20).default(10),
+  AGENT_TOOL_TIMEOUT: z.coerce.number().default(15000),
+  TAVILY_MAX_RESULTS: z.coerce.number().int().min(1).max(10).default(5),
+});
+
 // -------------------- Logging --------------------
 const loggingSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
@@ -179,6 +187,7 @@ const envSchema = serverSchema
   .extend(embeddingSchema.shape)
   .extend(vectorSchema.shape)
   .extend(llmSchema.shape)
+  .extend(agentSchema.shape)
   .extend(loggingSchema.shape)
   .extend(featureFlagsSchema.shape);
 
@@ -353,6 +362,14 @@ export const llmConfig = {
     baseUrl: validatedEnv.DEEPSEEK_BASE_URL,
   },
   modelFetchTimeout: validatedEnv.MODEL_FETCH_TIMEOUT,
+} as const;
+
+/** Agent / Web Search configuration */
+export const agentConfig = {
+  tavilyApiKey: validatedEnv.TAVILY_API_KEY,
+  maxIterations: validatedEnv.AGENT_MAX_ITERATIONS,
+  toolTimeout: validatedEnv.AGENT_TOOL_TIMEOUT,
+  tavilyMaxResults: validatedEnv.TAVILY_MAX_RESULTS,
 } as const;
 
 /** Logging configuration */

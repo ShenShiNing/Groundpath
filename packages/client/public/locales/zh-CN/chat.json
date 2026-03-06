@@ -141,5 +141,18 @@
   "citation": {
     "sources_one": "{{count}} 个来源",
     "sources_other": "{{count}} 个来源"
+  },
+  "agent": {
+    "kbSearch": "知识库搜索",
+    "webSearch": "网络搜索",
+    "searching": "正在搜索...",
+    "searchComplete": "搜索完成",
+    "query": "查询",
+    "results": "找到 {{count}} 条结果",
+    "duration": "耗时 {{ms}}ms",
+    "error": "执行失败",
+    "showDetails": "展开详情",
+    "hideDetails": "收起详情",
+    "thinking": "正在分析并调用工具..."
   }
 }

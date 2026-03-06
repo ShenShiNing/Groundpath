@@ -1,4 +1,5 @@
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType, ToolCallInfo } from '@knowledge-agent/shared/types';
+import type { ToolDefinition } from '@modules/agent/tools/tool.interface';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -18,6 +19,26 @@ export interface ModelInfo {
   created?: number;
   owned_by?: string;
 }
+
+// --- Agent / Tool call types ---
+
+export type AgentMessage =
+  | { role: 'system'; content: string }
+  | { role: 'user'; content: string }
+  | { role: 'assistant'; content: string; toolCalls?: ToolCallInfo[] }
+  | { role: 'tool'; content: string; toolCallId: string };
+
+export interface ToolGenerateResult {
+  finishReason: 'text' | 'tool_calls';
+  content?: string;
+  toolCalls?: ToolCallInfo[];
+}
+
+export interface GenerateWithToolsOptions extends GenerateOptions {
+  tools: ToolDefinition[];
+}
+
+// --- Provider interfaces ---
 
 export interface LLMProvider {
   readonly name: LLMProviderType;
@@ -40,6 +61,15 @@ export interface LLMProvider {
    * Check if the provider is reachable with current credentials.
    */
   healthCheck(): Promise<boolean>;
+
+  /**
+   * Generate a response that may include tool calls (optional).
+   * If not implemented, agent executor falls back to plain generate.
+   */
+  generateWithTools?(
+    messages: AgentMessage[],
+    options: GenerateWithToolsOptions
+  ): Promise<ToolGenerateResult>;
 }
 
 /**

@@ -7,6 +7,8 @@ import type {
   MessageInfo,
   Citation,
   SSEEvent,
+  ToolCallInfo,
+  ToolResultInfo,
 } from '@knowledge-agent/shared/types';
 import type {
   CreateConversationInput,
@@ -128,6 +130,12 @@ export interface SSEHandlers {
   onSources: (citations: Citation[]) => void;
   onDone: (data: { messageId: string }) => void;
   onError: (error: { code: string; message: string }) => void;
+  onToolStart?: (data: { stepIndex: number; toolCalls: ToolCallInfo[] }) => void;
+  onToolEnd?: (data: {
+    stepIndex: number;
+    toolResults: ToolResultInfo[];
+    durationMs: number;
+  }) => void;
 }
 
 /**
@@ -162,6 +170,8 @@ export function sendMessageWithSSE(
         sources: handlers.onSources,
         done: handlers.onDone,
         error: handlers.onError,
+        tool_start: handlers.onToolStart,
+        tool_end: handlers.onToolEnd,
       },
       handlers.onError
     );

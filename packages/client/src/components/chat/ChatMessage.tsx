@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CitationSources } from './CitationSources';
 import { ChatMarkdown } from './ChatMarkdown';
+import { ToolStepsDisplay } from './ToolStepsDisplay';
 import type { ChatMessage as ChatMessageType, Citation } from '@/stores';
 import type { CopyFormat } from '@/lib/chat';
 import { useTranslation } from 'react-i18next';
@@ -87,6 +88,14 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
 
   // Assistant message (loading with no content yet)
   if (message.isLoading && !message.content) {
+    // If we have tool steps, show them instead of generic thinking
+    if (message.toolSteps && message.toolSteps.length > 0) {
+      return (
+        <div className="mb-6">
+          <ToolStepsDisplay steps={message.toolSteps} />
+        </div>
+      );
+    }
     return (
       <div className="mb-5">
         <div className="flex items-center gap-2 py-2">
@@ -101,6 +110,11 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
   return (
     <div className="mb-6">
       <div className="flex-1 min-w-0">
+        {/* Tool execution steps */}
+        {message.toolSteps && message.toolSteps.length > 0 && (
+          <ToolStepsDisplay steps={message.toolSteps} />
+        )}
+
         <div className="text-sm">
           <ChatMarkdown
             content={message.content}

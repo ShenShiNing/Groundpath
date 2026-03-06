@@ -6,6 +6,7 @@ import { llmService } from '@modules/llm';
 import { searchService } from '@modules/rag';
 import type { SearchResult } from '@modules/vector';
 import { documentRepository } from '@modules/document';
+import { resolveTools, executeAgentLoop } from '@modules/agent';
 import { conversationService } from './conversation.service';
 import { messageService } from './message.service';
 import { promptService } from './prompt.service';
@@ -59,6 +60,16 @@ async function enrichSearchResults(results: SearchResult[]): Promise<EnrichedSea
   }));
 }
 
+/**
+ * Send text content as chunked SSE events (simulates streaming for agent results)
+ */
+function sendChunkedSSE(res: Response, content: string, chunkSize: number = 80): void {
+  for (let i = 0; i < content.length; i += chunkSize) {
+    const chunk = content.slice(i, i + chunkSize);
+    sendSSE(res, { type: 'chunk', data: chunk });
+  }
+}
+
 export const chatService = {
   /**
    * Send a message and stream the response via SSE
@@ -93,120 +104,199 @@ export const chatService = {
         });
       }
 
-      // Perform RAG search if KB is associated
-      let searchResults: EnrichedSearchResult[] = [];
-      if (conversation.knowledgeBaseId) {
-        try {
-          const rawResults = await searchService.searchInKnowledgeBase({
-            userId,
-            knowledgeBaseId: conversation.knowledgeBaseId,
-            query: content,
-            limit: 5,
-            scoreThreshold: 0.5,
-            documentIds,
-          });
-          searchResults = await enrichSearchResults(rawResults);
-        } catch (error) {
-          logger.warn({ error, conversationId }, 'RAG search failed, continuing without context');
-        }
-      }
-
-      // Send citations to client
-      if (searchResults.length > 0) {
-        const citations = promptService.toCitations(searchResults);
-        sendSSE(res, { type: 'sources', data: citations });
-      }
-
-      // Get conversation history for context
-      const history = await messageService.getRecentForContext(conversationId, 10);
-      const truncatedHistory = promptService.truncateHistory(history, 4000);
-
-      // Build prompt with RAG context
-      const systemPrompt = promptService.buildSystemPrompt(searchResults);
-      const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
+      // Resolve available tools
+      const toolContext = {
+        userId,
+        conversationId,
+        knowledgeBaseId: conversation.knowledgeBaseId,
+        documentIds,
+      };
+      const tools = resolveTools(toolContext);
 
       // Get LLM provider for user
       const provider = await llmService.getProviderForUser(userId);
       const genOptions = await llmService.getOptionsForUser(userId);
 
-      // Stream response with abort handling
-      let fullContent = '';
       const assistantMessageId = uuidv4();
       const abortController = new AbortController();
       let clientDisconnected = false;
 
-      // Listen for client disconnect to abort LLM streaming
+      // Listen for client disconnect to abort
       const onClose = () => {
         clientDisconnected = true;
         abortController.abort();
-        logger.info({ conversationId }, 'Client disconnected, aborting LLM stream');
+        logger.info({ conversationId }, 'Client disconnected, aborting');
       };
       res.on('close', onClose);
 
       try {
-        for await (const chunk of provider.streamGenerate(messages, {
-          ...genOptions,
-          signal: abortController.signal,
-        })) {
-          // Stop if client disconnected
-          if (clientDisconnected) {
-            break;
+        // Decide: Agent mode vs legacy streaming mode
+        const useAgentMode = tools.length > 0 && !!provider.generateWithTools;
+
+        if (useAgentMode) {
+          // --- Agent mode ---
+          logger.debug(
+            { conversationId, toolCount: tools.length, provider: provider.name },
+            'Using agent mode'
+          );
+
+          const history = await messageService.getRecentForContext(conversationId, 10);
+          const truncatedHistory = promptService.truncateHistory(history, 4000);
+          const systemPrompt = promptService.buildAgentSystemPrompt();
+          const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
+
+          const agentResult = await executeAgentLoop({
+            provider,
+            messages,
+            tools,
+            toolContext: { ...toolContext, signal: abortController.signal },
+            genOptions: { ...genOptions, signal: abortController.signal },
+            onToolStart: (stepIndex, toolCalls) => {
+              if (!clientDisconnected) {
+                sendSSE(res, { type: 'tool_start', data: { stepIndex, toolCalls } });
+              }
+            },
+            onToolEnd: (stepIndex, toolResults, durationMs) => {
+              if (!clientDisconnected) {
+                sendSSE(res, { type: 'tool_end', data: { stepIndex, toolResults, durationMs } });
+              }
+            },
+          });
+
+          if (clientDisconnected) return;
+
+          // Send citations
+          if (agentResult.citations.length > 0) {
+            sendSSE(res, { type: 'sources', data: agentResult.citations });
           }
-          fullContent += chunk;
-          sendSSE(res, { type: 'chunk', data: chunk });
+
+          // Send content as chunked SSE
+          if (agentResult.content) {
+            sendChunkedSSE(res, agentResult.content);
+          }
+
+          // Reject empty responses
+          if (!agentResult.content.trim()) {
+            logger.warn({ conversationId, userId }, 'Agent returned empty content');
+            sendSSE(res, {
+              type: 'error',
+              data: {
+                code: CHAT_ERROR_CODES.STREAMING_FAILED,
+                message: 'The model returned an empty response. Please try again.',
+              },
+            });
+            res.end();
+            return;
+          }
+
+          // Save assistant message
+          await messageService.create({
+            id: assistantMessageId,
+            conversationId,
+            role: 'assistant',
+            content: agentResult.content,
+            metadata: {
+              citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
+              agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
+            },
+          });
+        } else {
+          // --- Legacy streaming mode (hardcoded RAG + streaming) ---
+          let searchResults: EnrichedSearchResult[] = [];
+          if (conversation.knowledgeBaseId) {
+            try {
+              const rawResults = await searchService.searchInKnowledgeBase({
+                userId,
+                knowledgeBaseId: conversation.knowledgeBaseId,
+                query: content,
+                limit: 5,
+                scoreThreshold: 0.5,
+                documentIds,
+              });
+              searchResults = await enrichSearchResults(rawResults);
+            } catch (error) {
+              logger.warn(
+                { error, conversationId },
+                'RAG search failed, continuing without context'
+              );
+            }
+          }
+
+          // Send citations to client
+          if (searchResults.length > 0) {
+            const citations = promptService.toCitations(searchResults);
+            sendSSE(res, { type: 'sources', data: citations });
+          }
+
+          // Get conversation history for context
+          const history = await messageService.getRecentForContext(conversationId, 10);
+          const truncatedHistory = promptService.truncateHistory(history, 4000);
+
+          // Build prompt with RAG context
+          const systemPrompt = promptService.buildSystemPrompt(searchResults);
+          const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
+
+          // Stream response
+          let fullContent = '';
+
+          try {
+            for await (const chunk of provider.streamGenerate(messages, {
+              ...genOptions,
+              signal: abortController.signal,
+            })) {
+              if (clientDisconnected) break;
+              fullContent += chunk;
+              sendSSE(res, { type: 'chunk', data: chunk });
+            }
+          } catch (error) {
+            if (clientDisconnected || (error instanceof Error && error.name === 'AbortError')) {
+              logger.info({ conversationId }, 'LLM stream aborted due to client disconnect');
+              return;
+            }
+            logger.error({ error, conversationId }, 'LLM streaming error');
+            sendSSE(res, {
+              type: 'error',
+              data: {
+                code: CHAT_ERROR_CODES.STREAMING_FAILED,
+                message: error instanceof Error ? error.message : 'Streaming failed',
+              },
+            });
+            res.end();
+            return;
+          }
+
+          if (clientDisconnected) return;
+
+          // Reject empty responses
+          if (!fullContent.trim()) {
+            logger.warn({ conversationId, userId }, 'LLM stream completed with empty content');
+            sendSSE(res, {
+              type: 'error',
+              data: {
+                code: CHAT_ERROR_CODES.STREAMING_FAILED,
+                message: 'The model returned an empty response. Please try again.',
+              },
+            });
+            res.end();
+            return;
+          }
+
+          // Save assistant message
+          const citations =
+            searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
+          await messageService.create({
+            id: assistantMessageId,
+            conversationId,
+            role: 'assistant',
+            content: fullContent,
+            metadata: { citations },
+          });
         }
-      } catch (error) {
-        // Ignore abort errors from client disconnect
-        if (clientDisconnected || (error instanceof Error && error.name === 'AbortError')) {
-          logger.info({ conversationId }, 'LLM stream aborted due to client disconnect');
-          return;
-        }
-        logger.error({ error, conversationId }, 'LLM streaming error');
-        sendSSE(res, {
-          type: 'error',
-          data: {
-            code: CHAT_ERROR_CODES.STREAMING_FAILED,
-            message: error instanceof Error ? error.message : 'Streaming failed',
-          },
-        });
-        res.end();
-        return;
       } finally {
         res.off('close', onClose);
       }
 
-      // Don't save or send completion if client disconnected
-      if (clientDisconnected) {
-        return;
-      }
-
-      // Reject empty responses before persisting
-      if (!fullContent.trim()) {
-        logger.warn({ conversationId, userId }, 'LLM stream completed with empty content');
-        sendSSE(res, {
-          type: 'error',
-          data: {
-            code: CHAT_ERROR_CODES.STREAMING_FAILED,
-            message: 'The model returned an empty response. Please try again.',
-          },
-        });
-        res.end();
-        return;
-      }
-
-      // Save assistant message
-      const citations =
-        searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
-      await messageService.create({
-        id: assistantMessageId,
-        conversationId,
-        role: 'assistant',
-        content: fullContent,
-        metadata: {
-          citations,
-          // Token usage would come from provider if available
-        },
-      });
+      if (clientDisconnected) return;
 
       // Touch conversation to update timestamp
       await conversationRepository.touch(conversationId, userId);

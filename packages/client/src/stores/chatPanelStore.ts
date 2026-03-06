@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { conversationApi, sendMessageWithSSE } from '@/api';
 import { queryClient } from '@/lib/query';
-import type { Citation as APICitation } from '@knowledge-agent/shared/types';
+import type {
+  Citation as APICitation,
+  ToolCallInfo,
+  ToolResultInfo,
+  AgentStep,
+} from '@knowledge-agent/shared/types';
 
 // ============================================================================
 // Types
@@ -17,6 +22,14 @@ export interface Citation {
   score?: number;
 }
 
+export interface ToolStep {
+  stepIndex: number;
+  toolCalls: ToolCallInfo[];
+  toolResults?: ToolResultInfo[];
+  durationMs?: number;
+  status: 'running' | 'completed';
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -24,6 +37,7 @@ export interface ChatMessage {
   timestamp: Date;
   citations?: Citation[];
   isLoading?: boolean;
+  toolSteps?: ToolStep[];
 }
 
 export interface ChatPanelState {
@@ -50,6 +64,8 @@ export interface ChatPanelState {
   addMessage: (message: ChatMessage) => void;
   updateLastMessage: (update: Partial<ChatMessage>) => void;
   appendToLastMessage: (text: string) => void;
+  addToolStep: (step: ToolStep) => void;
+  updateToolStep: (stepIndex: number, update: Partial<ToolStep>) => void;
 
   // Sidebar actions
   toggleSidebar: () => void;
@@ -81,6 +97,17 @@ function invalidateConversationQueries(): void {
       query.queryKey.includes('knowledgeBases') &&
       query.queryKey.includes('conversations'),
   });
+}
+
+function agentTraceToToolSteps(trace?: AgentStep[]): ToolStep[] | undefined {
+  if (!trace?.length) return undefined;
+  return trace.map((step, idx) => ({
+    stepIndex: idx,
+    toolCalls: step.toolCalls,
+    toolResults: step.toolResults,
+    durationMs: step.durationMs,
+    status: 'completed' as const,
+  }));
 }
 
 // ============================================================================
@@ -138,6 +165,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       addMessage,
       updateLastMessage,
       appendToLastMessage,
+      addToolStep,
+      updateToolStep,
       selectedDocumentIds,
     } = get();
 
@@ -210,6 +239,20 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           const storeCitations = citations.map(toStoreCitation);
           updateLastMessage({ citations: storeCitations });
         },
+        onToolStart: (data) => {
+          addToolStep({
+            stepIndex: data.stepIndex,
+            toolCalls: data.toolCalls,
+            status: 'running',
+          });
+        },
+        onToolEnd: (data) => {
+          updateToolStep(data.stepIndex, {
+            toolResults: data.toolResults,
+            durationMs: data.durationMs,
+            status: 'completed',
+          });
+        },
         onDone: (data) => {
           const lastMsg = get().messages[get().messages.length - 1];
           if (lastMsg && !lastMsg.content.trim()) {
@@ -270,6 +313,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         content: msg.content,
         timestamp: new Date(msg.createdAt),
         citations: msg.metadata?.citations?.map(toStoreCitation),
+        toolSteps: agentTraceToToolSteps(msg.metadata?.agentTrace),
       }));
       set({
         conversationId,
@@ -307,6 +351,38 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           ...messages[lastIndex],
           content: messages[lastIndex].content + text,
         };
+      }
+      return { messages };
+    });
+  },
+
+  addToolStep: (step: ToolStep) => {
+    set((state) => {
+      const messages = [...state.messages];
+      const lastIndex = messages.length - 1;
+      if (lastIndex >= 0 && messages[lastIndex]) {
+        const msg = messages[lastIndex];
+        messages[lastIndex] = {
+          ...msg,
+          toolSteps: [...(msg.toolSteps ?? []), step],
+        };
+      }
+      return { messages };
+    });
+  },
+
+  updateToolStep: (stepIndex: number, update: Partial<ToolStep>) => {
+    set((state) => {
+      const messages = [...state.messages];
+      const lastIndex = messages.length - 1;
+      if (lastIndex >= 0 && messages[lastIndex]?.toolSteps) {
+        const msg = messages[lastIndex];
+        const toolSteps = [...(msg.toolSteps ?? [])];
+        const idx = toolSteps.findIndex((s) => s.stepIndex === stepIndex);
+        if (idx >= 0 && toolSteps[idx]) {
+          toolSteps[idx] = { ...toolSteps[idx], ...update };
+        }
+        messages[lastIndex] = { ...msg, toolSteps };
       }
       return { messages };
     });

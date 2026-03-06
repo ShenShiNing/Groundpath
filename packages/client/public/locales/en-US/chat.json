@@ -141,5 +141,18 @@
   "citation": {
     "sources_one": "{{count}} source",
     "sources_other": "{{count}} sources"
+  },
+  "agent": {
+    "kbSearch": "Knowledge Base Search",
+    "webSearch": "Web Search",
+    "searching": "Searching...",
+    "searchComplete": "Search complete",
+    "query": "Query",
+    "results": "Found {{count}} results",
+    "duration": "{{ms}}ms",
+    "error": "Execution failed",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "thinking": "Analyzing and calling tools..."
   }
 }
