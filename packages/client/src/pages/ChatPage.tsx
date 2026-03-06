@@ -137,6 +137,7 @@ export function ChatPage() {
   const isLoading = useChatPanelStore((s) => s.isLoading);
   const open = useChatPanelStore((s) => s.open);
   const sendMessage = useChatPanelStore((s) => s.sendMessage);
+  const retryMessage = useChatPanelStore((s) => s.retryMessage);
   const stopGeneration = useChatPanelStore((s) => s.stopGeneration);
   const setDocumentScope = useChatPanelStore((s) => s.setDocumentScope);
   const clearMessages = useChatPanelStore((s) => s.clearMessages);
@@ -285,6 +286,13 @@ export function ChatPage() {
       void sendMessage(content, getAccessToken);
     },
     [getAccessToken, knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage]
+  );
+
+  const handleRetry = useCallback(
+    (messageId: string) => {
+      void retryMessage(messageId, getAccessToken);
+    },
+    [getAccessToken, retryMessage]
   );
 
   const handleCitationClick = useCallback((citation: Citation) => {
@@ -559,6 +567,11 @@ export function ChatPage() {
                             message={message}
                             onCitationClick={handleCitationClick}
                             onCopy={(format) => handleCopyMessage(message.content, format)}
+                            onRegenerate={
+                              message.role === 'assistant' && !message.isLoading
+                                ? () => handleRetry(message.id)
+                                : undefined
+                            }
                           />
                         </div>
                       ))}

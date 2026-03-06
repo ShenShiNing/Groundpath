@@ -57,6 +57,7 @@ export interface ChatPanelState {
   close: () => void;
   toggle: () => void;
   sendMessage: (content: string, getAccessToken: () => string | null) => Promise<void>;
+  retryMessage: (messageId: string, getAccessToken: () => string | null) => Promise<void>;
   stopGeneration: () => void;
   setDocumentScope: (ids: string[]) => void;
   clearMessages: () => void;
@@ -294,6 +295,27 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       invalidateConversationQueries();
       set({ isLoading: false, abortController: null });
     }
+  },
+
+  retryMessage: async (messageId: string, getAccessToken: () => string | null) => {
+    if (get().isLoading) return;
+
+    const { messages } = get();
+    const assistantIdx = messages.findIndex((m) => m.id === messageId);
+    if (assistantIdx < 0) return;
+
+    // Find the user message right before this assistant message
+    const userIdx = assistantIdx - 1;
+    const userMsg = messages[userIdx];
+    if (!userMsg || userMsg.role !== 'user') return;
+
+    const userContent = userMsg.content;
+
+    // Remove the old user + assistant pair from local messages
+    set({ messages: messages.filter((_, i) => i !== userIdx && i !== assistantIdx) });
+
+    // Re-send (adds new user message + loading assistant, starts SSE)
+    await get().sendMessage(userContent, getAccessToken);
   },
 
   setDocumentScope: (ids: string[]) => {

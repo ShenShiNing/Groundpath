@@ -39,6 +39,7 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
   const showSidebar = useChatPanelStore((s) => s.showSidebar);
   const close = useChatPanelStore((s) => s.close);
   const sendMessage = useChatPanelStore((s) => s.sendMessage);
+  const retryMessage = useChatPanelStore((s) => s.retryMessage);
   const stopGeneration = useChatPanelStore((s) => s.stopGeneration);
   const setDocumentScope = useChatPanelStore((s) => s.setDocumentScope);
   const clearMessages = useChatPanelStore((s) => s.clearMessages);
@@ -59,6 +60,13 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
       sendMessage(content, getAccessToken);
     },
     [sendMessage, getAccessToken]
+  );
+
+  const handleRetry = useCallback(
+    (messageId: string) => {
+      void retryMessage(messageId, getAccessToken);
+    },
+    [getAccessToken, retryMessage]
   );
 
   // Auto-scroll to bottom on new messages
@@ -185,6 +193,11 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
                         message={message}
                         onCitationClick={handleCitationClick}
                         onCopy={(format) => handleCopyMessage(message.content, format)}
+                        onRegenerate={
+                          message.role === 'assistant' && !message.isLoading
+                            ? () => handleRetry(message.id)
+                            : undefined
+                        }
                       />
                     ))}
                     <div ref={messagesEndRef} />
