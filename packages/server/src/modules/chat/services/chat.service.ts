@@ -7,6 +7,7 @@ import { searchService } from '@modules/rag';
 import type { SearchResult } from '@modules/vector';
 import { documentRepository } from '@modules/document';
 import { resolveTools, executeAgentLoop } from '@modules/agent';
+import { agentConfig } from '@shared/config/env';
 import { conversationService } from './conversation.service';
 import { messageService } from './message.service';
 import { promptService } from './prompt.service';
@@ -111,7 +112,6 @@ export const chatService = {
         knowledgeBaseId: conversation.knowledgeBaseId,
         documentIds,
       };
-      const tools = resolveTools(toolContext);
 
       // Get LLM provider for user
       const provider = await llmService.getProviderForUser(userId);
@@ -131,24 +131,65 @@ export const chatService = {
 
       try {
         // Decide: Agent mode vs legacy streaming mode
-        const useAgentMode = tools.length > 0 && !!provider.generateWithTools;
+        // Agent mode only when web search is available (Tavily key) AND provider supports tool calling.
+        // KB search is always hardcoded (deterministic) — never delegated to the LLM.
+        const useAgentMode = !!agentConfig.tavilyApiKey && !!provider.generateWithTools;
 
         if (useAgentMode) {
-          // --- Agent mode ---
+          // --- Agent mode (web search with optional hardcoded KB context) ---
+
+          // Step 1: Hardcoded KB search if KB is associated (deterministic, not LLM-decided)
+          let searchResults: EnrichedSearchResult[] = [];
+          if (conversation.knowledgeBaseId) {
+            try {
+              const rawResults = await searchService.searchInKnowledgeBase({
+                userId,
+                knowledgeBaseId: conversation.knowledgeBaseId,
+                query: content,
+                limit: 5,
+                scoreThreshold: 0.5,
+                documentIds,
+              });
+              searchResults = await enrichSearchResults(rawResults);
+            } catch (error) {
+              logger.warn(
+                { error, conversationId },
+                'RAG search failed in agent mode, continuing without KB context'
+              );
+            }
+          }
+
+          // Step 2: Send citations to client before streaming
+          if (searchResults.length > 0) {
+            const citations = promptService.toCitations(searchResults);
+            sendSSE(res, { type: 'sources', data: citations });
+          }
+
+          // Step 3: Resolve tools — only web_search (KB search already done deterministically)
+          const agentTools = resolveTools({
+            ...toolContext,
+            knowledgeBaseId: null,
+          });
+
           logger.debug(
-            { conversationId, toolCount: tools.length, provider: provider.name },
+            {
+              conversationId,
+              toolCount: agentTools.length,
+              hasKbContext: searchResults.length > 0,
+              provider: provider.name,
+            },
             'Using agent mode'
           );
 
           const history = await messageService.getRecentForContext(conversationId, 10);
           const truncatedHistory = promptService.truncateHistory(history, 4000);
-          const systemPrompt = promptService.buildAgentSystemPrompt();
+          const systemPrompt = promptService.buildAgentSystemPrompt(searchResults);
           const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
 
           const agentResult = await executeAgentLoop({
             provider,
             messages,
-            tools,
+            tools: agentTools,
             toolContext: { ...toolContext, signal: abortController.signal },
             genOptions: { ...genOptions, signal: abortController.signal },
             onToolStart: (stepIndex, toolCalls) => {
@@ -165,7 +206,7 @@ export const chatService = {
 
           if (clientDisconnected) return;
 
-          // Send citations
+          // Send any additional citations from agent tools (e.g. web search)
           if (agentResult.citations.length > 0) {
             sendSSE(res, { type: 'sources', data: agentResult.citations });
           }
@@ -189,14 +230,17 @@ export const chatService = {
             return;
           }
 
-          // Save assistant message
+          // Save assistant message — merge KB citations + agent citations
+          const kbCitations =
+            searchResults.length > 0 ? promptService.toCitations(searchResults) : [];
+          const allCitations = [...kbCitations, ...agentResult.citations];
           await messageService.create({
             id: assistantMessageId,
             conversationId,
             role: 'assistant',
             content: agentResult.content,
             metadata: {
-              citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
+              citations: allCitations.length > 0 ? allCitations : undefined,
               agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
             },
           });

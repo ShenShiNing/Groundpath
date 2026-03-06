@@ -25,21 +25,37 @@ Guidelines:
 - Use markdown formatting when appropriate
 - Respond in the same language as the user's question`;
 
-const AGENT_SYSTEM_PROMPT = `You are a helpful AI assistant with access to tools.
+const AGENT_SYSTEM_PROMPT = `You are a helpful AI assistant with access to web search.
 
 IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
 
 When to use tools:
-- Use knowledge_base_search when the user's question might be answered by uploaded documents
-- Use web_search when you need real-time information, current events, or data not in the knowledge base
+- Use web_search when you need real-time information, current events, or data beyond what is provided
 - If you can answer confidently without tools, do so directly
 
 Guidelines:
-- After using knowledge_base_search, cite sources using [1], [2], etc.
 - After using web_search, include relevant source URLs
 - Be concise and direct
 - Use markdown formatting when appropriate
 - Respond in the same language as the user's question`;
+
+const AGENT_SYSTEM_PROMPT_WITH_KB = `You are a helpful AI assistant with access to a knowledge base and web search.
+
+IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
+
+When to use tools:
+- Use web_search when you need real-time information, current events, or data not covered by the knowledge base context below
+- If the knowledge base context already contains sufficient information, answer directly without using tools
+
+Guidelines:
+- Cite knowledge base sources using [1], [2], etc.
+- After using web_search, include relevant source URLs
+- Be concise and direct
+- Use markdown formatting when appropriate
+- Respond in the same language as the user's question
+
+Context from knowledge base:
+{context}`;
 
 export interface SearchResult {
   documentId: string;
@@ -146,8 +162,19 @@ export const promptService = {
 
   /**
    * Build system prompt for agent mode (with tool access)
+   * When searchResults are provided, KB context is embedded in the prompt.
    */
-  buildAgentSystemPrompt(): string {
-    return AGENT_SYSTEM_PROMPT;
+  buildAgentSystemPrompt(searchResults?: SearchResult[]): string {
+    if (!searchResults || searchResults.length === 0) {
+      return AGENT_SYSTEM_PROMPT;
+    }
+
+    const contextParts = searchResults.map((result, index) => {
+      const sourceLabel = `[Source ${index + 1}: ${result.documentTitle}${result.metadata?.pageNumber ? `, Page ${result.metadata.pageNumber}` : ''}]`;
+      return `${sourceLabel}\n${result.content}`;
+    });
+
+    const context = contextParts.join('\n\n---\n\n');
+    return AGENT_SYSTEM_PROMPT_WITH_KB.replace('{context}', context);
   },
 };
