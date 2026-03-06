@@ -12,12 +12,19 @@ export function requestLoggerMiddleware(req: Request, res: Response, next: NextF
   // Log request completion with duration when response finishes
   res.on('finish', () => {
     const durationMs = Date.now() - startTime;
+    const url = req.originalUrl || req.url;
     const logData = {
       method: req.method,
-      url: req.originalUrl || req.url,
+      url,
       statusCode: res.statusCode,
       durationMs,
     };
+
+    // Skip non-API 404s — browser extensions, frontend routes hitting the backend
+    if (res.statusCode === 404 && !url.startsWith('/api/')) {
+      req.log.debug(logData, 'Non-API path not found (ignored)');
+      return;
+    }
 
     // Use appropriate log level based on status code
     if (res.statusCode >= 500) {

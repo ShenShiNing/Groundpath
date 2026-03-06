@@ -7,7 +7,13 @@ const SLOW_REQUEST_THRESHOLD_MS = 1000;
 export const requestLogger = pinoHttp({
   logger,
   autoLogging: {
-    ignore: (req) => ['/api/hello', '/health'].includes(req.url ?? ''),
+    ignore: (req) => {
+      const url = req.url ?? '';
+      if (url === '/api/hello' || url === '/health') return true;
+      // Skip non-API paths — browser extensions, frontend routes, etc.
+      if (!url.startsWith('/api/')) return true;
+      return false;
+    },
   },
   customLogLevel: (_req, res, err) => {
     if (res.statusCode >= 500 || err) return 'error';
