@@ -153,6 +153,9 @@
     "error": "执行失败",
     "showDetails": "展开详情",
     "hideDetails": "收起详情",
-    "thinking": "正在分析并调用工具..."
+    "thinking": "正在分析并调用工具...",
+    "generating": "正在生成回答...",
+    "showMore": "展开全部",
+    "showLess": "收起"
   }
 }

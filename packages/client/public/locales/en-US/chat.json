@@ -153,6 +153,9 @@
     "error": "Execution failed",
     "showDetails": "Show details",
     "hideDetails": "Hide details",
-    "thinking": "Analyzing and calling tools..."
+    "thinking": "Analyzing and calling tools...",
+    "generating": "Generating response...",
+    "showMore": "Show more",
+    "showLess": "Show less"
   }
 }

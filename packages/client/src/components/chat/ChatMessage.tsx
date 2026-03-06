@@ -90,9 +90,16 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
   if (message.isLoading && !message.content) {
     // If we have tool steps, show them instead of generic thinking
     if (message.toolSteps && message.toolSteps.length > 0) {
+      const allToolsDone = message.toolSteps.every((s) => s.status !== 'running');
       return (
         <div className="mb-6">
           <ToolStepsDisplay steps={message.toolSteps} />
+          {allToolsDone && (
+            <div className="flex items-center gap-2 py-2">
+              <Loader2 className="size-4 text-muted-foreground animate-spin" />
+              <span className="text-sm text-muted-foreground">{t('agent.generating')}</span>
+            </div>
+          )}
         </div>
       );
     }

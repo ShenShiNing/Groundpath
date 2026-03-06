@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Loader2, Search, Globe, ChevronDown, ChevronRight, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ToolStep } from '@/stores';
@@ -12,6 +12,53 @@ const TOOL_ICONS: Record<string, typeof Search> = {
   knowledge_base_search: Search,
   web_search: Globe,
 };
+
+function ToolResultContent({
+  content,
+  isError,
+  t,
+}: {
+  content: string;
+  isError?: boolean;
+  t: (key: string) => string;
+}) {
+  const [resultExpanded, setResultExpanded] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isClamped, setIsClamped] = useState(false);
+
+  const checkClamped = useCallback((el: HTMLDivElement | null) => {
+    contentRef.current = el;
+    if (el) {
+      setIsClamped(el.scrollHeight > el.clientHeight);
+    }
+  }, []);
+
+  const displayText = isError ? `${t('agent.error')}: ${content}` : content;
+
+  return (
+    <div>
+      <div
+        ref={checkClamped}
+        className={cn(
+          'text-muted-foreground whitespace-pre-wrap break-words',
+          isError && 'text-destructive',
+          resultExpanded ? 'max-h-60 overflow-y-auto' : 'line-clamp-4'
+        )}
+      >
+        {displayText}
+      </div>
+      {(isClamped || resultExpanded) && (
+        <button
+          type="button"
+          className="mt-1 text-primary/80 hover:text-primary text-[11px] transition-colors"
+          onClick={() => setResultExpanded((prev) => !prev)}
+        >
+          {resultExpanded ? t('agent.showLess') : t('agent.showMore')}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function ToolStepCard({ step }: ToolStepCardProps) {
   const { t } = useTranslation('chat');
@@ -83,17 +130,12 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
                   {step.toolResults
                     .filter((r) => r.toolCallId === tc.id)
                     .map((r) => (
-                      <div
+                      <ToolResultContent
                         key={r.toolCallId}
-                        className={cn(
-                          'text-muted-foreground line-clamp-3',
-                          r.isError && 'text-destructive'
-                        )}
-                      >
-                        {r.isError
-                          ? `${t('agent.error')}: ${r.content}`
-                          : r.content.substring(0, 200) + (r.content.length > 200 ? '...' : '')}
-                      </div>
+                        content={r.content}
+                        isError={r.isError}
+                        t={t}
+                      />
                     ))}
                 </>
               )}
