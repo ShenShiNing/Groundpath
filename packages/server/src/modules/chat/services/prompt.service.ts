@@ -25,12 +25,12 @@ Guidelines:
 - Use markdown formatting when appropriate
 - Respond in the same language as the user's question`;
 
-const AGENT_SYSTEM_PROMPT = `You are a helpful AI assistant with access to web search.
+const AGENT_SYSTEM_PROMPT_WEB = `You are a helpful AI assistant with access to web search.
 
 IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
 
 When to use tools:
-- Use web_search when you need real-time information, current events, or data beyond what is provided
+- Use web_search when you need real-time information, current events, or data beyond your training
 - If you can answer confidently without tools, do so directly
 
 Guidelines:
@@ -39,23 +39,40 @@ Guidelines:
 - Use markdown formatting when appropriate
 - Respond in the same language as the user's question`;
 
-const AGENT_SYSTEM_PROMPT_WITH_KB = `You are a helpful AI assistant with access to a knowledge base and web search.
+const AGENT_SYSTEM_PROMPT_KB = `You are a helpful AI assistant with access to a knowledge base.
 
+IMPORTANT: You MUST use the knowledge_base_search tool to search for relevant information before answering. Do not answer from memory alone.
 IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
 
 When to use tools:
-- Use web_search when you need real-time information, current events, or data not covered by the knowledge base context below
-- If the knowledge base context already contains sufficient information, answer directly without using tools
+- ALWAYS use knowledge_base_search first for every user question
+- If the first search doesn't return sufficient results, try rephrasing your query and searching again
+- You may perform multiple searches with different queries to gather comprehensive information
+
+Guidelines:
+- Cite sources using [1], [2], etc. based on the search results
+- If no relevant information is found after searching, clearly state that
+- Be concise and direct
+- Use markdown formatting when appropriate
+- Respond in the same language as the user's question`;
+
+const AGENT_SYSTEM_PROMPT_KB_AND_WEB = `You are a helpful AI assistant with access to a knowledge base and web search.
+
+IMPORTANT: You MUST use the knowledge_base_search tool first before answering. Do not answer from memory alone.
+IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
+
+When to use tools:
+- ALWAYS use knowledge_base_search first for every user question
+- If the first search doesn't return sufficient results, try rephrasing your query and searching again
+- Use web_search when you need real-time information, current events, or data not found in the knowledge base
+- You may use both tools in combination to provide comprehensive answers
 
 Guidelines:
 - Cite knowledge base sources using [1], [2], etc.
 - After using web_search, include relevant source URLs
 - Be concise and direct
 - Use markdown formatting when appropriate
-- Respond in the same language as the user's question
-
-Context from knowledge base:
-{context}`;
+- Respond in the same language as the user's question`;
 
 export interface SearchResult {
   documentId: string;
@@ -161,20 +178,17 @@ export const promptService = {
   },
 
   /**
-   * Build system prompt for agent mode (with tool access)
-   * When searchResults are provided, KB context is embedded in the prompt.
+   * Build system prompt for agent mode based on available tools
    */
-  buildAgentSystemPrompt(searchResults?: SearchResult[]): string {
-    if (!searchResults || searchResults.length === 0) {
-      return AGENT_SYSTEM_PROMPT;
+  buildAgentSystemPrompt(options: { hasKnowledgeBase: boolean; hasWebSearch: boolean }): string {
+    const { hasKnowledgeBase, hasWebSearch } = options;
+
+    if (hasKnowledgeBase && hasWebSearch) {
+      return AGENT_SYSTEM_PROMPT_KB_AND_WEB;
     }
-
-    const contextParts = searchResults.map((result, index) => {
-      const sourceLabel = `[Source ${index + 1}: ${result.documentTitle}${result.metadata?.pageNumber ? `, Page ${result.metadata.pageNumber}` : ''}]`;
-      return `${sourceLabel}\n${result.content}`;
-    });
-
-    const context = contextParts.join('\n\n---\n\n');
-    return AGENT_SYSTEM_PROMPT_WITH_KB.replace('{context}', context);
+    if (hasKnowledgeBase) {
+      return AGENT_SYSTEM_PROMPT_KB;
+    }
+    return AGENT_SYSTEM_PROMPT_WEB;
   },
 };
