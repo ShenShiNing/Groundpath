@@ -156,6 +156,7 @@ const agentSchema = z.object({
   AGENT_MAX_ITERATIONS: z.coerce.number().int().min(1).max(20).default(5),
   AGENT_TOOL_TIMEOUT: z.coerce.number().default(15000),
   TAVILY_MAX_RESULTS: z.coerce.number().int().min(1).max(10).default(5),
+  TAVILY_CONTENT_MAX_LENGTH: z.coerce.number().int().min(200).max(10000).default(2000),
 });
 
 // -------------------- Logging --------------------
@@ -370,6 +371,7 @@ export const agentConfig = {
   maxIterations: validatedEnv.AGENT_MAX_ITERATIONS,
   toolTimeout: validatedEnv.AGENT_TOOL_TIMEOUT,
   tavilyMaxResults: validatedEnv.TAVILY_MAX_RESULTS,
+  tavilyContentMaxLength: validatedEnv.TAVILY_CONTENT_MAX_LENGTH,
 } as const;
 
 /** Logging configuration */

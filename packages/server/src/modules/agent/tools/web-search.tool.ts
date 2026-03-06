@@ -4,6 +4,22 @@ import { createLogger } from '@shared/logger';
 
 const logger = createLogger('web-search.tool');
 
+/** Truncate text to maxLen, cutting at the last sentence/line boundary. */
+function truncateAtBoundary(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+
+  const slice = text.slice(0, maxLen);
+  // Try to cut at the last sentence-ending punctuation or newline
+  const boundaryMatch = slice.match(/.*[.。!！?？\n]/s);
+  if (boundaryMatch) return boundaryMatch[0].trimEnd() + '…';
+
+  // Fall back to last space
+  const lastSpace = slice.lastIndexOf(' ');
+  if (lastSpace > maxLen * 0.5) return slice.slice(0, lastSpace) + '…';
+
+  return slice + '…';
+}
+
 const WEB_SEARCH_DEFINITION: ToolDefinition = {
   name: 'web_search',
   description:
@@ -24,6 +40,7 @@ interface TavilyResult {
   title: string;
   url: string;
   content: string;
+  raw_content?: string | null;
   score: number;
 }
 
@@ -59,6 +76,7 @@ export class WebSearchTool implements AgentTool {
         query,
         max_results: agentConfig.tavilyMaxResults,
         include_answer: false,
+        include_raw_content: true,
       }),
       signal: combinedSignal,
     });
@@ -76,7 +94,11 @@ export class WebSearchTool implements AgentTool {
       return { content: 'No web search results found.' };
     }
 
-    const parts = results.map((r, idx) => `[${idx + 1}] ${r.title}\nURL: ${r.url}\n${r.content}`);
+    const maxLen = agentConfig.tavilyContentMaxLength;
+    const parts = results.map((r, idx) => {
+      const body = truncateAtBoundary(r.raw_content || r.content, maxLen);
+      return `[${idx + 1}] ${r.title}\nURL: ${r.url}\n${body}`;
+    });
 
     logger.debug({ resultCount: results.length }, 'Web search tool completed');
 
