@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, Search, Globe, ChevronDown, ChevronRight, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ToolStep } from '@/stores';
@@ -26,23 +26,23 @@ function ToolResultContent({
   const contentRef = useRef<HTMLDivElement>(null);
   const [isClamped, setIsClamped] = useState(false);
 
-  const checkClamped = useCallback((el: HTMLDivElement | null) => {
-    contentRef.current = el;
-    if (el) {
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el && !resultExpanded) {
       setIsClamped(el.scrollHeight > el.clientHeight);
     }
-  }, []);
+  }, [content, resultExpanded]);
 
   const displayText = isError ? `${t('agent.error')}: ${content}` : content;
 
   return (
     <div>
       <div
-        ref={checkClamped}
+        ref={contentRef}
         className={cn(
           'text-muted-foreground whitespace-pre-wrap break-words',
           isError && 'text-destructive',
-          resultExpanded ? 'max-h-60 overflow-y-auto' : 'line-clamp-4'
+          !resultExpanded && 'line-clamp-4'
         )}
       >
         {displayText}
