@@ -1,5 +1,13 @@
-import type { LLMProvider, ChatMessage, GenerateOptions } from './llm-provider.interface';
+import type {
+  LLMProvider,
+  ChatMessage,
+  GenerateOptions,
+  AgentMessage,
+  GenerateWithToolsOptions,
+  ToolGenerateResult,
+} from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import { openaiCompatGenerateWithTools } from './openai-compat';
 import { logger } from '@shared/logger';
 
 interface ZhipuChoice {
@@ -121,6 +129,13 @@ export class ZhipuProvider implements LLMProvider {
     } finally {
       reader.releaseLock();
     }
+  }
+
+  async generateWithTools(
+    messages: AgentMessage[],
+    options: GenerateWithToolsOptions
+  ): Promise<ToolGenerateResult> {
+    return openaiCompatGenerateWithTools(ZHIPU_API_URL, this.apiKey, this.model, messages, options);
   }
 
   async healthCheck(): Promise<boolean> {

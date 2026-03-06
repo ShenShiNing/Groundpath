@@ -1,5 +1,13 @@
-import type { LLMProvider, ChatMessage, GenerateOptions } from './llm-provider.interface';
+import type {
+  LLMProvider,
+  ChatMessage,
+  GenerateOptions,
+  AgentMessage,
+  GenerateWithToolsOptions,
+  ToolGenerateResult,
+} from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import { openaiCompatGenerateWithTools } from './openai-compat';
 import { logger } from '@shared/logger';
 
 // DeepSeek uses OpenAI-compatible API format
@@ -112,6 +120,19 @@ export class DeepSeekProvider implements LLMProvider {
     } finally {
       reader.releaseLock();
     }
+  }
+
+  async generateWithTools(
+    messages: AgentMessage[],
+    options: GenerateWithToolsOptions
+  ): Promise<ToolGenerateResult> {
+    return openaiCompatGenerateWithTools(
+      `${this.baseUrl}/v1/chat/completions`,
+      this.apiKey,
+      this.model,
+      messages,
+      options
+    );
   }
 
   async healthCheck(): Promise<boolean> {
