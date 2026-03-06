@@ -153,7 +153,7 @@ const llmSchema = z.object({
 // -------------------- Agent / Web Search --------------------
 const agentSchema = z.object({
   TAVILY_API_KEY: z.string().optional(),
-  AGENT_MAX_ITERATIONS: z.coerce.number().int().min(1).max(20).default(10),
+  AGENT_MAX_ITERATIONS: z.coerce.number().int().min(1).max(20).default(5),
   AGENT_TOOL_TIMEOUT: z.coerce.number().default(15000),
   TAVILY_MAX_RESULTS: z.coerce.number().int().min(1).max(10).default(5),
 });
