@@ -82,53 +82,98 @@ pnpm -F @knowledge-agent/shared <command>   # Run command in shared package
 - **Tailwind CSS** with OKLch color variables for theming
 - **shadcn/ui** component library (New York style, Lucide icons)
 - **TanStack Router** for file-based routing (`src/routes/`)
-- **TanStack Query** for server state management
+- **TanStack Query** for server state management with hierarchical key factory (`src/lib/query/keys.ts`)
 - **Zustand** for client state (`src/stores/`)
+- **i18next** + react-i18next for internationalization (namespaced translations, browser language detection)
+- **next-themes** for dark/light mode theming with localStorage persistence
 
 ### Frontend Patterns
 
 - Path alias: `@/*` maps to `./src/*`
-- Theme context via `ThemeProvider` with localStorage persistence
 - `cn()` utility from `lib/utils.ts` combines clsx + tailwind-merge for class handling
 - Components use class-variance-authority (CVA) for variant styling
 - Toast notifications via Sonner
+
+#### HTTP & Streaming Layer (`src/lib/http/`)
+
+- `api-client.ts` — Axios instance with auto Bearer token injection, 401 refresh retry, CSRF header
+- `stream-client.ts` — Fetch-based SSE streaming with token refresh and abort signal support
+- `sse.ts` — `parseSSEStream()` for ReadableStream decoding, `createSSEDispatcher()` for type-safe event routing
+- `auth.ts` — Single source of truth for access/refresh tokens via `tokenAccessors` pattern (avoids Zustand ↔ API circular deps)
+
+#### Zustand Stores (`src/stores/`)
+
+- `authStore` — Auth state with persist middleware (localStorage stores only user + isAuthenticated)
+- `userStore` — Profile and session management
+- `chatPanelStore` — Chat UI state, SSE message streaming, agent tool step tracking, citation handling
+- `aiSettingsStore` — LLM provider settings UI state
+
+#### React Query Key Factory (`src/lib/query/keys.ts`)
+
+Hierarchical keys for cache invalidation: `documents.list()`, `documents.detail(id)`, `knowledgeBases.documents(kbId)`, `chat.searchConversations(params)`, `llm.models(provider, hasKey, baseUrl)`, etc.
 
 ### Backend Stack
 
 - **Express 5** with TypeScript
 - **tsx** for development hot reload
 - **Drizzle ORM** with MySQL
+- **Redis** (ioredis) for rate limiting, caching, and session support
 - **Qdrant** for vector storage
 - **JWT authentication** with access/refresh token pattern
-- **Pino** for structured logging
+- **Pino** for structured logging (auto-redacts tokens/keys/PII)
 
 ### Backend Architecture
 
 ```
 packages/server/src/
 ├── modules/            # Feature modules (vertical slices)
+│   ├── agent/          # Agent executor with tool system (kb-search, web-search tools)
 │   ├── auth/           # Authentication, OAuth, email verification
 │   ├── user/           # User profile management
 │   ├── document/       # Document CRUD, versions, folders
+│   ├── document-ai/    # AI-powered summary, analysis, generation, expansion (SSE streaming)
 │   ├── knowledge-base/ # Knowledge base management
 │   ├── embedding/      # Embedding providers (OpenAI, Zhipu, Ollama)
 │   ├── vector/         # Qdrant vector operations
 │   ├── rag/            # Document processing, chunking, search
-│   ├── llm/            # LLM providers (OpenAI, Anthropic, Ollama)
-│   ├── chat/           # Chat sessions and message history
-│   ├── storage/        # File storage (local, R2)
-│   └── logs/           # Operation and login logs
+│   ├── llm/            # LLM providers (OpenAI, Anthropic, DeepSeek, Zhipu, Ollama, Custom)
+│   ├── chat/           # Chat sessions, message history, prompt assembly
+│   ├── storage/        # File storage (local, R2) with signed URL support
+│   └── logs/           # Operation, login, and system logs
 ├── shared/
-│   ├── config/         # Environment and auth config
-│   ├── db/             # Database connection and schema
+│   ├── cache/          # Redis-backed cache service (with namespace isolation and TTL)
+│   ├── config/         # Environment config (modular exports: serverConfig, authConfig, agentConfig, etc.)
+│   ├── db/             # Database connection, schema definitions
+│   ├── email/          # Email templates (verification)
 │   ├── errors/         # AppError class and Errors factory
-│   ├── middleware/     # Auth, validation, rate limiting
-│   ├── logger/         # Pino logger setup
-│   └── utils/          # JWT, pagination, request helpers
+│   ├── logger/         # Pino logger (operation, request, system loggers)
+│   ├── middleware/      # Auth, validation, rate limiting, CSRF, sanitize, security
+│   ├── redis/          # Redis client singleton (buildRedisKey with prefix)
+│   ├── scheduler/      # Cron/scheduled tasks (log cleanup, token cleanup, vector cleanup)
+│   ├── server/         # Graceful shutdown
+│   └── utils/          # JWT, pagination, cookies, file signing, request helpers
 └── router.ts           # Main route aggregation
 ```
 
 Each module follows the pattern: `controllers/` → `services/` → `repositories/`
+
+### API Routes
+
+```
+/api/hello          — Health check
+/api/auth           — Login, register, logout, refresh, password
+/api/auth/email     — Email verification
+/api/auth/oauth     — GitHub/Google OAuth
+/api/user           — Profile management
+/api/documents      — Document CRUD
+/api/knowledge-bases — KB management
+/api/rag            — Document processing & semantic search
+/api/llm            — LLM provider config & model listing
+/api/chat           — Conversations & SSE message streaming
+/api/document-ai    — AI summary, analysis, generation
+/api/logs           — Audit & operation logs
+/api/files/*        — Signed file access
+```
 
 ### Error Handling
 
@@ -147,19 +192,56 @@ throw Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Token has expired');
 
 ### Authentication Flow
 
-- Access tokens: 15 min expiry, contains user info
-- Refresh tokens: 7 days, stored in DB with rotation on use
+- Access tokens: 15 min expiry, contains user info + session ID
+- Refresh tokens: 7 days, stored in DB with rotation on use, hashed before storage
+- Token revocation: tokens issued before `tokenValidAfter` timestamp are rejected
 - Multi-device session tracking with device info
 - OAuth providers: GitHub, Google
+- CSRF: origin/referer validation + double-submit token (`X-CSRF-Token` header must match cookie)
+- Rate limiting: Redis-backed with Lua script, pre-built limiters for login/register/refresh/email
+
+### Agent System (`modules/agent/`)
+
+- `AgentExecutor` orchestrates multi-step tool-augmented chat
+- Tools implement `ToolInterface` (`name`, `description`, `execute`)
+- Built-in tools: `KBSearchTool` (knowledge base retrieval), `WebSearchTool` (Tavily API)
+- Config: `agentConfig.maxIterations` (default 5, max 20), `toolTimeout` (15s)
+- Frontend displays agent steps via `ToolStepCard` with real-time status (running/completed/error)
+
+### Server Config Pattern (`shared/config/env.ts`)
+
+Config is exported as modular objects — import specific configs, not the entire env:
+
+```typescript
+import { serverConfig, authConfig, embeddingConfig, agentConfig } from '@config/env';
+```
+
+Key config groups: `serverConfig`, `databaseConfig`, `redisConfig`, `authConfig`, `emailConfig`, `oauthConfig`, `storageConfig`, `documentConfig`, `embeddingConfig`, `vectorConfig`, `llmConfig`, `agentConfig`, `loggingConfig`, `featureFlags`
+
+### Cache Service (`shared/cache/`)
+
+- Redis-backed with namespace isolation and configurable TTL
+- Two instances: `cacheService` (5 min TTL), `shortCache` (30s TTL)
+- Predefined keys: `cacheKeys.user(id)`, `cacheKeys.knowledgeBase(id)`, `cacheKeys.document(id)`, etc.
+- Invalidation: `invalidatePatterns.*` for bulk cache clearing
 
 ### Shared Package Exports
 
 Import from `@knowledge-agent/shared`:
 
-- `@knowledge-agent/shared/types` - All TypeScript interfaces
-- `@knowledge-agent/shared/constants` - HTTP_STATUS, ERROR_CODES, AUTH_ERROR_CODES
-- `@knowledge-agent/shared/schemas` - Zod validation schemas
-- `@knowledge-agent/shared/utils` - isNullish, safeJsonParse, sleep, parseDeviceInfo
+- `@knowledge-agent/shared/types` — All TypeScript interfaces (`ApiResponse<T>` discriminated union with `isSuccessResponse`/`isErrorResponse` type guards, `PaginatedResponse<T>`, domain DTOs)
+- `@knowledge-agent/shared/constants` — `HTTP_STATUS`, `ERROR_CODES`, `AUTH_ERROR_CODES`, `EMAIL_ERROR_CODES`, `DOCUMENT_ERROR_CODES`, `KNOWLEDGE_BASE_ERROR_CODES`, `LLM_ERROR_CODES`, `CHAT_ERROR_CODES`, `DOCUMENT_AI_ERROR_CODES`, `AGENT_ERROR_CODES`
+- `@knowledge-agent/shared/schemas` — Zod validation schemas for all domains (also re-exports `z` and `ZodError`)
+- `@knowledge-agent/shared/utils` — `isNullish`, `safeJsonParse`, `sleep`, `parseDeviceInfo`
+
+### Middleware (`shared/middleware/`)
+
+- `authenticate` / `optionalAuthenticate` / `authenticateRefreshToken` — JWT auth with session & ban check
+- `validateBody(schema)` / `validateQuery(schema)` / `validateParams(schema)` — Zod validation, returns typed result via `getValidatedQuery`/`getValidatedParams`
+- `createRateLimiter(options)` — Redis Lua-script based; pre-built: `loginLimiter`, `registerLimiter`, `refreshLimiter`, `generalLimiter`, `emailLimiter`
+- `requireCsrfProtection` — Double-submit token + origin validation
+- `sanitizeMiddleware` — XSS input sanitization
+- `requestIdMiddleware` — Injects `req.requestId` for request tracing
 
 ### Path Aliases (Server)
 
@@ -170,9 +252,15 @@ Import from `@knowledge-agent/shared`:
 
 ## TypeScript Configuration
 
-- Bundler module resolution
+- Bundler module resolution with `verbatimModuleSyntax`
 - Full strict mode enabled
 - `noUncheckedIndexedAccess` and `noImplicitOverride` enabled
+
+## Code Style
+
+- Prettier: single quotes, 100 char width, 2-space indent, trailing commas (ES5), LF line endings
+- ESLint: flat config (v9+), `@typescript-eslint/no-explicit-any: warn`, unused vars allow `_` prefix
+- Husky + lint-staged: pre-commit runs ESLint + Prettier on staged files
 
 ## Answer
 

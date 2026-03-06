@@ -42,11 +42,17 @@ Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieva
 
 - 文档异步处理流水线：分块 -> 向量化 -> 写入 Qdrant
 - 检索过滤：按 `userId / knowledgeBaseId / documentIds / scoreThreshold` 过滤
+- **Agentic RAG**：当 LLM 支持 tool calling 时，自动进入 Agent 模式
+  - LLM 自主决定调用工具的时机与次数
+  - 内置工具：知识库检索（`kb_search`）、网络搜索（`web_search`，基于 Tavily）
+  - 实时展示工具调用过程（tool steps），支持展开查看结果
+  - 不支持 tool calling 的模型自动回退到传统流式 RAG
 - 多轮对话：
-  - 会话创建、列表、重命名、删除
-  - 消息流式返回（SSE）
+  - 会话创建、列表、搜索、重命名、删除
+  - 消息流式返回（SSE），支持中断生成
   - 引用来源（sources）回传与文档跳转
-  - 可限定“文档范围”提问
+  - 可限定”文档范围”提问
+  - 消息重试
 
 ### 1.4 Document AI
 
@@ -60,10 +66,16 @@ Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieva
 
 - LLM Provider：`openai / anthropic / zhipu / deepseek / ollama / custom`
 - Embedding Provider：`zhipu / openai / ollama`
+- Web Search：Tavily API（为 Agent 模式提供网络搜索能力）
 - 存储后端：`local` 或 `Cloudflare R2`
 - 文件访问支持签名 URL（开发环境可关闭签名便于调试）
 
-### 1.6 日志与运维能力
+### 1.6 国际化
+
+- 前端基于 i18next + react-i18next，支持浏览器语言检测与多语言切换
+- 命名空间化翻译（按模块划分）
+
+### 1.7 日志与运维能力
 
 - 登录日志、操作日志、系统日志
 - 定时任务（UTC）：
@@ -132,6 +144,7 @@ Copy-Item packages/server/.env.example packages/server/.env
 - `STORAGE_TYPE=local|r2`
 - `EMBEDDING_PROVIDER=zhipu|openai|ollama`
 - `ZHIPU_API_KEY` / `OPENAI_API_KEY`（对应 provider 时需要）
+- `TAVILY_API_KEY`（启用 Agent 网络搜索功能时需要）
 
 ### 2.4 初始化数据库
 
@@ -217,6 +230,7 @@ server {
 - 登录后能创建知识库
 - 上传文档后 `processingStatus` 最终变为 `completed`
 - 对话页面可以收到 SSE 流式响应
+- Agent 模式下工具调用步骤（tool steps）正常显示
 - 回收站恢复/永久删除流程正常
 - 定时清理任务日志正常输出
 
@@ -234,6 +248,8 @@ server {
   - 原始文件与版本文件存储
 - LLM/Embedding Provider：
   - 文本生成、摘要分析、向量嵌入
+- Tavily API：
+  - Agent 模式下的网络搜索能力
 
 ### 3.2 核心链路 A：文档入库到可检索
 
@@ -247,14 +263,17 @@ server {
 ### 3.3 核心链路 B：检索增强对话（SSE）
 
 1. 客户端发送消息到 `/api/chat/conversations/:id/messages`。
-2. 服务端在知识库范围内执行语义检索（可叠加文档过滤）。
-3. 组装系统提示词 + 历史消息 + 检索上下文。
-4. 调用用户配置的 LLM，按 SSE 连续返回：
+2. 服务端根据 LLM 能力选择模式：
+   - **Agent 模式**（LLM 支持 tool calling）：LLM 自主编排工具调用，按需检索知识库或搜索网络
+   - **传统模式**（fallback）：先执行硬编码 RAG 检索，再流式调用 LLM
+3. SSE 事件流：
+   - `tool_start`：工具调用开始（Agent 模式）
+   - `tool_end`：工具调用结束，含结果和耗时（Agent 模式）
    - `sources`：引用来源
    - `chunk`：增量文本
    - `done`：结束事件
    - `error`：错误事件
-5. 完成后写入 assistant 消息并保存 citations 元数据。
+4. 完成后写入 assistant 消息，保存 citations 和 agentTrace 元数据。
 
 ### 3.4 核心链路 C：文档 AI
 
@@ -271,18 +290,21 @@ server {
 
 ## 4. 常用命令
 
-| 命令                                               | 说明                   |
-| -------------------------------------------------- | ---------------------- |
-| `pnpm dev`                                         | 同时启动前后端开发服务 |
-| `pnpm dev:client`                                  | 仅启动前端             |
-| `pnpm dev:server`                                  | 仅启动后端             |
-| `pnpm build`                                       | 构建全部包             |
-| `pnpm lint`                                        | ESLint 检查            |
-| `pnpm test`                                        | 运行测试               |
-| `pnpm test:coverage`                               | 测试覆盖率             |
-| `pnpm -F @knowledge-agent/server db:push`          | 开发环境同步数据库结构 |
-| `pnpm -F @knowledge-agent/server db:migrate`       | 执行迁移               |
-| `pnpm -F @knowledge-agent/server db:sync-counters` | 手动同步知识库计数器   |
+| 命令                                               | 说明                    |
+| -------------------------------------------------- | ----------------------- |
+| `pnpm dev`                                         | 同时启动前后端开发服务  |
+| `pnpm dev:client`                                  | 仅启动前端              |
+| `pnpm dev:server`                                  | 仅启动后端              |
+| `pnpm build`                                       | 构建全部包              |
+| `pnpm lint`                                        | ESLint 检查             |
+| `pnpm lint:fix`                                    | ESLint 自动修复         |
+| `pnpm format`                                      | Prettier 格式化         |
+| `pnpm test`                                        | 运行测试                |
+| `pnpm test:coverage`                               | 测试覆盖率              |
+| `pnpm -F @knowledge-agent/server db:push`          | 开发环境同步数据库结构  |
+| `pnpm -F @knowledge-agent/server db:migrate`       | 执行迁移                |
+| `pnpm -F @knowledge-agent/server db:studio`        | 打开 Drizzle Studio GUI |
+| `pnpm -F @knowledge-agent/server db:sync-counters` | 手动同步知识库计数器    |
 
 ## 5. 开源协议
 

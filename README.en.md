@@ -42,11 +42,17 @@ This repository is a `pnpm` monorepo:
 
 - Async document processing pipeline: chunking -> embedding -> Qdrant write
 - Retrieval filters by `userId / knowledgeBaseId / documentIds / scoreThreshold`
+- **Agentic RAG**: automatically enters agent mode when LLM supports tool calling
+  - LLM autonomously decides when and how many times to invoke tools
+  - Built-in tools: knowledge base search (`kb_search`), web search (`web_search`, powered by Tavily)
+  - Real-time tool step display with expandable results
+  - Graceful fallback to legacy streaming RAG for models without tool calling support
 - Multi-turn conversation:
-  - Conversation create/list/rename/delete
-  - SSE streaming responses
+  - Conversation create/list/search/rename/delete
+  - SSE streaming responses with abort support
   - Citation sources returned to client with document jump
   - Ask within selected document scope
+  - Message retry
 
 ### 1.4 Document AI
 
@@ -60,10 +66,16 @@ This repository is a `pnpm` monorepo:
 
 - LLM providers: `openai / anthropic / zhipu / deepseek / ollama / custom`
 - Embedding providers: `zhipu / openai / ollama`
+- Web search: Tavily API (provides web search capability for agent mode)
 - Storage backends: `local` or `Cloudflare R2`
 - Signed file URLs supported (can be disabled in development for debugging)
 
-### 1.6 Logging and Operations
+### 1.6 Internationalization
+
+- Frontend built on i18next + react-i18next with browser language detection and multi-language support
+- Namespaced translations (organized by module)
+
+### 1.7 Logging and Operations
 
 - Login logs, operation logs, system logs
 - Scheduled tasks (UTC):
@@ -132,6 +144,7 @@ Common important settings:
 - `STORAGE_TYPE=local|r2`
 - `EMBEDDING_PROVIDER=zhipu|openai|ollama`
 - `ZHIPU_API_KEY` / `OPENAI_API_KEY` (required by selected provider)
+- `TAVILY_API_KEY` (required for agent web search feature)
 
 ### 2.4 Initialize Database
 
@@ -217,6 +230,7 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 - You can create a knowledge base after login
 - Uploaded documents eventually reach `processingStatus=completed`
 - Chat page receives SSE streaming responses
+- Agent mode displays tool steps correctly
 - Trash restore/permanent-delete flows work correctly
 - Scheduled cleanup tasks produce normal logs
 
@@ -234,6 +248,8 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
   - Raw files and versioned files
 - LLM/Embedding providers:
   - Text generation, summary/analysis, embeddings
+- Tavily API:
+  - Web search capability for agent mode
 
 ### 3.2 Core Flow A: Document Ingestion to Searchable State
 
@@ -247,14 +263,17 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 ### 3.3 Core Flow B: Retrieval-Augmented Chat (SSE)
 
 1. Client sends message to `/api/chat/conversations/:id/messages`.
-2. Server runs semantic retrieval within knowledge base scope (with optional document filters).
-3. Server builds system prompt + history + retrieval context.
-4. Server calls user-configured LLM and streams SSE events:
+2. Server selects mode based on LLM capabilities:
+   - **Agent mode** (LLM supports tool calling): LLM autonomously orchestrates tool calls, searching knowledge base or web as needed
+   - **Legacy mode** (fallback): hardcoded RAG retrieval first, then streaming LLM call
+3. SSE event stream:
+   - `tool_start`: tool call initiated (agent mode)
+   - `tool_end`: tool call completed with results and duration (agent mode)
    - `sources`: citation sources
    - `chunk`: incremental text
    - `done`: completion event
    - `error`: error event
-5. Assistant message is persisted with citation metadata.
+4. Assistant message is persisted with citations and agentTrace metadata.
 
 ### 3.4 Core Flow C: Document AI
 
@@ -278,10 +297,13 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 | `pnpm dev:server`                                  | Start backend only                     |
 | `pnpm build`                                       | Build all packages                     |
 | `pnpm lint`                                        | Run ESLint                             |
+| `pnpm lint:fix`                                    | Auto-fix ESLint issues                 |
+| `pnpm format`                                      | Format code with Prettier              |
 | `pnpm test`                                        | Run tests                              |
 | `pnpm test:coverage`                               | Run tests with coverage                |
 | `pnpm -F @knowledge-agent/server db:push`          | Sync schema in development             |
 | `pnpm -F @knowledge-agent/server db:migrate`       | Run database migrations                |
+| `pnpm -F @knowledge-agent/server db:studio`        | Open Drizzle Studio GUI                |
 | `pnpm -F @knowledge-agent/server db:sync-counters` | Manually sync knowledge base counters  |
 
 ## 5. Open Source License
