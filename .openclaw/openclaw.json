@@ -57,10 +57,6 @@
         "subagents": {
           "allowAgents": ["architect", "dev-manager"]
         },
-        "agentToAgent": {
-          "allowSend": ["architect", "dev-manager"],
-          "allowReceive": ["architect", "dev-manager"]
-        },
         "identity": {
           "name": "Product Manager",
           "theme": "clarity first",
@@ -77,10 +73,6 @@
         "tools": {
           "allow": ["read", "glob", "grep", "sessions_send"],
           "deny": ["write", "edit", "exec", "sessions_spawn"]
-        },
-        "agentToAgent": {
-          "allowSend": ["product-manager", "dev-manager"],
-          "allowReceive": ["product-manager", "dev-manager"]
         },
         "identity": {
           "name": "Architect",
@@ -102,10 +94,6 @@
         "subagents": {
           "allowAgents": ["backend-engineer", "frontend-engineer"]
         },
-        "agentToAgent": {
-          "allowSend": ["product-manager", "architect", "backend-engineer", "frontend-engineer"],
-          "allowReceive": ["product-manager", "architect", "backend-engineer", "frontend-engineer"]
-        },
         "identity": {
           "name": "Development Manager",
           "theme": "calm precision",
@@ -124,11 +112,7 @@
           "deny": ["sessions_spawn"]
         },
         "sandbox": {
-          "mode": "recommended"
-        },
-        "agentToAgent": {
-          "allowSend": ["dev-manager"],
-          "allowReceive": ["dev-manager"]
+          "mode": "non-main"
         },
         "identity": {
           "name": "Backend Engineer",
@@ -148,11 +132,7 @@
           "deny": ["sessions_spawn"]
         },
         "sandbox": {
-          "mode": "recommended"
-        },
-        "agentToAgent": {
-          "allowSend": ["dev-manager"],
-          "allowReceive": ["dev-manager"]
+          "mode": "non-main"
         },
         "identity": {
           "name": "Frontend Engineer",
