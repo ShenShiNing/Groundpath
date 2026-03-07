@@ -17,10 +17,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --cache --cache-location .cache/eslint/.eslintcache",
     "lint:fix": "eslint . --fix --cache --cache-location .cache/eslint/.eslintcache",
-    "prepare": "husky",
-    "openclaw:setup": "sh scripts/openclaw-setup.sh",
-    "openclaw:start": "openclaw gateway --port 18789",
-    "openclaw:status": "openclaw gateway status"
+    "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
