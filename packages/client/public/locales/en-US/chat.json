@@ -106,8 +106,8 @@
     "general": "You can chat first and save useful content into a knowledge base later."
   },
   "createKb": {
-    "title": "Create a knowledge base from chat",
-    "description": "Choose a content source manually and create a knowledge base. It will not trigger automatically.",
+    "title": "Save chat content to knowledge base",
+    "description": "Create a new knowledge base or append to an existing one.",
     "name": "Knowledge base name",
     "namePlaceholder": "My Chat Knowledge Base",
     "descriptionLabel": "Knowledge base description",
@@ -117,10 +117,17 @@
     "seedSourceConversation": "Full conversation",
     "seedSourceLatestAssistant": "Latest assistant reply",
     "seedSourceLatestAssistantEmpty": "No assistant reply available yet. Complete at least one Q&A first.",
+    "modeNew": "Create new knowledge base",
+    "modeExisting": "Append to existing knowledge base",
+    "selectKb": "Select target knowledge base",
+    "kbRequired": "Please select a knowledge base",
+    "switchToKb": "Switch to this knowledge base after saving",
     "switchToNewKb": "Switch to this knowledge base after creation",
+    "appendSuccess": "Content appended to knowledge base",
     "cancel": "Cancel",
-    "creating": "Creating...",
-    "submit": "Create knowledge base and save content"
+    "creating": "Saving...",
+    "submit": "Create knowledge base and save content",
+    "submitAppend": "Append to knowledge base"
   },
   "upload": {
     "title": "Upload documents to knowledge base",

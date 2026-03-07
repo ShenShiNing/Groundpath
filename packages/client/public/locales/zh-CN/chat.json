@@ -106,8 +106,8 @@
     "general": "你可以先直接聊天，之后手动将聊天内容沉淀为知识库。"
   },
   "createKb": {
-    "title": "从聊天内容创建知识库",
-    "description": "手动选择内容来源并创建知识库，不会自动触发创建。",
+    "title": "保存聊天内容到知识库",
+    "description": "选择创建新知识库或追加到已有知识库。",
     "name": "知识库名称",
     "namePlaceholder": "我的聊天知识库",
     "descriptionLabel": "知识库描述",
@@ -117,10 +117,17 @@
     "seedSourceConversation": "完整聊天记录",
     "seedSourceLatestAssistant": "最新 AI 回复内容",
     "seedSourceLatestAssistantEmpty": "暂无可用 AI 回复，请先完成至少一次问答。",
+    "modeNew": "创建新知识库",
+    "modeExisting": "追加到已有知识库",
+    "selectKb": "选择目标知识库",
+    "kbRequired": "请选择一个知识库",
+    "switchToKb": "完成后切换到该知识库",
     "switchToNewKb": "创建完成后切换到该知识库",
+    "appendSuccess": "内容已追加到知识库",
     "cancel": "取消",
-    "creating": "创建中...",
-    "submit": "创建知识库并保存内容"
+    "creating": "保存中...",
+    "submit": "创建知识库并保存内容",
+    "submitAppend": "追加到知识库"
   },
   "upload": {
     "title": "上传文档到知识库",

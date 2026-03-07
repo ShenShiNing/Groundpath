@@ -71,6 +71,7 @@ export interface ChatPanelState {
   // Sidebar actions
   toggleSidebar: () => void;
   startNewConversation: () => void;
+  switchKnowledgeBase: (newKbId: string | null) => void;
   switchConversation: (
     conversationId: string,
     options?: { focusMessageId?: string | null; focusKeyword?: string | null }
@@ -421,6 +422,13 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       focusMessageId: null,
       focusKeyword: null,
       messages: [],
+      selectedDocumentIds: [],
+    });
+  },
+
+  switchKnowledgeBase: (newKbId: string | null) => {
+    set({
+      knowledgeBaseId: newKbId,
       selectedDocumentIds: [],
     });
   },

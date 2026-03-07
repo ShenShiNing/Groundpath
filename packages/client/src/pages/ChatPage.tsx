@@ -33,7 +33,7 @@ import {
 import { ChatInput, ChatMessage, CitationPreview, DocumentScopeSelector } from '@/components/chat';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
-import { knowledgeBasesApi } from '@/api';
+import { knowledgeBasesApi, conversationApi } from '@/api';
 import { useCreateKnowledgeBase, useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
@@ -41,6 +41,7 @@ import { useChatPanelStore, type Citation } from '@/stores';
 import { toast } from 'sonner';
 
 type KnowledgeSeedSource = 'conversation' | 'latest-assistant';
+type KbSeedMode = 'new' | 'existing';
 
 function sanitizeFileName(input: string): string {
   const invalidChars = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
@@ -115,6 +116,8 @@ export function ChatPage() {
   const [newKbEmbeddingProvider, setNewKbEmbeddingProvider] =
     useState<EmbeddingProviderType>('zhipu');
   const [seedSource, setSeedSource] = useState<KnowledgeSeedSource>('conversation');
+  const [kbSeedMode, setKbSeedMode] = useState<KbSeedMode>('new');
+  const [targetKbId, setTargetKbId] = useState<string | null>(null);
   const [switchToNewKb, setSwitchToNewKb] = useState(true);
   const [isCreatingKb, setIsCreatingKb] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -142,6 +145,7 @@ export function ChatPage() {
   const setDocumentScope = useChatPanelStore((s) => s.setDocumentScope);
   const clearMessages = useChatPanelStore((s) => s.clearMessages);
   const startNewConversation = useChatPanelStore((s) => s.startNewConversation);
+  const switchKnowledgeBase = useChatPanelStore((s) => s.switchKnowledgeBase);
   const clearFocusMessageId = useChatPanelStore((s) => s.clearFocusMessageId);
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
@@ -326,11 +330,18 @@ export function ChatPage() {
     setUploadDialogOpen(false);
   }, []);
 
-  const handleOpenCreateKbDialog = useCallback(() => {
+  const handleOpenSaveToKbDialog = useCallback(() => {
     if (!hasPersistableMessages) {
       toast.info(t('kbSeed.none'));
       return;
     }
+
+    const hasExistingKbs = knowledgeBases.length > 0;
+    const defaultMode: KbSeedMode = hasExistingKbs ? 'existing' : 'new';
+    setKbSeedMode(defaultMode);
+    setTargetKbId(
+      hasExistingKbs ? (selectedKnowledgeBaseId ?? knowledgeBases[0]?.id ?? null) : null
+    );
 
     const defaultName = selectedKnowledgeBase?.name ?? t('kb.defaultName');
     setNewKbName(defaultName);
@@ -339,11 +350,23 @@ export function ChatPage() {
     setSeedSource(latestAssistantMessage ? 'latest-assistant' : 'conversation');
     setSwitchToNewKb(true);
     setCreateKbDialogOpen(true);
-  }, [hasPersistableMessages, latestAssistantMessage, selectedKnowledgeBase?.name, t]);
+  }, [
+    hasPersistableMessages,
+    knowledgeBases,
+    latestAssistantMessage,
+    selectedKnowledgeBase?.name,
+    selectedKnowledgeBaseId,
+    t,
+  ]);
 
-  const handleCreateKbFromChat = useCallback(async () => {
-    if (!newKbName.trim()) {
+  const handleSaveToKb = useCallback(async () => {
+    if (kbSeedMode === 'new' && !newKbName.trim()) {
       toast.error(t('kbName.required'));
+      return;
+    }
+
+    if (kbSeedMode === 'existing' && !targetKbId) {
+      toast.error(t('createKb.kbRequired'));
       return;
     }
 
@@ -377,17 +400,26 @@ export function ChatPage() {
 
     setIsCreatingKb(true);
     try {
-      const knowledgeBase = await createKnowledgeBase.mutateAsync({
-        name: newKbName.trim(),
-        description: newKbDescription.trim() || null,
-        embeddingProvider: newKbEmbeddingProvider,
-      });
+      let finalKbId: string;
+
+      if (kbSeedMode === 'existing') {
+        finalKbId = targetKbId!;
+      } else {
+        const knowledgeBase = await createKnowledgeBase.mutateAsync({
+          name: newKbName.trim(),
+          description: newKbDescription.trim() || null,
+          embeddingProvider: newKbEmbeddingProvider,
+        });
+        finalKbId = knowledgeBase.id;
+      }
 
       const documentTitle =
         seedSource === 'latest-assistant'
           ? t('seed.documentTitle.latestAssistant')
           : t('seed.documentTitle.transcript');
-      const fileBaseName = sanitizeFileName(documentTitle || knowledgeBase.name) || 'chat-notes';
+      const fileBaseName =
+        sanitizeFileName(documentTitle || (kbSeedMode === 'new' ? newKbName.trim() : '')) ||
+        'chat-notes';
       const file = new File([selectedContent], `${fileBaseName}.md`, {
         type: 'text/markdown',
       });
@@ -397,33 +429,41 @@ export function ChatPage() {
       formData.append('title', documentTitle);
       formData.append('description', t('seed.documentDescription'));
 
-      await knowledgeBasesApi.uploadDocument(knowledgeBase.id, formData);
+      await knowledgeBasesApi.uploadDocument(finalKbId, formData);
 
       if (switchToNewKb) {
-        setSelectedKnowledgeBaseId(knowledgeBase.id);
-        open(knowledgeBase.id);
-        startNewConversation();
+        setSelectedKnowledgeBaseId(finalKbId);
+        // Update conversation KB binding on the backend if there's an active conversation
+        if (conversationId) {
+          await conversationApi.update(conversationId, { knowledgeBaseId: finalKbId });
+        }
+        // Only switch KB reference, preserve messages
+        switchKnowledgeBase(finalKbId);
       }
 
       setCreateKbDialogOpen(false);
-      toast.success(t('kbCreate.success'));
+      toast.success(
+        kbSeedMode === 'existing' ? t('createKb.appendSuccess') : t('kbCreate.success')
+      );
     } catch {
       toast.error(t('kbCreate.error'));
     } finally {
       setIsCreatingKb(false);
     }
   }, [
+    conversationId,
     createKnowledgeBase,
+    kbSeedMode,
     latestAssistantMessage,
     messages,
     newKbDescription,
     newKbEmbeddingProvider,
     newKbName,
-    open,
     seedSource,
-    startNewConversation,
+    switchKnowledgeBase,
     switchToNewKb,
     t,
+    targetKbId,
   ]);
 
   if (kbLoading) {
@@ -509,7 +549,7 @@ export function ChatPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onClick={handleOpenCreateKbDialog}
+                      onClick={handleOpenSaveToKbDialog}
                       disabled={!hasPersistableMessages}
                     >
                       <Database className="size-4" />
@@ -609,45 +649,98 @@ export function ChatPage() {
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="chat-kb-name">{t('createKb.name')}</Label>
-              <Input
-                id="chat-kb-name"
-                value={newKbName}
-                onChange={(event) => setNewKbName(event.target.value)}
-                placeholder={t('createKb.namePlaceholder')}
-                maxLength={200}
-              />
+            {/* Mode switcher: new vs existing */}
+            <div className="flex gap-4">
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="kb-seed-mode"
+                  value="new"
+                  checked={kbSeedMode === 'new'}
+                  onChange={() => setKbSeedMode('new')}
+                  className="accent-primary"
+                />
+                <span className="text-sm">{t('createKb.modeNew')}</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="radio"
+                  name="kb-seed-mode"
+                  value="existing"
+                  checked={kbSeedMode === 'existing'}
+                  onChange={() => setKbSeedMode('existing')}
+                  disabled={knowledgeBases.length === 0}
+                  className="accent-primary"
+                />
+                <span
+                  className={cn('text-sm', knowledgeBases.length === 0 && 'text-muted-foreground')}
+                >
+                  {t('createKb.modeExisting')}
+                </span>
+              </label>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="chat-kb-description">{t('createKb.descriptionLabel')}</Label>
-              <Textarea
-                id="chat-kb-description"
-                value={newKbDescription}
-                onChange={(event) => setNewKbDescription(event.target.value)}
-                placeholder={t('createKb.descriptionPlaceholder')}
-                maxLength={2000}
-                rows={3}
-              />
-            </div>
+            {kbSeedMode === 'existing' ? (
+              <div className="grid gap-2">
+                <Label htmlFor="chat-target-kb">{t('createKb.selectKb')}</Label>
+                <Select value={targetKbId ?? ''} onValueChange={(value) => setTargetKbId(value)}>
+                  <SelectTrigger id="chat-target-kb">
+                    <SelectValue placeholder={t('createKb.selectKb')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {knowledgeBases.map((kb) => (
+                      <SelectItem key={kb.id} value={kb.id}>
+                        {kb.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-2">
+                  <Label htmlFor="chat-kb-name">{t('createKb.name')}</Label>
+                  <Input
+                    id="chat-kb-name"
+                    value={newKbName}
+                    onChange={(event) => setNewKbName(event.target.value)}
+                    placeholder={t('createKb.namePlaceholder')}
+                    maxLength={200}
+                  />
+                </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="chat-kb-provider">{t('createKb.provider')}</Label>
-              <Select
-                value={newKbEmbeddingProvider}
-                onValueChange={(value) => setNewKbEmbeddingProvider(value as EmbeddingProviderType)}
-              >
-                <SelectTrigger id="chat-kb-provider">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="zhipu">Zhipu AI</SelectItem>
-                  <SelectItem value="openai">OpenAI</SelectItem>
-                  <SelectItem value="ollama">Ollama (Local)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="chat-kb-description">{t('createKb.descriptionLabel')}</Label>
+                  <Textarea
+                    id="chat-kb-description"
+                    value={newKbDescription}
+                    onChange={(event) => setNewKbDescription(event.target.value)}
+                    placeholder={t('createKb.descriptionPlaceholder')}
+                    maxLength={2000}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="chat-kb-provider">{t('createKb.provider')}</Label>
+                  <Select
+                    value={newKbEmbeddingProvider}
+                    onValueChange={(value) =>
+                      setNewKbEmbeddingProvider(value as EmbeddingProviderType)
+                    }
+                  >
+                    <SelectTrigger id="chat-kb-provider">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zhipu">Zhipu AI</SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             <div className="grid gap-2">
               <Label htmlFor="chat-seed-source">{t('createKb.seedSource')}</Label>
@@ -681,7 +774,7 @@ export function ChatPage() {
                 onCheckedChange={(checked) => setSwitchToNewKb(checked === true)}
               />
               <Label htmlFor="switch-to-new-kb" className="text-sm">
-                {t('createKb.switchToNewKb')}
+                {t('createKb.switchToKb')}
               </Label>
             </div>
           </div>
@@ -690,12 +783,14 @@ export function ChatPage() {
             <Button variant="outline" onClick={() => setCreateKbDialogOpen(false)}>
               {t('createKb.cancel')}
             </Button>
-            <Button onClick={() => void handleCreateKbFromChat()} disabled={isCreatingKb}>
+            <Button onClick={() => void handleSaveToKb()} disabled={isCreatingKb}>
               {isCreatingKb ? (
                 <>
                   <Loader2 className="size-4 mr-2 animate-spin" />
                   {t('createKb.creating')}
                 </>
+              ) : kbSeedMode === 'existing' ? (
+                t('createKb.submitAppend')
               ) : (
                 t('createKb.submit')
               )}
