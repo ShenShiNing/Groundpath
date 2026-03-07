@@ -9,6 +9,7 @@
     "read": "阅读",
     "edit": "编辑",
     "download": "下载",
+    "aiRewrite": "AI 改写",
     "backToList": "返回知识库列表"
   },
   "card": {
@@ -19,6 +20,33 @@
   "toast": {
     "saved": "文档已保存",
     "saveFailed": "保存失败"
+  },
+  "aiRewrite": {
+    "title": "AI 改写文档",
+    "description": "输入改写指令，AI 将生成修改后的内容供你审核。",
+    "instruction": "改写指令",
+    "instructionPlaceholder": "例如：使内容更简洁 / 翻译成英文 / 增加细节...",
+    "position": "改写方式",
+    "positionReplace": "替换原文",
+    "positionBefore": "插入到原文前",
+    "positionAfter": "追加到原文后",
+    "style": "写作风格",
+    "styleAuto": "自动",
+    "styleFormal": "正式",
+    "styleCasual": "日常",
+    "styleTechnical": "技术",
+    "styleCreative": "创意",
+    "styleAcademic": "学术",
+    "generate": "开始生成",
+    "regenerate": "重新生成",
+    "stop": "停止生成",
+    "original": "原始内容",
+    "generated": "生成内容",
+    "generating": "AI 正在生成...",
+    "saveAsVersion": "保存为新版本",
+    "saving": "保存中...",
+    "saved": "AI 改写已保存为新版本",
+    "cancel": "取消"
   },
   "versions": {
     "title": "版本历史",

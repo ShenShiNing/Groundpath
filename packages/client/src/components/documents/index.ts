@@ -7,3 +7,4 @@ export { DocumentViewer } from './DocumentViewer';
 export { DocumentInfo } from './DocumentInfo';
 export { DocumentReader } from './DocumentReader';
 export { DocumentEditor } from './DocumentEditor';
+export { AIRewriteDialog } from './AIRewriteDialog';

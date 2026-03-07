@@ -9,6 +9,7 @@
     "read": "Read",
     "edit": "Edit",
     "download": "Download",
+    "aiRewrite": "AI Rewrite",
     "backToList": "Back to Knowledge Bases"
   },
   "card": {
@@ -19,6 +20,33 @@
   "toast": {
     "saved": "Document saved",
     "saveFailed": "Save failed"
+  },
+  "aiRewrite": {
+    "title": "AI Rewrite Document",
+    "description": "Enter rewrite instructions. AI will generate modified content for your review.",
+    "instruction": "Rewrite instructions",
+    "instructionPlaceholder": "e.g., Make it more concise / Translate to Chinese / Add more details...",
+    "position": "Rewrite mode",
+    "positionReplace": "Replace original",
+    "positionBefore": "Insert before original",
+    "positionAfter": "Append after original",
+    "style": "Writing style",
+    "styleAuto": "Auto",
+    "styleFormal": "Formal",
+    "styleCasual": "Casual",
+    "styleTechnical": "Technical",
+    "styleCreative": "Creative",
+    "styleAcademic": "Academic",
+    "generate": "Generate",
+    "regenerate": "Regenerate",
+    "stop": "Stop",
+    "original": "Original content",
+    "generated": "Generated content",
+    "generating": "AI is generating...",
+    "saveAsVersion": "Save as new version",
+    "saving": "Saving...",
+    "saved": "AI rewrite saved as new version",
+    "cancel": "Cancel"
   },
   "versions": {
     "title": "Version History",

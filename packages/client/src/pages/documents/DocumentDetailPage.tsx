@@ -6,9 +6,18 @@ import type {
   DocumentVersionListItem,
   VersionSource,
 } from '@knowledge-agent/shared/types';
-import { ArrowLeft, Download, Eye, FileText, History, PencilLine, RotateCcw } from 'lucide-react';
+import {
+  ArrowLeft,
+  Download,
+  Eye,
+  FileText,
+  History,
+  PencilLine,
+  RotateCcw,
+  Wand2,
+} from 'lucide-react';
 import { toast } from 'sonner';
-import { DocumentReader, DocumentInfo } from '@/components/documents';
+import { DocumentReader, DocumentInfo, AIRewriteDialog } from '@/components/documents';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +75,7 @@ export function DocumentDetailPage() {
   });
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<DocumentVersionListItem | null>(null);
+  const [aiRewriteOpen, setAiRewriteOpen] = useState(false);
 
   const hasUserSelectedMode =
     modeOverride.documentId === safeDocumentId && modeOverride.mode !== null;
@@ -280,6 +290,17 @@ export function DocumentDetailPage() {
                   </Button>
                 )}
 
+                {isEditable && (
+                  <Button
+                    variant="outline"
+                    className="cursor-pointer"
+                    onClick={() => setAiRewriteOpen(true)}
+                  >
+                    <Wand2 className="size-4 mr-1.5" />
+                    {t('action.aiRewrite')}
+                  </Button>
+                )}
+
                 <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
                   <Download className="size-4 mr-1.5" />
                   {t('action.download')}
@@ -351,6 +372,18 @@ export function DocumentDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AIRewriteDialog
+        open={aiRewriteOpen}
+        onOpenChange={setAiRewriteOpen}
+        documentId={safeDocumentId}
+        documentTitle={content?.title ?? document?.title ?? ''}
+        currentContent={content?.textContent ?? ''}
+        onSaveSuccess={() => {
+          setAiRewriteOpen(false);
+          toast.success(t('aiRewrite.saved'));
+        }}
+      />
     </>
   );
 }
