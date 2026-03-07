@@ -7,6 +7,7 @@ import type {
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { conversationRepository } from '../repositories/conversation.repository';
 import { messageRepository } from '../repositories/message.repository';
+import { knowledgeBaseService } from '@modules/knowledge-base';
 import { Errors } from '@shared/errors';
 import type { Conversation } from '@shared/db/schema/ai/conversations.schema';
 
@@ -121,6 +122,36 @@ export const conversationService = {
   },
 
   /**
+   * Update conversation fields (title, knowledgeBaseId)
+   */
+  async update(
+    userId: string,
+    conversationId: string,
+    data: { title?: string; knowledgeBaseId?: string | null }
+  ): Promise<ConversationInfo> {
+    const conversation = await conversationRepository.findByIdAndUser(conversationId, userId);
+    if (!conversation) {
+      throw Errors.auth(CHAT_ERROR_CODES.CONVERSATION_NOT_FOUND, 'Conversation not found', 404);
+    }
+
+    // Validate target KB exists and belongs to user
+    if (data.knowledgeBaseId !== undefined && data.knowledgeBaseId !== null) {
+      await knowledgeBaseService.getById(data.knowledgeBaseId, userId);
+    }
+
+    const updateData: Record<string, unknown> = { updatedBy: userId };
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.knowledgeBaseId !== undefined) updateData.knowledgeBaseId = data.knowledgeBaseId;
+
+    const updated = await conversationRepository.update(
+      conversationId,
+      updateData as Parameters<typeof conversationRepository.update>[1]
+    );
+
+    return toConversationInfo(updated!);
+  },
+
+  /**
    * Update conversation title
    */
   async updateTitle(
@@ -128,17 +159,7 @@ export const conversationService = {
     conversationId: string,
     title: string
   ): Promise<ConversationInfo> {
-    const conversation = await conversationRepository.findByIdAndUser(conversationId, userId);
-    if (!conversation) {
-      throw Errors.auth(CHAT_ERROR_CODES.CONVERSATION_NOT_FOUND, 'Conversation not found', 404);
-    }
-
-    const updated = await conversationRepository.update(conversationId, {
-      title,
-      updatedBy: userId,
-    });
-
-    return toConversationInfo(updated!);
+    return this.update(userId, conversationId, { title });
   },
 
   /**

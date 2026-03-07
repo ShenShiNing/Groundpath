@@ -67,6 +67,17 @@ const { authenticateMock, conversationServiceMock, messageServiceMock, chatServi
           if (conv) conv.title = title;
           return { id, title };
         }),
+        update: vi.fn(
+          async (
+            _userId: string,
+            id: string,
+            data: { title?: string; knowledgeBaseId?: string | null }
+          ) => {
+            const conv = conversations.get(id);
+            if (conv && data.title) conv.title = data.title;
+            return { id, title: data.title ?? conv?.title ?? '' };
+          }
+        ),
         delete: vi.fn(async (_userId: string, id: string) => {
           const conv = conversations.get(id);
           if (conv) conv.deleted = true;

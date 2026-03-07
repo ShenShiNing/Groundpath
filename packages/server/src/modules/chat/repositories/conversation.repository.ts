@@ -82,7 +82,7 @@ export const conversationRepository = {
    */
   async update(
     id: string,
-    data: Partial<Pick<Conversation, 'title' | 'updatedBy'>>
+    data: Partial<Pick<Conversation, 'title' | 'knowledgeBaseId' | 'updatedBy'>>
   ): Promise<Conversation | undefined> {
     await db.update(conversations).set(data).where(eq(conversations.id, id));
     return this.findById(id);

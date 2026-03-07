@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
     list: vi.fn(),
     search: vi.fn(),
     getById: vi.fn(),
+    update: vi.fn(),
     updateTitle: vi.fn(),
     delete: vi.fn(),
   },
@@ -120,18 +121,16 @@ describe('conversationController', () => {
     });
   });
 
-  it('update should validate body and call updateTitle', async () => {
+  it('update should validate body and call update', async () => {
     const req = createReq({ params: { id: 'conv-1' }, body: { title: 'New title' } });
     const res = createRes();
-    mocks.conversationService.updateTitle.mockResolvedValue({ id: 'conv-1', title: 'New title' });
+    mocks.conversationService.update.mockResolvedValue({ id: 'conv-1', title: 'New title' });
 
     await conversationController.update(req, res);
 
-    expect(mocks.conversationService.updateTitle).toHaveBeenCalledWith(
-      'user-1',
-      'conv-1',
-      'New title'
-    );
+    expect(mocks.conversationService.update).toHaveBeenCalledWith('user-1', 'conv-1', {
+      title: 'New title',
+    });
     expect(mocks.sendSuccessResponse).toHaveBeenCalledWith(res, {
       id: 'conv-1',
       title: 'New title',

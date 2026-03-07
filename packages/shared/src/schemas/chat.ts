@@ -5,9 +5,14 @@ export const createConversationSchema = z.object({
   title: z.string().min(1).max(255).optional(),
 });
 
-export const updateConversationSchema = z.object({
-  title: z.string().min(1).max(255),
-});
+export const updateConversationSchema = z
+  .object({
+    title: z.string().min(1).max(255).optional(),
+    knowledgeBaseId: z.string().uuid().nullable().optional(),
+  })
+  .refine((data) => data.title !== undefined || data.knowledgeBaseId !== undefined, {
+    message: 'At least one field must be provided',
+  });
 
 export const sendMessageSchema = z.object({
   content: z

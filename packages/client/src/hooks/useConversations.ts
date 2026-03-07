@@ -5,6 +5,7 @@ import type {
   ConversationListItem,
   ConversationSearchResponse,
 } from '@knowledge-agent/shared/types';
+import type { UpdateConversationInput } from '@knowledge-agent/shared/schemas';
 
 // ============================================================================
 // Query Hooks
@@ -87,8 +88,8 @@ export function useUpdateConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, title }: { id: string; title: string }) =>
-      conversationApi.update(id, { title }),
+    mutationFn: ({ id, data }: { id: string; data: UpdateConversationInput }) =>
+      conversationApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) =>

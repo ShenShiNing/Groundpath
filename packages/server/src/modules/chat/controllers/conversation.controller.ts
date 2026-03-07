@@ -79,7 +79,7 @@ export const conversationController = {
       const userId = req.user!.sub;
       const id = paramAsString(req.params.id);
       const parsed = updateConversationSchema.parse(req.body);
-      const conversation = await conversationService.updateTitle(userId, id, parsed.title);
+      const conversation = await conversationService.update(userId, id, parsed);
       sendSuccessResponse(res, conversation);
     } catch (error) {
       handleError(error, res, 'Update conversation');
