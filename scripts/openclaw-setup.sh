@@ -75,7 +75,7 @@ if [ -f "$OPENCLAW_DIR/openclaw.json" ]; then
   log_ok "openclaw.json exists"
   # Validate JSON syntax
   if command -v node &>/dev/null; then
-    if node -e "JSON.parse(require('fs').readFileSync('$OPENCLAW_DIR/openclaw.json', 'utf8'))" 2>/dev/null; then
+    if node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" -- "$OPENCLAW_DIR/openclaw.json" 2>/dev/null; then
       log_ok "openclaw.json is valid JSON"
     else
       log_err "openclaw.json has invalid JSON syntax"
@@ -133,12 +133,11 @@ else
   log_warn ".gitignore not found"
 fi
 
-# 7. Run openclaw doctor if available
+# 7. OpenClaw doctor hint (interactive, don't run automatically)
 echo ""
 echo "--- OpenClaw Diagnostics ---"
 if command -v openclaw &>/dev/null; then
-  echo "Running openclaw doctor..."
-  openclaw doctor 2>&1 || log_warn "openclaw doctor reported issues"
+  log_info "Run 'openclaw doctor' manually for full diagnostics (interactive)."
 else
   log_info "Skipping openclaw doctor (CLI not installed)"
 fi
