@@ -81,6 +81,13 @@ Agent.md
 agent.md
 /.codex/skills/ui-ux-pro-max/
 
+# OpenClaw runtime (keep config, ignore runtime data)
+.openclaw/agents/
+.openclaw/credentials/
+.openclaw/sessions/
+.openclaw/logs/
+.openclaw/.env
+
 # TanStack Router
 routeTree.gen.ts
 **/routeTree.gen.ts

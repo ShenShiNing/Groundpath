@@ -1,0 +1,174 @@
+{
+  "meta": {
+    "version": "1.0.0",
+    "project": "KnowledgeAgent",
+    "description": "Multi-agent AI development team for KnowledgeAgent RAG application"
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "relay-claude": {
+        "baseUrl": "${RELAY_CLAUDE_BASE_URL}",
+        "apiKey": "${RELAY_CLAUDE_API_KEY}",
+        "api": "openai-completions",
+        "models": [
+          { "id": "claude-opus-4", "name": "Claude Opus 4" },
+          { "id": "claude-sonnet-4", "name": "Claude Sonnet 4" }
+        ]
+      },
+      "relay-code": {
+        "baseUrl": "${RELAY_CODE_BASE_URL}",
+        "apiKey": "${RELAY_CODE_API_KEY}",
+        "api": "openai-completions",
+        "models": [
+          { "id": "deepseek-chat", "name": "DeepSeek Chat" },
+          { "id": "codex", "name": "OpenAI Codex" }
+        ]
+      },
+      "anthropic": {
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8,
+        "maxSpawnDepth": 2
+      }
+    },
+    "list": [
+      {
+        "id": "product-manager",
+        "name": "product-manager",
+        "isDefault": true,
+        "workspace": ".openclaw/workspace-pm",
+        "model": {
+          "primary": "relay-claude/claude-opus-4"
+        },
+        "tools": {
+          "allow": ["read", "glob", "grep", "sessions_send", "sessions_spawn"],
+          "deny": ["write", "edit", "exec"]
+        },
+        "subagents": {
+          "allowAgents": ["architect", "dev-manager"]
+        },
+        "agentToAgent": {
+          "allowSend": ["architect", "dev-manager"],
+          "allowReceive": ["architect", "dev-manager"]
+        },
+        "identity": {
+          "name": "Product Manager",
+          "theme": "clarity first",
+          "emoji": "\ud83d\udccc"
+        }
+      },
+      {
+        "id": "architect",
+        "name": "architect",
+        "workspace": ".openclaw/workspace-architect",
+        "model": {
+          "primary": "relay-claude/claude-opus-4"
+        },
+        "tools": {
+          "allow": ["read", "glob", "grep", "sessions_send"],
+          "deny": ["write", "edit", "exec", "sessions_spawn"]
+        },
+        "agentToAgent": {
+          "allowSend": ["product-manager", "dev-manager"],
+          "allowReceive": ["product-manager", "dev-manager"]
+        },
+        "identity": {
+          "name": "Architect",
+          "theme": "evolutionary architecture",
+          "emoji": "\ud83c\udfd7\ufe0f"
+        }
+      },
+      {
+        "id": "dev-manager",
+        "name": "dev-manager",
+        "workspace": ".openclaw/workspace-dev-manager",
+        "model": {
+          "primary": "relay-claude/claude-sonnet-4"
+        },
+        "tools": {
+          "allow": ["read", "glob", "grep", "sessions_send", "sessions_spawn"],
+          "deny": ["write", "edit", "exec"]
+        },
+        "subagents": {
+          "allowAgents": ["backend-engineer", "frontend-engineer"]
+        },
+        "agentToAgent": {
+          "allowSend": ["product-manager", "architect", "backend-engineer", "frontend-engineer"],
+          "allowReceive": ["product-manager", "architect", "backend-engineer", "frontend-engineer"]
+        },
+        "identity": {
+          "name": "Development Manager",
+          "theme": "calm precision",
+          "emoji": "\ud83e\udded"
+        }
+      },
+      {
+        "id": "backend-engineer",
+        "name": "backend-engineer",
+        "workspace": ".openclaw/workspace-backend",
+        "model": {
+          "primary": "relay-code/deepseek-chat"
+        },
+        "tools": {
+          "allow": ["read", "write", "edit", "glob", "grep", "exec", "sessions_send"],
+          "deny": ["sessions_spawn"]
+        },
+        "sandbox": {
+          "mode": "recommended"
+        },
+        "agentToAgent": {
+          "allowSend": ["dev-manager"],
+          "allowReceive": ["dev-manager"]
+        },
+        "identity": {
+          "name": "Backend Engineer",
+          "theme": "reliable systems",
+          "emoji": "\ud83d\udee0\ufe0f"
+        }
+      },
+      {
+        "id": "frontend-engineer",
+        "name": "frontend-engineer",
+        "workspace": ".openclaw/workspace-frontend",
+        "model": {
+          "primary": "relay-code/deepseek-chat"
+        },
+        "tools": {
+          "allow": ["read", "write", "edit", "glob", "grep", "exec", "sessions_send"],
+          "deny": ["sessions_spawn"]
+        },
+        "sandbox": {
+          "mode": "recommended"
+        },
+        "agentToAgent": {
+          "allowSend": ["dev-manager"],
+          "allowReceive": ["dev-manager"]
+        },
+        "identity": {
+          "name": "Frontend Engineer",
+          "theme": "usable interfaces",
+          "emoji": "\ud83c\udfa8"
+        }
+      }
+    ]
+  },
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  }
+}
