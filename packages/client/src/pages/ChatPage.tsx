@@ -31,7 +31,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ChatInput, ChatMessage, CitationPreview, DocumentScopeSelector } from '@/components/chat';
-import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
+import {
+  buildConversationMarkdownForKnowledgeSeed,
+  copyMessageToClipboard,
+  sanitizeMessageContentForKnowledgeSeed,
+  type CopyFormat,
+} from '@/lib/chat';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { knowledgeBasesApi, conversationApi } from '@/api';
 import { useCreateKnowledgeBase, useKBDocuments, useKnowledgeBases } from '@/hooks';
@@ -58,26 +63,6 @@ function sanitizeFileName(input: string): string {
     .join('');
 
   return input ? sanitized.replace(/\s+/g, '-').slice(0, 80) : '';
-}
-
-function buildConversationMarkdown(
-  messages: Array<{ role: 'user' | 'assistant'; content: string; timestamp: Date }>,
-  labels: {
-    transcript: string;
-    user: string;
-    assistant: string;
-  }
-): string {
-  const body = messages
-    .filter((message) => message.content.trim().length > 0)
-    .map((message) => {
-      const title = message.role === 'user' ? labels.user : labels.assistant;
-      const time = message.timestamp.toISOString();
-      return `## ${title} (${time})\n\n${message.content.trim()}\n`;
-    })
-    .join('\n');
-
-  return `# ${labels.transcript}\n\n${body}`.trim();
 }
 
 function findFirstMatchingTextElement(container: HTMLElement, keyword: string): HTMLElement | null {
@@ -375,13 +360,18 @@ export function ChatPage() {
       return;
     }
 
-    const conversationContent = buildConversationMarkdown(
+    const conversationContent = buildConversationMarkdownForKnowledgeSeed(
       messages
         .filter((message) => !message.isLoading)
         .map((message) => ({
           role: message.role,
           content: message.content,
           timestamp: message.timestamp,
+          citations: message.citations,
+          toolSteps: message.toolSteps?.map((step) => ({
+            toolCalls: step.toolCalls.map((call) => ({ name: call.name })),
+            toolResults: step.toolResults?.map((result) => ({ content: result.content })),
+          })),
         })),
       {
         transcript: t('export.transcriptTitle'),
@@ -389,7 +379,18 @@ export function ChatPage() {
         assistant: t('export.assistant'),
       }
     );
-    const latestAssistantContent = latestAssistantMessage?.content.trim() ?? '';
+    const latestAssistantContent = latestAssistantMessage
+      ? sanitizeMessageContentForKnowledgeSeed({
+          role: latestAssistantMessage.role,
+          content: latestAssistantMessage.content,
+          timestamp: latestAssistantMessage.timestamp,
+          citations: latestAssistantMessage.citations,
+          toolSteps: latestAssistantMessage.toolSteps?.map((step) => ({
+            toolCalls: step.toolCalls.map((call) => ({ name: call.name })),
+            toolResults: step.toolResults?.map((result) => ({ content: result.content })),
+          })),
+        })
+      : '';
     const selectedContent =
       seedSource === 'latest-assistant' ? latestAssistantContent : conversationContent;
 
