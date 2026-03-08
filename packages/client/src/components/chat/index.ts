@@ -10,3 +10,4 @@ export { ConversationItem, type ConversationItemProps } from './ConversationItem
 export { ChatSearchDialog, type ChatSearchDialogProps } from './ChatSearchDialog';
 export { ToolStepCard, type ToolStepCardProps } from './ToolStepCard';
 export { ToolStepsDisplay, type ToolStepsDisplayProps } from './ToolStepsDisplay';
+export { SaveToKBDialog, type SaveToKBDialogProps } from './SaveToKBDialog';
