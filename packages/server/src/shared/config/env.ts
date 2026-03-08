@@ -171,6 +171,14 @@ const llmSchema = z.object({
   MODEL_FETCH_TIMEOUT: z.coerce.number().default(15000), // 15s for fetching model lists
 });
 
+// -------------------- Queue / Worker --------------------
+const queueSchema = z.object({
+  QUEUE_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(3),
+  QUEUE_MAX_RETRIES: z.coerce.number().int().min(0).max(10).default(3),
+  QUEUE_BACKOFF_DELAY: z.coerce.number().int().min(1000).default(5000),
+  QUEUE_BACKOFF_TYPE: z.enum(['fixed', 'exponential']).default('exponential'),
+});
+
 // -------------------- Agent / Web Search --------------------
 const agentSchema = z.object({
   TAVILY_API_KEY: z.string().optional(),
@@ -208,6 +216,7 @@ const envSchema = serverSchema
   .extend(documentSchema.shape)
   .extend(ragSchema.shape)
   .extend(documentAISchema.shape)
+  .extend(queueSchema.shape)
   .extend(embeddingSchema.shape)
   .extend(vectorSchema.shape)
   .extend(llmSchema.shape)
@@ -416,6 +425,14 @@ export const agentConfig = {
   toolTimeout: validatedEnv.AGENT_TOOL_TIMEOUT,
   tavilyMaxResults: validatedEnv.TAVILY_MAX_RESULTS,
   tavilyContentMaxLength: validatedEnv.TAVILY_CONTENT_MAX_LENGTH,
+} as const;
+
+/** Queue / Worker configuration */
+export const queueConfig = {
+  concurrency: validatedEnv.QUEUE_CONCURRENCY,
+  maxRetries: validatedEnv.QUEUE_MAX_RETRIES,
+  backoffDelay: validatedEnv.QUEUE_BACKOFF_DELAY,
+  backoffType: validatedEnv.QUEUE_BACKOFF_TYPE,
 } as const;
 
 /** Logging configuration */

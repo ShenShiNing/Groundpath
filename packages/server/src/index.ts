@@ -20,6 +20,7 @@ import { initializeScheduler } from '@shared/scheduler';
 import { closeDatabase } from '@shared/db';
 import { closeRedis, connectRedis } from '@shared/redis';
 import { createShutdownHandler } from '@shared/server/shutdown';
+import { startDocumentProcessingWorker, stopDocumentProcessingWorker } from '@modules/rag';
 import router from './router';
 
 // ==================== App Setup ====================
@@ -102,6 +103,9 @@ function onServerStart(): void {
 
   // Initialize scheduled tasks
   initializeScheduler();
+
+  // Start background workers
+  startDocumentProcessingWorker();
 }
 
 /**
@@ -121,6 +125,7 @@ async function startServer(): Promise<void> {
   const shutdown = createShutdownHandler(server, {
     closeDatabase,
     closeRedis,
+    closeWorkers: stopDocumentProcessingWorker,
     logger,
     shutdownTimeout: serverConfig.shutdownTimeout,
     exit: (code) => process.exit(code),

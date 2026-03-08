@@ -14,7 +14,7 @@ import { documentVersionRepository } from '../repositories/document-version.repo
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@shared/logger';
 import { logOperation } from '@shared/logger/operation-logger';
-import { processingService } from '@modules/rag';
+import { enqueueDocumentProcessing } from '@modules/rag';
 import { storageProvider } from '@modules/storage';
 import type { RequestContext } from './document-upload.service';
 import { toDocumentInfo } from './document-upload.service';
@@ -213,8 +213,8 @@ export const documentContentService = {
       durationMs: Date.now() - startTime,
     });
 
-    processingService.processDocument(documentId, userId).catch((err) => {
-      logger.warn({ documentId, err }, 'Failed to trigger document processing after edit');
+    enqueueDocumentProcessing(documentId, userId).catch((err) => {
+      logger.warn({ documentId, err }, 'Failed to enqueue document processing after edit');
     });
 
     return toDocumentInfo(updated!);

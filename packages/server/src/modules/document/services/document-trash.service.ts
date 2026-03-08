@@ -15,7 +15,7 @@ import { documentChunkRepository } from '../repositories/document-chunk.reposito
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@shared/logger';
 import { logOperation } from '@shared/logger/operation-logger';
-import { processingService } from '@modules/rag';
+import { enqueueDocumentProcessing } from '@modules/rag';
 import { vectorRepository } from '@modules/vector';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
@@ -141,9 +141,9 @@ export const documentTrashService = {
       return restoredDoc;
     });
 
-    // 4. Trigger reprocessing (will update totalChunks via delta calculation)
-    processingService.processDocument(documentId, userId).catch((err) => {
-      logger.warn({ documentId, err }, 'Failed to trigger processing after restore');
+    // 4. Enqueue reprocessing (will update totalChunks via delta calculation)
+    enqueueDocumentProcessing(documentId, userId).catch((err) => {
+      logger.warn({ documentId, err }, 'Failed to enqueue processing after restore');
     });
 
     // Log operation

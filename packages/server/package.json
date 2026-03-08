@@ -39,6 +39,7 @@
     "@knowledge-agent/shared": "workspace:*",
     "@qdrant/js-client-rest": "^1.16.2",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.70.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",

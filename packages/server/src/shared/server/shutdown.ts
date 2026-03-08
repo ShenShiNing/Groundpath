@@ -11,6 +11,7 @@ export interface ShutdownLogger {
 export interface ShutdownDependencies {
   closeDatabase: () => Promise<void>;
   closeRedis: () => Promise<void>;
+  closeWorkers?: () => Promise<void>;
   logger: ShutdownLogger;
   shutdownTimeout: number;
   exit: (code: number) => void;
@@ -43,6 +44,15 @@ export function createShutdownHandler(
         deps.logger.error({ err }, 'Error during server shutdown');
         deps.exit(1);
         return;
+      }
+
+      try {
+        if (deps.closeWorkers) {
+          await deps.closeWorkers();
+          deps.logger.info('Workers stopped');
+        }
+      } catch (workerErr) {
+        deps.logger.error({ err: workerErr }, 'Error stopping workers');
       }
 
       try {

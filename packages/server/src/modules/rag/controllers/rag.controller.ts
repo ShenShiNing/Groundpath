@@ -4,7 +4,7 @@ import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
 import { sendSuccessResponse, handleError, Errors } from '@shared/errors';
 import { getParamId } from '@shared/utils';
 import { searchService } from '../services/search.service';
-import { processingService } from '../services/processing.service';
+import { enqueueDocumentProcessing } from '../queue';
 import { documentRepository } from '@modules/document';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
@@ -58,11 +58,8 @@ export const ragController = {
         );
       }
 
-      // Trigger async processing (fire-and-forget)
-      // Concurrency control is handled inside processingService
-      processingService.processDocument(documentId, userId).catch(() => {
-        // Error is already logged and status updated inside processDocument
-      });
+      // Enqueue processing job (non-blocking, deduped by documentId)
+      await enqueueDocumentProcessing(documentId, userId);
 
       sendSuccessResponse(res, {
         documentId,

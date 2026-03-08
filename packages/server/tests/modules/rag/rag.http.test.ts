@@ -8,6 +8,7 @@ const {
   authenticateMock,
   searchServiceMock,
   processingServiceMock,
+  enqueueDocumentProcessingMock,
   documentRepositoryMock,
   knowledgeBaseServiceMock,
 } = vi.hoisted(() => {
@@ -59,6 +60,7 @@ const {
     processingServiceMock: {
       processDocument: vi.fn(async () => undefined),
     },
+    enqueueDocumentProcessingMock: vi.fn(async () => undefined),
     documentRepositoryMock: {
       findByIdAndUser: vi.fn<(documentId: string, userId: string) => Promise<DocumentLookupResult>>(
         async () => ({
@@ -89,6 +91,10 @@ vi.mock('@modules/rag/services/search.service', () => ({
 
 vi.mock('@modules/rag/services/processing.service', () => ({
   processingService: processingServiceMock,
+}));
+
+vi.mock('@modules/rag/queue', () => ({
+  enqueueDocumentProcessing: enqueueDocumentProcessingMock,
 }));
 
 vi.mock('@modules/document', () => ({
@@ -238,7 +244,7 @@ describe('rag.routes http behavior', () => {
     expect(body.success).toBe(true);
     expect(body.data.status).toBe('processing');
     expect(documentRepositoryMock.findByIdAndUser).toHaveBeenCalledWith('doc-1', 'user-1');
-    expect(processingServiceMock.processDocument).toHaveBeenCalledWith('doc-1', 'user-1');
+    expect(enqueueDocumentProcessingMock).toHaveBeenCalledWith('doc-1', 'user-1');
   });
 
   it('should return DOCUMENT_NOT_FOUND when processing missing document', async () => {
@@ -252,7 +258,7 @@ describe('rag.routes http behavior', () => {
 
     expect(response.status).toBe(404);
     expect(body.error.code).toBe('DOCUMENT_NOT_FOUND');
-    expect(processingServiceMock.processDocument).not.toHaveBeenCalled();
+    expect(enqueueDocumentProcessingMock).not.toHaveBeenCalled();
   });
 
   it('should return status for existing document', async () => {

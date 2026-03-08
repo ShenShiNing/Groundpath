@@ -10,7 +10,7 @@ import { documentVersionRepository } from '../repositories/document-version.repo
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@shared/logger';
 import { logOperation } from '@shared/logger/operation-logger';
-import { processingService } from '@modules/rag';
+import { enqueueDocumentProcessing } from '@modules/rag';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
 const logger = createLogger('document-upload.service');
@@ -207,9 +207,9 @@ export const documentUploadService = {
       durationMs: Date.now() - startTime,
     });
 
-    // Trigger async document processing for RAG
-    processingService.processDocument(docId, userId).catch((err) => {
-      logger.warn({ documentId: docId, err }, 'Failed to trigger document processing');
+    // Enqueue document processing for RAG (non-blocking)
+    enqueueDocumentProcessing(docId, userId).catch((err) => {
+      logger.warn({ documentId: docId, err }, 'Failed to enqueue document processing');
     });
 
     return toDocumentInfo(document);
