@@ -8,6 +8,7 @@ export * from './llm';
 export * from './chat';
 export * from './logs';
 export * from './document-ai';
+export * from './rag';
 
 // Re-export zod for consumers
 export { z, ZodError } from 'zod';

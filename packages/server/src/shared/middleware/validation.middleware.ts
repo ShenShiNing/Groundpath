@@ -35,6 +35,7 @@ export function validateBody<T extends ZodType>(schema: T): RequestHandler {
       return;
     }
     req.body = result.data;
+    res.locals.validated = { ...res.locals.validated, body: result.data };
     next();
   };
 }
@@ -104,4 +105,12 @@ export function getValidatedQuery<T>(res: Response): T {
  */
 export function getValidatedParams<T>(res: Response): T {
   return res.locals.validated?.params as T;
+}
+
+/**
+ * Type-safe helper to get validated body from res.locals
+ * Use after validateBody middleware
+ */
+export function getValidatedBody<T>(res: Response): T {
+  return res.locals.validated?.body as T;
 }

@@ -13,7 +13,7 @@ import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils';
-import { getValidatedQuery } from '@shared/middleware';
+import { getValidatedBody, getValidatedQuery } from '@shared/middleware';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('document.controller');
@@ -107,11 +107,11 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
     }
 
-    const { title, description, knowledgeBaseId } = req.body as {
+    const { title, description, knowledgeBaseId } = getValidatedBody<{
       title?: string;
       description?: string;
       knowledgeBaseId?: string;
-    };
+    }>(res);
 
     if (!knowledgeBaseId) {
       throw new AppError('VALIDATION_ERROR', 'Knowledge base ID is required', 400);
@@ -185,7 +185,7 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
     }
 
-    const data = req.body as SaveDocumentContentRequest;
+    const data = getValidatedBody<SaveDocumentContentRequest>(res);
     const document = await documentService.saveContent(
       documentId,
       userId,
@@ -205,7 +205,7 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'Document ID is required', 400);
     }
 
-    const data = req.body as UpdateDocumentRequest;
+    const data = getValidatedBody<UpdateDocumentRequest>(res);
     const document = await documentService.update(documentId, userId, data, getRequestContext(req));
     sendSuccessResponse(res, document);
   }),
@@ -308,7 +308,7 @@ export const documentController = {
       throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
     }
 
-    const { changeNote } = req.body as { changeNote?: string };
+    const { changeNote } = getValidatedBody<{ changeNote?: string }>(res);
 
     const document = await documentService.uploadNewVersion(
       documentId,

@@ -41,6 +41,7 @@ function createMockReqRes(body: object = {}) {
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
+    locals: { validated: { body } },
   } as unknown as Response;
   let nextError: Error | undefined;
   const next = vi.fn((err?: Error) => {

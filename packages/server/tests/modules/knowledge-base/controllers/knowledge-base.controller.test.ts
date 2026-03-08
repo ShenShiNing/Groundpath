@@ -39,10 +39,11 @@ function createMockRequest(params: Record<string, string> = {}, body: object = {
   } as unknown as Request;
 }
 
-function createMockResponse(): Response {
+function createMockResponse(body: object = {}): Response {
   return {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
+    locals: { validated: { body } },
   } as unknown as Response;
 }
 
@@ -65,7 +66,7 @@ describe('knowledgeBaseController', () => {
     );
 
     const req = createMockRequest({}, { name: 'KB 1', embeddingProvider: 'openai' });
-    const res = createMockResponse();
+    const res = createMockResponse({ name: 'KB 1', embeddingProvider: 'openai' });
     const next = await invokeHandler(knowledgeBaseController.create, req, res);
 
     expect(next).not.toHaveBeenCalled();
@@ -112,7 +113,7 @@ describe('knowledgeBaseController', () => {
     );
 
     const req = createMockRequest({ id: mockKbId }, { name: 'Renamed' });
-    const res = createMockResponse();
+    const res = createMockResponse({ name: 'Renamed' });
     const next = await invokeHandler(knowledgeBaseController.update, req, res);
 
     expect(next).not.toHaveBeenCalled();

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { z } from '@knowledge-agent/shared/schemas';
+import { ragSearchRequestSchema } from '@knowledge-agent/shared/schemas';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
 import { sendSuccessResponse, handleError, Errors } from '@shared/errors';
 import { getParamId } from '@shared/utils';
@@ -8,19 +8,11 @@ import { processingService } from '../services/processing.service';
 import { documentRepository } from '@modules/document';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
-const searchSchema = z.object({
-  query: z.string().min(1).max(1000),
-  knowledgeBaseId: z.string().uuid(),
-  limit: z.coerce.number().min(1).max(50).default(5),
-  scoreThreshold: z.coerce.number().min(0).max(1).optional(),
-  documentIds: z.array(z.string()).optional(),
-});
-
 export const ragController = {
   async search(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.sub;
-      const parsed = searchSchema.parse(req.body);
+      const parsed = ragSearchRequestSchema.parse(req.body);
 
       // Validate knowledge base ownership before searching
       await knowledgeBaseService.validateOwnership(parsed.knowledgeBaseId, userId);

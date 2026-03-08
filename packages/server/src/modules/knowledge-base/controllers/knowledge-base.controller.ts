@@ -8,6 +8,7 @@ import { knowledgeBaseService } from '../services/knowledge-base.service';
 import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
+import { getValidatedBody } from '@shared/middleware';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils';
 
 /**
@@ -34,7 +35,7 @@ export const knowledgeBaseController = {
    */
   create: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const data = req.body as CreateKnowledgeBaseRequest;
+    const data = getValidatedBody<CreateKnowledgeBaseRequest>(res);
     const kb = await knowledgeBaseService.create(userId, data, getRequestContext(req));
     sendSuccessResponse(res, kb, HTTP_STATUS.CREATED);
   }),
@@ -72,7 +73,7 @@ export const knowledgeBaseController = {
       throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
     }
 
-    const data = req.body as UpdateKnowledgeBaseRequest;
+    const data = getValidatedBody<UpdateKnowledgeBaseRequest>(res);
     const kb = await knowledgeBaseService.update(kbId, userId, data, getRequestContext(req));
     sendSuccessResponse(res, kb);
   }),

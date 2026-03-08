@@ -6,6 +6,7 @@ import { userService } from '../../user';
 import { sendSuccessResponse } from '@shared/errors';
 import { Errors } from '@shared/errors';
 import { asyncHandler } from '@shared/errors/async-handler';
+import { getValidatedBody } from '@shared/middleware';
 import { getClientIp, normalizeEmail } from '@shared/utils';
 
 export const emailController = {
@@ -13,7 +14,7 @@ export const emailController = {
    * POST /api/auth/email/send-code
    */
   sendCode: asyncHandler(async (req: Request, res: Response) => {
-    const { email: rawEmail, type } = req.body as SendVerificationCodeRequest;
+    const { email: rawEmail, type } = getValidatedBody<SendVerificationCodeRequest>(res);
     const email = normalizeEmail(rawEmail);
     const ipAddress = getClientIp(req);
 
@@ -54,8 +55,8 @@ export const emailController = {
   /**
    * POST /api/auth/email/verify-code
    */
-  verifyCode: asyncHandler(async (req: Request, res: Response) => {
-    const { email: rawEmail, code, type } = req.body as VerifyCodeRequest;
+  verifyCode: asyncHandler(async (_req: Request, res: Response) => {
+    const { email: rawEmail, code, type } = getValidatedBody<VerifyCodeRequest>(res);
     const email = normalizeEmail(rawEmail);
 
     const result = await emailVerificationService.verifyCode(email, code, type);

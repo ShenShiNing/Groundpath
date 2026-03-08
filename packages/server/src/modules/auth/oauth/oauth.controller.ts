@@ -8,6 +8,7 @@ import { systemLogger } from '@shared/logger/system-logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
 import { asyncHandler } from '@shared/errors/async-handler';
+import { getValidatedBody } from '@shared/middleware';
 import {
   getClientIp,
   setRefreshTokenCookie,
@@ -179,7 +180,7 @@ export const oauthController = {
    * POST /api/auth/oauth/exchange
    */
   exchange: asyncHandler(async (req: Request, res: Response) => {
-    const { code } = req.body as OAuthExchangeRequest;
+    const { code } = getValidatedBody<OAuthExchangeRequest>(res);
     if (!code) {
       throw Errors.validation('OAuth exchange code is required');
     }

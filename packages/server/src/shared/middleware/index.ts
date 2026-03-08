@@ -25,6 +25,7 @@ export {
   validateBody,
   validateQuery,
   validateParams,
+  getValidatedBody,
   getValidatedQuery,
   getValidatedParams,
 } from './validation.middleware';

@@ -12,6 +12,7 @@ import { authService } from '../services/auth.service';
 import { sendSuccessResponse, Errors } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
+import { getValidatedBody } from '@shared/middleware';
 import {
   getClientIp,
   requireUserId,
@@ -50,7 +51,7 @@ export const authController = {
    * POST /api/auth/register
    */
   register: asyncHandler(async (req: Request, res: Response) => {
-    const registerRequest = req.body as RegisterRequest;
+    const registerRequest = getValidatedBody<RegisterRequest>(res);
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
@@ -63,7 +64,7 @@ export const authController = {
    */
   changePassword: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const { oldPassword, newPassword } = req.body as ChangePasswordRequest;
+    const { oldPassword, newPassword } = getValidatedBody<ChangePasswordRequest>(res);
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
@@ -75,7 +76,7 @@ export const authController = {
    * POST /api/auth/login
    */
   login: asyncHandler(async (req: Request, res: Response) => {
-    const loginRequest = req.body as LoginRequest;
+    const loginRequest = getValidatedBody<LoginRequest>(res);
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
@@ -175,7 +176,7 @@ export const authController = {
    * POST /api/auth/register-with-code
    */
   registerWithCode: asyncHandler(async (req: Request, res: Response) => {
-    const registerRequest = req.body as RegisterWithCodeRequest;
+    const registerRequest = getValidatedBody<RegisterWithCodeRequest>(res);
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
@@ -186,8 +187,8 @@ export const authController = {
   /**
    * POST /api/auth/reset-password
    */
-  resetPassword: asyncHandler(async (req: Request, res: Response) => {
-    const resetRequest = req.body as ResetPasswordRequest;
+  resetPassword: asyncHandler(async (_req: Request, res: Response) => {
+    const resetRequest = getValidatedBody<ResetPasswordRequest>(res);
     const result = await authService.resetPassword(resetRequest);
     sendSuccessResponse(res, result);
   }),
