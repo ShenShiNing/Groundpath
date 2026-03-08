@@ -17,6 +17,9 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --cache --cache-location .cache/eslint/.eslintcache",
     "lint:fix": "eslint . --fix --cache --cache-location .cache/eslint/.eslintcache",
+    "architecture:check": "depcruise packages/server/src --config .dependency-cruiser.cjs --ignore-known",
+    "architecture:check:all": "depcruise packages/server/src --config .dependency-cruiser.cjs",
+    "architecture:baseline": "depcruise packages/server/src --config .dependency-cruiser.cjs --output-type baseline > .dependency-cruiser-known-violations.json",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -32,6 +35,7 @@
     "@eslint/js": "^9.39.2",
     "@tanstack/eslint-plugin-query": "^5.91.3",
     "@vitest/coverage-v8": "^4.0.18",
+    "dependency-cruiser": "^17.3.8",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.0.1",

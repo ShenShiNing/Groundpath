@@ -1,0 +1,3252 @@
+[
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/controllers/document.controller.ts",
+    "to": "packages/server/src/modules/document/services/document.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/controllers/upload.controller.ts",
+    "to": "packages/server/src/modules/user/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/user/index.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/user/user.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/upload.controller.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/document.routes.ts",
+    "to": "packages/server/src/modules/document/controllers/document.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/document.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/services/document-trash.service.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/services/document-version.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/services/document-version.service.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/services/document.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document-content.service.ts",
+    "to": "packages/server/src/modules/rag/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "to": "packages/server/src/modules/rag/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-trash.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "to": "packages/server/src/modules/knowledge-base/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "to": "packages/server/src/modules/rag/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document-version.service.ts",
+    "to": "packages/server/src/modules/rag/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-version.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/services/document-trash.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/services/document-version.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/services/document-version.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/knowledge-base/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/knowledge-base/index.ts",
+    "to": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/knowledge-base/index.ts",
+    "to": "packages/server/src/modules/knowledge-base/services/counter-sync.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/knowledge-base/services/counter-sync.service.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/knowledge-base/services/counter-sync.service.ts",
+    "to": "packages/server/src/modules/document/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/services/counter-sync.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/services/log-cleanup.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/logs/services/log-cleanup.service.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/shared/logger/system-logger.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/logs/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "to": "packages/server/src/modules/knowledge-base/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "to": "packages/server/src/modules/rag/services/processing.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "to": "packages/server/src/modules/rag/services/search.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/services/search.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/index.ts",
+    "to": "packages/server/src/modules/rag/rag.routes.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/rag.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/index.ts",
+    "to": "packages/server/src/modules/rag/services/processing.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/index.ts",
+    "to": "packages/server/src/modules/rag/services/search.service.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/services/search.service.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/rag.routes.ts",
+    "to": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/rag.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/services/processing.service.ts",
+    "to": "packages/server/src/modules/knowledge-base/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/processing.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/rag/services/search.service.ts",
+    "to": "packages/server/src/modules/knowledge-base/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/knowledge-base/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/document/controllers/document.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-content.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/document/services/document-upload.service.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/rag/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/rag/services/search.service.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/storage/index.ts",
+    "to": "packages/server/src/modules/storage/storage.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/storage/storage.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/storage.factory.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/providers/local.provider.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/utils/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/shared/utils/user.mappers.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/storage/index.ts",
+    "to": "packages/server/src/modules/storage/storage.factory.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/storage/storage.factory.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/providers/local.provider.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/utils/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/shared/utils/user.mappers.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/storage/index.ts",
+    "to": "packages/server/src/modules/storage/storage.routes.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/modules/storage/storage.routes.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/storage.controller.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/storage.factory.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/providers/local.provider.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/utils/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/shared/utils/user.mappers.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/modules/storage/storage.controller.ts",
+    "to": "packages/server/src/shared/utils/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/utils/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/shared/utils/user.mappers.ts",
+        "dependencyTypes": ["local", "export"]
+      },
+      {
+        "name": "packages/server/src/modules/storage/index.ts",
+        "dependencyTypes": [
+          "aliased",
+          "aliased-tsconfig",
+          "aliased-tsconfig-paths",
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "packages/server/src/modules/storage/storage.controller.ts",
+        "dependencyTypes": ["local", "export"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/shared/db/schema/ai/conversations.schema.ts",
+    "to": "packages/server/src/shared/db/schema/ai/messages.schema.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/db/schema/ai/messages.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/db/schema/ai/conversations.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/shared/db/schema/auth/refresh-tokens.schema.ts",
+    "to": "packages/server/src/shared/db/schema/user/users.schema.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/db/schema/user/users.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/db/schema/auth/refresh-tokens.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/shared/db/schema/auth/user-auths.schema.ts",
+    "to": "packages/server/src/shared/db/schema/user/users.schema.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/db/schema/user/users.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/db/schema/auth/user-auths.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/shared/db/schema/document/document-chunks.schema.ts",
+    "to": "packages/server/src/shared/db/schema/document/documents.schema.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/db/schema/document/documents.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/db/schema/document/document-chunks.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/shared/db/schema/document/document-versions.schema.ts",
+    "to": "packages/server/src/shared/db/schema/document/documents.schema.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/db/schema/document/documents.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/db/schema/document/document-versions.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/shared/db/schema/document/documents.schema.ts",
+    "to": "packages/server/src/shared/db/schema/document/knowledge-bases.schema.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/db/schema/document/knowledge-bases.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/db/schema/document/documents.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "packages/server/src/shared/db/schema/system/login-logs.schema.ts",
+    "to": "packages/server/src/shared/db/schema/user/users.schema.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "packages/server/src/shared/db/schema/user/users.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      },
+      {
+        "name": "packages/server/src/shared/db/schema/system/login-logs.schema.ts",
+        "dependencyTypes": ["local", "import"]
+      }
+    ]
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/auth.routes.ts",
+    "to": "packages/server/src/modules/auth/controllers/auth.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/chat.routes.ts",
+    "to": "packages/server/src/modules/chat/controllers/conversation.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/chat.routes.ts",
+    "to": "packages/server/src/modules/chat/controllers/message.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/document-ai.routes.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/analysis.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/document-ai.routes.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/generation.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/document-ai.routes.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/summary.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/document.routes.ts",
+    "to": "packages/server/src/modules/document/controllers/document.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+    "to": "packages/server/src/modules/knowledge-base/controllers/knowledge-base.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/llm.routes.ts",
+    "to": "packages/server/src/modules/llm/controllers/llm-config.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/logs.routes.ts",
+    "to": "packages/server/src/modules/logs/controllers/login-log.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/logs.routes.ts",
+    "to": "packages/server/src/modules/logs/controllers/operation-log.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/rag.routes.ts",
+    "to": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/user.routes.ts",
+    "to": "packages/server/src/modules/document/controllers/upload.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/user.routes.ts",
+    "to": "packages/server/src/modules/user/controllers/user.controller.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-cross-module-controller-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/logger/operation-logger.ts",
+    "to": "packages/server/src/modules/logs/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/logger/system-logger.ts",
+    "to": "packages/server/src/modules/logs/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/middleware/auth.middleware.ts",
+    "to": "packages/server/src/modules/auth/repositories/refresh-token.repository.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/middleware/auth.middleware.ts",
+    "to": "packages/server/src/modules/user/repositories/user.repository.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/scheduler/index.ts",
+    "to": "packages/server/src/modules/auth/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/scheduler/index.ts",
+    "to": "packages/server/src/modules/knowledge-base/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/scheduler/index.ts",
+    "to": "packages/server/src/modules/logs/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/scheduler/index.ts",
+    "to": "packages/server/src/modules/vector/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/shared/utils/user.mappers.ts",
+    "to": "packages/server/src/modules/storage/index.ts",
+    "rule": {
+      "severity": "error",
+      "name": "no-shared-to-modules"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/auth.routes.ts",
+    "to": "packages/server/src/modules/auth/controllers/auth.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/controllers/auth.controller.ts",
+    "to": "packages/server/src/modules/auth/services/auth.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/controllers/auth.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/repositories/login-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/repositories/oauth-exchange-code.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/repositories/refresh-token.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/repositories/user-auth.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/repositories/user-token-state.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/services/auth.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/services/password.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/services/session.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/services/token-cleanup.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/index.ts",
+    "to": "packages/server/src/modules/auth/services/token.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/oauth/oauth.controller.ts",
+    "to": "packages/server/src/modules/auth/services/auth.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/oauth/oauth.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/login-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/oauth/oauth.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/oauth-exchange-code.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/oauth/oauth.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/user-auth.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/oauth/oauth.service.ts",
+    "to": "packages/server/src/modules/auth/services/token.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/oauth/oauth.service.ts",
+    "to": "packages/server/src/modules/logs/services/device-detection.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/oauth/oauth.service.ts",
+    "to": "packages/server/src/modules/logs/services/geo-location.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/repositories/login-log.repository.ts",
+    "to": "packages/server/src/modules/logs/services/device-detection.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/repositories/login-log.repository.ts",
+    "to": "packages/server/src/modules/logs/services/geo-location.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/repositories/user-token-state.repository.ts",
+    "to": "packages/server/src/modules/user/repositories/user.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/auth.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/login-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/auth.service.ts",
+    "to": "packages/server/src/modules/auth/services/password.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/auth.service.ts",
+    "to": "packages/server/src/modules/auth/services/session.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/auth.service.ts",
+    "to": "packages/server/src/modules/auth/services/token.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/auth.service.ts",
+    "to": "packages/server/src/modules/logs/services/device-detection.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/auth.service.ts",
+    "to": "packages/server/src/modules/logs/services/geo-location.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/password.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/refresh-token.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/password.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/user-token-state.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/session.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/user-token-state.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/session.service.ts",
+    "to": "packages/server/src/modules/auth/services/token.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/token-cleanup.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/refresh-token.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/token.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/refresh-token.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/auth/services/token.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/user-token-state.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/chat.routes.ts",
+    "to": "packages/server/src/modules/chat/controllers/conversation.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/chat.routes.ts",
+    "to": "packages/server/src/modules/chat/controllers/message.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/controllers/conversation.controller.ts",
+    "to": "packages/server/src/modules/chat/services/conversation.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/controllers/conversation.controller.ts",
+    "to": "packages/server/src/modules/chat/services/message.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/controllers/message.controller.ts",
+    "to": "packages/server/src/modules/chat/services/chat.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/controllers/message.controller.ts",
+    "to": "packages/server/src/modules/chat/services/conversation.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/controllers/message.controller.ts",
+    "to": "packages/server/src/modules/chat/services/message.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/index.ts",
+    "to": "packages/server/src/modules/chat/services/chat.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/index.ts",
+    "to": "packages/server/src/modules/chat/services/conversation.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/index.ts",
+    "to": "packages/server/src/modules/chat/services/message.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/index.ts",
+    "to": "packages/server/src/modules/chat/services/prompt.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/services/chat.service.ts",
+    "to": "packages/server/src/modules/chat/repositories/conversation.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/services/chat.service.ts",
+    "to": "packages/server/src/modules/chat/services/conversation.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/services/chat.service.ts",
+    "to": "packages/server/src/modules/chat/services/message.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/services/chat.service.ts",
+    "to": "packages/server/src/modules/chat/services/prompt.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/services/conversation.service.ts",
+    "to": "packages/server/src/modules/chat/repositories/conversation.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/services/conversation.service.ts",
+    "to": "packages/server/src/modules/chat/repositories/message.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/chat/services/message.service.ts",
+    "to": "packages/server/src/modules/chat/repositories/message.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/controllers/analysis.controller.ts",
+    "to": "packages/server/src/modules/document-ai/services/analysis.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/controllers/generation.controller.ts",
+    "to": "packages/server/src/modules/document-ai/services/generation.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/controllers/summary.controller.ts",
+    "to": "packages/server/src/modules/document-ai/services/summary.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/document-ai.routes.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/analysis.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/document-ai.routes.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/generation.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/document-ai.routes.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/summary.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/analysis.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/generation.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/controllers/summary.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/services/analysis.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/services/document-ai-cache.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/services/document-ai-llm.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/services/document-ai-sse.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/services/generation.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document-ai/index.ts",
+    "to": "packages/server/src/modules/document-ai/services/summary.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/controllers/document.controller.ts",
+    "to": "packages/server/src/modules/document/services/document.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/controllers/upload.controller.ts",
+    "to": "packages/server/src/modules/document/services/document-storage.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/document.routes.ts",
+    "to": "packages/server/src/modules/document/controllers/document.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/controllers/document.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/repositories/document-chunk.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/repositories/document-version.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/repositories/document.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/services/document-storage.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/services/document-version.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/index.ts",
+    "to": "packages/server/src/modules/document/services/document.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-content.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document-version.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-content.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-content.service.ts",
+    "to": "packages/server/src/modules/document/services/document-storage.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-content.service.ts",
+    "to": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document-chunk.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document-version.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "to": "packages/server/src/modules/document/services/document-storage.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document-version.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "to": "packages/server/src/modules/document/services/document-storage.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-version.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document-version.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-version.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document-version.service.ts",
+    "to": "packages/server/src/modules/document/services/document-storage.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document-chunk.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/repositories/document.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/services/document-content.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/services/document-trash.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/services/document-upload.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/document/services/document.service.ts",
+    "to": "packages/server/src/modules/document/services/document-version.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/controllers/knowledge-base.controller.ts",
+    "to": "packages/server/src/modules/knowledge-base/services/knowledge-base.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/index.ts",
+    "to": "packages/server/src/modules/knowledge-base/controllers/knowledge-base.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/index.ts",
+    "to": "packages/server/src/modules/knowledge-base/repositories/knowledge-base.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/index.ts",
+    "to": "packages/server/src/modules/knowledge-base/services/counter-sync.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/index.ts",
+    "to": "packages/server/src/modules/knowledge-base/services/knowledge-base.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/knowledge-base.routes.ts",
+    "to": "packages/server/src/modules/knowledge-base/controllers/knowledge-base.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/services/counter-sync.service.ts",
+    "to": "packages/server/src/modules/knowledge-base/repositories/knowledge-base.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/knowledge-base/services/knowledge-base.service.ts",
+    "to": "packages/server/src/modules/knowledge-base/repositories/knowledge-base.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/controllers/llm-config.controller.ts",
+    "to": "packages/server/src/modules/llm/services/llm-config.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/controllers/llm-config.controller.ts",
+    "to": "packages/server/src/modules/llm/services/llm.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/controllers/llm-config.controller.ts",
+    "to": "packages/server/src/modules/llm/services/model-fetcher.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/index.ts",
+    "to": "packages/server/src/modules/llm/services/llm-config.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/index.ts",
+    "to": "packages/server/src/modules/llm/services/llm.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/llm.routes.ts",
+    "to": "packages/server/src/modules/llm/controllers/llm-config.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/services/llm-config.service.ts",
+    "to": "packages/server/src/modules/llm/repositories/llm-config.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/services/llm-config.service.ts",
+    "to": "packages/server/src/modules/llm/services/encryption.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/llm/services/llm.service.ts",
+    "to": "packages/server/src/modules/llm/services/llm-config.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/controllers/login-log.controller.ts",
+    "to": "packages/server/src/modules/logs/services/login-log.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/controllers/operation-log.controller.ts",
+    "to": "packages/server/src/modules/logs/services/operation-log.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/controllers/login-log.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/controllers/operation-log.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/repositories/operation-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/repositories/system-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/services/device-detection.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/services/geo-location.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/services/log-cleanup.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/services/login-log.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/index.ts",
+    "to": "packages/server/src/modules/logs/services/operation-log.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/logs.routes.ts",
+    "to": "packages/server/src/modules/logs/controllers/login-log.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/logs.routes.ts",
+    "to": "packages/server/src/modules/logs/controllers/operation-log.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/services/log-cleanup.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/login-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/services/log-cleanup.service.ts",
+    "to": "packages/server/src/modules/logs/repositories/operation-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/services/log-cleanup.service.ts",
+    "to": "packages/server/src/modules/logs/repositories/system-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/services/login-log.service.ts",
+    "to": "packages/server/src/modules/auth/repositories/login-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/logs/services/operation-log.service.ts",
+    "to": "packages/server/src/modules/logs/repositories/operation-log.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "to": "packages/server/src/modules/rag/services/processing.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "to": "packages/server/src/modules/rag/services/search.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/index.ts",
+    "to": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/index.ts",
+    "to": "packages/server/src/modules/rag/services/chunking.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/index.ts",
+    "to": "packages/server/src/modules/rag/services/processing.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/index.ts",
+    "to": "packages/server/src/modules/rag/services/search.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/rag.routes.ts",
+    "to": "packages/server/src/modules/rag/controllers/rag.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/rag/services/processing.service.ts",
+    "to": "packages/server/src/modules/rag/services/chunking.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/controllers/user.controller.ts",
+    "to": "packages/server/src/modules/user/services/user.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/index.ts",
+    "to": "packages/server/src/modules/user/controllers/user.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/index.ts",
+    "to": "packages/server/src/modules/user/repositories/user.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/index.ts",
+    "to": "packages/server/src/modules/user/services/user.service.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/services/user.service.ts",
+    "to": "packages/server/src/modules/user/repositories/user.repository.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/user.routes.ts",
+    "to": "packages/server/src/modules/document/controllers/upload.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "packages/server/src/modules/user/user.routes.ts",
+    "to": "packages/server/src/modules/user/controllers/user.controller.ts",
+    "rule": {
+      "severity": "warn",
+      "name": "no-cross-module-deep-import"
+    }
+  }
+]
