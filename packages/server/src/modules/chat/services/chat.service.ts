@@ -7,6 +7,7 @@ import { searchService } from '@modules/rag';
 import type { SearchResult } from '@modules/vector';
 import { documentRepository } from '@modules/document';
 import { resolveTools, executeAgentLoop } from '@modules/agent';
+import { ragConfig } from '@config/env';
 import { conversationService } from './conversation.service';
 import { messageService } from './message.service';
 import { promptService } from './prompt.service';
@@ -225,8 +226,8 @@ export const chatService = {
                 userId,
                 knowledgeBaseId: conversation.knowledgeBaseId,
                 query: content,
-                limit: 5,
-                scoreThreshold: 0.5,
+                limit: ragConfig.searchDefaultLimit,
+                scoreThreshold: ragConfig.searchDefaultScoreThreshold,
                 documentIds,
               });
               searchResults = await enrichSearchResults(rawResults);

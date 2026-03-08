@@ -15,6 +15,7 @@ import type { ChatMessage } from '@modules/llm';
 import { documentContentService } from '@modules/document';
 import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
+import { documentAIConfig } from '@config/env';
 import {
   buildSummarySystemPrompt,
   buildSummaryUserPrompt,
@@ -25,10 +26,10 @@ import {
 
 const logger = createLogger('summary.service');
 
-// Configuration for long document handling
-const MAX_CONTEXT_TOKENS = 8000;
-const CHARS_PER_TOKEN = 3; // Conservative estimate for mixed CJK/English
-const BATCH_SIZE = 5;
+// Configuration from env (was previously hardcoded)
+const MAX_CONTEXT_TOKENS = documentAIConfig.maxContextTokens;
+const CHARS_PER_TOKEN = documentAIConfig.charsPerToken;
+const BATCH_SIZE = documentAIConfig.summaryBatchSize;
 
 interface SummaryOptions {
   userId: string;

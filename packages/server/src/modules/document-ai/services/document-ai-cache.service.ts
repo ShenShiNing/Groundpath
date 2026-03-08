@@ -5,17 +5,15 @@
 
 import crypto from 'crypto';
 import { createLogger } from '@shared/logger';
+import { documentAIConfig } from '@config/env';
 
 const logger = createLogger('document-ai-cache');
 
 // In-memory cache (consider Redis for production at scale)
 const cache = new Map<string, { data: unknown; expiresAt: number }>();
 
-// Default TTL: 1 hour
-const DEFAULT_TTL_MS = 60 * 60 * 1000;
-
-// Cleanup interval: 5 minutes
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+const DEFAULT_TTL_MS = documentAIConfig.cacheTtlMs;
+const CLEANUP_INTERVAL_MS = documentAIConfig.cacheCleanupIntervalMs;
 
 // Start periodic cleanup
 const cleanupTimer = setInterval(() => {

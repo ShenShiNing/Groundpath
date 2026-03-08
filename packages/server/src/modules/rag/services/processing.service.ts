@@ -4,6 +4,7 @@ import { withTransaction } from '@shared/db/db.utils';
 import { db } from '@shared/db';
 import { documents } from '@shared/db/schema/document/documents.schema';
 import { eq, and, inArray } from 'drizzle-orm';
+import { documentConfig } from '@config/env';
 import {
   documentRepository,
   documentVersionRepository,
@@ -180,7 +181,7 @@ export const processingService = {
       // Generate embeddings using the KB's provider
       // This is done BEFORE any database modifications
       const embeddingProvider = getEmbeddingProviderByType(provider as EmbeddingProviderType);
-      const batchSize = 20;
+      const batchSize = documentConfig.vectorBatchSize;
       const allChunkRecords: Array<{
         id: string;
         documentId: string;

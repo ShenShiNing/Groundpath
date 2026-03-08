@@ -5,11 +5,11 @@
 
 import type { Response } from 'express';
 import { createLogger } from '@shared/logger';
+import { documentAIConfig } from '@config/env';
 
 const logger = createLogger('document-ai-sse');
 
-// Heartbeat interval: 15 seconds
-const HEARTBEAT_INTERVAL_MS = 15000;
+const HEARTBEAT_INTERVAL_MS = documentAIConfig.heartbeatIntervalMs;
 
 export interface SSEEvent {
   type: 'chunk' | 'done' | 'error' | 'heartbeat';

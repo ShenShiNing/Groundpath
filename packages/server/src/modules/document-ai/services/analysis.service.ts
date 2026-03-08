@@ -21,6 +21,7 @@ import type { ChatMessage } from '@modules/llm';
 import { documentContentService } from '@modules/document';
 import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
+import { documentAIConfig } from '@config/env';
 import {
   buildKeywordExtractionPrompt,
   buildEntityExtractionPrompt,
@@ -31,7 +32,7 @@ import {
 const logger = createLogger('analysis.service');
 
 // Max content length to send to LLM (avoid token limits)
-const MAX_ANALYSIS_CHARS = 30000;
+const MAX_ANALYSIS_CHARS = documentAIConfig.maxAnalysisChars;
 
 interface AnalysisOptions {
   userId: string;

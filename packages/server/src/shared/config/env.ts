@@ -121,6 +121,24 @@ const documentSchema = z.object({
   TEXT_PREVIEW_MAX_LENGTH: z.coerce.number().default(50000),
   CHUNK_SIZE: z.coerce.number().default(512),
   CHUNK_OVERLAP: z.coerce.number().default(50),
+  VECTOR_BATCH_SIZE: z.coerce.number().int().min(1).default(20),
+});
+
+// -------------------- RAG Search Defaults --------------------
+const ragSchema = z.object({
+  RAG_SEARCH_DEFAULT_LIMIT: z.coerce.number().int().min(1).max(50).default(5),
+  RAG_SEARCH_DEFAULT_SCORE_THRESHOLD: z.coerce.number().min(0).max(1).default(0.5),
+});
+
+// -------------------- Document AI --------------------
+const documentAISchema = z.object({
+  DOCUMENT_AI_MAX_CONTEXT_TOKENS: z.coerce.number().int().min(1000).default(8000),
+  DOCUMENT_AI_CHARS_PER_TOKEN: z.coerce.number().min(1).default(3),
+  DOCUMENT_AI_SUMMARY_BATCH_SIZE: z.coerce.number().int().min(1).default(5),
+  DOCUMENT_AI_MAX_ANALYSIS_CHARS: z.coerce.number().int().min(1000).default(30000),
+  DOCUMENT_AI_CACHE_TTL_MS: z.coerce.number().int().min(1000).default(3600000),
+  DOCUMENT_AI_CACHE_CLEANUP_INTERVAL_MS: z.coerce.number().int().min(1000).default(300000),
+  DOCUMENT_AI_HEARTBEAT_INTERVAL_MS: z.coerce.number().int().min(1000).default(15000),
 });
 
 // -------------------- Embedding Providers --------------------
@@ -185,6 +203,8 @@ const envSchema = serverSchema
   .extend(oauthSchema.shape)
   .extend(storageSchema.shape)
   .extend(documentSchema.shape)
+  .extend(ragSchema.shape)
+  .extend(documentAISchema.shape)
   .extend(embeddingSchema.shape)
   .extend(vectorSchema.shape)
   .extend(llmSchema.shape)
@@ -328,6 +348,24 @@ export const documentConfig = {
   textPreviewMaxLength: validatedEnv.TEXT_PREVIEW_MAX_LENGTH,
   chunkSize: validatedEnv.CHUNK_SIZE,
   chunkOverlap: validatedEnv.CHUNK_OVERLAP,
+  vectorBatchSize: validatedEnv.VECTOR_BATCH_SIZE,
+} as const;
+
+/** RAG search defaults */
+export const ragConfig = {
+  searchDefaultLimit: validatedEnv.RAG_SEARCH_DEFAULT_LIMIT,
+  searchDefaultScoreThreshold: validatedEnv.RAG_SEARCH_DEFAULT_SCORE_THRESHOLD,
+} as const;
+
+/** Document AI configuration */
+export const documentAIConfig = {
+  maxContextTokens: validatedEnv.DOCUMENT_AI_MAX_CONTEXT_TOKENS,
+  charsPerToken: validatedEnv.DOCUMENT_AI_CHARS_PER_TOKEN,
+  summaryBatchSize: validatedEnv.DOCUMENT_AI_SUMMARY_BATCH_SIZE,
+  maxAnalysisChars: validatedEnv.DOCUMENT_AI_MAX_ANALYSIS_CHARS,
+  cacheTtlMs: validatedEnv.DOCUMENT_AI_CACHE_TTL_MS,
+  cacheCleanupIntervalMs: validatedEnv.DOCUMENT_AI_CACHE_CLEANUP_INTERVAL_MS,
+  heartbeatIntervalMs: validatedEnv.DOCUMENT_AI_HEARTBEAT_INTERVAL_MS,
 } as const;
 
 /** Embedding providers configuration */

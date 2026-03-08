@@ -18,6 +18,7 @@ import { documentContentService } from '@modules/document';
 import { searchService } from '@modules/rag';
 import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
+import { ragConfig } from '@config/env';
 import {
   buildGenerationSystemPrompt,
   buildGenerationUserPrompt,
@@ -89,8 +90,8 @@ async function fetchRAGContext(
       userId,
       knowledgeBaseId,
       query,
-      limit: 5,
-      scoreThreshold: 0.5,
+      limit: ragConfig.searchDefaultLimit,
+      scoreThreshold: ragConfig.searchDefaultScoreThreshold,
       documentIds,
     });
 
