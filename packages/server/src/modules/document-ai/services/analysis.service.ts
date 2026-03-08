@@ -28,6 +28,7 @@ import {
   buildTopicIdentificationPrompt,
   buildAnalysisUserPrompt,
 } from '../prompts/analysis.prompts';
+import { countWords } from '../helpers';
 
 const logger = createLogger('analysis.service');
 
@@ -74,18 +75,6 @@ function parseJsonResponse<T>(response: string): T | null {
 
     return null;
   }
-}
-
-/**
- * Count words in text (handles both CJK and English)
- */
-function countWords(text: string): number {
-  const cjkChars = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
-  const englishWords = text
-    .replace(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g, ' ')
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
-  return cjkChars + englishWords;
 }
 
 /**

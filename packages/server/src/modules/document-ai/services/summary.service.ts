@@ -4,11 +4,7 @@
  */
 
 import type { Response } from 'express';
-import type {
-  SummaryLength,
-  SummaryResponse,
-  DocumentAISSEEvent,
-} from '@knowledge-agent/shared/types';
+import type { SummaryLength, SummaryResponse } from '@knowledge-agent/shared/types';
 import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { llmService } from '@modules/llm';
 import type { ChatMessage } from '@modules/llm';
@@ -23,10 +19,10 @@ import {
   buildMergeSummariesPrompt,
   buildMergeUserPrompt,
 } from '../prompts/summary.prompts';
+import { countWords, sendSSE, initSSEStream, streamLLMToSSE, handleSSEError } from '../helpers';
 
 const logger = createLogger('summary.service');
 
-// Configuration from env (was previously hardcoded)
 const MAX_CONTEXT_TOKENS = documentAIConfig.maxContextTokens;
 const CHARS_PER_TOKEN = documentAIConfig.charsPerToken;
 const BATCH_SIZE = documentAIConfig.summaryBatchSize;
@@ -43,21 +39,13 @@ interface StreamSummaryOptions extends SummaryOptions {
   signal?: AbortSignal;
 }
 
-/**
- * Estimate token count from character count
- */
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN);
 }
 
-/**
- * Split text into chunks of approximately equal size
- */
 function splitIntoChunks(text: string, maxChunkTokens: number): string[] {
   const maxChunkChars = maxChunkTokens * CHARS_PER_TOKEN;
   const chunks: string[] = [];
-
-  // Split by paragraphs first
   const paragraphs = text.split(/\n\n+/);
   let currentChunk = '';
 
@@ -67,7 +55,6 @@ function splitIntoChunks(text: string, maxChunkTokens: number): string[] {
         chunks.push(currentChunk.trim());
         currentChunk = '';
       }
-      // If single paragraph is too long, split by sentences
       if (paragraph.length > maxChunkChars) {
         const sentences = paragraph.split(/(?<=[.!?。！？])\s+/);
         for (const sentence of sentences) {
@@ -94,27 +81,6 @@ function splitIntoChunks(text: string, maxChunkTokens: number): string[] {
   return chunks;
 }
 
-/**
- * Count words in text (handles both CJK and English)
- */
-function countWords(text: string): number {
-  // Count CJK characters as individual words
-  const cjkChars = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
-  // Count English words
-  const englishWords = text
-    .replace(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g, ' ')
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
-  return cjkChars + englishWords;
-}
-
-/**
- * Send SSE event to client
- */
-function sendSSE(res: Response, event: DocumentAISSEEvent): void {
-  res.write(`data: ${JSON.stringify(event)}\n\n`);
-}
-
 export const summaryService = {
   /**
    * Generate a summary for a document (non-streaming)
@@ -125,7 +91,6 @@ export const summaryService = {
 
     logger.info({ documentId, userId, length }, 'Starting document summarization');
 
-    // Get document content
     const docContent = await documentContentService.getContent(documentId, userId);
 
     if (!docContent.textContent || docContent.textContent.trim().length === 0) {
@@ -139,14 +104,12 @@ export const summaryService = {
     const textContent = docContent.textContent;
     const estimatedTokens = estimateTokens(textContent);
 
-    // Get LLM provider
     const provider = await llmService.getProviderForUser(userId);
     const genOptions = await llmService.getOptionsForUser(userId);
 
     let summary: string;
 
     if (estimatedTokens <= MAX_CONTEXT_TOKENS) {
-      // Direct summarization for shorter documents
       summary = await this.directSummarize(
         provider,
         textContent,
@@ -154,7 +117,6 @@ export const summaryService = {
         genOptions
       );
     } else {
-      // Hierarchical summarization for long documents
       summary = await this.hierarchicalSummarize(
         provider,
         textContent,
@@ -185,22 +147,11 @@ export const summaryService = {
   async streamSummary(res: Response, options: StreamSummaryOptions): Promise<void> {
     const { userId, documentId, length, language, focusAreas, signal } = options;
 
-    // Set SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-
-    let clientDisconnected = false;
-    const onClose = () => {
-      clientDisconnected = true;
-    };
-    res.on('close', onClose);
+    const sse = initSSEStream(res);
 
     try {
       logger.info({ documentId, userId, length }, 'Starting streaming summarization');
 
-      // Get document content
       const docContent = await documentContentService.getContent(documentId, userId);
 
       if (!docContent.textContent || docContent.textContent.trim().length === 0) {
@@ -218,117 +169,95 @@ export const summaryService = {
       const textContent = docContent.textContent;
       const estimatedTokens = estimateTokens(textContent);
 
-      // Get LLM provider
       const provider = await llmService.getProviderForUser(userId);
       const genOptions = await llmService.getOptionsForUser(userId);
 
-      // Build prompts
       const systemPrompt = buildSummarySystemPrompt({ length, language, focusAreas });
-      let userPrompt: string;
 
-      if (estimatedTokens <= MAX_CONTEXT_TOKENS) {
-        userPrompt = buildSummaryUserPrompt(textContent, language);
-      } else {
-        // For long documents, first do hierarchical summarization to get partial summaries
-        // Then stream the final merge
-        const chunks = splitIntoChunks(textContent, Math.floor(MAX_CONTEXT_TOKENS / 2));
-        const partialSummaries: string[] = [];
-
-        // Generate partial summaries (non-streaming)
-        for (let i = 0; i < chunks.length && !clientDisconnected; i += BATCH_SIZE) {
-          const batch = chunks.slice(i, i + BATCH_SIZE);
-          for (let j = 0; j < batch.length && !clientDisconnected; j++) {
-            const chunkIndex = i + j;
-            const chunkContent = batch[j];
-            if (!chunkContent) continue;
-            const chunkPrompt = buildChunkSummaryPrompt(chunkIndex, chunks.length, language);
-            const messages: ChatMessage[] = [
-              { role: 'system', content: chunkPrompt },
-              { role: 'user', content: chunkContent },
-            ];
-            const partialSummary = await provider.generate(messages, genOptions);
-            partialSummaries.push(partialSummary);
-          }
-        }
-
-        if (clientDisconnected) {
-          return;
-        }
-
-        // Build merge prompt
-        const mergeSystemPrompt = buildMergeSummariesPrompt({ length, language, focusAreas });
-        userPrompt = buildMergeUserPrompt(partialSummaries, language);
-        const mergeMessages: ChatMessage[] = [
-          { role: 'system', content: mergeSystemPrompt },
-          { role: 'user', content: userPrompt },
-        ];
-
-        // Stream the final merge
-        let fullContent = '';
-        for await (const chunk of provider.streamGenerate(mergeMessages, {
-          ...genOptions,
+      if (estimatedTokens > MAX_CONTEXT_TOKENS) {
+        await this.streamHierarchicalSummary(res, sse, {
+          provider,
+          genOptions,
+          textContent,
+          language,
+          length,
+          focusAreas,
           signal,
-        })) {
-          if (clientDisconnected) break;
-          fullContent += chunk;
-          sendSSE(res, { type: 'chunk', data: chunk });
-        }
-
-        if (!clientDisconnected) {
-          sendSSE(res, {
-            type: 'done',
-            data: {
-              wordCount: countWords(fullContent),
-              generatedAt: new Date().toISOString(),
-            },
-          });
-        }
-        res.end();
+        });
         return;
       }
 
       // Direct streaming for short documents
+      const userPrompt = buildSummaryUserPrompt(textContent, language);
       const messages: ChatMessage[] = [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ];
 
-      let fullContent = '';
-      for await (const chunk of provider.streamGenerate(messages, {
-        ...genOptions,
+      await streamLLMToSSE(res, provider, messages, genOptions, {
+        isDisconnected: sse.isDisconnected,
         signal,
-      })) {
-        if (clientDisconnected) break;
-        fullContent += chunk;
-        sendSSE(res, { type: 'chunk', data: chunk });
-      }
-
-      if (!clientDisconnected) {
-        sendSSE(res, {
-          type: 'done',
-          data: {
-            wordCount: countWords(fullContent),
-            generatedAt: new Date().toISOString(),
-          },
-        });
-      }
+      });
       res.end();
     } catch (error) {
-      logger.error({ error, documentId }, 'Streaming summarization failed');
-
-      if (!clientDisconnected && !res.headersSent) {
-        sendSSE(res, {
-          type: 'error',
-          data: {
-            code: DOCUMENT_AI_ERROR_CODES.STREAMING_FAILED,
-            message: error instanceof Error ? error.message : 'Streaming failed',
-          },
-        });
-      }
-      res.end();
+      handleSSEError(error, res, sse.isDisconnected(), 'summarization');
     } finally {
-      res.off('close', onClose);
+      sse.cleanup();
     }
+  },
+
+  /**
+   * Handle hierarchical summarization streaming (long documents)
+   */
+  async streamHierarchicalSummary(
+    res: Response,
+    sse: ReturnType<typeof initSSEStream>,
+    opts: {
+      provider: Awaited<ReturnType<typeof llmService.getProviderForUser>>;
+      genOptions: Awaited<ReturnType<typeof llmService.getOptionsForUser>>;
+      textContent: string;
+      language?: string;
+      length: SummaryLength;
+      focusAreas?: string[];
+      signal?: AbortSignal;
+    }
+  ): Promise<void> {
+    const { provider, genOptions, textContent, language, length, focusAreas, signal } = opts;
+    const chunks = splitIntoChunks(textContent, Math.floor(MAX_CONTEXT_TOKENS / 2));
+    const partialSummaries: string[] = [];
+
+    // Generate partial summaries (non-streaming)
+    for (let i = 0; i < chunks.length && !sse.isDisconnected(); i += BATCH_SIZE) {
+      const batch = chunks.slice(i, i + BATCH_SIZE);
+      for (let j = 0; j < batch.length && !sse.isDisconnected(); j++) {
+        const chunkIndex = i + j;
+        const chunkContent = batch[j];
+        if (!chunkContent) continue;
+        const chunkPrompt = buildChunkSummaryPrompt(chunkIndex, chunks.length, language);
+        const messages: ChatMessage[] = [
+          { role: 'system', content: chunkPrompt },
+          { role: 'user', content: chunkContent },
+        ];
+        const partialSummary = await provider.generate(messages, genOptions);
+        partialSummaries.push(partialSummary);
+      }
+    }
+
+    if (sse.isDisconnected()) return;
+
+    // Stream the final merge
+    const mergeSystemPrompt = buildMergeSummariesPrompt({ length, language, focusAreas });
+    const mergeUserPrompt = buildMergeUserPrompt(partialSummaries, language);
+    const mergeMessages: ChatMessage[] = [
+      { role: 'system', content: mergeSystemPrompt },
+      { role: 'user', content: mergeUserPrompt },
+    ];
+
+    await streamLLMToSSE(res, provider, mergeMessages, genOptions, {
+      isDisconnected: sse.isDisconnected,
+      signal,
+    });
+    res.end();
   },
 
   /**
@@ -364,7 +293,6 @@ export const summaryService = {
 
     logger.info({ chunkCount: chunks.length }, 'Splitting document for hierarchical summarization');
 
-    // Generate summaries for each chunk
     const chunkSummaries: string[] = [];
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
       const batch = chunks.slice(i, i + BATCH_SIZE);
@@ -381,16 +309,13 @@ export const summaryService = {
       chunkSummaries.push(...batchResults);
     }
 
-    // Check if merged summaries fit in context
     const mergedSummaryText = chunkSummaries.join('\n\n');
     const mergedTokens = estimateTokens(mergedSummaryText);
 
     if (mergedTokens > MAX_CONTEXT_TOKENS) {
-      // Recursive summarization needed
       return this.hierarchicalSummarize(provider, mergedSummaryText, options, genOptions);
     }
 
-    // Final merge
     const mergeSystemPrompt = buildMergeSummariesPrompt(options);
     const mergeUserPrompt = buildMergeUserPrompt(chunkSummaries, options.language);
 

@@ -55,7 +55,6 @@ async function buildAuthResponse(
 
 /**
  * Get enhanced login info (device detection + geo-location)
- * This runs asynchronously and does not block the main flow
  */
 async function getEnhancedLoginInfo(ipAddress: string | null, userAgent: string | null) {
   const [geoInfo] = await Promise.all([getGeoLocationAsync(ipAddress)]);
@@ -63,10 +62,83 @@ async function getEnhancedLoginInfo(ipAddress: string | null, userAgent: string 
 
   logger.info({ ipAddress, userAgent, deviceInfo, geoInfo }, 'Enhanced login info');
 
-  return {
-    deviceInfo,
-    geoInfo,
-  };
+  return { deviceInfo, geoInfo };
+}
+
+/**
+ * Validate that email and username are not already taken.
+ */
+async function validateNewUser(email: string, username: string): Promise<void> {
+  const emailExists = await userService.existsByEmail(email);
+  if (emailExists) {
+    throw Errors.auth(
+      AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
+      'An account with this email already exists',
+      400
+    );
+  }
+
+  const usernameExists = await userService.existsByUsername(username);
+  if (usernameExists) {
+    throw Errors.auth(
+      AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
+      'This username is already taken',
+      400
+    );
+  }
+}
+
+/**
+ * Record successful login/registration and build auth response.
+ */
+async function recordSuccessAndBuildResponse(
+  user: User,
+  email: string,
+  ipAddress: string | null,
+  userAgent: string | null,
+  deviceInfo: DeviceInfo | null
+): Promise<AuthResponse> {
+  const enhanced = await getEnhancedLoginInfo(ipAddress, userAgent);
+  await loginLogRepository.recordSuccess(
+    user.id,
+    email,
+    'password',
+    ipAddress,
+    userAgent,
+    enhanced
+  );
+  await userService.updateLastLogin(user.id, ipAddress);
+  return buildAuthResponse(user, ipAddress, deviceInfo);
+}
+
+/**
+ * Record a login failure and throw the corresponding error.
+ */
+async function recordFailureAndThrow(
+  email: string,
+  ipAddress: string | null,
+  userAgent: string | null,
+  enhancedPromise: Promise<{
+    deviceInfo: ReturnType<typeof detectDevice>;
+    geoInfo: Awaited<ReturnType<typeof getGeoLocationAsync>>;
+  }>,
+  reason: string,
+  errorCode: (typeof AUTH_ERROR_CODES)[keyof typeof AUTH_ERROR_CODES],
+  errorMessage: string,
+  statusCode?: number,
+  userId?: string
+): Promise<never> {
+  const enhanced = await enhancedPromise.catch(() => ({ deviceInfo: null, geoInfo: null }));
+  await loginLogRepository.recordFailure(
+    email,
+    'password',
+    reason,
+    ipAddress,
+    userAgent,
+    userId,
+    enhanced
+  );
+  throw Errors.auth(errorCode, errorMessage, statusCode);
 }
 
 /**
@@ -84,56 +156,24 @@ export const authService = {
     const { username, password, deviceInfo } = data;
     const email = normalizeEmail(data.email);
 
-    // Check if email already exists
-    const emailExists = await userService.existsByEmail(email);
-    if (emailExists) {
-      throw Errors.auth(
-        AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
-        'An account with this email already exists',
-        400
-      );
-    }
+    await validateNewUser(email, username);
 
-    // Check if username already exists
-    const usernameExists = await userService.existsByUsername(username);
-    if (usernameExists) {
-      throw Errors.auth(
-        AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
-        'This username is already taken',
-        400
-      );
-    }
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, authConfig.bcrypt.saltRounds);
-
-    // Create user
-    const userId = uuidv4();
     const user = await userService.create({
-      id: userId,
+      id: uuidv4(),
       username,
       email,
       password: hashedPassword,
       status: 'active',
     });
 
-    // Get enhanced login info asynchronously
-    const enhanced = await getEnhancedLoginInfo(ipAddress, userAgent);
-
-    // Record successful registration in login logs
-    await loginLogRepository.recordSuccess(
-      user.id,
+    return recordSuccessAndBuildResponse(
+      user,
       email,
-      'password',
       ipAddress,
       userAgent,
-      enhanced
+      deviceInfo ?? parseDeviceInfo(userAgent)
     );
-
-    // Update last login info
-    await userService.updateLastLogin(user.id, ipAddress);
-
-    return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
   },
 
   /**
@@ -158,46 +198,30 @@ export const authService = {
       );
     }
 
-    // Get enhanced login info asynchronously (non-blocking for failures, awaited for success)
+    // Get enhanced login info (non-blocking for failures, awaited for success)
     const enhancedPromise = getEnhancedLoginInfo(ipAddress, userAgent);
 
-    // Find user by email
     const user = await userService.findByEmail(email);
 
-    /** Record a login failure and throw the corresponding error */
-    const failLogin = async (
-      reason: string,
-      errorCode: (typeof AUTH_ERROR_CODES)[keyof typeof AUTH_ERROR_CODES],
-      errorMessage: string,
-      statusCode?: number,
-      userId?: string
-    ): Promise<never> => {
-      // Get enhanced info for failure logging (don't block on errors)
-      const enhanced = await enhancedPromise.catch(() => ({ deviceInfo: null, geoInfo: null }));
-      await loginLogRepository.recordFailure(
+    if (!user || !user.password) {
+      return recordFailureAndThrow(
         email,
-        'password',
-        reason,
         ipAddress,
         userAgent,
-        userId,
-        enhanced
-      );
-      throw Errors.auth(errorCode, errorMessage, statusCode);
-    };
-
-    if (!user || !user.password) {
-      return failLogin(
+        enhancedPromise,
         'Invalid credentials',
         AUTH_ERROR_CODES.INVALID_CREDENTIALS,
         'Invalid email or password'
       );
     }
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return failLogin(
+      return recordFailureAndThrow(
+        email,
+        ipAddress,
+        userAgent,
+        enhancedPromise,
         'Invalid password',
         AUTH_ERROR_CODES.INVALID_CREDENTIALS,
         'Invalid email or password',
@@ -206,9 +230,12 @@ export const authService = {
       );
     }
 
-    // Check user status
     if (user.status === 'banned') {
-      return failLogin(
+      return recordFailureAndThrow(
+        email,
+        ipAddress,
+        userAgent,
+        enhancedPromise,
         'Account banned',
         AUTH_ERROR_CODES.USER_BANNED,
         'Your account has been banned',
@@ -217,10 +244,7 @@ export const authService = {
       );
     }
 
-    // Get enhanced info for success logging
     const enhanced = await enhancedPromise;
-
-    // Record successful login
     await loginLogRepository.recordSuccess(
       user.id,
       email,
@@ -229,11 +253,7 @@ export const authService = {
       userAgent,
       enhanced
     );
-
-    // Reset account rate limit on successful login
     await resetAccountRateLimit(email);
-
-    // Update last login info
     await userService.updateLastLogin(user.id, ipAddress);
 
     return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
@@ -272,13 +292,11 @@ export const authService = {
     const { username, password, verificationToken, deviceInfo } = data;
     const email = normalizeEmail(data.email);
 
-    // Verify the verification token
     const { email: verifiedEmail } = emailVerificationService.verifyToken(
       verificationToken,
       'register'
     );
 
-    // Ensure the email matches (verifiedEmail is already normalized in token)
     if (verifiedEmail !== email) {
       throw Errors.auth(
         AUTH_ERROR_CODES.TOKEN_INVALID,
@@ -287,33 +305,11 @@ export const authService = {
       );
     }
 
-    // Check if email already exists
-    const emailExists = await userService.existsByEmail(email);
-    if (emailExists) {
-      throw Errors.auth(
-        AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
-        'An account with this email already exists',
-        400
-      );
-    }
+    await validateNewUser(email, username);
 
-    // Check if username already exists
-    const usernameExists = await userService.existsByUsername(username);
-    if (usernameExists) {
-      throw Errors.auth(
-        AUTH_ERROR_CODES.USERNAME_ALREADY_EXISTS,
-        'This username is already taken',
-        400
-      );
-    }
-
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, authConfig.bcrypt.saltRounds);
-
-    // Create user with email verified
-    const userId = uuidv4();
     const user = await userService.create({
-      id: userId,
+      id: uuidv4(),
       username,
       email,
       password: hashedPassword,
@@ -321,23 +317,13 @@ export const authService = {
       emailVerified: true,
     });
 
-    // Get enhanced login info asynchronously
-    const enhanced = await getEnhancedLoginInfo(ipAddress, userAgent);
-
-    // Record successful registration
-    await loginLogRepository.recordSuccess(
-      user.id,
+    return recordSuccessAndBuildResponse(
+      user,
       email,
-      'password',
       ipAddress,
       userAgent,
-      enhanced
+      deviceInfo ?? parseDeviceInfo(userAgent)
     );
-
-    // Update last login info
-    await userService.updateLastLogin(user.id, ipAddress);
-
-    return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
   },
 
   /**

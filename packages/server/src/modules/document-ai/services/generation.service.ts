@@ -9,7 +9,6 @@ import type {
   GenerationStyle,
   GenerationResponse,
   ExpandResponse,
-  DocumentAISSEEvent,
 } from '@knowledge-agent/shared/types';
 import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { llmService } from '@modules/llm';
@@ -25,6 +24,7 @@ import {
   buildExpandSystemPrompt,
   buildExpandUserPrompt,
 } from '../prompts/generation.prompts';
+import { countWords, sendSSE, initSSEStream, streamLLMToSSE, handleSSEError } from '../helpers';
 
 const logger = createLogger('generation.service');
 
@@ -58,25 +58,6 @@ interface StreamExpandOptions extends ExpandOptions {
 }
 
 /**
- * Count words in text (handles both CJK and English)
- */
-function countWords(text: string): number {
-  const cjkChars = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
-  const englishWords = text
-    .replace(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g, ' ')
-    .split(/\s+/)
-    .filter((word) => word.length > 0).length;
-  return cjkChars + englishWords;
-}
-
-/**
- * Send SSE event to client
- */
-function sendSSE(res: Response, event: DocumentAISSEEvent): void {
-  res.write(`data: ${JSON.stringify(event)}\n\n`);
-}
-
-/**
  * Fetch RAG context from knowledge base
  */
 async function fetchRAGContext(
@@ -99,11 +80,7 @@ async function fetchRAGContext(
       return null;
     }
 
-    // Format context from search results
-    const contextParts = results.map((r, i) => {
-      return `[参考 ${i + 1}]\n${r.content}`;
-    });
-
+    const contextParts = results.map((r, i) => `[参考 ${i + 1}]\n${r.content}`);
     return contextParts.join('\n\n');
   } catch (error) {
     logger.warn({ error, knowledgeBaseId }, 'Failed to fetch RAG context');
@@ -130,17 +107,14 @@ export const generationService = {
 
     logger.info({ userId, template, style }, 'Starting content generation');
 
-    // Get LLM provider
     const provider = await llmService.getProviderForUser(userId);
     const genOptions = await llmService.getOptionsForUser(userId);
 
-    // Fetch RAG context if knowledge base is specified
     let context: string | null = null;
     if (knowledgeBaseId) {
       context = await fetchRAGContext(userId, knowledgeBaseId, prompt, contextDocumentIds);
     }
 
-    // Build prompts
     const systemPrompt = buildGenerationSystemPrompt({ template, style, language, maxLength });
     const userPrompt = buildGenerationUserPrompt(prompt, context ?? undefined, language);
 
@@ -184,32 +158,19 @@ export const generationService = {
       signal,
     } = options;
 
-    // Set SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-
-    let clientDisconnected = false;
-    const onClose = () => {
-      clientDisconnected = true;
-    };
-    res.on('close', onClose);
+    const sse = initSSEStream(res);
 
     try {
       logger.info({ userId, template, style }, 'Starting streaming content generation');
 
-      // Get LLM provider
       const provider = await llmService.getProviderForUser(userId);
       const genOptions = await llmService.getOptionsForUser(userId);
 
-      // Fetch RAG context if knowledge base is specified
       let context: string | null = null;
       if (knowledgeBaseId) {
         context = await fetchRAGContext(userId, knowledgeBaseId, prompt, contextDocumentIds);
       }
 
-      // Build prompts
       const systemPrompt = buildGenerationSystemPrompt({ template, style, language, maxLength });
       const userPrompt = buildGenerationUserPrompt(prompt, context ?? undefined, language);
 
@@ -218,41 +179,15 @@ export const generationService = {
         { role: 'user', content: userPrompt },
       ];
 
-      let fullContent = '';
-      for await (const chunk of provider.streamGenerate(messages, {
-        ...genOptions,
+      await streamLLMToSSE(res, provider, messages, genOptions, {
+        isDisconnected: sse.isDisconnected,
         signal,
-      })) {
-        if (clientDisconnected) break;
-        fullContent += chunk;
-        sendSSE(res, { type: 'chunk', data: chunk });
-      }
-
-      if (!clientDisconnected) {
-        sendSSE(res, {
-          type: 'done',
-          data: {
-            wordCount: countWords(fullContent),
-            generatedAt: new Date().toISOString(),
-          },
-        });
-      }
+      });
       res.end();
     } catch (error) {
-      logger.error({ error }, 'Streaming content generation failed');
-
-      if (!clientDisconnected && !res.headersSent) {
-        sendSSE(res, {
-          type: 'error',
-          data: {
-            code: DOCUMENT_AI_ERROR_CODES.STREAMING_FAILED,
-            message: error instanceof Error ? error.message : 'Streaming failed',
-          },
-        });
-      }
-      res.end();
+      handleSSEError(error, res, sse.isDisconnected(), 'content generation');
     } finally {
-      res.off('close', onClose);
+      sse.cleanup();
     }
   },
 
@@ -266,7 +201,6 @@ export const generationService = {
 
     logger.info({ userId, documentId, position }, 'Starting document expansion');
 
-    // Get document content
     const docContent = await documentContentService.getContent(documentId, userId);
 
     if (!docContent.textContent || docContent.textContent.trim().length === 0) {
@@ -278,18 +212,14 @@ export const generationService = {
     }
 
     const existingContent = docContent.textContent;
-
-    // Get LLM provider
     const provider = await llmService.getProviderForUser(userId);
     const genOptions = await llmService.getOptionsForUser(userId);
 
-    // Fetch RAG context if knowledge base is specified
     let context: string | null = null;
     if (knowledgeBaseId) {
       context = await fetchRAGContext(userId, knowledgeBaseId, instruction);
     }
 
-    // Build prompts
     const systemPrompt = buildExpandSystemPrompt({ position, style, maxLength });
     const userPrompt = buildExpandUserPrompt(instruction, existingContent, context ?? undefined);
 
@@ -323,22 +253,11 @@ export const generationService = {
     const { userId, documentId, instruction, position, style, maxLength, knowledgeBaseId, signal } =
       options;
 
-    // Set SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-
-    let clientDisconnected = false;
-    const onClose = () => {
-      clientDisconnected = true;
-    };
-    res.on('close', onClose);
+    const sse = initSSEStream(res);
 
     try {
       logger.info({ userId, documentId, position }, 'Starting streaming document expansion');
 
-      // Get document content
       const docContent = await documentContentService.getContent(documentId, userId);
 
       if (!docContent.textContent || docContent.textContent.trim().length === 0) {
@@ -354,18 +273,14 @@ export const generationService = {
       }
 
       const existingContent = docContent.textContent;
-
-      // Get LLM provider
       const provider = await llmService.getProviderForUser(userId);
       const genOptions = await llmService.getOptionsForUser(userId);
 
-      // Fetch RAG context if knowledge base is specified
       let context: string | null = null;
       if (knowledgeBaseId) {
         context = await fetchRAGContext(userId, knowledgeBaseId, instruction);
       }
 
-      // Build prompts
       const systemPrompt = buildExpandSystemPrompt({ position, style, maxLength });
       const userPrompt = buildExpandUserPrompt(instruction, existingContent, context ?? undefined);
 
@@ -374,41 +289,15 @@ export const generationService = {
         { role: 'user', content: userPrompt },
       ];
 
-      let fullContent = '';
-      for await (const chunk of provider.streamGenerate(messages, {
-        ...genOptions,
+      await streamLLMToSSE(res, provider, messages, genOptions, {
+        isDisconnected: sse.isDisconnected,
         signal,
-      })) {
-        if (clientDisconnected) break;
-        fullContent += chunk;
-        sendSSE(res, { type: 'chunk', data: chunk });
-      }
-
-      if (!clientDisconnected) {
-        sendSSE(res, {
-          type: 'done',
-          data: {
-            wordCount: countWords(fullContent),
-            generatedAt: new Date().toISOString(),
-          },
-        });
-      }
+      });
       res.end();
     } catch (error) {
-      logger.error({ error, documentId }, 'Streaming document expansion failed');
-
-      if (!clientDisconnected && !res.headersSent) {
-        sendSSE(res, {
-          type: 'error',
-          data: {
-            code: DOCUMENT_AI_ERROR_CODES.STREAMING_FAILED,
-            message: error instanceof Error ? error.message : 'Streaming failed',
-          },
-        });
-      }
-      res.end();
+      handleSSEError(error, res, sse.isDisconnected(), 'document expansion');
     } finally {
-      res.off('close', onClose);
+      sse.cleanup();
     }
   },
 };
