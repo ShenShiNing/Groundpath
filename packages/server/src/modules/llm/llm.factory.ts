@@ -6,7 +6,7 @@ import { ZhipuProvider } from './providers/zhipu.provider';
 import { DeepSeekProvider } from './providers/deepseek.provider';
 import { OllamaProvider } from './providers/ollama.provider';
 import { CustomProvider } from './providers/custom.provider';
-import { embeddingConfig, llmConfig } from '@config/env';
+import { llmConfig } from '@config/env';
 
 export interface LLMProviderConfig {
   apiKey?: string;
@@ -18,13 +18,15 @@ export interface LLMProviderConfig {
  * Create an LLM provider instance with user-provided configuration.
  * Unlike the embedding factory, LLM providers are NOT cached because
  * each user may have different API keys and settings.
+ *
+ * Fallback keys come exclusively from llmConfig (never from embeddingConfig).
  */
 export function createLLMProvider(type: LLMProviderType, config: LLMProviderConfig): LLMProvider {
   const { apiKey, model, baseUrl } = config;
 
   switch (type) {
     case 'openai': {
-      const key = apiKey ?? embeddingConfig.openai.apiKey;
+      const key = apiKey ?? llmConfig.openaiApiKey;
       if (!key) throw new Error('OpenAI API key is required');
       return new OpenAIProvider(key, model);
     }
@@ -34,7 +36,7 @@ export function createLLMProvider(type: LLMProviderType, config: LLMProviderConf
       return new AnthropicProvider(key, model);
     }
     case 'zhipu': {
-      const key = apiKey ?? embeddingConfig.zhipu.apiKey;
+      const key = apiKey ?? llmConfig.zhipuApiKey;
       if (!key) throw new Error('Zhipu API key is required');
       return new ZhipuProvider(key, model);
     }
@@ -44,7 +46,7 @@ export function createLLMProvider(type: LLMProviderType, config: LLMProviderConf
       return new DeepSeekProvider(key, model);
     }
     case 'ollama': {
-      return new OllamaProvider(model, baseUrl ?? embeddingConfig.ollama.baseUrl);
+      return new OllamaProvider(model, baseUrl ?? llmConfig.ollamaBaseUrl);
     }
     case 'custom': {
       if (!apiKey) throw new Error('API key is required for custom provider');

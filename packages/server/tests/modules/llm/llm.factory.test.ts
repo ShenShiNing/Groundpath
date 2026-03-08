@@ -17,13 +17,11 @@ const {
 }));
 
 vi.mock('@config/env', () => ({
-  embeddingConfig: {
-    openai: { apiKey: 'env-openai-key' },
-    zhipu: { apiKey: 'env-zhipu-key' },
-    ollama: { baseUrl: 'http://localhost:11434' },
-  },
   llmConfig: {
     anthropicApiKey: 'env-anthropic-key',
+    openaiApiKey: 'env-openai-key',
+    zhipuApiKey: 'env-zhipu-key',
+    ollamaBaseUrl: 'http://localhost:11434',
     deepseek: { apiKey: 'env-deepseek-key' },
   },
 }));

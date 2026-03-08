@@ -163,6 +163,9 @@ const vectorSchema = z.object({
 // -------------------- LLM Providers --------------------
 const llmSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
+  OPENAI_LLM_API_KEY: z.string().optional(),
+  ZHIPU_LLM_API_KEY: z.string().optional(),
+  OLLAMA_LLM_BASE_URL: z.string().default('http://localhost:11434'),
   DEEPSEEK_API_KEY: z.string().optional(),
   DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
   MODEL_FETCH_TIMEOUT: z.coerce.number().default(15000), // 15s for fetching model lists
@@ -396,6 +399,9 @@ export const vectorConfig = {
 /** LLM providers configuration */
 export const llmConfig = {
   anthropicApiKey: validatedEnv.ANTHROPIC_API_KEY,
+  openaiApiKey: validatedEnv.OPENAI_LLM_API_KEY,
+  zhipuApiKey: validatedEnv.ZHIPU_LLM_API_KEY,
+  ollamaBaseUrl: validatedEnv.OLLAMA_LLM_BASE_URL,
   deepseek: {
     apiKey: validatedEnv.DEEPSEEK_API_KEY,
     baseUrl: validatedEnv.DEEPSEEK_BASE_URL,
