@@ -61,13 +61,14 @@ export function ChatPage() {
   const [createKbDialogOpen, setCreateKbDialogOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
-  const { data: knowledgeBases = [], isLoading: kbLoading } = useKnowledgeBases();
-  const { data: documentsResponse, isLoading: docsLoading } = useKBDocuments(
-    selectedKnowledgeBaseId,
-    {
-      pageSize: 100,
-    }
-  );
+  const { data: knowledgeBases = [], isLoading: kbLoading, isError: kbError } = useKnowledgeBases();
+  const {
+    data: documentsResponse,
+    isLoading: docsLoading,
+    isError: docsError,
+  } = useKBDocuments(selectedKnowledgeBaseId, {
+    pageSize: 100,
+  });
 
   const knowledgeBaseId = useChatPanelStore((s) => s.knowledgeBaseId);
   const conversationId = useChatPanelStore((s) => s.conversationId);
@@ -204,6 +205,18 @@ export function ChatPage() {
       window.clearTimeout(timer);
     };
   }, [clearFocusMessageId, focusKeyword, focusMessageId, messages]);
+
+  useEffect(() => {
+    if (kbError) {
+      toast.error(t('error.loadFailed'));
+    }
+  }, [kbError, t]);
+
+  useEffect(() => {
+    if (docsError) {
+      toast.error(t('error.loadFailed'));
+    }
+  }, [docsError, t]);
 
   const getAccessToken = useCallback(() => useAuthStore.getState().accessToken, []);
 

@@ -17,7 +17,9 @@ const RootLayout = () => {
     }
 
     // Recover in-memory access token from refresh token after full page reload.
-    void ensureAccessToken().catch(() => {});
+    void ensureAccessToken().catch((err) => {
+      console.warn('[auth] Failed to recover access token from refresh token:', err);
+    });
   }, [accessToken, isAuthenticated]);
 
   return (

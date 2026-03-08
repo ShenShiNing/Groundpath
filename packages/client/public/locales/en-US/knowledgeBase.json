@@ -55,6 +55,9 @@
   },
   "detail": {
     "subtitle": "Knowledge base details & document management",
+    "error": {
+      "loadFailed": "Failed to load knowledge base data. Please try again later."
+    },
     "notFound": {
       "title": "Knowledge base not found",
       "description": "This knowledge base may have been deleted, or you don't have access."

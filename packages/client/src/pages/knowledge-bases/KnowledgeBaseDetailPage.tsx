@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useParams, Link } from '@tanstack/react-router';
 import {
   Settings,
@@ -35,6 +35,7 @@ import { queryKeys } from '@/lib/query';
 import { cn, openInNewTab } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
 import { DocumentGridCard, DocumentTableRow } from './DocumentItemViews';
 
@@ -67,12 +68,26 @@ export default function KnowledgeBaseDetailPage() {
 
   const queryClient = useQueryClient();
 
-  const { data: knowledgeBase, isLoading: kbLoading } = useKnowledgeBase(knowledgeBaseId);
-  const { data: documentsResponse, isLoading: docsLoading } = useKBDocuments(knowledgeBaseId, {
+  const {
+    data: knowledgeBase,
+    isLoading: kbLoading,
+    isError: kbError,
+  } = useKnowledgeBase(knowledgeBaseId);
+  const {
+    data: documentsResponse,
+    isLoading: docsLoading,
+    isError: docsError,
+  } = useKBDocuments(knowledgeBaseId, {
     pageSize: 100,
   });
 
   const deleteDocumentMutation = useDeleteDocument();
+
+  useEffect(() => {
+    if (docsError) {
+      toast.error(t('detail.error.loadFailed'));
+    }
+  }, [docsError, t]);
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
 
@@ -175,6 +190,24 @@ export default function KnowledgeBaseDetailPage() {
                 <Skeleton key={i} className="h-36 rounded-xl" />
               ))}
             </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (kbError) {
+    return (
+      <>
+        <div className="flex-1 flex items-center justify-center px-6">
+          <div className="w-full max-w-xl p-8 text-center">
+            <h2 className="mb-2 text-xl font-semibold">{t('detail.error.loadFailed')}</h2>
+            <p className="mb-5 text-sm text-muted-foreground">
+              {t('error.generic', { ns: 'common' })}
+            </p>
+            <Button className="cursor-pointer" asChild>
+              <Link to="/knowledge-bases">{t('detail.action.backToList')}</Link>
+            </Button>
           </div>
         </div>
       </>

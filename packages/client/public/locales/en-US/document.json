@@ -21,6 +21,11 @@
     "saved": "Document saved",
     "saveFailed": "Save failed"
   },
+  "error": {
+    "loadFailed": "Failed to load document. Please try again later.",
+    "aiRewriteFailed": "AI rewrite generation failed. Please try again.",
+    "aiRewriteSaveFailed": "Failed to save AI rewrite content. Please try again."
+  },
   "aiRewrite": {
     "title": "AI Rewrite Document",
     "description": "Enter rewrite instructions. AI will generate modified content for your review.",

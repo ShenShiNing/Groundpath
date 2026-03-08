@@ -21,6 +21,11 @@
     "saved": "文档已保存",
     "saveFailed": "保存失败"
   },
+  "error": {
+    "loadFailed": "文档加载失败，请稍后重试。",
+    "aiRewriteFailed": "AI 改写生成失败，请重试。",
+    "aiRewriteSaveFailed": "保存 AI 改写内容失败，请重试。"
+  },
   "aiRewrite": {
     "title": "AI 改写文档",
     "description": "输入改写指令，AI 将生成修改后的内容供你审核。",

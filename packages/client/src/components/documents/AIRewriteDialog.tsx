@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, RefreshCw, Square } from 'lucide-react';
+import { toast } from 'sonner';
 import type { GenerationStyle } from '@knowledge-agent/shared/types';
 import {
   Dialog,
@@ -104,13 +105,14 @@ export function AIRewriteDialog({
         onError: () => {
           setIsGenerating(false);
           setHasGenerated(true);
+          toast.error(t('error.aiRewriteFailed'));
         },
       },
       getAccessToken
     );
 
     abortRef.current = controller;
-  }, [documentId, instruction, knowledgeBaseId, position, style]);
+  }, [documentId, instruction, knowledgeBaseId, position, style, t]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();
@@ -136,9 +138,13 @@ export function AIRewriteDialog({
     }
 
     const changeNote = `AI 改写: ${instruction.substring(0, 100)}`;
-    await saveContent({ id: documentId, data: { content: finalContent, changeNote } });
-    onSaveSuccess();
-    resetState();
+    try {
+      await saveContent({ id: documentId, data: { content: finalContent, changeNote } });
+      onSaveSuccess();
+      resetState();
+    } catch {
+      toast.error(t('error.aiRewriteSaveFailed'));
+    }
   }, [
     currentContent,
     documentId,
@@ -148,6 +154,7 @@ export function AIRewriteDialog({
     position,
     resetState,
     saveContent,
+    t,
   ]);
 
   const previewTruncated =

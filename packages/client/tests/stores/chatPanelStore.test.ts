@@ -58,6 +58,6 @@ describe('chatPanelStore sendMessage', () => {
     expect(state.isLoading).toBe(false);
     expect(state.messages).toHaveLength(1);
     expect(state.messages[0]?.role).toBe('assistant');
-    expect(state.messages[0]?.content).toContain('AI 设置页面');
+    expect(state.messages[0]?.content).toContain('error.conversationFailed');
   });
 });

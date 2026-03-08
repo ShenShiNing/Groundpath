@@ -149,6 +149,12 @@
     "sources_one": "{{count}} source",
     "sources_other": "{{count}} sources"
   },
+  "error": {
+    "conversationFailed": "Unable to start a conversation. Please go to [AI Settings](/settings/ai) and configure a model first.",
+    "llmNotConfigured": "No AI model configured. Please go to [AI Settings](/settings/ai) to set up a model first.",
+    "emptyResponse": "The model returned an empty response. Please try again.",
+    "loadFailed": "Failed to load data. Please try again later."
+  },
   "agent": {
     "kbSearch": "Knowledge Base Search",
     "webSearch": "Web Search",

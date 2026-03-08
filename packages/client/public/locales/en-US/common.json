@@ -24,5 +24,9 @@
   "create": "Create",
   "update": "Update",
   "backToDashboard": "Back to Dashboard",
-  "backToKnowledgeBases": "Back to Knowledge Bases"
+  "backToKnowledgeBases": "Back to Knowledge Bases",
+  "error": {
+    "generic": "Something went wrong. Please try again later.",
+    "retry": "Retry"
+  }
 }

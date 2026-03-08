@@ -51,13 +51,22 @@ export function DocumentDetailPage() {
   const { id } = useParams({ strict: false });
   const documentId = typeof id === 'string' ? id : undefined;
   const safeDocumentId = documentId ?? '';
-  const { data: document, isLoading } = useDocument(documentId);
-  const { data: content, isLoading: isContentLoading } = useDocumentContent(documentId);
-  const { data: versionHistory, isLoading: isVersionLoading } = useDocumentVersions(documentId);
+  const { data: document, isLoading, isError: docError } = useDocument(documentId);
+  const {
+    data: content,
+    isLoading: isContentLoading,
+    isError: contentError,
+  } = useDocumentContent(documentId);
+  const {
+    data: versionHistory,
+    isLoading: isVersionLoading,
+    isError: versionError,
+  } = useDocumentVersions(documentId);
   const { mutateAsync: restoreVersion, isPending: isRestoringVersion } = useRestoreVersion();
   const { mutateAsync: saveContent, isPending: isSaving } = useSaveDocumentContent();
 
   const isPageLoading = isLoading || isContentLoading;
+  const isPageError = docError || contentError;
   const isContentReady = !isContentLoading;
   const isEditable = !!content?.isEditable;
   const resolvedDocumentType: DocumentType =
@@ -181,6 +190,10 @@ export function DocumentDetailPage() {
       return <p className="text-sm text-muted-foreground">{t('versions.loading')}</p>;
     }
 
+    if (versionError) {
+      return <p className="text-sm text-destructive">{t('error.loadFailed')}</p>;
+    }
+
     if (versions.length === 0) {
       return <p className="text-sm text-muted-foreground">{t('versions.empty')}</p>;
     }
@@ -235,6 +248,21 @@ export function DocumentDetailPage() {
       </div>
     );
   };
+
+  if (isPageError && !isPageLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="py-14 text-center">
+          <p className="text-destructive">{t('error.loadFailed')}</p>
+          <Link to="/knowledge-bases" className="mt-4 inline-block">
+            <Button variant="outline" className="cursor-pointer">
+              {t('action.backToList')}
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

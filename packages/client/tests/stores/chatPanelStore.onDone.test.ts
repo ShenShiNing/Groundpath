@@ -56,7 +56,7 @@ describe('chatPanelStore onDone empty content guard', () => {
     capturedHandlers!.onDone({ messageId: 'msg-server-1' });
 
     const finalState = useChatPanelStore.getState();
-    expect(finalState.messages[1]?.content).toBe('模型返回了空响应，请重试。');
+    expect(finalState.messages[1]?.content).toContain('error.emptyResponse');
     expect(finalState.messages[1]?.isLoading).toBe(false);
     expect(finalState.isLoading).toBe(false);
   });

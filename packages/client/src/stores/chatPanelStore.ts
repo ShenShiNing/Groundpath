@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import i18n from '@/i18n/i18n';
 import { conversationApi, sendMessageWithSSE } from '@/api';
 import { queryClient } from '@/lib/query';
 import type { ChatMessage, ChatPanelState, ToolStep } from './chatPanelStore.types';
@@ -99,7 +100,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: '无法开始对话。请先前往 [AI 设置页面](/settings/ai) 完成模型配置后再试。',
+          content: i18n.t('error.conversationFailed', { ns: 'chat' }),
           timestamp: new Date(),
         });
         return;
@@ -163,7 +164,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           if (lastMsg && !lastMsg.content.trim()) {
             updateLastMessage({
               id: data.messageId,
-              content: '模型返回了空响应，请重试。',
+              content: i18n.t('error.emptyResponse', { ns: 'chat' }),
               isLoading: false,
             });
           } else {
@@ -175,7 +176,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         onError: (error) => {
           const fallbackMessage =
             error.code === 'LLM_CONFIG_NOT_FOUND'
-              ? '尚未配置 AI 模型。请先前往 [AI 设置页面](/settings/ai) 完成配置后再试。'
+              ? i18n.t('error.llmNotConfigured', { ns: 'chat' })
               : `Error: ${error.message}`;
           updateLastMessage({
             content: get().messages[get().messages.length - 1]?.content || fallbackMessage,

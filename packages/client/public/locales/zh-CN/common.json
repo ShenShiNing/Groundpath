@@ -24,5 +24,9 @@
   "create": "创建",
   "update": "更新",
   "backToDashboard": "返回工作台",
-  "backToKnowledgeBases": "返回知识库列表"
+  "backToKnowledgeBases": "返回知识库列表",
+  "error": {
+    "generic": "发生了错误，请稍后重试。",
+    "retry": "重试"
+  }
 }
