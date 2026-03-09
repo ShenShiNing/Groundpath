@@ -124,6 +124,12 @@ const documentSchema = z.object({
   VECTOR_BATCH_SIZE: z.coerce.number().int().min(1).default(20),
 });
 
+// -------------------- Document Index / Structured RAG --------------------
+const documentIndexSchema = z.object({
+  DOCUMENT_INDEX_ROUTE_TOKEN_THRESHOLD: z.coerce.number().int().min(1).default(5000),
+  DOCUMENT_INDEX_CHARS_PER_TOKEN: z.coerce.number().min(1).default(4),
+});
+
 // -------------------- RAG Search Defaults --------------------
 const ragSchema = z.object({
   RAG_SEARCH_DEFAULT_LIMIT: z.coerce.number().int().min(1).max(50).default(5),
@@ -202,6 +208,8 @@ const loggingSchema = z.object({
 const featureFlagsSchema = z.object({
   DISABLE_RATE_LIMIT: booleanString(false),
   COUNTER_SYNC_ENABLED: booleanString(false),
+  STRUCTURED_RAG_ENABLED: booleanString(false),
+  STRUCTURED_RAG_ROLLOUT_MODE: z.enum(['disabled', 'internal', 'all']).default('disabled'),
 });
 
 // ==================== Combined Schema ====================
@@ -214,6 +222,7 @@ const envSchema = serverSchema
   .extend(oauthSchema.shape)
   .extend(storageSchema.shape)
   .extend(documentSchema.shape)
+  .extend(documentIndexSchema.shape)
   .extend(ragSchema.shape)
   .extend(documentAISchema.shape)
   .extend(queueSchema.shape)
@@ -363,6 +372,12 @@ export const documentConfig = {
   vectorBatchSize: validatedEnv.VECTOR_BATCH_SIZE,
 } as const;
 
+/** Document index / structured RAG configuration */
+export const documentIndexConfig = {
+  routeTokenThreshold: validatedEnv.DOCUMENT_INDEX_ROUTE_TOKEN_THRESHOLD,
+  charsPerToken: validatedEnv.DOCUMENT_INDEX_CHARS_PER_TOKEN,
+} as const;
+
 /** RAG search defaults */
 export const ragConfig = {
   searchDefaultLimit: validatedEnv.RAG_SEARCH_DEFAULT_LIMIT,
@@ -453,6 +468,8 @@ export const loggingConfig = {
 export const featureFlags = {
   disableRateLimit: validatedEnv.DISABLE_RATE_LIMIT,
   counterSyncEnabled: validatedEnv.COUNTER_SYNC_ENABLED,
+  structuredRagEnabled: validatedEnv.STRUCTURED_RAG_ENABLED,
+  structuredRagRolloutMode: validatedEnv.STRUCTURED_RAG_ROLLOUT_MODE,
 } as const;
 
 // ==================== Utilities ====================

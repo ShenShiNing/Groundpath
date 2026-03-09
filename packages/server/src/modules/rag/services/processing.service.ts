@@ -17,6 +17,8 @@ import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
 import { chunkingService } from './chunking.service';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 import type { DocumentProcessingEnqueueOptions } from '../queue/document-processing.types';
+import { documentParseRouterService } from '@modules/document-index/services/document-parse-router.service';
+import { documentIndexService } from '@modules/document-index/services/document-index.service';
 
 const logger = createLogger('processing.service');
 
@@ -105,6 +107,7 @@ export const processingService = {
     userId: string,
     request?: DocumentProcessingEnqueueOptions
   ): Promise<void> {
+    const processStartedAt = Date.now();
     logger.info(
       {
         documentId,
@@ -126,6 +129,7 @@ export const processingService = {
     // Track old chunk IDs for cleanup
     let oldChunkIds: string[] = [];
     let collectionName: string | undefined;
+    let indexBuildId: string | undefined;
 
     try {
       // Get the document
@@ -197,6 +201,36 @@ export const processingService = {
         return;
       }
 
+      const routeDecision = documentParseRouterService.decideRoute({
+        documentType: document.documentType,
+        textContent: version.textContent,
+      });
+
+      logger.info(
+        {
+          documentId,
+          documentVersion: document.currentVersion,
+          documentType: document.documentType,
+          routeMode: routeDecision.routeMode,
+          routeReason: routeDecision.reason,
+          estimatedTokens: routeDecision.estimatedTokens,
+          thresholdTokens: routeDecision.thresholdTokens,
+          rolloutMode: routeDecision.rolloutMode,
+        },
+        routeDecision.routeMode === 'structured'
+          ? 'Structured route selected; using chunk pipeline as temporary fallback'
+          : 'Chunk route selected for document processing'
+      );
+
+      const indexBuild = await documentIndexService.startBuild({
+        documentId,
+        documentVersion: document.currentVersion,
+        routeMode: routeDecision.routeMode,
+        targetIndexVersion: request?.targetIndexVersion,
+        createdBy: userId,
+      });
+      indexBuildId = indexBuild.id;
+
       // Chunk the text
       const chunks = chunkingService.chunkText(version.textContent);
 
@@ -217,6 +251,13 @@ export const processingService = {
           }
         });
         await this.safeDeleteVectors(collectionName, documentId);
+        await documentIndexService.completeBuild({
+          indexVersionId: indexBuild.id,
+          parseMethod: 'chunked-empty',
+          parserRuntime: 'legacy-rag',
+          headingCount: 0,
+          parseDurationMs: Date.now() - processStartedAt,
+        });
         return;
       }
 
@@ -315,6 +356,9 @@ export const processingService = {
           }
         }
         await this.resetToPending(documentId);
+        if (indexBuildId) {
+          await documentIndexService.supersedeBuild(indexBuildId);
+        }
         return;
       }
 
@@ -359,6 +403,14 @@ export const processingService = {
         }
       }
 
+      await documentIndexService.completeBuild({
+        indexVersionId: indexBuild.id,
+        parseMethod: routeDecision.routeMode === 'structured' ? 'legacy-chunk-fallback' : 'chunked',
+        parserRuntime: 'legacy-rag',
+        headingCount: 0,
+        parseDurationMs: Date.now() - processStartedAt,
+      });
+
       logger.info(
         {
           documentId,
@@ -375,9 +427,19 @@ export const processingService = {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error({ documentId, error: message }, 'Document processing failed');
       try {
+        if (indexBuildId) {
+          await documentIndexService.failBuild(indexBuildId, message);
+        }
+      } catch (indexError) {
+        logger.error({ documentId, indexError }, 'Failed to mark document index build as failed');
+      }
+      try {
         await documentRepository.updateProcessingStatus(documentId, 'failed', message);
-      } catch (updateError) {
-        logger.error({ documentId, updateError }, 'Failed to update document status to failed');
+      } catch (documentStatusError) {
+        logger.error(
+          { documentId, updateError: documentStatusError },
+          'Failed to update document status to failed'
+        );
       }
     } finally {
       // Always release the lock

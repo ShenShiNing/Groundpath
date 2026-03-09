@@ -22,6 +22,8 @@ const {
   getEmbeddingProviderByTypeMock,
   dbMock,
   withTransactionMock,
+  documentParseRouterServiceMock,
+  documentIndexServiceMock,
 } = vi.hoisted(() => ({
   documentRepositoryMock: {
     findById: vi.fn(),
@@ -58,6 +60,15 @@ const {
     update: vi.fn(),
   },
   withTransactionMock: vi.fn(),
+  documentParseRouterServiceMock: {
+    decideRoute: vi.fn(),
+  },
+  documentIndexServiceMock: {
+    startBuild: vi.fn(),
+    completeBuild: vi.fn(),
+    failBuild: vi.fn(),
+    supersedeBuild: vi.fn(),
+  },
 }));
 
 vi.mock('@modules/document', () => ({
@@ -79,8 +90,16 @@ vi.mock('@modules/embedding', () => ({
   getEmbeddingProviderByType: getEmbeddingProviderByTypeMock,
 }));
 
-vi.mock('./chunking.service', () => ({
+vi.mock('@modules/rag/services/chunking.service', () => ({
   chunkingService: chunkingServiceMock,
+}));
+
+vi.mock('@modules/document-index/services/document-parse-router.service', () => ({
+  documentParseRouterService: documentParseRouterServiceMock,
+}));
+
+vi.mock('@modules/document-index/services/document-index.service', () => ({
+  documentIndexService: documentIndexServiceMock,
 }));
 
 vi.mock('uuid', () => ({
@@ -146,6 +165,18 @@ describe('RAG Processing Error Injection', () => {
     ensureCollectionMock.mockResolvedValue(undefined);
     documentChunkRepositoryMock.getChunkIdsByDocumentId.mockResolvedValue([]);
     getEmbeddingProviderByTypeMock.mockReturnValue(embeddingProviderMock);
+    documentParseRouterServiceMock.decideRoute.mockReturnValue({
+      routeMode: 'chunked',
+      reason: 'below_threshold',
+      estimatedTokens: 100,
+      thresholdTokens: 5000,
+      structuredCandidate: true,
+      rolloutMode: 'disabled',
+    });
+    documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-1' });
+    documentIndexServiceMock.completeBuild.mockResolvedValue(undefined);
+    documentIndexServiceMock.failBuild.mockResolvedValue(undefined);
+    documentIndexServiceMock.supersedeBuild.mockResolvedValue(undefined);
   });
 
   it('should mark as failed and release lock when embedding fails', async () => {
@@ -259,6 +290,47 @@ describe('RAG Processing Error Injection', () => {
     );
     expect(documentVersionRepositoryMock.findByDocumentAndVersion).not.toHaveBeenCalled();
     expect(chunkingServiceMock.chunkText).not.toHaveBeenCalled();
+    expect(documentIndexServiceMock.startBuild).not.toHaveBeenCalled();
+  });
+
+  it('should record a structured route but continue with chunk fallback pipeline', async () => {
+    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+      textContent: 'Some long text',
+    });
+    documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-1' });
+    documentParseRouterServiceMock.decideRoute.mockReturnValue({
+      routeMode: 'structured',
+      reason: 'meets_threshold',
+      estimatedTokens: 6000,
+      thresholdTokens: 5000,
+      structuredCandidate: true,
+      rolloutMode: 'all',
+    });
+    chunkingServiceMock.chunkText.mockReturnValue([
+      { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
+    ]);
+    embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
+    vectorRepositoryMock.upsert.mockResolvedValue(undefined);
+    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
+    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
+    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
+    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+
+    await processingService.processDocument(docId, userId);
+
+    expect(documentIndexServiceMock.startBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: docId,
+        routeMode: 'structured',
+      })
+    );
+    expect(chunkingServiceMock.chunkText).toHaveBeenCalledWith('Some long text');
+    expect(documentIndexServiceMock.completeBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexVersionId: 'idx-build-1',
+        parseMethod: 'legacy-chunk-fallback',
+      })
+    );
   });
 
   it('should handle document not found', async () => {
