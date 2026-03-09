@@ -44,6 +44,7 @@
 
 ## 提交与 PR 要求
 
+- 每个功能开始开发前都必须单独拉取一个分支，禁止在同一分支上混合开发多个功能。
 - 使用 Conventional Commits：`feat(scope): ...`、`fix(scope): ...`、`refactor(scope): ...`。
 - scope 应对应包或领域（如 `client`、`server`、`auth`、`chat`）。
 - PR 至少包含：变更摘要、影响范围、执行过的命令（lint/test/build）、配置或迁移说明；UI 变更附截图。
