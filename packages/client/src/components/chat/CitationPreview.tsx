@@ -4,6 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Citation } from '@/stores';
+import {
+  getCitationLocatorText,
+  getCitationPageLabel,
+  getCitationPreviewText,
+} from '@/stores/chatPanelStore.types';
 
 // ============================================================================
 // Types
@@ -28,6 +33,10 @@ export function CitationPreview({
 }: CitationPreviewProps) {
   if (!citation) return null;
 
+  const pageLabel = getCitationPageLabel(citation);
+  const locatorText = getCitationLocatorText(citation);
+  const previewText = getCitationPreviewText(citation);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -39,20 +48,36 @@ export function CitationPreview({
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-base truncate">{citation.documentTitle}</DialogTitle>
               <div className="flex items-center gap-2 mt-1">
-                {citation.pageNumber && (
+                <Badge variant="secondary" className="text-[10px] uppercase">
+                  {citation.sourceType}
+                </Badge>
+                {pageLabel && (
                   <Badge variant="secondary" className="text-[10px]">
-                    Page {citation.pageNumber}
+                    {pageLabel}
                   </Badge>
                 )}
-                <Badge variant="secondary" className="text-[10px]">
-                  Chunk #{citation.chunkIndex + 1}
-                </Badge>
+                {citation.sourceType === 'chunk' && citation.chunkIndex !== undefined && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    Chunk #{citation.chunkIndex + 1}
+                  </Badge>
+                )}
+                {citation.documentVersion !== undefined && (
+                  <Badge variant="outline" className="text-[10px]">
+                    Doc v{citation.documentVersion}
+                  </Badge>
+                )}
+                {citation.indexVersion && (
+                  <Badge variant="outline" className="max-w-32 truncate text-[10px]">
+                    {citation.indexVersion}
+                  </Badge>
+                )}
                 {citation.score && (
                   <Badge variant="outline" className="text-[10px]">
                     {Math.round(citation.score * 100)}% match
                   </Badge>
                 )}
               </div>
+              {locatorText && <p className="mt-2 text-xs text-muted-foreground">{locatorText}</p>}
             </div>
           </div>
         </DialogHeader>
@@ -60,7 +85,7 @@ export function CitationPreview({
         {/* Citation Content */}
         <ScrollArea className="max-h-75 mt-4">
           <div className="bg-muted/50 rounded-lg p-4 border-l-4 border-primary">
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{citation.content}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{previewText}</p>
           </div>
         </ScrollArea>
 

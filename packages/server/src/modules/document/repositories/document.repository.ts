@@ -242,7 +242,7 @@ export const documentRepository = {
   async updateProcessingStatus(
     id: string,
     status: Document['processingStatus'],
-    error?: string,
+    error?: string | null,
     chunkCount?: number,
     tx?: Transaction
   ): Promise<void> {

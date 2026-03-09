@@ -179,7 +179,10 @@ export const documentVersionService = {
     });
 
     // Enqueue document processing for RAG (non-blocking)
-    enqueueDocumentProcessing(documentId, userId).catch((err) => {
+    enqueueDocumentProcessing(documentId, userId, {
+      targetDocumentVersion: newVersion,
+      reason: 'upload',
+    }).catch((err) => {
       logger.warn(
         { documentId, err },
         'Failed to enqueue document processing after version upload'
@@ -307,7 +310,10 @@ export const documentVersionService = {
     });
 
     // Enqueue document processing for RAG (non-blocking)
-    enqueueDocumentProcessing(documentId, userId).catch((err) => {
+    enqueueDocumentProcessing(documentId, userId, {
+      targetDocumentVersion: newVersionNumber,
+      reason: 'restore',
+    }).catch((err) => {
       logger.warn(
         { documentId, err },
         'Failed to enqueue document processing after version restore'

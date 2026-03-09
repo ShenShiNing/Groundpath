@@ -3,15 +3,14 @@ import { getQueueConnection, getQueuePrefix } from '@shared/queue';
 import { queueConfig } from '@config/env';
 import { processingService } from '../services/processing.service';
 import { createLogger } from '@shared/logger';
+import type {
+  DocumentProcessingEnqueueOptions,
+  DocumentProcessingJobData,
+} from './document-processing.types';
 
 const logger = createLogger('document-processing.queue');
 
 const QUEUE_NAME = 'document-processing';
-
-export interface DocumentProcessingJobData {
-  documentId: string;
-  userId: string;
-}
 
 // ==================== Queue ====================
 
@@ -37,19 +36,32 @@ export const documentProcessingQueue = new Queue<DocumentProcessingJobData>(QUEU
 /**
  * Enqueue a document for processing.
  *
- * Uses the documentId as the job ID for natural deduplication:
- * - If the same document is already queued/active, the duplicate is ignored.
- * - If a previous job completed/failed (and was cleaned up), a new job is created.
+ * Uses documentId + targetDocumentVersion (and optional targetIndexVersion)
+ * as the job ID so different document versions can queue independently while
+ * duplicate retries for the same target are still deduplicated.
  */
-export async function enqueueDocumentProcessing(documentId: string, userId: string): Promise<void> {
-  await documentProcessingQueue.add(
-    'process',
-    { documentId, userId },
-    {
-      jobId: `doc-${documentId}`,
-    }
+export async function enqueueDocumentProcessing(
+  documentId: string,
+  userId: string,
+  options: DocumentProcessingEnqueueOptions
+): Promise<void> {
+  const { targetDocumentVersion, targetIndexVersion, reason } = options;
+  const jobData: DocumentProcessingJobData = {
+    documentId,
+    userId,
+    targetDocumentVersion,
+    targetIndexVersion,
+    reason,
+  };
+  const jobId = targetIndexVersion
+    ? `doc-${documentId}-v${targetDocumentVersion}-idx-${targetIndexVersion}`
+    : `doc-${documentId}-v${targetDocumentVersion}`;
+
+  await documentProcessingQueue.add('process', jobData, { jobId });
+  logger.info(
+    { documentId, userId, targetDocumentVersion, targetIndexVersion, reason, jobId },
+    'Document processing job enqueued'
   );
-  logger.info({ documentId, userId }, 'Document processing job enqueued');
 }
 
 // ==================== Worker ====================
@@ -69,14 +81,32 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
   worker = new Worker<DocumentProcessingJobData>(
     QUEUE_NAME,
     async (job: Job<DocumentProcessingJobData>) => {
-      const { documentId, userId } = job.data;
+      const { documentId, userId, targetDocumentVersion, targetIndexVersion, reason } = job.data;
       const attempt = job.attemptsMade + 1;
 
-      logger.info({ documentId, userId, jobId: job.id, attempt }, 'Processing document job');
+      logger.info(
+        {
+          documentId,
+          userId,
+          targetDocumentVersion,
+          targetIndexVersion,
+          reason,
+          jobId: job.id,
+          attempt,
+        },
+        'Processing document job'
+      );
 
-      await processingService.processDocument(documentId, userId);
+      await processingService.processDocument(documentId, userId, {
+        targetDocumentVersion,
+        targetIndexVersion,
+        reason,
+      });
 
-      logger.info({ documentId, userId, jobId: job.id }, 'Document processing job completed');
+      logger.info(
+        { documentId, userId, targetDocumentVersion, targetIndexVersion, reason, jobId: job.id },
+        'Document processing job completed'
+      );
     },
     {
       connection: connectionOpts,
@@ -90,6 +120,9 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
     logger.error(
       {
         documentId: job?.data.documentId,
+        targetDocumentVersion: job?.data.targetDocumentVersion,
+        targetIndexVersion: job?.data.targetIndexVersion,
+        reason: job?.data.reason,
         jobId: job?.id,
         err,
         attemptsMade: job?.attemptsMade,

@@ -2,15 +2,52 @@
 export const MESSAGE_ROLES = ['user', 'assistant', 'system'] as const;
 export type MessageRole = (typeof MESSAGE_ROLES)[number];
 
-// Citation from RAG search
-export interface Citation {
+export const CITATION_SOURCE_TYPES = ['chunk', 'node'] as const;
+export type CitationSourceType = (typeof CITATION_SOURCE_TYPES)[number];
+
+export const AGENT_STOP_REASONS = [
+  'answered',
+  'insufficient_evidence',
+  'budget_exhausted',
+  'tool_timeout',
+  'user_aborted',
+  'provider_error',
+] as const;
+export type AgentStopReason = (typeof AGENT_STOP_REASONS)[number];
+
+interface CitationBase {
   documentId: string;
   documentTitle: string;
+  sourceType: CitationSourceType;
+  documentVersion?: number;
+  indexVersion?: string;
+  sectionPath?: string[];
+  pageStart?: number;
+  pageEnd?: number;
+  locator?: string;
+  excerpt?: string;
+  score?: number;
+}
+
+// Citation from RAG search
+export interface ChunkCitation extends CitationBase {
+  sourceType: 'chunk';
   chunkIndex: number;
   content: string;
   pageNumber?: number;
-  score?: number;
+  nodeId?: never;
 }
+
+export interface NodeCitation extends CitationBase {
+  sourceType: 'node';
+  nodeId: string;
+  excerpt: string;
+  content?: string;
+  chunkIndex?: never;
+  pageNumber?: never;
+}
+
+export type Citation = ChunkCitation | NodeCitation;
 
 // Token usage stats
 export interface TokenUsage {
@@ -22,8 +59,11 @@ export interface TokenUsage {
 // Message metadata
 export interface MessageMetadata {
   citations?: Citation[];
+  retrievedSources?: Citation[];
+  finalCitations?: Citation[];
   tokenUsage?: TokenUsage;
   agentTrace?: AgentStep[];
+  stopReason?: AgentStopReason;
 }
 
 // Chat message (API response)
@@ -137,6 +177,7 @@ export interface SSEDoneEvent {
   data: {
     messageId: string;
     tokenUsage?: TokenUsage;
+    stopReason?: AgentStopReason;
   };
 }
 

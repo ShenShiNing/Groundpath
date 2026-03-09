@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import type { Citation, SSEEvent } from '@knowledge-agent/shared/types';
+import type { Citation, MessageMetadata, SSEEvent } from '@knowledge-agent/shared/types';
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { llmService } from '@modules/llm';
 import { searchService } from '@modules/rag';
@@ -31,6 +31,27 @@ interface EnrichedSearchResult {
   score: number;
   metadata?: {
     pageNumber?: number;
+  };
+}
+
+function buildCitationMetadata(
+  citations?: Citation[],
+  extras?: Pick<MessageMetadata, 'agentTrace' | 'stopReason' | 'tokenUsage'>
+): MessageMetadata | undefined {
+  if (
+    !citations?.length &&
+    !extras?.agentTrace?.length &&
+    !extras?.stopReason &&
+    !extras?.tokenUsage
+  ) {
+    return undefined;
+  }
+
+  return {
+    citations,
+    retrievedSources: citations,
+    finalCitations: citations,
+    ...extras,
   };
 }
 
@@ -254,10 +275,12 @@ export const chatService = {
       conversationId,
       role: 'assistant',
       content: agentResult.content,
-      metadata: {
-        citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
-        agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
-      },
+      metadata: buildCitationMetadata(
+        agentResult.citations.length > 0 ? agentResult.citations : undefined,
+        {
+          agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
+        }
+      ),
     });
   },
 
@@ -343,7 +366,7 @@ export const chatService = {
       conversationId,
       role: 'assistant',
       content: fullContent,
-      metadata: { citations },
+      metadata: buildCitationMetadata(citations),
     });
   },
 
@@ -399,7 +422,7 @@ export const chatService = {
       conversationId,
       role: 'assistant',
       content: responseContent,
-      metadata: { citations },
+      metadata: buildCitationMetadata(citations),
     });
 
     await conversationRepository.touch(conversationId, userId);

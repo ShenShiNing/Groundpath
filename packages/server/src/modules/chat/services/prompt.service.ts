@@ -136,14 +136,23 @@ export const promptService = {
    * Convert search results to citations
    */
   toCitations(searchResults: SearchResult[]): Citation[] {
-    return searchResults.map((result) => ({
-      documentId: result.documentId,
-      documentTitle: result.documentTitle,
-      chunkIndex: result.chunkIndex,
-      content: result.content,
-      pageNumber: result.metadata?.pageNumber,
-      score: result.score,
-    }));
+    return searchResults.map((result) => {
+      const pageNumber = result.metadata?.pageNumber;
+
+      return {
+        sourceType: 'chunk',
+        documentId: result.documentId,
+        documentTitle: result.documentTitle,
+        chunkIndex: result.chunkIndex,
+        content: result.content,
+        excerpt: result.content,
+        pageNumber,
+        pageStart: pageNumber,
+        pageEnd: pageNumber,
+        locator: pageNumber ? `p.${pageNumber}` : undefined,
+        score: result.score,
+      };
+    });
   },
 
   /**

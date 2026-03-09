@@ -9,13 +9,7 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { conversations } from './conversations.schema';
-import type { Citation, TokenUsage } from '@knowledge-agent/shared/types';
-
-// Message metadata stored as JSON
-export interface MessageMetadata {
-  citations?: Citation[];
-  tokenUsage?: TokenUsage;
-}
+import type { MessageMetadata } from '@knowledge-agent/shared/types';
 
 export const messages = mysqlTable(
   'messages',

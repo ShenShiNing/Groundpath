@@ -142,7 +142,10 @@ export const documentTrashService = {
     });
 
     // 4. Enqueue reprocessing (will update totalChunks via delta calculation)
-    enqueueDocumentProcessing(documentId, userId).catch((err) => {
+    enqueueDocumentProcessing(documentId, userId, {
+      targetDocumentVersion: document.currentVersion,
+      reason: 'restore',
+    }).catch((err) => {
       logger.warn({ documentId, err }, 'Failed to enqueue processing after restore');
     });
 

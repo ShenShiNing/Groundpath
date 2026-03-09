@@ -63,10 +63,12 @@ export class KBSearchTool implements AgentTool {
       const title = docTitles.get(r.documentId) ?? 'Unknown Document';
       parts.push(`[Source ${idx + 1}: ${title}]\n${r.content}`);
       citations.push({
+        sourceType: 'chunk',
         documentId: r.documentId,
         documentTitle: title,
         chunkIndex: r.chunkIndex,
         content: r.content,
+        excerpt: r.content,
         score: r.score,
       });
     });

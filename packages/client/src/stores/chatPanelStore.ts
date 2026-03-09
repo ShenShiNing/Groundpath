@@ -239,7 +239,10 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         role: msg.role as 'user' | 'assistant',
         content: msg.content,
         timestamp: new Date(msg.createdAt),
-        citations: msg.metadata?.citations?.map(toStoreCitation),
+        citations:
+          msg.metadata?.finalCitations?.map(toStoreCitation) ??
+          msg.metadata?.citations?.map(toStoreCitation) ??
+          msg.metadata?.retrievedSources?.map(toStoreCitation),
         toolSteps: agentTraceToToolSteps(msg.metadata?.agentTrace),
       }));
       set({

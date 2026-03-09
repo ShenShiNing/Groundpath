@@ -316,6 +316,7 @@ describe('executeAgentLoop', () => {
         content: 'found it',
         citations: [
           {
+            sourceType: 'chunk',
             documentId: 'doc-1',
             documentTitle: 'Doc 1',
             chunkIndex: 0,

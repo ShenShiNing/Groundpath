@@ -16,6 +16,7 @@ import type { VectorPoint } from '@modules/vector';
 import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
 import { chunkingService } from './chunking.service';
 import { knowledgeBaseService } from '@modules/knowledge-base';
+import type { DocumentProcessingEnqueueOptions } from '../queue/document-processing.types';
 
 const logger = createLogger('processing.service');
 
@@ -77,6 +78,17 @@ export const processingService = {
     processingLocks.delete(documentId);
   },
 
+  async resetToPending(documentId: string): Promise<void> {
+    await documentRepository.updateProcessingStatus(documentId, 'pending', null);
+  },
+
+  async isStaleTargetVersion(documentId: string, targetDocumentVersion?: number): Promise<boolean> {
+    if (!targetDocumentVersion) return false;
+
+    const latestDocument = await documentRepository.findById(documentId);
+    return !latestDocument || latestDocument.currentVersion !== targetDocumentVersion;
+  },
+
   /**
    * Process a document for RAG (chunking, embedding, vector storage)
    *
@@ -88,8 +100,21 @@ export const processingService = {
    * 5. Qdrant operations use upsert (idempotent) and cleanup old vectors after success
    * 6. Release lock in finally block to ensure cleanup
    */
-  async processDocument(documentId: string, userId: string): Promise<void> {
-    logger.info({ documentId }, 'Starting document processing');
+  async processDocument(
+    documentId: string,
+    userId: string,
+    request?: DocumentProcessingEnqueueOptions
+  ): Promise<void> {
+    logger.info(
+      {
+        documentId,
+        userId,
+        targetDocumentVersion: request?.targetDocumentVersion,
+        targetIndexVersion: request?.targetIndexVersion,
+        reason: request?.reason,
+      },
+      'Starting document processing'
+    );
 
     // Try to acquire lock
     const lockAcquired = await this.acquireProcessingLock(documentId);
@@ -107,6 +132,23 @@ export const processingService = {
       const document = await documentRepository.findById(documentId);
       if (!document) {
         throw new Error(`Document not found: ${documentId}`);
+      }
+
+      if (
+        request?.targetDocumentVersion !== undefined &&
+        document.currentVersion !== request.targetDocumentVersion
+      ) {
+        logger.warn(
+          {
+            documentId,
+            targetDocumentVersion: request.targetDocumentVersion,
+            currentDocumentVersion: document.currentVersion,
+            reason: request.reason,
+          },
+          'Skipping stale document processing job before processing'
+        );
+        await this.resetToPending(documentId);
+        return;
       }
 
       // Save old chunk count for delta calculation
@@ -248,6 +290,32 @@ export const processingService = {
           'Vector storage failed - please retry processing'
         );
         throw qdrantError;
+      }
+
+      if (await this.isStaleTargetVersion(documentId, request?.targetDocumentVersion)) {
+        logger.warn(
+          {
+            documentId,
+            targetDocumentVersion: request?.targetDocumentVersion,
+            reason: request?.reason,
+          },
+          'Skipping stale document processing job after vector upsert'
+        );
+        if (allVectorPoints.length > 0) {
+          try {
+            await vectorRepository.deleteByIds(
+              collectionName,
+              allVectorPoints.map((point) => point.id)
+            );
+          } catch (cleanupError) {
+            logger.warn(
+              { documentId, collectionName, error: cleanupError },
+              'Failed to clean up stale vectors after freshness check'
+            );
+          }
+        }
+        await this.resetToPending(documentId);
+        return;
       }
 
       // Phase 2: MySQL transaction (atomic)

@@ -100,17 +100,21 @@ describe('KBSearchTool', () => {
     expect(result.content).toContain('Document Beta');
     expect(result.citations).toHaveLength(2);
     expect(result.citations![0]).toEqual({
+      sourceType: 'chunk',
       documentId: 'doc-1',
       documentTitle: 'Document Alpha',
       chunkIndex: 0,
       content: 'Chunk 1 text',
+      excerpt: 'Chunk 1 text',
       score: 0.92,
     });
     expect(result.citations![1]).toEqual({
+      sourceType: 'chunk',
       documentId: 'doc-2',
       documentTitle: 'Document Beta',
       chunkIndex: 3,
       content: 'Chunk 2 text',
+      excerpt: 'Chunk 2 text',
       score: 0.85,
     });
   });

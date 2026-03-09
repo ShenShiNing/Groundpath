@@ -213,7 +213,10 @@ export const documentContentService = {
       durationMs: Date.now() - startTime,
     });
 
-    enqueueDocumentProcessing(documentId, userId).catch((err) => {
+    enqueueDocumentProcessing(documentId, userId, {
+      targetDocumentVersion: newVersion,
+      reason: 'edit',
+    }).catch((err) => {
       logger.warn({ documentId, err }, 'Failed to enqueue document processing after edit');
     });
 

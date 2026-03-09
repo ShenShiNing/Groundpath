@@ -59,7 +59,10 @@ export const ragController = {
       }
 
       // Enqueue processing job (non-blocking, deduped by documentId)
-      await enqueueDocumentProcessing(documentId, userId);
+      await enqueueDocumentProcessing(documentId, userId, {
+        targetDocumentVersion: document.currentVersion,
+        reason: 'retry',
+      });
 
       sendSuccessResponse(res, {
         documentId,

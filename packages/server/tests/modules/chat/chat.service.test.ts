@@ -252,7 +252,14 @@ describe('chatService.sendMessageWithSSE', () => {
     mocks.executeAgentLoop.mockResolvedValue({
       content: 'Combined answer',
       citations: [
-        { documentId: 'doc-1', documentTitle: 'Test', chunkIndex: 0, content: 'c', score: 0.9 },
+        {
+          sourceType: 'chunk',
+          documentId: 'doc-1',
+          documentTitle: 'Test',
+          chunkIndex: 0,
+          content: 'c',
+          score: 0.9,
+        },
       ],
       agentTrace: [{ step: 0 }],
     });

@@ -208,7 +208,10 @@ export const documentUploadService = {
     });
 
     // Enqueue document processing for RAG (non-blocking)
-    enqueueDocumentProcessing(docId, userId).catch((err) => {
+    enqueueDocumentProcessing(docId, userId, {
+      targetDocumentVersion: 1,
+      reason: 'upload',
+    }).catch((err) => {
       logger.warn({ documentId: docId, err }, 'Failed to enqueue document processing');
     });
 

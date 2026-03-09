@@ -3,6 +3,11 @@ import { ChevronDown, FileText, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { Citation } from '@/stores';
+import {
+  getCitationLocatorText,
+  getCitationPageLabel,
+  getCitationPreviewText,
+} from '@/stores/chatPanelStore.types';
 import { useTranslation } from 'react-i18next';
 
 // ============================================================================
@@ -56,13 +61,23 @@ export function CitationSources({ citations, onCitationClick }: CitationSourcesP
                 <div className="flex items-center gap-1.5 mb-1">
                   <FileText className="size-3.5 text-muted-foreground" aria-hidden="true" />
                   <span className="text-xs font-medium truncate">{citation.documentTitle}</span>
-                  {citation.pageNumber && (
+                  <span className="text-[10px] text-muted-foreground uppercase">
+                    {citation.sourceType}
+                  </span>
+                  {getCitationPageLabel(citation) && (
                     <span className="text-[10px] text-muted-foreground">
-                      p.{citation.pageNumber}
+                      {getCitationPageLabel(citation)}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">{citation.content}</p>
+                {getCitationLocatorText(citation) && (
+                  <p className="mb-1 text-[10px] text-muted-foreground line-clamp-1">
+                    {getCitationLocatorText(citation)}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {getCitationPreviewText(citation)}
+                </p>
               </div>
 
               {/* Open Button */}

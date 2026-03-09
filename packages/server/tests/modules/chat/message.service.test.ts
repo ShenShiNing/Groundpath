@@ -65,6 +65,7 @@ describe('messageService', () => {
     const metadata = {
       citations: [
         {
+          sourceType: 'chunk' as const,
           documentId: 'doc-1',
           documentTitle: 'Doc',
           chunkIndex: 0,
@@ -152,10 +153,13 @@ describe('messageService', () => {
   it('should delegate metadata update and message count', async () => {
     mocks.messageRepository.countByConversation.mockResolvedValue(42);
 
-    await messageService.updateMetadata('msg-1', { citations: [] });
+    await messageService.updateMetadata('msg-1', { citations: [], finalCitations: [] });
     const total = await messageService.count('conv-1');
 
-    expect(mocks.messageRepository.updateMetadata).toHaveBeenCalledWith('msg-1', { citations: [] });
+    expect(mocks.messageRepository.updateMetadata).toHaveBeenCalledWith('msg-1', {
+      citations: [],
+      finalCitations: [],
+    });
     expect(mocks.messageRepository.countByConversation).toHaveBeenCalledWith('conv-1');
     expect(total).toBe(42);
   });

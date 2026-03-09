@@ -69,20 +69,33 @@ describe('document-processing.queue', () => {
 
   describe('enqueueDocumentProcessing', () => {
     it('should add a job to the queue with correct data', async () => {
-      await enqueueDocumentProcessing('doc-1', 'user-1');
+      await enqueueDocumentProcessing('doc-1', 'user-1', {
+        targetDocumentVersion: 3,
+        reason: 'edit',
+      });
 
       expect(queueAddMock).toHaveBeenCalledWith(
         'process',
-        { documentId: 'doc-1', userId: 'user-1' },
-        { jobId: 'doc-doc-1' }
+        {
+          documentId: 'doc-1',
+          userId: 'user-1',
+          targetDocumentVersion: 3,
+          targetIndexVersion: undefined,
+          reason: 'edit',
+        },
+        { jobId: 'doc-doc-1-v3' }
       );
     });
 
-    it('should use documentId-based jobId for deduplication', async () => {
-      await enqueueDocumentProcessing('doc-abc', 'user-2');
+    it('should use version-aware jobId for deduplication', async () => {
+      await enqueueDocumentProcessing('doc-abc', 'user-2', {
+        targetDocumentVersion: 7,
+        targetIndexVersion: 'idx-2',
+        reason: 'backfill',
+      });
 
       const callArgs = queueAddMock.mock.calls[0];
-      expect(callArgs![2]).toEqual({ jobId: 'doc-doc-abc' });
+      expect(callArgs![2]).toEqual({ jobId: 'doc-doc-abc-v7-idx-idx-2' });
     });
   });
 

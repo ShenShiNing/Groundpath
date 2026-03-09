@@ -14,6 +14,7 @@ const {
 } = vi.hoisted(() => {
   type DocumentLookupResult = {
     id: string;
+    currentVersion: number;
     processingStatus: string;
     processingError: null;
     chunkCount: number;
@@ -65,6 +66,7 @@ const {
       findByIdAndUser: vi.fn<(documentId: string, userId: string) => Promise<DocumentLookupResult>>(
         async () => ({
           id: 'doc-1',
+          currentVersion: 4,
           processingStatus: 'completed',
           processingError: null,
           chunkCount: 3,
@@ -244,7 +246,10 @@ describe('rag.routes http behavior', () => {
     expect(body.success).toBe(true);
     expect(body.data.status).toBe('processing');
     expect(documentRepositoryMock.findByIdAndUser).toHaveBeenCalledWith('doc-1', 'user-1');
-    expect(enqueueDocumentProcessingMock).toHaveBeenCalledWith('doc-1', 'user-1');
+    expect(enqueueDocumentProcessingMock).toHaveBeenCalledWith('doc-1', 'user-1', {
+      targetDocumentVersion: 4,
+      reason: 'retry',
+    });
   });
 
   it('should return DOCUMENT_NOT_FOUND when processing missing document', async () => {

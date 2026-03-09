@@ -9,15 +9,9 @@ import type {
 // Types
 // ============================================================================
 
-export interface Citation {
+export type Citation = APICitation & {
   id: string;
-  documentId: string;
-  documentTitle: string;
-  chunkIndex: number;
-  content: string;
-  pageNumber?: number;
-  score?: number;
-}
+};
 
 export interface ToolStep {
   stepIndex: number;
@@ -80,15 +74,47 @@ export interface ChatPanelState {
 // Helpers
 // ============================================================================
 
+export function getCitationPreviewText(citation: Pick<Citation, 'excerpt' | 'content'>): string {
+  return citation.excerpt ?? citation.content ?? '';
+}
+
+export function getCitationPageLabel(
+  citation: Pick<Citation, 'pageStart' | 'pageEnd' | 'pageNumber'>
+): string | null {
+  if (citation.pageStart && citation.pageEnd) {
+    return citation.pageStart === citation.pageEnd
+      ? `p.${citation.pageStart}`
+      : `p.${citation.pageStart}-${citation.pageEnd}`;
+  }
+
+  if (citation.pageStart) {
+    return `p.${citation.pageStart}`;
+  }
+
+  if (citation.pageEnd) {
+    return `p.${citation.pageEnd}`;
+  }
+
+  if (citation.pageNumber) {
+    return `p.${citation.pageNumber}`;
+  }
+
+  return null;
+}
+
+export function getCitationLocatorText(
+  citation: Pick<Citation, 'locator' | 'sectionPath'>
+): string | null {
+  if (citation.locator) return citation.locator;
+  if (citation.sectionPath?.length) return citation.sectionPath.join(' / ');
+  return null;
+}
+
 export function toStoreCitation(citation: APICitation, index: number): Citation {
   return {
     id: `cit-${index}`,
-    documentId: citation.documentId,
-    documentTitle: citation.documentTitle,
-    chunkIndex: citation.chunkIndex,
-    content: citation.content,
-    pageNumber: citation.pageNumber,
-    score: citation.score,
+    ...citation,
+    excerpt: citation.excerpt ?? citation.content,
   };
 }
 

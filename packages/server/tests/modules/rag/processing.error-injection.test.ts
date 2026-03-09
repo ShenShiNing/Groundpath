@@ -238,6 +238,29 @@ describe('RAG Processing Error Injection', () => {
     expect(documentRepositoryMock.findById).not.toHaveBeenCalled();
   });
 
+  it('should reset to pending and skip stale target versions', async () => {
+    documentRepositoryMock.findById.mockResolvedValue({
+      id: docId,
+      knowledgeBaseId: kbId,
+      chunkCount: 0,
+      currentVersion: 2,
+    });
+    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+
+    await processingService.processDocument(docId, userId, {
+      targetDocumentVersion: 1,
+      reason: 'edit',
+    });
+
+    expect(documentRepositoryMock.updateProcessingStatus).toHaveBeenCalledWith(
+      docId,
+      'pending',
+      null
+    );
+    expect(documentVersionRepositoryMock.findByDocumentAndVersion).not.toHaveBeenCalled();
+    expect(chunkingServiceMock.chunkText).not.toHaveBeenCalled();
+  });
+
   it('should handle document not found', async () => {
     documentRepositoryMock.findById.mockResolvedValue(null);
 
