@@ -61,4 +61,69 @@ describe('outlineSearchService', () => {
       locator: 'Retrieval Pipeline / p.12-14',
     });
   });
+
+  it('prefers alias-style matches such as numbered sections and appendices', async () => {
+    mocks.repo.searchActiveNodes.mockResolvedValue([
+      {
+        nodeId: 'node-2',
+        documentId: 'doc-1',
+        documentTitle: 'Architecture Guide',
+        documentVersion: 2,
+        indexVersion: 'idx-1',
+        indexVersionId: 'row-1',
+        nodeType: 'section',
+        title: '1.1 Goals',
+        depth: 2,
+        sectionPath: ['Chapter 1 Introduction', '1.1 Goals'],
+        pageStart: 15,
+        pageEnd: 15,
+        parentId: 'node-1',
+        orderNo: 2,
+        stableLocator: 'Chapter 1 Introduction > 1.1 Goals',
+        content: null,
+        contentPreview: 'Goal text',
+        tokenCount: 8,
+      },
+      {
+        nodeId: 'node-3',
+        documentId: 'doc-1',
+        documentTitle: 'Architecture Guide',
+        documentVersion: 2,
+        indexVersion: 'idx-1',
+        indexVersionId: 'row-1',
+        nodeType: 'appendix',
+        title: 'Appendix B Extra Tables',
+        depth: 1,
+        sectionPath: ['Appendix B Extra Tables'],
+        pageStart: 30,
+        pageEnd: 31,
+        parentId: 'root',
+        orderNo: 3,
+        stableLocator: 'Appendix B Extra Tables',
+        content: null,
+        contentPreview: 'Extra tables',
+        tokenCount: 6,
+      },
+    ]);
+
+    const numbered = await outlineSearchService.search({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      query: '1.1',
+    });
+    expect(numbered.results[0]).toMatchObject({
+      nodeId: 'node-2',
+      matchReason: 'alias',
+    });
+
+    const appendix = await outlineSearchService.search({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      query: 'appendix b',
+    });
+    expect(appendix.results[0]).toMatchObject({
+      nodeId: 'node-3',
+      matchReason: 'alias',
+    });
+  });
 });

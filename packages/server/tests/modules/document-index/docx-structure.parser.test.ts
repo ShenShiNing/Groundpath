@@ -21,7 +21,7 @@ Goal text.`);
         }),
         expect.objectContaining({
           nodeType: 'section',
-          sectionPath: ['Chapter 1 Introduction', 'Goals'],
+          sectionPath: ['Chapter 1 Introduction', '1.1 Goals'],
         }),
       ])
     );

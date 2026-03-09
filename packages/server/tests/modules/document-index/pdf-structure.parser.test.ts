@@ -21,7 +21,7 @@ Planning text.`);
         }),
         expect.objectContaining({
           nodeType: 'section',
-          sectionPath: ['CHAPTER 1 Retrieval', 'Query Planning'],
+          sectionPath: ['CHAPTER 1 Retrieval', '1.1 Query Planning'],
         }),
       ])
     );

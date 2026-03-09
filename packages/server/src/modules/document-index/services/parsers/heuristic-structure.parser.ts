@@ -15,10 +15,12 @@ function toPreview(text: string, maxLength: number = 240): string {
 function isExplicitHeading(line: string): { level: number; title: string } | null {
   const numbered = line.match(/^(\d+(?:\.\d+){0,5})[.)]?\s+(.{1,160})$/);
   if (numbered) {
+    const numberLabel = (numbered[1] ?? '').trim();
+    const titleText = (numbered[2] ?? '').trim();
     const segments = (numbered[1] ?? '').split('.').length;
     return {
       level: Math.min(Math.max(segments, 1), 6),
-      title: (numbered[2] ?? '').trim(),
+      title: `${numberLabel} ${titleText}`.trim(),
     };
   }
 

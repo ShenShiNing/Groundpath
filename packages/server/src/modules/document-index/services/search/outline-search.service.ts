@@ -41,22 +41,65 @@ function toLocator(row: AccessibleNodeRow): string {
   return base;
 }
 
+function extractAliases(row: AccessibleNodeRow): string[] {
+  const aliases = new Set<string>();
+  const candidates = [row.title ?? '', row.stableLocator ?? '', ...(row.sectionPath ?? [])];
+
+  for (const candidate of candidates) {
+    const normalized = candidate.trim().toLowerCase();
+    if (normalized) aliases.add(normalized);
+
+    const numberedMatch = candidate.match(/(\d+(?:\.\d+)+|\d+)/);
+    if (numberedMatch?.[1]) {
+      aliases.add(numberedMatch[1].toLowerCase());
+      aliases.add(`section ${numberedMatch[1].toLowerCase()}`);
+    }
+
+    const appendixMatch = candidate.match(
+      /(?:appendix|附录)\s*([A-Z0-9一二三四五六七八九十百零\d]+)/iu
+    );
+    if (appendixMatch?.[1]) {
+      const appendixId = appendixMatch[1].toLowerCase();
+      aliases.add(`appendix ${appendixId}`);
+      aliases.add(`附录 ${appendixId}`);
+    }
+
+    const chapterMatch = candidate.match(
+      /(?:chapter\s+(\d+)|第\s*([一二三四五六七八九十百零\d]+)\s*章)/iu
+    );
+    if (chapterMatch) {
+      const chapterId = (chapterMatch[1] ?? chapterMatch[2] ?? '').toLowerCase();
+      if (chapterId) {
+        aliases.add(`chapter ${chapterId}`);
+        aliases.add(`第${chapterId}章`);
+      }
+    }
+  }
+
+  return [...aliases];
+}
+
 function scoreRow(row: AccessibleNodeRow, query: string, terms: string[]) {
   const queryLower = query.trim().toLowerCase();
   const title = (row.title ?? '').toLowerCase();
   const locator = (row.stableLocator ?? row.sectionPath?.join(' > ') ?? '').toLowerCase();
   const preview = (row.contentPreview ?? '').toLowerCase();
+  const aliases = extractAliases(row);
 
   let score = 0;
   let matchReason = 'preview';
 
+  if (queryLower && aliases.includes(queryLower)) {
+    score += 12;
+    matchReason = 'alias';
+  }
   if (queryLower && title.includes(queryLower)) {
     score += 10;
-    matchReason = 'title';
+    if (matchReason !== 'alias') matchReason = 'title';
   }
   if (queryLower && locator.includes(queryLower)) {
     score += 8;
-    if (matchReason !== 'title') matchReason = 'locator';
+    if (!['alias', 'title'].includes(matchReason)) matchReason = 'locator';
   }
   if (queryLower && preview.includes(queryLower)) {
     score += 4;
@@ -64,6 +107,7 @@ function scoreRow(row: AccessibleNodeRow, query: string, terms: string[]) {
   }
 
   for (const term of terms) {
+    if (aliases.some((alias) => alias.includes(term))) score += 3.5;
     if (title.includes(term)) score += 3;
     if (locator.includes(term)) score += 2;
     if (preview.includes(term)) score += 1;
