@@ -21,25 +21,40 @@ export interface SendVerificationCodeOptions {
   type: EmailVerificationCodeType;
 }
 
+export interface SendEmailOptions {
+  to: string | string[];
+  subject: string;
+  text: string;
+  html?: string;
+}
+
 /**
  * Email service for sending verification codes and other emails
  */
 export const emailService = {
+  async sendEmail({ to, subject, text, html }: SendEmailOptions): Promise<void> {
+    const mailOptions: Mail.Options = {
+      from: `"${emailConfig.from.name}" <${emailConfig.from.address}>`,
+      to,
+      subject,
+      text,
+      html,
+    };
+
+    await transporter.sendMail(mailOptions);
+  },
+
   /**
    * Send a verification code email
    */
   async sendVerificationCode({ to, code, type }: SendVerificationCodeOptions): Promise<void> {
     const { codeExpiresInMinutes } = emailConfig.verification;
-
-    const mailOptions: Mail.Options = {
-      from: `"${emailConfig.from.name}" <${emailConfig.from.address}>`,
+    await this.sendEmail({
       to,
       subject: emailTemplates.getSubject(type),
       text: emailTemplates.generateText({ code, type, expiresInMinutes: codeExpiresInMinutes }),
       html: emailTemplates.generateHtml({ code, type, expiresInMinutes: codeExpiresInMinutes }),
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
   },
 
   /**

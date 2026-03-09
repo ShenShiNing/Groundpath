@@ -3,16 +3,21 @@ import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 import { documentRepository } from '@modules/document';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';
+import { documentIndexCacheService } from './document-index-cache.service';
 
 const logger = createLogger('document-index-activation.service');
 
 export const documentIndexActivationService = {
   async activateVersion(indexVersionId: string, tx?: Transaction) {
-    return withTransaction(async (trx) => {
+    let documentIdForInvalidation: string | undefined;
+    let userIdForInvalidation: string | undefined;
+    let knowledgeBaseIdForInvalidation: string | undefined;
+    const activatedVersion = await withTransaction(async (trx) => {
       const version = await documentIndexVersionRepository.findById(indexVersionId, trx);
       if (!version) {
         throw Errors.notFound('Document index version');
       }
+      documentIdForInvalidation = version.documentId;
 
       await documentIndexVersionRepository.supersedeActiveByDocumentId(
         version.documentId,
@@ -35,6 +40,9 @@ export const documentIndexActivationService = {
         },
         trx
       );
+      const document = await documentRepository.findById(version.documentId, trx);
+      userIdForInvalidation = document?.userId;
+      knowledgeBaseIdForInvalidation = document?.knowledgeBaseId;
 
       logger.info(
         {
@@ -48,14 +56,29 @@ export const documentIndexActivationService = {
 
       return activatedVersion;
     }, tx);
+    if (documentIdForInvalidation) {
+      await documentIndexCacheService.invalidateDocumentCaches(
+        documentIdForInvalidation,
+        indexVersionId
+      );
+    }
+    await documentIndexCacheService.invalidateQueryCaches({
+      userId: userIdForInvalidation,
+      knowledgeBaseId: knowledgeBaseIdForInvalidation,
+    });
+    return activatedVersion;
   },
 
   async markFailed(indexVersionId: string, error: string, tx?: Transaction) {
-    return withTransaction(async (trx) => {
+    let documentIdForInvalidation: string | undefined;
+    let userIdForInvalidation: string | undefined;
+    let knowledgeBaseIdForInvalidation: string | undefined;
+    const failedVersion = await withTransaction(async (trx) => {
       const version = await documentIndexVersionRepository.findById(indexVersionId, trx);
       if (!version) {
         throw Errors.notFound('Document index version');
       }
+      documentIdForInvalidation = version.documentId;
 
       const failedVersion = await documentIndexVersionRepository.update(
         version.id,
@@ -67,6 +90,8 @@ export const documentIndexActivationService = {
       );
 
       const document = await documentRepository.findById(version.documentId, trx);
+      userIdForInvalidation = document?.userId;
+      knowledgeBaseIdForInvalidation = document?.knowledgeBaseId;
       if (document?.activeIndexVersionId === version.id) {
         await documentRepository.update(
           version.documentId,
@@ -89,14 +114,29 @@ export const documentIndexActivationService = {
 
       return failedVersion;
     }, tx);
+    if (documentIdForInvalidation) {
+      await documentIndexCacheService.invalidateDocumentCaches(
+        documentIdForInvalidation,
+        indexVersionId
+      );
+    }
+    await documentIndexCacheService.invalidateQueryCaches({
+      userId: userIdForInvalidation,
+      knowledgeBaseId: knowledgeBaseIdForInvalidation,
+    });
+    return failedVersion;
   },
 
   async markSuperseded(indexVersionId: string, tx?: Transaction) {
-    return withTransaction(async (trx) => {
+    let documentIdForInvalidation: string | undefined;
+    let userIdForInvalidation: string | undefined;
+    let knowledgeBaseIdForInvalidation: string | undefined;
+    const supersededVersion = await withTransaction(async (trx) => {
       const version = await documentIndexVersionRepository.findById(indexVersionId, trx);
       if (!version) {
         throw Errors.notFound('Document index version');
       }
+      documentIdForInvalidation = version.documentId;
 
       const supersededVersion = await documentIndexVersionRepository.update(
         version.id,
@@ -107,6 +147,8 @@ export const documentIndexActivationService = {
       );
 
       const document = await documentRepository.findById(version.documentId, trx);
+      userIdForInvalidation = document?.userId;
+      knowledgeBaseIdForInvalidation = document?.knowledgeBaseId;
       if (document?.activeIndexVersionId === version.id) {
         await documentRepository.update(
           version.documentId,
@@ -128,5 +170,16 @@ export const documentIndexActivationService = {
 
       return supersededVersion;
     }, tx);
+    if (documentIdForInvalidation) {
+      await documentIndexCacheService.invalidateDocumentCaches(
+        documentIdForInvalidation,
+        indexVersionId
+      );
+    }
+    await documentIndexCacheService.invalidateQueryCaches({
+      userId: userIdForInvalidation,
+      knowledgeBaseId: knowledgeBaseIdForInvalidation,
+    });
+    return supersededVersion;
   },
 };

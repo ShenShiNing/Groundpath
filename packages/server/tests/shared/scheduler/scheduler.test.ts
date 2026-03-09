@@ -10,14 +10,20 @@ const logCleanupRunMock = vi.fn();
 const tokenCleanupRunMock = vi.fn();
 const vectorCleanupRunMock = vi.fn();
 const counterSyncAllMock = vi.fn();
+const structuredRagAlertCheckMock = vi.fn();
 
 interface SchedulerImportOptions {
   cleanupEnabled?: boolean;
   counterSyncEnabled?: boolean;
+  structuredRagAlertsEnabled?: boolean;
 }
 
 async function importScheduler(options: SchedulerImportOptions = {}) {
-  const { cleanupEnabled = true, counterSyncEnabled = true } = options;
+  const {
+    cleanupEnabled = true,
+    counterSyncEnabled = true,
+    structuredRagAlertsEnabled = false,
+  } = options;
 
   vi.resetModules();
   vi.clearAllMocks();
@@ -36,6 +42,10 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
     featureFlags: {
       counterSyncEnabled,
+    },
+    structuredRagObservabilityConfig: {
+      alertsEnabled: structuredRagAlertsEnabled,
+      alertScheduleCron: '0 5 * * *',
     },
   }));
 
@@ -56,6 +66,9 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
   vi.doMock('@modules/logs', () => ({
     logCleanupService: {
       runCleanup: logCleanupRunMock,
+    },
+    structuredRagAlertService: {
+      checkAndNotify: structuredRagAlertCheckMock,
     },
   }));
 
@@ -91,6 +104,7 @@ describe('shared/scheduler', () => {
     tokenCleanupRunMock.mockReset();
     vectorCleanupRunMock.mockReset();
     counterSyncAllMock.mockReset();
+    structuredRagAlertCheckMock.mockReset();
   });
 
   it('should schedule cleanup and counter-sync tasks with UTC timezone and avoid double init', async () => {
@@ -177,11 +191,40 @@ describe('shared/scheduler', () => {
     const scheduler = await importScheduler({
       cleanupEnabled: false,
       counterSyncEnabled: false,
+      structuredRagAlertsEnabled: false,
     });
 
     scheduler.initializeScheduler();
 
     expect(scheduleMock).not.toHaveBeenCalled();
     expect(loggerInfoMock).toHaveBeenCalledWith('Scheduler initialized - no tasks enabled');
+  });
+
+  it('should schedule structured rag alert checks when alerts are enabled', async () => {
+    const scheduler = await importScheduler({
+      cleanupEnabled: false,
+      counterSyncEnabled: false,
+      structuredRagAlertsEnabled: true,
+    });
+
+    structuredRagAlertCheckMock.mockResolvedValueOnce({
+      alertsTriggered: 1,
+      emailSent: true,
+      recipients: ['ops@example.com'],
+    });
+
+    scheduler.initializeScheduler();
+
+    expect(scheduleMock).toHaveBeenCalledWith('0 5 * * *', expect.any(Function), {
+      timezone: 'UTC',
+    });
+
+    const alertTaskCall = scheduleMock.mock.calls.find((call) => call[0] === '0 5 * * *');
+    const alertTask = alertTaskCall?.[1] as (() => Promise<void>) | undefined;
+    expect(alertTask).toBeTypeOf('function');
+
+    await alertTask!();
+
+    expect(structuredRagAlertCheckMock).toHaveBeenCalledTimes(1);
   });
 });

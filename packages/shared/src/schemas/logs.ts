@@ -65,3 +65,21 @@ export const resourceHistorySchema = z.object({
 });
 
 export type ResourceHistoryParams = z.infer<typeof resourceHistorySchema>;
+
+/**
+ * Structured RAG dashboard query params
+ */
+export const structuredRagDashboardQuerySchema = z.object({
+  hours: z.coerce.number().int().min(1).max(24 * 90).default(24),
+  recentLimit: z.coerce.number().int().min(1).max(20).default(8),
+  knowledgeBaseId: z.string().uuid().optional(),
+});
+
+export type StructuredRagDashboardQueryParams = z.infer<typeof structuredRagDashboardQuerySchema>;
+
+export const structuredRagReportQuerySchema = z.object({
+  days: z.coerce.number().int().min(7).max(365).default(30),
+  knowledgeBaseId: z.string().uuid().optional(),
+});
+
+export type StructuredRagReportQueryParams = z.infer<typeof structuredRagReportQuerySchema>;

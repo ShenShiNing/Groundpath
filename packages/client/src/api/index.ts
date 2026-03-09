@@ -6,6 +6,7 @@ export { initiateGitHubLogin, initiateGoogleLogin, exchangeOAuthCode } from './o
 export { documentsApi } from './documents';
 export { knowledgeBasesApi } from './knowledge-bases';
 export { llmConfigApi } from './llm-config';
+export { logsApi } from './logs';
 export {
   chatApi,
   conversationApi,

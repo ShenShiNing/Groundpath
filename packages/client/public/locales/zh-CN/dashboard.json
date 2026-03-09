@@ -32,5 +32,93 @@
   "stats": {
     "knowledgeBaseCount": "知识库总数",
     "documentCount": "文档总量"
+  },
+  "structuredRag": {
+    "title": "Structured RAG 观测",
+    "subtitle": "基于最近 {{hours}} 小时的结构化日志聚合",
+    "window": "最近 {{hours}} 小时",
+    "error": "暂时无法加载 Structured RAG 指标",
+    "filters": {
+      "lastHours": "最近 {{hours}} 小时",
+      "allKnowledgeBases": "全部知识库"
+    },
+    "alerts": {
+      "empty": "当前没有触发中的 Structured RAG 诊断告警",
+      "fallback_ratio": {
+        "title": "兜底率偏高",
+        "value": "当前 {{value}}，阈值 {{threshold}}"
+      },
+      "budget_exhaustion": {
+        "title": "预算耗尽偏高",
+        "value": "当前 {{value}}，阈值 {{threshold}}"
+      },
+      "provider_error": {
+        "title": "Provider 错误偏高",
+        "value": "当前 {{value}}，阈值 {{threshold}}"
+      },
+      "freshness_lag": {
+        "title": "索引新鲜度滞后",
+        "value": "当前 {{value}}，阈值 {{threshold}}"
+      }
+    },
+    "cards": {
+      "fallbackRatio": {
+        "title": "向量兜底率",
+        "subtitle": "{{count}} 次 agent 执行"
+      },
+      "budgetExhaustion": {
+        "title": "预算耗尽率",
+        "subtitle": "工具超时率 {{timeoutRate}}"
+      },
+      "structuredCoverage": {
+        "title": "结构化覆盖率",
+        "subtitle": "解析成功率 {{parseSuccessRate}}"
+      },
+      "indexFreshness": {
+        "title": "索引新鲜度",
+        "subtitle": "平均解析耗时 {{parseDuration}}"
+      }
+    },
+    "recent": {
+      "title": "最近事件",
+      "empty": "最近窗口内还没有 Structured RAG 事件",
+      "duration": "耗时 {{duration}}"
+    },
+    "trend": {
+      "title": "时间趋势",
+      "executions": "{{count}} 次执行",
+      "fallback": "兜底 {{value}}",
+      "coverage": "覆盖 {{value}}",
+      "granularity": "趋势粒度：{{granularity}}",
+      "hourGranularity": "小时级",
+      "dayGranularity": "天级"
+    },
+    "breakdown": {
+      "title": "知识库分解",
+      "empty": "当前筛选范围内没有知识库级 Structured RAG 指标",
+      "columns": {
+        "knowledgeBase": "知识库",
+        "executions": "执行数",
+        "fallback": "兜底率",
+        "coverage": "覆盖率",
+        "providerErrors": "Provider 错误率",
+        "freshness": "新鲜度"
+      }
+    },
+    "report": {
+      "download": "导出长期报表"
+    },
+    "detail": {
+      "title": "质量细项",
+      "avgFinalCitations": "平均最终引用数",
+      "avgRetrievedCitations": "平均召回引用数",
+      "providerErrorRate": "Provider 错误率",
+      "insufficientEvidenceRate": "证据不足率",
+      "graphBuilds": "图构建次数",
+      "totalNodes": "累计节点数",
+      "totalEdges": "累计边数",
+      "avgAgentDuration": "平均 Agent 耗时",
+      "note": "当前面板基于 system_logs 中的 structured_rag.* 事件聚合，适合作为首版诊断入口。"
+    }
   }
 }

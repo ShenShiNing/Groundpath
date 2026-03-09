@@ -151,6 +151,7 @@ export interface ToolResultInfo {
   name: string;
   content: string;
   isError?: boolean;
+  isTimeout?: boolean;
 }
 
 export interface AgentStep {

@@ -15,6 +15,10 @@ export interface ToolContext {
   knowledgeBaseId?: string | null;
   documentIds?: string[];
   signal?: AbortSignal;
+  runtimeState?: {
+    readNodeIds?: string[];
+    toolResultCache?: Record<string, ToolExecutionResult>;
+  };
 }
 
 export interface ToolExecutionResult {

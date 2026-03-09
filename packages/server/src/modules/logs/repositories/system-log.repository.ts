@@ -32,6 +32,14 @@ export interface CreateSystemLogInput {
   metadata?: unknown;
 }
 
+export interface StructuredRagAlertLogEntry {
+  id: string;
+  event: string;
+  code: string;
+  severity: string | null;
+  createdAt: Date;
+}
+
 export const systemLogRepository = {
   /**
    * Create a new system log entry
@@ -171,5 +179,42 @@ export const systemLogRepository = {
     await db.delete(systemLogs).where(inArray(systemLogs.id, ids));
 
     return ids.length;
+  },
+
+  async getLatestStructuredRagAlertEvents(codes: string[]): Promise<StructuredRagAlertLogEntry[]> {
+    if (codes.length === 0) return [];
+
+    const rows = await db.execute(sql`
+      SELECT
+        ${systemLogs.id} AS id,
+        ${systemLogs.event} AS event,
+        JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.code')) AS code,
+        JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.severity')) AS severity,
+        ${systemLogs.createdAt} AS createdAt
+      FROM ${systemLogs}
+      WHERE ${systemLogs.event} = 'structured-rag.alert.sent'
+        AND JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.code')) IN (${sql.join(
+          codes.map((code) => sql`${code}`),
+          sql`, `
+        )})
+      ORDER BY ${systemLogs.createdAt} DESC
+    `);
+
+    const rawRows = (rows[0] as unknown as Array<Record<string, unknown>>) ?? [];
+    const latestByCode = new Map<string, StructuredRagAlertLogEntry>();
+
+    for (const row of rawRows) {
+      const code = String(row.code ?? '');
+      if (!code || latestByCode.has(code)) continue;
+      latestByCode.set(code, {
+        id: String(row.id),
+        event: String(row.event),
+        code,
+        severity: row.severity == null ? null : String(row.severity),
+        createdAt: row.createdAt instanceof Date ? row.createdAt : new Date(String(row.createdAt)),
+      });
+    }
+
+    return [...latestByCode.values()];
   },
 };

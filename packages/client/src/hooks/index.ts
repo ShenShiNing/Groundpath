@@ -53,3 +53,6 @@ export {
   useDeleteLLMConfig,
   useTestLLMConnection,
 } from './useLLMConfig';
+
+// Logs / Observability hooks
+export { useStructuredRagDashboard } from './useLogs';

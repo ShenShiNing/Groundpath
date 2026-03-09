@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '@shared/logger';
+import { structuredRagMetrics } from '@shared/observability';
 import { withTransaction } from '@shared/db/db.utils';
 import { db } from '@shared/db';
 import { documents } from '@shared/db/schema/document/documents.schema';
@@ -135,6 +136,14 @@ export const processingService = {
     let collectionName: string | undefined;
     let indexBuildId: string | undefined;
     let parsedStructure: ParsedDocumentStructure | null = null;
+    let routeMode: 'structured' | 'chunked' = 'chunked';
+    let routeReason: string | undefined;
+    let parseMethod = 'chunked';
+    let parserRuntime = 'legacy-rag';
+    let headingCount = 0;
+    let knowledgeBaseId: string | undefined;
+    let documentVersion: number | undefined;
+    let documentUpdatedAtMs: number | undefined;
 
     try {
       // Get the document
@@ -163,6 +172,10 @@ export const processingService = {
       // Save old chunk count for delta calculation
       const oldChunkCount = document.chunkCount;
       const kbId = document.knowledgeBaseId;
+      knowledgeBaseId = kbId;
+      documentVersion = document.currentVersion;
+      documentUpdatedAtMs =
+        document.updatedAt instanceof Date ? document.updatedAt.getTime() : undefined;
 
       // Get knowledge base embedding config
       const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(kbId);
@@ -209,7 +222,11 @@ export const processingService = {
       const routeDecision = documentParseRouterService.decideRoute({
         documentType: document.documentType,
         textContent: version.textContent,
+        userId,
+        knowledgeBaseId: kbId,
       });
+      routeMode = routeDecision.routeMode;
+      routeReason = routeDecision.reason;
 
       logger.info(
         {
@@ -279,6 +296,20 @@ export const processingService = {
           parserRuntime: 'legacy-rag',
           headingCount: 0,
           parseDurationMs: Date.now() - processStartedAt,
+        });
+        structuredRagMetrics.recordIndexBuild({
+          documentId,
+          userId,
+          knowledgeBaseId: kbId,
+          documentVersion: document.currentVersion,
+          routeMode,
+          parseMethod: 'chunked-empty',
+          parserRuntime: 'legacy-rag',
+          headingCount: 0,
+          parseDurationMs: Date.now() - processStartedAt,
+          indexFreshnessLagMs: documentUpdatedAtMs ? Date.now() - documentUpdatedAtMs : undefined,
+          success: true,
+          reason: routeReason,
         });
         return;
       }
@@ -412,11 +443,21 @@ export const processingService = {
       });
 
       if (parsedStructure) {
-        await documentIndexService.replaceGraph({
+        const graphResult = await documentIndexService.replaceGraph({
           documentId,
           indexVersionId: indexBuild.id,
           structure: parsedStructure,
         });
+        if (graphResult) {
+          structuredRagMetrics.recordIndexGraph({
+            documentId,
+            userId,
+            knowledgeBaseId: kbId,
+            indexVersionId: indexBuild.id,
+            nodeCount: graphResult.nodeCount,
+            edgeCount: graphResult.edgeCount,
+          });
+        }
       }
 
       // Phase 3: Cleanup old vectors in Qdrant (best effort)
@@ -433,14 +474,33 @@ export const processingService = {
         }
       }
 
+      parseMethod =
+        parsedStructure?.parseMethod ??
+        (routeDecision.routeMode === 'structured' ? 'legacy-chunk-fallback' : 'chunked');
+      parserRuntime = parsedStructure?.parserRuntime ?? 'legacy-rag';
+      headingCount = parsedStructure?.headingCount ?? 0;
+      const parseDurationMs = Date.now() - processStartedAt;
+
       await documentIndexService.completeBuild({
         indexVersionId: indexBuild.id,
-        parseMethod:
-          parsedStructure?.parseMethod ??
-          (routeDecision.routeMode === 'structured' ? 'legacy-chunk-fallback' : 'chunked'),
-        parserRuntime: parsedStructure?.parserRuntime ?? 'legacy-rag',
-        headingCount: parsedStructure?.headingCount ?? 0,
-        parseDurationMs: Date.now() - processStartedAt,
+        parseMethod,
+        parserRuntime,
+        headingCount,
+        parseDurationMs,
+      });
+      structuredRagMetrics.recordIndexBuild({
+        documentId,
+        userId,
+        knowledgeBaseId: kbId,
+        documentVersion: document.currentVersion,
+        routeMode,
+        parseMethod,
+        parserRuntime,
+        headingCount,
+        parseDurationMs,
+        indexFreshnessLagMs: documentUpdatedAtMs ? Date.now() - documentUpdatedAtMs : undefined,
+        success: true,
+        reason: routeReason,
       });
 
       logger.info(
@@ -472,6 +532,23 @@ export const processingService = {
           { documentId, updateError: documentStatusError },
           'Failed to update document status to failed'
         );
+      }
+      if (knowledgeBaseId && documentVersion !== undefined) {
+        structuredRagMetrics.recordIndexBuild({
+          documentId,
+          userId,
+          knowledgeBaseId,
+          documentVersion,
+          routeMode,
+          parseMethod,
+          parserRuntime,
+          headingCount,
+          parseDurationMs: undefined,
+          indexFreshnessLagMs: documentUpdatedAtMs ? Date.now() - documentUpdatedAtMs : undefined,
+          success: false,
+          reason: routeReason,
+          error: message,
+        });
       }
     } finally {
       // Always release the lock

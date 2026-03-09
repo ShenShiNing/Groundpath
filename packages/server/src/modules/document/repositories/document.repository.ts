@@ -6,7 +6,23 @@ import {
   type Document,
   type NewDocument,
 } from '@shared/db/schema/document/documents.schema';
-import type { DocumentListParams, TrashListParams } from '@knowledge-agent/shared/types';
+import type {
+  DocumentListParams,
+  TrashListParams,
+  DocumentType,
+} from '@knowledge-agent/shared/types';
+
+export interface DocumentBackfillCandidate {
+  id: string;
+  userId: string;
+  title: string;
+  knowledgeBaseId: string;
+  documentType: DocumentType;
+  currentVersion: number;
+  activeIndexVersionId: string | null;
+  processingStatus: Document['processingStatus'];
+  updatedAt: Date;
+}
 
 /**
  * Document repository for database operations
@@ -299,5 +315,57 @@ export const documentRepository = {
         )
       );
     return new Map(result.map((r) => [r.id, r.title]));
+  },
+
+  async listBackfillCandidates(options?: {
+    knowledgeBaseId?: string;
+    documentType?: DocumentType;
+    includeIndexed?: boolean;
+    includeProcessing?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ documents: DocumentBackfillCandidate[]; hasMore: boolean }> {
+    const limit = Math.max(options?.limit ?? 100, 1);
+    const offset = Math.max(options?.offset ?? 0, 0);
+    const conditions = [isNull(documents.deletedAt)];
+
+    if (options?.knowledgeBaseId) {
+      conditions.push(eq(documents.knowledgeBaseId, options.knowledgeBaseId));
+    }
+
+    if (options?.documentType) {
+      conditions.push(eq(documents.documentType, options.documentType));
+    }
+
+    if (!options?.includeIndexed) {
+      conditions.push(isNull(documents.activeIndexVersionId));
+    }
+
+    if (!options?.includeProcessing) {
+      conditions.push(sql`${documents.processingStatus} != 'processing'`);
+    }
+
+    const result = await db
+      .select({
+        id: documents.id,
+        userId: documents.userId,
+        title: documents.title,
+        knowledgeBaseId: documents.knowledgeBaseId,
+        documentType: documents.documentType,
+        currentVersion: documents.currentVersion,
+        activeIndexVersionId: documents.activeIndexVersionId,
+        processingStatus: documents.processingStatus,
+        updatedAt: documents.updatedAt,
+      })
+      .from(documents)
+      .where(and(...conditions))
+      .orderBy(desc(documents.updatedAt), asc(documents.id))
+      .limit(limit + 1)
+      .offset(offset);
+
+    return {
+      documents: result.slice(0, limit),
+      hasMore: result.length > limit,
+    };
   },
 };

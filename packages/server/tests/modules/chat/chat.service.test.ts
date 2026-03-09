@@ -169,6 +169,39 @@ describe('chatService.sendMessageWithSSE', () => {
     expect(doneEvent).toBeDefined();
   });
 
+  it('persists provider_error and completes SSE when legacy streaming provider throws', async () => {
+    const provider = {
+      streamGenerate() {
+        throw new Error('provider offline');
+      },
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res, written } = createMockRes();
+
+    await chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Hi',
+    });
+
+    const createCalls = mocks.messageService.create.mock.calls;
+    const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
+    expect(assistantCalls).toHaveLength(1);
+    expect(assistantCalls[0]![0]).toMatchObject({
+      role: 'assistant',
+      metadata: expect.objectContaining({
+        stopReason: 'provider_error',
+      }),
+    });
+    expect(String(assistantCalls[0]![0].content)).toContain('provider failed');
+
+    const doneEvent = written.find(
+      (w) => w.includes('"type":"done"') && w.includes('"stopReason":"provider_error"')
+    );
+    expect(doneEvent).toBeDefined();
+  });
+
   it('uses legacy streaming when no tools are available', async () => {
     mocks.resolveTools.mockReturnValue([]);
     const provider = {
@@ -499,5 +532,29 @@ describe('chatService.sendMessage', () => {
     expect(mocks.executeAgentLoop).not.toHaveBeenCalled();
     expect(mocks.searchService.searchInKnowledgeBase).toHaveBeenCalledTimes(1);
     expect(result.content).toBe('Legacy answer');
+  });
+
+  it('returns provider_error fallback in legacy non-streaming path when provider.generate fails', async () => {
+    mocks.resolveTools.mockReturnValue([]);
+    mocks.searchService.searchInKnowledgeBase.mockResolvedValue([]);
+    mocks.llmService.getProviderForUser.mockResolvedValue({
+      generate: vi.fn().mockRejectedValue(new Error('provider offline')),
+    });
+
+    const result = await chatService.sendMessage({
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Legacy path failure',
+    });
+
+    expect(result.content).toContain('provider failed');
+    expect(mocks.messageService.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        role: 'assistant',
+        metadata: expect.objectContaining({
+          stopReason: 'provider_error',
+        }),
+      })
+    );
   });
 });

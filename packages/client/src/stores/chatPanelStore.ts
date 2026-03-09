@@ -201,7 +201,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     const { abortController, updateLastMessage } = get();
     if (abortController) {
       abortController.abort();
-      updateLastMessage({ isLoading: false });
+      updateLastMessage({ isLoading: false, stopReason: 'user_aborted' });
       invalidateConversationQueries();
       set({ isLoading: false, abortController: null });
     }

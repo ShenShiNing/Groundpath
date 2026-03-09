@@ -1,6 +1,7 @@
-import { PDFParse } from 'pdf-parse';
+import { documentIndexConfig } from '@config/env';
 import { documentStorageService } from '@modules/document/services/document-storage.service';
 import { parseHeuristicStructuredText } from './heuristic-structure.parser';
+import { extractStructuredPdfText } from './pdf-parser.runtime';
 
 export const pdfStructureParser = {
   parseTextContent(textContent: string) {
@@ -9,12 +10,12 @@ export const pdfStructureParser = {
 
   async parseFromStorage(storageKey: string) {
     const buffer = await documentStorageService.getDocumentContent(storageKey);
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const result = await parser.getText();
-      return this.parseTextContent(result.text || '');
-    } finally {
-      await parser.destroy();
-    }
+    const textContent = await extractStructuredPdfText(buffer);
+    const parsed = this.parseTextContent(textContent);
+
+    return {
+      ...parsed,
+      parserRuntime: documentIndexConfig.pdfRuntime,
+    };
   },
 };

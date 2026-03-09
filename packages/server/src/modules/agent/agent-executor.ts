@@ -1,5 +1,5 @@
 import type { LLMProvider, ChatMessage, GenerateOptions, AgentMessage } from '@modules/llm';
-import type { AgentTool, ToolContext } from './tools';
+import type { AgentTool, ToolContext, ToolExecutionResult } from './tools';
 import type {
   ToolCallInfo,
   ToolResultInfo,
@@ -10,6 +10,7 @@ import type {
 import { AGENT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { agentConfig } from '@shared/config/env';
 import { createLogger } from '@shared/logger';
+import { structuredRagMetrics } from '@shared/observability';
 
 const logger = createLogger('agent-executor');
 
@@ -32,12 +33,42 @@ export interface AgentExecutorResult {
   stopReason?: AgentStopReason;
 }
 
+const PROVIDER_ERROR_FALLBACK_CONTENT =
+  'The model provider failed before the answer could be completed. Please try again.';
+
+class AgentToolTimeoutError extends Error {
+  readonly toolName: string;
+  readonly timeoutMs: number;
+
+  constructor(toolName: string, timeoutMs: number) {
+    super(`Tool "${toolName}" timed out after ${timeoutMs}ms`);
+    this.name = 'AgentToolTimeoutError';
+    this.toolName = toolName;
+    this.timeoutMs = timeoutMs;
+  }
+}
+
 function getCitationKey(citation: Citation): string {
   if (citation.sourceType === 'node') {
     return `node:${citation.documentId}:${citation.indexVersion ?? ''}:${citation.nodeId}`;
   }
 
   return `chunk:${citation.documentId}:${citation.documentVersion ?? ''}:${citation.chunkIndex}`;
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+      a.localeCompare(b)
+    );
+    return `{${entries.map(([key, nested]) => `${key}:${stableStringify(nested)}`).join(',')}}`;
+  }
+
+  return JSON.stringify(value);
 }
 
 function finalizeCitations(citations: Citation[], maxItems: number = 8): Citation[] {
@@ -54,11 +85,136 @@ function finalizeCitations(citations: Citation[], maxItems: number = 8): Citatio
   return [...deduped.values()].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, maxItems);
 }
 
+function hasKnowledgeTool(tools: AgentTool[]): boolean {
+  return tools.some(
+    (tool) => tool.definition.category === 'structured' || tool.definition.category === 'fallback'
+  );
+}
+
+function finalizeStopReason(input: {
+  stopReason: AgentStopReason;
+  tools: AgentTool[];
+  finalCitations: Citation[];
+  agentTrace: AgentStep[];
+}): AgentStopReason {
+  if (input.stopReason !== 'answered') return input.stopReason;
+
+  if (hasKnowledgeTool(input.tools) && input.agentTrace.length > 0 && input.finalCitations.length === 0) {
+    return 'insufficient_evidence';
+  }
+
+  return input.stopReason;
+}
+
+function buildResult(input: {
+  content: string;
+  stopReason: AgentStopReason;
+  citations: Citation[];
+  agentTrace: AgentStep[];
+  tools: AgentTool[];
+}): AgentExecutorResult {
+  const finalCitations = finalizeCitations(input.citations);
+
+  return {
+    content: input.content,
+    citations: finalCitations,
+    retrievedCitations: input.citations,
+    agentTrace: input.agentTrace,
+    stopReason: finalizeStopReason({
+      stopReason: input.stopReason,
+      tools: input.tools,
+      finalCitations,
+      agentTrace: input.agentTrace,
+    }),
+  };
+}
+
+async function generateWithoutTools(input: {
+  provider: LLMProvider;
+  agentMessages: AgentMessage[];
+  genOptions: GenerateOptions;
+  stopReason: AgentStopReason;
+  citations: Citation[];
+  agentTrace: AgentStep[];
+  tools: AgentTool[];
+}): Promise<AgentExecutorResult> {
+  const plainMessages: ChatMessage[] = input.agentMessages.map((m) => ({
+    role: m.role === 'tool' ? 'user' : m.role,
+    content: m.content,
+  }));
+
+  try {
+    const finalContent = await input.provider.generate(plainMessages, input.genOptions);
+    return buildResult({
+      content: finalContent,
+      stopReason: input.stopReason,
+      citations: input.citations,
+      agentTrace: input.agentTrace,
+      tools: input.tools,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+
+    logger.error({ err: error, stopReason: input.stopReason }, 'Plain generate fallback failed');
+    return buildResult({
+      content: PROVIDER_ERROR_FALLBACK_CONTENT,
+      stopReason: 'provider_error',
+      citations: input.citations,
+      agentTrace: input.agentTrace,
+      tools: input.tools,
+    });
+  }
+}
+
+async function withToolTimeout<T>(promise: Promise<T>, toolName: string): Promise<T> {
+  let timeoutHandle: NodeJS.Timeout | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new AgentToolTimeoutError(toolName, agentConfig.toolTimeout));
+        }, agentConfig.toolTimeout);
+      }),
+    ]);
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
+  }
+}
+
 export async function executeAgentLoop(
   options: AgentExecutorOptions
 ): Promise<AgentExecutorResult> {
   const { provider, messages, tools, toolContext, genOptions, onToolStart, onToolEnd } = options;
   const maxIterations = options.maxIterations ?? agentConfig.maxIterations;
+  const executionStartedAt = Date.now();
+  const agentTrace: AgentStep[] = [];
+  const allCitations: Citation[] = [];
+  let structuredRounds = 0;
+  let fallbackRounds = 0;
+  let externalRounds = 0;
+  let totalToolCalls = 0;
+
+  function finalizeExecutionResult(result: AgentExecutorResult): AgentExecutorResult {
+    structuredRagMetrics.recordAgentExecution({
+      conversationId: toolContext.conversationId,
+      userId: toolContext.userId,
+      knowledgeBaseId: toolContext.knowledgeBaseId,
+      provider: provider.name,
+      stopReason: result.stopReason,
+      durationMs: Date.now() - executionStartedAt,
+      toolCallCount: totalToolCalls,
+      structuredToolCalls: structuredRounds,
+      fallbackToolCalls: fallbackRounds,
+      externalToolCalls: externalRounds,
+      agentTraceSteps: agentTrace.length,
+      retrievedCitationCount: result.retrievedCitations.length,
+      finalCitationCount: result.citations.length,
+    });
+
+    return result;
+  }
 
   // If provider doesn't support tool calls, fallback to plain generate
   if (!provider.generateWithTools) {
@@ -66,23 +222,36 @@ export async function executeAgentLoop(
       { provider: provider.name },
       'Provider does not support tools, falling back to plain generate'
     );
-    const content = await provider.generate(messages, genOptions);
-    return {
-      content,
-      citations: [],
-      retrievedCitations: [],
-      agentTrace: [],
-      stopReason: 'answered',
-    };
+    try {
+      const content = await provider.generate(messages, genOptions);
+      return finalizeExecutionResult(
+        buildResult({
+          content,
+          stopReason: 'answered',
+          citations: [],
+          agentTrace: [],
+          tools,
+        })
+      );
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') throw error;
+
+      logger.error({ err: error, provider: provider.name }, 'Provider generate call failed');
+      return finalizeExecutionResult(
+        buildResult({
+          content: PROVIDER_ERROR_FALLBACK_CONTENT,
+          stopReason: 'provider_error',
+          citations: [],
+          agentTrace: [],
+          tools,
+        })
+      );
+    }
   }
 
   const toolMap = new Map(tools.map((t) => [t.definition.name, t]));
   const toolDefinitions = tools.map((t) => t.definition);
   const agentMessages: AgentMessage[] = messages.map((m) => ({ role: m.role, content: m.content }));
-  const agentTrace: AgentStep[] = [];
-  const allCitations: Citation[] = [];
-  let structuredRounds = 0;
-  let fallbackRounds = 0;
 
   for (let step = 0; step < maxIterations; step++) {
     if (toolContext.signal?.aborted) {
@@ -104,29 +273,41 @@ export async function executeAgentLoop(
         { err: error, step, provider: provider.name, messageCount: agentMessages.length },
         'LLM generateWithTools call failed'
       );
-      throw error;
+      return finalizeExecutionResult(
+        buildResult({
+          content: PROVIDER_ERROR_FALLBACK_CONTENT,
+          stopReason: 'provider_error',
+          citations: allCitations,
+          agentTrace,
+          tools,
+        })
+      );
     }
 
     if (result.finishReason === 'text') {
-      return {
-        content: result.content ?? '',
-        citations: finalizeCitations(allCitations),
-        retrievedCitations: allCitations,
-        agentTrace,
-        stopReason: 'answered',
-      };
+      return finalizeExecutionResult(
+        buildResult({
+          content: result.content ?? '',
+          citations: allCitations,
+          agentTrace,
+          stopReason: 'answered',
+          tools,
+        })
+      );
     }
 
     // Handle tool calls
     const toolCalls = result.toolCalls ?? [];
     if (toolCalls.length === 0) {
-      return {
-        content: result.content ?? '',
-        citations: finalizeCitations(allCitations),
-        retrievedCitations: allCitations,
-        agentTrace,
-        stopReason: 'answered',
-      };
+      return finalizeExecutionResult(
+        buildResult({
+          content: result.content ?? '',
+          citations: allCitations,
+          agentTrace,
+          stopReason: 'answered',
+          tools,
+        })
+      );
     }
 
     const toolCategories = toolCalls.map(
@@ -136,6 +317,7 @@ export async function executeAgentLoop(
       (category) => category === 'structured'
     ).length;
     const fallbackToolCalls = toolCategories.filter((category) => category === 'fallback').length;
+    const externalToolCalls = toolCategories.filter((category) => category === 'external').length;
 
     if (
       structuredRounds + structuredToolCalls > agentConfig.maxStructuredRounds ||
@@ -151,22 +333,22 @@ export async function executeAgentLoop(
         },
         'Agent tool budget exhausted before executing tool calls'
       );
-      const plainMessages: ChatMessage[] = agentMessages.map((m) => ({
-        role: m.role === 'tool' ? 'user' : m.role,
-        content: m.content,
-      }));
-      const finalContent = await provider.generate(plainMessages, genOptions);
-      return {
-        content: finalContent,
-        citations: finalizeCitations(allCitations),
-        retrievedCitations: allCitations,
-        agentTrace,
-        stopReason: 'budget_exhausted',
-      };
+      return finalizeExecutionResult(
+        await generateWithoutTools({
+          provider,
+          agentMessages,
+          genOptions,
+          stopReason: 'budget_exhausted',
+          citations: allCitations,
+          agentTrace,
+          tools,
+        })
+      );
     }
 
     onToolStart?.(step, toolCalls);
     const startTime = Date.now();
+    let sawToolTimeout = false;
 
     // Add assistant message with tool calls to conversation
     agentMessages.push({
@@ -190,7 +372,21 @@ export async function executeAgentLoop(
         }
 
         try {
-          const execResult = await tool.execute(tc.arguments, toolContext);
+          if (toolContext.runtimeState && !toolContext.runtimeState.toolResultCache) {
+            toolContext.runtimeState.toolResultCache = {};
+          }
+          const runtimeCache = toolContext.runtimeState?.toolResultCache;
+          const cacheKey = `${tc.name}:${stableStringify(tc.arguments)}`;
+          let execResult: ToolExecutionResult;
+
+          if (runtimeCache?.[cacheKey]) {
+            execResult = runtimeCache[cacheKey]!;
+          } else {
+            execResult = await withToolTimeout(tool.execute(tc.arguments, toolContext), tc.name);
+            if (runtimeCache) {
+              runtimeCache[cacheKey] = execResult;
+            }
+          }
           if (execResult.citations?.length) {
             allCitations.push(...execResult.citations);
           }
@@ -200,6 +396,21 @@ export async function executeAgentLoop(
             content: execResult.content,
           };
         } catch (error) {
+          if (error instanceof AgentToolTimeoutError) {
+            sawToolTimeout = true;
+            logger.warn(
+              { toolName: tc.name, timeoutMs: error.timeoutMs },
+              'Tool execution timed out'
+            );
+            return {
+              toolCallId: tc.id,
+              name: tc.name,
+              content: error.message,
+              isError: true,
+              isTimeout: true,
+            };
+          }
+
           const errorMsg = error instanceof Error ? error.message : String(error);
           logger.warn({ toolName: tc.name, error: errorMsg }, 'Tool execution failed');
           return {
@@ -227,6 +438,23 @@ export async function executeAgentLoop(
     onToolEnd?.(step, toolResults, durationMs);
     structuredRounds += structuredToolCalls;
     fallbackRounds += fallbackToolCalls;
+    externalRounds += externalToolCalls;
+    totalToolCalls += toolCalls.length;
+
+    if (sawToolTimeout) {
+      logger.warn({ step, durationMs }, 'Agent stopping after tool timeout');
+      return finalizeExecutionResult(
+        await generateWithoutTools({
+          provider,
+          agentMessages,
+          genOptions,
+          stopReason: 'tool_timeout',
+          citations: allCitations,
+          agentTrace,
+          tools,
+        })
+      );
+    }
 
     logger.debug({ step, toolCount: toolCalls.length, durationMs }, 'Agent step completed');
   }
@@ -237,17 +465,15 @@ export async function executeAgentLoop(
     'Agent loop exceeded max iterations, generating final answer without tools'
   );
 
-  const plainMessages: ChatMessage[] = agentMessages.map((m) => ({
-    role: m.role === 'tool' ? 'user' : m.role,
-    content: m.content,
-  }));
-  const finalContent = await provider.generate(plainMessages, genOptions);
-
-  return {
-    content: finalContent,
-    citations: finalizeCitations(allCitations),
-    retrievedCitations: allCitations,
-    agentTrace,
-    stopReason: 'budget_exhausted',
-  };
+  return finalizeExecutionResult(
+    await generateWithoutTools({
+      provider,
+      agentMessages,
+      genOptions,
+      stopReason: 'budget_exhausted',
+      citations: allCitations,
+      agentTrace,
+      tools,
+    })
+  );
 }

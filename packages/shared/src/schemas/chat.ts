@@ -56,6 +56,7 @@ export const toolResultInfoSchema = z.object({
   name: z.string().min(1),
   content: z.string(),
   isError: z.boolean().optional(),
+  isTimeout: z.boolean().optional(),
 });
 
 export const agentStepSchema = z.object({

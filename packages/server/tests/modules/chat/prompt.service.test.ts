@@ -101,4 +101,21 @@ describe('promptService.buildSystemPrompt', () => {
     expect(prompt).toContain('[Source 1: Test Doc]');
     expect(prompt).toContain('Some content here');
   });
+
+  it('truncates overly long context snippets to control token usage', () => {
+    const longContent = 'A'.repeat(1200);
+    const prompt = promptService.buildSystemPrompt([
+      {
+        documentId: 'doc-1',
+        documentTitle: 'Long Doc',
+        chunkIndex: 0,
+        content: longContent,
+        score: 0.9,
+      },
+    ]);
+
+    expect(prompt).toContain('[Source 1: Long Doc]');
+    expect(prompt).toContain('...');
+    expect(prompt).not.toContain(longContent);
+  });
 });

@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
     findById: vi.fn(),
     update: vi.fn(),
   },
+  cacheService: {
+    invalidateDocumentCaches: vi.fn(),
+    invalidateQueryCaches: vi.fn(),
+  },
 }));
 
 vi.mock('@shared/db/db.utils', () => ({
@@ -34,6 +38,10 @@ vi.mock('@modules/document', () => ({
   documentRepository: mocks.documentRepository,
 }));
 
+vi.mock('@modules/document-index/services/document-index-cache.service', () => ({
+  documentIndexCacheService: mocks.cacheService,
+}));
+
 import { AppError } from '@shared/errors/app-error';
 import { documentIndexActivationService } from '@modules/document-index';
 
@@ -55,6 +63,12 @@ describe('documentIndexActivationService', () => {
       status: 'active',
     });
     mocks.documentRepository.update.mockResolvedValue(undefined);
+    mocks.documentRepository.findById.mockResolvedValue({
+      id: 'doc-1',
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      activeIndexVersionId: 'idx-row-1',
+    });
 
     const result = await documentIndexActivationService.activateVersion('idx-row-1');
 
@@ -76,6 +90,11 @@ describe('documentIndexActivationService', () => {
       { activeIndexVersionId: 'idx-row-1' },
       expect.anything()
     );
+    expect(mocks.cacheService.invalidateDocumentCaches).toHaveBeenCalledWith('doc-1', 'idx-row-1');
+    expect(mocks.cacheService.invalidateQueryCaches).toHaveBeenCalledWith({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+    });
     expect(result).toEqual({ id: 'idx-row-1', status: 'active' });
   });
 
@@ -93,6 +112,8 @@ describe('documentIndexActivationService', () => {
     });
     mocks.documentRepository.findById.mockResolvedValue({
       id: 'doc-1',
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
       activeIndexVersionId: 'idx-row-2',
     });
 
@@ -111,6 +132,11 @@ describe('documentIndexActivationService', () => {
       { activeIndexVersionId: null },
       expect.anything()
     );
+    expect(mocks.cacheService.invalidateDocumentCaches).toHaveBeenCalledWith('doc-1', 'idx-row-2');
+    expect(mocks.cacheService.invalidateQueryCaches).toHaveBeenCalledWith({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+    });
     expect(result).toEqual({ id: 'idx-row-2', status: 'failed' });
   });
 
@@ -128,6 +154,8 @@ describe('documentIndexActivationService', () => {
     });
     mocks.documentRepository.findById.mockResolvedValue({
       id: 'doc-1',
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
       activeIndexVersionId: 'idx-row-1',
     });
 
@@ -141,6 +169,11 @@ describe('documentIndexActivationService', () => {
       expect.anything()
     );
     expect(mocks.documentRepository.update).not.toHaveBeenCalled();
+    expect(mocks.cacheService.invalidateDocumentCaches).toHaveBeenCalledWith('doc-1', 'idx-row-3');
+    expect(mocks.cacheService.invalidateQueryCaches).toHaveBeenCalledWith({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+    });
     expect(result).toEqual({ id: 'idx-row-3', status: 'superseded' });
   });
 

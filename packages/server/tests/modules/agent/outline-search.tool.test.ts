@@ -33,7 +33,16 @@ describe('OutlineSearchTool', () => {
 
   it('returns JSON content and citations from service', async () => {
     mocks.service.search.mockResolvedValue({
-      results: [{ nodeId: 'node-1', title: 'Retrieval' }],
+      results: [
+        {
+          nodeId: 'node-1',
+          title: 'Retrieval',
+          locator: 'Chapter 1 / p.12',
+          score: 9.5,
+          matchReason: 'title',
+          contentPreview: 'A'.repeat(220),
+        },
+      ],
       citations: [
         {
           sourceType: 'node',
@@ -51,7 +60,10 @@ describe('OutlineSearchTool', () => {
     expect(mocks.service.search).toHaveBeenCalledWith(
       expect.objectContaining({ query: 'retrieval', limit: 3 })
     );
-    expect(result.content).toContain('"nodeId": "node-1"');
+    expect(result.content).toContain('"id":"node-1"');
+    expect(result.content).toContain('"locator":"Chapter 1 / p.12"');
+    expect(result.content).toContain('"preview":"');
+    expect(result.content).not.toContain('\n  ');
     expect(result.citations).toHaveLength(1);
   });
 });

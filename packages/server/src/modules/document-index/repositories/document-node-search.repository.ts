@@ -26,6 +26,13 @@ export interface AccessibleNodeRow {
   tokenCount: number | null;
 }
 
+export interface AccessibleNodeHeadRow
+  extends Omit<AccessibleNodeRow, 'content' | 'contentPreview' | 'tokenCount'> {
+  content: null;
+  contentPreview: null;
+  tokenCount: null;
+}
+
 interface AccessFilter {
   userId: string;
   knowledgeBaseId?: string | null;
@@ -66,6 +73,25 @@ function buildSearchConditions(terms: string[]) {
   return or(...termConditions);
 }
 
+function buildSearchConditionsWithoutPreview(terms: string[]) {
+  const normalizedTerms = terms
+    .map((term) => term.trim().toLowerCase())
+    .filter((term) => term.length > 0)
+    .slice(0, 8);
+
+  if (normalizedTerms.length === 0) return undefined;
+
+  const termConditions = normalizedTerms.flatMap((term) => {
+    const pattern = `%${term}%`;
+    return [
+      sql`LOWER(COALESCE(${documentNodes.title}, '')) LIKE ${pattern}`,
+      sql`LOWER(COALESCE(${documentNodes.stableLocator}, '')) LIKE ${pattern}`,
+    ];
+  });
+
+  return or(...termConditions);
+}
+
 function getAccessibleNodeSelect() {
   return {
     nodeId: documentNodes.id,
@@ -90,6 +116,51 @@ function getAccessibleNodeSelect() {
 }
 
 export const documentNodeSearchRepository = {
+  async searchActiveNodeHeads(
+    filter: AccessFilter & { terms: string[]; limit?: number }
+  ): Promise<AccessibleNodeHeadRow[]> {
+    const conditions = buildAccessConditions(filter);
+    const searchCondition = buildSearchConditionsWithoutPreview(filter.terms);
+    if (searchCondition) {
+      conditions.push(searchCondition);
+    }
+
+    const rows = await db
+      .select({
+        nodeId: documentNodes.id,
+        documentId: documents.id,
+        documentTitle: documents.title,
+        documentVersion: documentIndexVersions.documentVersion,
+        indexVersion: documentIndexVersions.indexVersion,
+        indexVersionId: documentNodes.indexVersionId,
+        nodeType: documentNodes.nodeType,
+        title: documentNodes.title,
+        depth: documentNodes.depth,
+        sectionPath: documentNodes.sectionPath,
+        pageStart: documentNodes.pageStart,
+        pageEnd: documentNodes.pageEnd,
+        parentId: documentNodes.parentId,
+        orderNo: documentNodes.orderNo,
+        stableLocator: documentNodes.stableLocator,
+        content: sql<null>`NULL`,
+        contentPreview: sql<null>`NULL`,
+        tokenCount: sql<null>`NULL`,
+      })
+      .from(documentNodes)
+      .innerJoin(
+        documents,
+        and(
+          eq(documents.id, documentNodes.documentId),
+          eq(documents.activeIndexVersionId, documentNodes.indexVersionId)
+        )
+      )
+      .innerJoin(documentIndexVersions, eq(documentIndexVersions.id, documentNodes.indexVersionId))
+      .where(and(...conditions))
+      .limit(filter.limit ?? 50);
+
+    return rows as AccessibleNodeHeadRow[];
+  },
+
   async searchActiveNodes(
     filter: AccessFilter & { terms: string[]; limit?: number }
   ): Promise<AccessibleNodeRow[]> {
@@ -113,6 +184,24 @@ export const documentNodeSearchRepository = {
       .leftJoin(documentNodeContents, eq(documentNodeContents.nodeId, documentNodes.id))
       .where(and(...conditions))
       .limit(filter.limit ?? 50);
+  },
+
+  async getContentPreviewsByNodeIds(nodeIds: string[]): Promise<Map<string, string>> {
+    if (nodeIds.length === 0) return new Map();
+
+    const rows = await db
+      .select({
+        nodeId: documentNodeContents.nodeId,
+        contentPreview: documentNodeContents.contentPreview,
+      })
+      .from(documentNodeContents)
+      .where(inArray(documentNodeContents.nodeId, nodeIds));
+
+    return new Map(
+      rows
+        .filter((row) => typeof row.contentPreview === 'string' && row.contentPreview.length > 0)
+        .map((row) => [row.nodeId, row.contentPreview as string])
+    );
   },
 
   async getAccessibleNodesByIds(

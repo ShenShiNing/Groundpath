@@ -8,6 +8,8 @@ const envMocks = vi.hoisted(() => ({
   featureFlags: {
     structuredRagEnabled: false,
     structuredRagRolloutMode: 'disabled' as 'disabled' | 'internal' | 'all',
+    structuredRagInternalUserIds: [] as string[],
+    structuredRagInternalKnowledgeBaseIds: [] as string[],
   },
 }));
 
@@ -44,18 +46,42 @@ describe('documentParseRouterService', () => {
     });
   });
 
-  it('returns chunked when rollout mode is internal and targeting is not implemented', () => {
+  it('returns chunked when rollout mode is internal and target is not allowlisted', () => {
     envMocks.featureFlags.structuredRagEnabled = true;
     envMocks.featureFlags.structuredRagRolloutMode = 'internal';
+    envMocks.featureFlags.structuredRagInternalUserIds = [];
+    envMocks.featureFlags.structuredRagInternalKnowledgeBaseIds = [];
 
     const result = documentParseRouterService.decideRoute({
       documentType: 'docx',
       textContent: 'a'.repeat(40000),
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
     });
 
     expect(result).toMatchObject({
       routeMode: 'chunked',
-      reason: 'rollout_internal_not_implemented',
+      reason: 'rollout_not_targeted',
+    });
+  });
+
+  it('returns structured when rollout mode is internal and user is allowlisted', () => {
+    envMocks.featureFlags.structuredRagEnabled = true;
+    envMocks.featureFlags.structuredRagRolloutMode = 'internal';
+    envMocks.featureFlags.structuredRagInternalUserIds = ['user-1'];
+    envMocks.featureFlags.structuredRagInternalKnowledgeBaseIds = [];
+
+    const result = documentParseRouterService.decideRoute({
+      documentType: 'pdf',
+      textContent: 'a'.repeat(24000),
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+    });
+
+    expect(result).toMatchObject({
+      routeMode: 'structured',
+      reason: 'meets_threshold',
+      estimatedTokens: 6000,
     });
   });
 

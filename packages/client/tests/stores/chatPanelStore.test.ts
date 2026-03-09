@@ -60,4 +60,32 @@ describe('chatPanelStore sendMessage', () => {
     expect(state.messages[0]?.role).toBe('assistant');
     expect(state.messages[0]?.content).toContain('error.conversationFailed');
   });
+
+  it('marks the last assistant message as user_aborted when generation is stopped locally', () => {
+    const abort = new AbortController();
+
+    useChatPanelStore.setState({
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: 'partial answer',
+          timestamp: new Date(),
+          isLoading: true,
+        },
+      ],
+      abortController: abort,
+      isLoading: true,
+    });
+
+    useChatPanelStore.getState().stopGeneration();
+
+    const state = useChatPanelStore.getState();
+    expect(state.abortController).toBeNull();
+    expect(state.isLoading).toBe(false);
+    expect(state.messages[0]).toMatchObject({
+      isLoading: false,
+      stopReason: 'user_aborted',
+    });
+  });
 });

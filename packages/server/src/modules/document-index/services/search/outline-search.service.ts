@@ -1,8 +1,9 @@
 import type { Citation } from '@knowledge-agent/shared/types';
 import {
   documentNodeSearchRepository,
-  type AccessibleNodeRow,
+  type AccessibleNodeHeadRow,
 } from '../../repositories/document-node-search.repository';
+import { documentIndexCacheService } from '../document-index-cache.service';
 
 export interface OutlineSearchInput {
   userId: string;
@@ -29,7 +30,11 @@ export interface OutlineSearchResultItem {
   contentPreview?: string;
 }
 
-function toLocator(row: AccessibleNodeRow): string {
+interface ScoredOutlineRow extends OutlineSearchResultItem {
+  rawRow: AccessibleNodeHeadRow;
+}
+
+function toLocator(row: AccessibleNodeHeadRow): string {
   const base = row.stableLocator || row.sectionPath?.join(' > ') || row.title || row.documentTitle;
   if (row.pageStart && row.pageEnd) {
     return row.pageStart === row.pageEnd
@@ -41,7 +46,7 @@ function toLocator(row: AccessibleNodeRow): string {
   return base;
 }
 
-function extractAliases(row: AccessibleNodeRow): string[] {
+function extractAliases(row: AccessibleNodeHeadRow): string[] {
   const aliases = new Set<string>();
   const candidates = [row.title ?? '', row.stableLocator ?? '', ...(row.sectionPath ?? [])];
 
@@ -79,11 +84,11 @@ function extractAliases(row: AccessibleNodeRow): string[] {
   return [...aliases];
 }
 
-function scoreRow(row: AccessibleNodeRow, query: string, terms: string[]) {
+function scoreRow(row: AccessibleNodeHeadRow, query: string, terms: string[], preview?: string) {
   const queryLower = query.trim().toLowerCase();
   const title = (row.title ?? '').toLowerCase();
   const locator = (row.stableLocator ?? row.sectionPath?.join(' > ') ?? '').toLowerCase();
-  const preview = (row.contentPreview ?? '').toLowerCase();
+  const previewText = (preview ?? '').toLowerCase();
   const aliases = extractAliases(row);
 
   let score = 0;
@@ -101,7 +106,7 @@ function scoreRow(row: AccessibleNodeRow, query: string, terms: string[]) {
     score += 8;
     if (!['alias', 'title'].includes(matchReason)) matchReason = 'locator';
   }
-  if (queryLower && preview.includes(queryLower)) {
+  if (queryLower && previewText.includes(queryLower)) {
     score += 4;
     if (score < 8) matchReason = 'preview';
   }
@@ -110,7 +115,7 @@ function scoreRow(row: AccessibleNodeRow, query: string, terms: string[]) {
     if (aliases.some((alias) => alias.includes(term))) score += 3.5;
     if (title.includes(term)) score += 3;
     if (locator.includes(term)) score += 2;
-    if (preview.includes(term)) score += 1;
+    if (previewText.includes(term)) score += 1;
   }
 
   if (row.nodeType === 'chapter') score += 1.5;
@@ -130,65 +135,135 @@ export const outlineSearchService = {
       return { results: [], citations: [] };
     }
 
-    const terms = [
-      ...new Set(
-        query
-          .toLowerCase()
-          .split(/\s+/)
-          .filter((term) => term.length >= 2)
-      ),
-    ];
-    const rows = await documentNodeSearchRepository.searchActiveNodes({
-      userId: input.userId,
-      knowledgeBaseId: input.knowledgeBaseId,
-      documentIds: input.documentIds,
-      terms: [query.toLowerCase(), ...terms],
-      limit: Math.max(input.limit ?? 5, 10),
-    });
+    const limit = input.limit ?? 5;
+    return documentIndexCacheService.getOutlineSearch(
+      {
+        userId: input.userId,
+        knowledgeBaseId: input.knowledgeBaseId,
+        documentIds: input.documentIds,
+        query,
+        limit,
+        includeContentPreview: !!input.includeContentPreview,
+      },
+      async () => {
+        const terms = [
+          ...new Set(
+            query
+              .toLowerCase()
+              .split(/\s+/)
+              .filter((term) => term.length >= 2)
+          ),
+        ];
+        const rows = await documentNodeSearchRepository.searchActiveNodeHeads({
+          userId: input.userId,
+          knowledgeBaseId: input.knowledgeBaseId,
+          documentIds: input.documentIds,
+          terms: [query.toLowerCase(), ...terms],
+          limit: Math.max(limit, 10),
+        });
 
-    const scored = rows
-      .map((row) => {
-        const { score, matchReason } = scoreRow(row, query, terms);
-        return {
-          nodeId: row.nodeId,
+        const previewCache = new Map<string, string>();
+        const scoredHeads: ScoredOutlineRow[] = rows
+          .map((row) => {
+            const { score, matchReason } = scoreRow(row, query, terms);
+            return {
+              rawRow: row,
+              nodeId: row.nodeId,
+              documentId: row.documentId,
+              documentTitle: row.documentTitle,
+              documentVersion: row.documentVersion,
+              indexVersion: row.indexVersion,
+              title: row.title,
+              sectionPath: row.sectionPath ?? [],
+              pageStart: row.pageStart ?? undefined,
+              pageEnd: row.pageEnd ?? undefined,
+              locator: toLocator(row),
+              score,
+              matchReason,
+              contentPreview: undefined,
+            };
+          })
+          .filter((row) => row.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, limit);
+
+        const missingPreviewRows = await Promise.all(
+          scoredHeads.map(async (row) => {
+            const cachedPreview = await documentIndexCacheService.getNodePreview(
+              row.documentId,
+              row.nodeId
+            );
+            if (cachedPreview) {
+              previewCache.set(row.nodeId, cachedPreview);
+              return null;
+            }
+            return row;
+          })
+        );
+
+        const missingPreviewIds = missingPreviewRows
+          .filter((row): row is ScoredOutlineRow => !!row)
+          .map((row) => row.nodeId);
+
+        if (missingPreviewIds.length > 0) {
+          const loadedPreviews = await documentNodeSearchRepository.getContentPreviewsByNodeIds(
+            missingPreviewIds
+          );
+          for (const row of scoredHeads) {
+            const preview = loadedPreviews.get(row.nodeId);
+            if (preview) {
+              previewCache.set(row.nodeId, preview);
+              void documentIndexCacheService.setNodePreview(row.documentId, row.nodeId, preview);
+            }
+          }
+        }
+
+        const scored = scoredHeads.map((row) => {
+          const preview = previewCache.get(row.nodeId);
+          const rescored = scoreRow(row.rawRow, query, terms, preview);
+          return {
+            ...row,
+            score: rescored.score,
+            matchReason: rescored.matchReason,
+            contentPreview: preview,
+          };
+        });
+
+        const citations: Citation[] = scored.map((row) => ({
+          sourceType: 'node',
           documentId: row.documentId,
           documentTitle: row.documentTitle,
           documentVersion: row.documentVersion,
           indexVersion: row.indexVersion,
-          title: row.title,
-          sectionPath: row.sectionPath ?? [],
-          pageStart: row.pageStart ?? undefined,
-          pageEnd: row.pageEnd ?? undefined,
-          locator: toLocator(row),
-          score,
-          matchReason,
-          contentPreview: row.contentPreview ?? undefined,
-        } satisfies OutlineSearchResultItem;
-      })
-      .filter((row) => row.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, input.limit ?? 5);
+          nodeId: row.nodeId,
+          sectionPath: row.sectionPath,
+          pageStart: row.pageStart,
+          pageEnd: row.pageEnd,
+          locator: row.locator,
+          excerpt: row.contentPreview ?? row.title ?? row.locator,
+          score: row.score,
+        }));
 
-    const citations: Citation[] = scored.map((row) => ({
-      sourceType: 'node',
-      documentId: row.documentId,
-      documentTitle: row.documentTitle,
-      documentVersion: row.documentVersion,
-      indexVersion: row.indexVersion,
-      nodeId: row.nodeId,
-      sectionPath: row.sectionPath,
-      pageStart: row.pageStart,
-      pageEnd: row.pageEnd,
-      locator: row.locator,
-      excerpt: row.contentPreview ?? row.title ?? row.locator,
-      score: row.score,
-    }));
+        return {
+          results: await Promise.all(
+            scored.map(async (row) => {
+              if (!input.includeContentPreview) {
+                return { ...row, contentPreview: undefined };
+              }
 
-    return {
-      results: scored.map((row) =>
-        input.includeContentPreview ? row : { ...row, contentPreview: undefined }
-      ),
-      citations,
-    };
+              const cachedPreview =
+                (await documentIndexCacheService.getNodePreview(row.documentId, row.nodeId)) ??
+                row.contentPreview;
+
+              return {
+                ...row,
+                contentPreview: cachedPreview ?? undefined,
+              };
+            })
+          ),
+          citations,
+        };
+      }
+    );
   },
 };

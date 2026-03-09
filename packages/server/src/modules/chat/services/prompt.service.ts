@@ -129,6 +129,16 @@ export interface SearchResult {
   };
 }
 
+function truncateContextSnippet(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const sliced = text.slice(0, maxChars);
+  const lastBoundary = Math.max(sliced.lastIndexOf('\n'), sliced.lastIndexOf('. '), sliced.lastIndexOf(' '));
+  if (lastBoundary > maxChars * 0.6) {
+    return `${sliced.slice(0, lastBoundary).trimEnd()}...`;
+  }
+  return `${sliced.trimEnd()}...`;
+}
+
 export const promptService = {
   /**
    * Build system prompt with RAG context
@@ -140,7 +150,7 @@ export const promptService = {
 
     const contextParts = searchResults.map((result, index) => {
       const sourceLabel = `[Source ${index + 1}: ${result.documentTitle}${result.metadata?.pageNumber ? `, Page ${result.metadata.pageNumber}` : ''}]`;
-      return `${sourceLabel}\n${result.content}`;
+      return `${sourceLabel}\n${truncateContextSnippet(result.content, 900)}`;
     });
 
     const context = contextParts.join('\n\n---\n\n');

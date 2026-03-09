@@ -32,5 +32,93 @@
   "stats": {
     "knowledgeBaseCount": "Knowledge Bases",
     "documentCount": "Documents"
+  },
+  "structuredRag": {
+    "title": "Structured RAG Observability",
+    "subtitle": "Aggregated from structured logs over the last {{hours}} hours",
+    "window": "Last {{hours}}h",
+    "error": "Unable to load Structured RAG metrics right now",
+    "filters": {
+      "lastHours": "Last {{hours}}h",
+      "allKnowledgeBases": "All knowledge bases"
+    },
+    "alerts": {
+      "empty": "No active Structured RAG diagnostic alerts right now",
+      "fallback_ratio": {
+        "title": "Fallback ratio elevated",
+        "value": "Current {{value}}, threshold {{threshold}}"
+      },
+      "budget_exhaustion": {
+        "title": "Budget exhaustion elevated",
+        "value": "Current {{value}}, threshold {{threshold}}"
+      },
+      "provider_error": {
+        "title": "Provider errors elevated",
+        "value": "Current {{value}}, threshold {{threshold}}"
+      },
+      "freshness_lag": {
+        "title": "Index freshness lag elevated",
+        "value": "Current {{value}}, threshold {{threshold}}"
+      }
+    },
+    "cards": {
+      "fallbackRatio": {
+        "title": "Fallback Ratio",
+        "subtitle": "{{count}} agent executions"
+      },
+      "budgetExhaustion": {
+        "title": "Budget Exhaustion",
+        "subtitle": "Tool timeout rate {{timeoutRate}}"
+      },
+      "structuredCoverage": {
+        "title": "Structured Coverage",
+        "subtitle": "Parse success rate {{parseSuccessRate}}"
+      },
+      "indexFreshness": {
+        "title": "Index Freshness",
+        "subtitle": "Average parse time {{parseDuration}}"
+      }
+    },
+    "recent": {
+      "title": "Recent Events",
+      "empty": "No Structured RAG activity in the current window",
+      "duration": "Duration {{duration}}"
+    },
+    "trend": {
+      "title": "Trend",
+      "executions": "{{count}} executions",
+      "fallback": "Fallback {{value}}",
+      "coverage": "Coverage {{value}}",
+      "granularity": "Trend granularity: {{granularity}}",
+      "hourGranularity": "Hourly",
+      "dayGranularity": "Daily"
+    },
+    "breakdown": {
+      "title": "Knowledge Base Breakdown",
+      "empty": "No knowledge-base-level Structured RAG metrics in the current filter",
+      "columns": {
+        "knowledgeBase": "Knowledge Base",
+        "executions": "Executions",
+        "fallback": "Fallback",
+        "coverage": "Coverage",
+        "providerErrors": "Provider Errors",
+        "freshness": "Freshness"
+      }
+    },
+    "report": {
+      "download": "Export long-term report"
+    },
+    "detail": {
+      "title": "Quality Details",
+      "avgFinalCitations": "Avg final citations",
+      "avgRetrievedCitations": "Avg retrieved citations",
+      "providerErrorRate": "Provider error rate",
+      "insufficientEvidenceRate": "Insufficient evidence rate",
+      "graphBuilds": "Graph builds",
+      "totalNodes": "Total nodes",
+      "totalEdges": "Total edges",
+      "avgAgentDuration": "Avg agent duration",
+      "note": "This panel is aggregated from structured_rag.* events in system_logs and serves as the first diagnostic surface."
+    }
   }
 }

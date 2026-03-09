@@ -1,11 +1,12 @@
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { documentIndexConfig, featureFlags } from '@config/env';
+import { structuredRagRolloutService } from './structured-rag-rollout.service';
 
 export type DocumentRouteMode = 'structured' | 'chunked';
 export type DocumentRouteReason =
   | 'empty_content'
   | 'feature_disabled'
-  | 'rollout_internal_not_implemented'
+  | 'rollout_not_targeted'
   | 'unsupported_document_type'
   | 'below_threshold'
   | 'meets_threshold';
@@ -29,12 +30,18 @@ export const documentParseRouterService = {
   decideRoute(input: {
     documentType: DocumentType;
     textContent: string | null;
+    userId?: string | null;
+    knowledgeBaseId?: string | null;
   }): DocumentRouteDecision {
     const textContent = input.textContent?.trim() ?? '';
     const estimatedTokens = textContent ? this.estimateTokens(textContent) : 0;
     const thresholdTokens = documentIndexConfig.routeTokenThreshold;
     const structuredCandidate = STRUCTURED_DOCUMENT_TYPES.has(input.documentType);
     const rolloutMode = featureFlags.structuredRagRolloutMode;
+    const rolloutDecision = structuredRagRolloutService.getDecision({
+      userId: input.userId,
+      knowledgeBaseId: input.knowledgeBaseId,
+    });
 
     if (!textContent) {
       return {
@@ -47,7 +54,7 @@ export const documentParseRouterService = {
       };
     }
 
-    if (!featureFlags.structuredRagEnabled || rolloutMode === 'disabled') {
+    if (rolloutDecision.reason === 'feature_disabled') {
       return {
         routeMode: 'chunked',
         reason: 'feature_disabled',
@@ -58,10 +65,10 @@ export const documentParseRouterService = {
       };
     }
 
-    if (rolloutMode === 'internal') {
+    if (!rolloutDecision.enabled) {
       return {
         routeMode: 'chunked',
-        reason: 'rollout_internal_not_implemented',
+        reason: 'rollout_not_targeted',
         estimatedTokens,
         thresholdTokens,
         structuredCandidate,

@@ -14,6 +14,7 @@ import type { SearchResult } from '@modules/vector';
 import { documentRepository } from '@modules/document';
 import { resolveTools, executeAgentLoop } from '@modules/agent';
 import { ragConfig } from '@config/env';
+import { structuredRagMetrics } from '@shared/observability';
 import { conversationService } from './conversation.service';
 import { messageService } from './message.service';
 import { promptService } from './prompt.service';
@@ -21,6 +22,8 @@ import { conversationRepository } from '../repositories/conversation.repository'
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('chat.service');
+const PROVIDER_ERROR_FALLBACK_CONTENT =
+  'The model provider failed before the answer could be completed. Please try again.';
 
 interface SendMessageOptions {
   userId: string;
@@ -138,6 +141,7 @@ async function executeAgentConversation(
       conversationId,
       knowledgeBaseId: knowledgeBaseId ?? undefined,
       documentIds,
+      runtimeState: {},
     },
     genOptions,
     onToolStart: callbacks?.onToolStart,
@@ -150,6 +154,28 @@ function sendChunkedSSE(res: Response, content: string, chunkSize: number = 80):
     const chunk = content.slice(i, i + chunkSize);
     sendSSE(res, { type: 'chunk', data: chunk });
   }
+}
+
+async function persistAssistantMessage(input: {
+  messageId: string;
+  conversationId: string;
+  content: string;
+  citations?: Citation[];
+  retrievedSources?: Citation[];
+  agentTrace?: MessageMetadata['agentTrace'];
+  stopReason?: MessageMetadata['stopReason'];
+}) {
+  await messageService.create({
+    id: input.messageId,
+    conversationId: input.conversationId,
+    role: 'assistant',
+    content: input.content,
+    metadata: buildCitationMetadata(input.citations, {
+      retrievedSources: input.retrievedSources,
+      agentTrace: input.agentTrace,
+      stopReason: input.stopReason,
+    }),
+  });
 }
 
 /** Shared context passed to mode-specific execution functions */
@@ -328,20 +354,28 @@ export const chatService = {
       return;
     }
 
-    await messageService.create({
-      id: ctx.assistantMessageId,
+    await persistAssistantMessage({
+      messageId: ctx.assistantMessageId,
       conversationId,
-      role: 'assistant',
       content: agentResult.content,
-      metadata: buildCitationMetadata(
-        agentResult.citations.length > 0 ? agentResult.citations : undefined,
-        {
-          retrievedSources:
-            agentResult.retrievedCitations.length > 0 ? agentResult.retrievedCitations : undefined,
-          agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
-          stopReason: agentResult.stopReason,
-        }
-      ),
+      citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
+      retrievedSources:
+        agentResult.retrievedCitations.length > 0 ? agentResult.retrievedCitations : undefined,
+      agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
+      stopReason: agentResult.stopReason,
+    });
+    structuredRagMetrics.recordChatCompletion({
+      conversationId,
+      userId,
+      knowledgeBaseId: ctx.knowledgeBaseId,
+      provider: provider.name,
+      transport: 'streaming',
+      orchestration: 'agent',
+      stopReason: agentResult.stopReason,
+      hasKnowledgeBase: !!ctx.knowledgeBaseId,
+      structuredToolsAvailable: tools.some((tool) => tool.definition.name === 'outline_search'),
+      retrievedCitationCount: agentResult.retrievedCitations.length,
+      finalCitationCount: agentResult.citations.length,
     });
   },
 
@@ -394,14 +428,33 @@ export const chatService = {
         return;
       }
       logger.error({ err: error, conversationId }, 'LLM streaming error');
-      sendSSE(res, {
-        type: 'error',
-        data: {
-          code: CHAT_ERROR_CODES.STREAMING_FAILED,
-          message: error instanceof Error ? error.message : 'Streaming failed',
-        },
+      const fallbackContent = fullContent.trim() ? fullContent : PROVIDER_ERROR_FALLBACK_CONTENT;
+      if (!fullContent.trim()) {
+        sendChunkedSSE(res, fallbackContent);
+      }
+      const citations =
+        searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
+      await persistAssistantMessage({
+        messageId: ctx.assistantMessageId,
+        conversationId,
+        content: fallbackContent,
+        citations,
+        stopReason: 'provider_error',
       });
-      res.end();
+      ctx.completionStopReason = 'provider_error';
+      structuredRagMetrics.recordChatCompletion({
+        conversationId,
+        userId,
+        knowledgeBaseId: ctx.knowledgeBaseId,
+        provider: provider.name,
+        transport: 'streaming',
+        orchestration: 'legacy',
+        stopReason: 'provider_error',
+        hasKnowledgeBase: !!ctx.knowledgeBaseId,
+        structuredToolsAvailable: false,
+        retrievedCitationCount: citations?.length ?? 0,
+        finalCitationCount: citations?.length ?? 0,
+      });
       return;
     }
 
@@ -422,14 +475,27 @@ export const chatService = {
 
     const citations =
       searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
-    await messageService.create({
-      id: ctx.assistantMessageId,
+    await persistAssistantMessage({
+      messageId: ctx.assistantMessageId,
       conversationId,
-      role: 'assistant',
       content: fullContent,
-      metadata: buildCitationMetadata(citations, { stopReason: 'answered' }),
+      citations,
+      stopReason: 'answered',
     });
     ctx.completionStopReason = 'answered';
+    structuredRagMetrics.recordChatCompletion({
+      conversationId,
+      userId,
+      knowledgeBaseId: ctx.knowledgeBaseId,
+      provider: provider.name,
+      transport: 'streaming',
+      orchestration: 'legacy',
+      stopReason: 'answered',
+      hasKnowledgeBase: !!ctx.knowledgeBaseId,
+      structuredToolsAvailable: false,
+      retrievedCitationCount: citations?.length ?? 0,
+      finalCitationCount: citations?.length ?? 0,
+    });
   },
 
   /**
@@ -493,6 +559,19 @@ export const chatService = {
           }
         ),
       });
+      structuredRagMetrics.recordChatCompletion({
+        conversationId,
+        userId,
+        knowledgeBaseId: conversation.knowledgeBaseId,
+        provider: provider.name,
+        transport: 'non_streaming',
+        orchestration: 'agent',
+        stopReason: agentResult.stopReason,
+        hasKnowledgeBase: !!conversation.knowledgeBaseId,
+        structuredToolsAvailable: tools.some((tool) => tool.definition.name === 'outline_search'),
+        retrievedCitationCount: agentResult.retrievedCitations.length,
+        finalCitationCount: agentResult.citations.length,
+      });
 
       await conversationRepository.touch(conversationId, userId);
 
@@ -524,7 +603,17 @@ export const chatService = {
     const truncatedHistory = promptService.truncateHistory(history, 4000);
     const systemPrompt = promptService.buildSystemPrompt(searchResults);
     const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
-    const responseContent = await provider.generate(messages, genOptions);
+    let responseContent: string;
+    let stopReason: MessageMetadata['stopReason'] = 'answered';
+    try {
+      responseContent = await provider.generate(messages, genOptions);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') throw error;
+
+      logger.error({ err: error, conversationId }, 'Non-streaming provider generate failed');
+      responseContent = PROVIDER_ERROR_FALLBACK_CONTENT;
+      stopReason = 'provider_error';
+    }
 
     const citations =
       searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
@@ -532,7 +621,20 @@ export const chatService = {
       conversationId,
       role: 'assistant',
       content: responseContent,
-      metadata: buildCitationMetadata(citations, { stopReason: 'answered' }),
+      metadata: buildCitationMetadata(citations, { stopReason }),
+    });
+    structuredRagMetrics.recordChatCompletion({
+      conversationId,
+      userId,
+      knowledgeBaseId: conversation.knowledgeBaseId,
+      provider: provider.name,
+      transport: 'non_streaming',
+      orchestration: 'legacy',
+      stopReason,
+      hasKnowledgeBase: !!conversation.knowledgeBaseId,
+      structuredToolsAvailable: false,
+      retrievedCitationCount: citations?.length ?? 0,
+      finalCitationCount: citations?.length ?? 0,
     });
 
     await conversationRepository.touch(conversationId, userId);

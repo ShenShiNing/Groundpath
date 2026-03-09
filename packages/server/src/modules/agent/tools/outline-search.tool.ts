@@ -1,6 +1,12 @@
 import type { AgentTool, ToolContext, ToolDefinition, ToolExecutionResult } from './tool.interface';
 import { outlineSearchService } from '@modules/document-index/services/search/outline-search.service';
 
+function truncatePreview(preview?: string): string | undefined {
+  if (!preview) return undefined;
+  if (preview.length <= 180) return preview;
+  return `${preview.slice(0, 177).trimEnd()}...`;
+}
+
 const OUTLINE_SEARCH_DEFINITION: ToolDefinition = {
   name: 'outline_search',
   description:
@@ -49,7 +55,16 @@ export class OutlineSearchTool implements AgentTool {
     }
 
     return {
-      content: JSON.stringify({ results: result.results }, null, 2),
+      content: JSON.stringify({
+        results: result.results.map((item) => ({
+          id: item.nodeId,
+          title: item.title ?? item.locator,
+          locator: item.locator,
+          score: item.score,
+          reason: item.matchReason,
+          preview: truncatePreview(item.contentPreview),
+        })),
+      }),
       citations: result.citations,
     };
   }

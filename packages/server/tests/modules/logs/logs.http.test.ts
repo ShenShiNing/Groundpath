@@ -4,7 +4,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
 
-const { authenticateMock, loginLogServiceMock, operationLogServiceMock } = vi.hoisted(() => {
+const {
+  authenticateMock,
+  loginLogServiceMock,
+  operationLogServiceMock,
+  structuredRagDashboardServiceMock,
+  structuredRagReportServiceMock,
+} = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     const authHeader = req.headers.authorization;
     const isAuthorized =
@@ -48,6 +54,82 @@ const { authenticateMock, loginLogServiceMock, operationLogServiceMock } = vi.ho
       })),
       getResourceHistory: vi.fn(async () => [{ id: 'op-resource-1' }]),
     },
+    structuredRagDashboardServiceMock: {
+      getSummary: vi.fn(async () => ({
+        windowHours: 24,
+        filters: { knowledgeBaseId: null },
+        agent: {
+          totalExecutions: 10,
+          fallbackRatio: 20,
+          budgetExhaustionRate: 5,
+          toolTimeoutRate: 2,
+          providerErrorRate: 1,
+          insufficientEvidenceRate: 10,
+          avgDurationMs: 1200,
+          avgFinalCitationCount: 1.4,
+          avgRetrievedCitationCount: 2.2,
+        },
+        index: {
+          totalBuilds: 8,
+          parseSuccessRate: 87.5,
+          structuredRequestRate: 75,
+          structuredCoverage: 62.5,
+          avgParseDurationMs: 900,
+          avgFreshnessLagMs: 1500,
+          graphBuilds: 4,
+          totalNodes: 120,
+          totalEdges: 80,
+        },
+        trendGranularity: 'hour',
+        alerts: [],
+        trend: [],
+        knowledgeBaseBreakdown: [],
+        recentEvents: [],
+      })),
+    },
+    structuredRagReportServiceMock: {
+      generateReport: vi.fn(async () => ({
+        generatedAt: new Date('2026-03-09T00:00:00.000Z'),
+        windowDays: 30,
+        filters: {
+          knowledgeBaseId: null,
+          userScoped: true,
+        },
+        highlights: ['Fallback ratio elevated'],
+        summary: {
+          windowHours: 24,
+          trendGranularity: 'hour',
+          filters: { knowledgeBaseId: null },
+          agent: {
+            totalExecutions: 10,
+            fallbackRatio: 20,
+            budgetExhaustionRate: 5,
+            toolTimeoutRate: 2,
+            providerErrorRate: 1,
+            insufficientEvidenceRate: 10,
+            avgDurationMs: 1200,
+            avgFinalCitationCount: 1.4,
+            avgRetrievedCitationCount: 2.2,
+          },
+          index: {
+            totalBuilds: 8,
+            parseSuccessRate: 87.5,
+            structuredRequestRate: 75,
+            structuredCoverage: 62.5,
+            avgParseDurationMs: 900,
+            avgFreshnessLagMs: 1500,
+            graphBuilds: 4,
+            totalNodes: 120,
+            totalEdges: 80,
+          },
+          alerts: [],
+          trend: [],
+          knowledgeBaseBreakdown: [],
+          recentEvents: [],
+        },
+        markdown: '# Structured RAG Report',
+      })),
+    },
   };
 });
 
@@ -65,6 +147,14 @@ vi.mock('@modules/logs/services/login-log.service', () => ({
 
 vi.mock('@modules/logs/services/operation-log.service', () => ({
   operationLogService: operationLogServiceMock,
+}));
+
+vi.mock('@modules/logs/services/structured-rag-dashboard.service', () => ({
+  structuredRagDashboardService: structuredRagDashboardServiceMock,
+}));
+
+vi.mock('@modules/logs/services/structured-rag-report.service', () => ({
+  structuredRagReportService: structuredRagReportServiceMock,
 }));
 
 import logsRoutes from '@modules/logs/logs.routes';
@@ -251,5 +341,64 @@ describe('logs.routes http behavior', () => {
       'user-1',
       20
     );
+  });
+
+  it('should validate structured rag summary query params', async () => {
+    const response = await fetch(`${baseUrl}/logs/structured-rag/summary?hours=0`, {
+      headers: { authorization: 'Bearer valid-access' },
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(structuredRagDashboardServiceMock.getSummary).not.toHaveBeenCalled();
+  });
+
+  it('should return structured rag summary with parsed filters', async () => {
+    const response = await fetch(
+      `${baseUrl}/logs/structured-rag/summary?hours=48&recentLimit=5&knowledgeBaseId=550e8400-e29b-41d4-a716-446655440000`,
+      {
+        headers: { authorization: 'Bearer valid-access' },
+      }
+    );
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(structuredRagDashboardServiceMock.getSummary).toHaveBeenCalledWith({
+      userId: 'user-1',
+      hours: 48,
+      recentLimit: 5,
+      knowledgeBaseId: '550e8400-e29b-41d4-a716-446655440000',
+    });
+  });
+
+  it('should validate structured rag report query params', async () => {
+    const response = await fetch(`${baseUrl}/logs/structured-rag/report?days=3`, {
+      headers: { authorization: 'Bearer valid-access' },
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(structuredRagReportServiceMock.generateReport).not.toHaveBeenCalled();
+  });
+
+  it('should return structured rag report with parsed filters', async () => {
+    const response = await fetch(
+      `${baseUrl}/logs/structured-rag/report?days=60&knowledgeBaseId=550e8400-e29b-41d4-a716-446655440000`,
+      {
+        headers: { authorization: 'Bearer valid-access' },
+      }
+    );
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(structuredRagReportServiceMock.generateReport).toHaveBeenCalledWith({
+      userId: 'user-1',
+      days: 60,
+      knowledgeBaseId: '550e8400-e29b-41d4-a716-446655440000',
+    });
   });
 });

@@ -1,8 +1,8 @@
 import cron from 'node-cron';
-import { loggingConfig, featureFlags } from '@shared/config/env';
+import { loggingConfig, featureFlags, structuredRagObservabilityConfig } from '@shared/config/env';
 import { createLogger } from '@shared/logger';
 import { systemLogger } from '@shared/logger/system-logger';
-import { logCleanupService } from '@modules/logs';
+import { logCleanupService, structuredRagAlertService } from '@modules/logs';
 import { tokenCleanupService } from '@modules/auth';
 import { counterSyncService } from '@modules/knowledge-base';
 import { vectorCleanupService } from '@modules/vector';
@@ -77,6 +77,35 @@ export function initializeScheduler(): void {
       }
     );
     scheduledTasks.push('counter-sync (4:00 AM UTC every Sunday)');
+  }
+
+  if (structuredRagObservabilityConfig.alertsEnabled) {
+    cron.schedule(
+      structuredRagObservabilityConfig.alertScheduleCron,
+      async () => {
+        logger.info('Running structured RAG alert check...');
+
+        try {
+          const result = await structuredRagAlertService.checkAndNotify();
+          systemLogger.schedulerRun(
+            'structured-rag.alert-check',
+            'Structured RAG alert check completed',
+            undefined,
+            result
+          );
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          logger.error({ error }, 'Structured RAG alert check failed');
+          systemLogger.schedulerError('structured-rag.alert-check.failed', error);
+        }
+      },
+      {
+        timezone: 'UTC',
+      }
+    );
+    scheduledTasks.push(
+      `structured-rag-alerts (${structuredRagObservabilityConfig.alertScheduleCron} UTC)`
+    );
   }
 
   isInitialized = true;

@@ -4,7 +4,7 @@ import type { AgentTool, ToolContext, ToolDefinition } from '@modules/agent/tool
 import type { LLMProvider, ChatMessage, GenerateOptions } from '@modules/llm';
 
 vi.mock('@shared/config/env', () => ({
-  agentConfig: { maxIterations: 5, maxStructuredRounds: 3, maxFallbackRounds: 1 },
+  agentConfig: { maxIterations: 5, maxStructuredRounds: 3, maxFallbackRounds: 1, toolTimeout: 20 },
 }));
 
 vi.mock('@shared/logger', () => ({
@@ -272,7 +272,10 @@ describe('executeAgentLoop', () => {
     const provider = createMockProvider({ generateWithTools });
     const options = createBaseOptions({ provider });
 
-    await expect(executeAgentLoop(options)).rejects.toThrow('API rate limit');
+    const result = await executeAgentLoop(options);
+
+    expect(result.stopReason).toBe('provider_error');
+    expect(result.content).toContain('provider failed');
   });
 
   // ── Callbacks ──
@@ -462,6 +465,44 @@ describe('executeAgentLoop', () => {
     expect(result.agentTrace[0]!.toolResults).toHaveLength(2);
   });
 
+  it('reuses identical tool calls from runtime cache without re-executing the tool', async () => {
+    const tool = createMockTool('outline_search', 'cached result', 'structured');
+
+    const generateWithTools = vi
+      .fn()
+      .mockResolvedValueOnce({
+        finishReason: 'tool_calls',
+        content: '',
+        toolCalls: [{ id: 'tc-1', name: 'outline_search', arguments: { query: 'same' } }],
+      })
+      .mockResolvedValueOnce({
+        finishReason: 'tool_calls',
+        content: '',
+        toolCalls: [{ id: 'tc-2', name: 'outline_search', arguments: { query: 'same' } }],
+      })
+      .mockResolvedValueOnce({
+        finishReason: 'text',
+        content: 'Answer',
+        toolCalls: [],
+      });
+
+    const provider = createMockProvider({ generateWithTools });
+    const result = await executeAgentLoop(
+      createBaseOptions({
+        provider,
+        tools: [tool],
+        toolContext: {
+          userId: 'user-1',
+          conversationId: 'conv-1',
+          runtimeState: {},
+        },
+      })
+    );
+
+    expect(tool.execute).toHaveBeenCalledTimes(1);
+    expect(result.agentTrace).toHaveLength(2);
+  });
+
   it('should stop with budget_exhausted when structured tool budget is exceeded', async () => {
     const tool = createMockTool('outline_search', 'structured result', 'structured');
     const generateWithTools = vi.fn().mockResolvedValueOnce({
@@ -489,5 +530,68 @@ describe('executeAgentLoop', () => {
     expect(tool.execute).not.toHaveBeenCalled();
     expect(provider.generate).toHaveBeenCalledOnce();
     expect(result.stopReason).toBe('budget_exhausted');
+  });
+
+  it('should stop with tool_timeout when a tool exceeds the configured timeout', async () => {
+    const tool = createMockTool('slow_tool');
+    vi.mocked(tool.execute).mockImplementation(
+      () => new Promise(() => undefined) as Promise<{ content: string }>
+    );
+
+    const generateWithTools = vi.fn().mockResolvedValueOnce({
+      finishReason: 'tool_calls',
+      content: '',
+      toolCalls: [{ id: 'tc-1', name: 'slow_tool', arguments: {} }],
+    });
+
+    const provider = createMockProvider({
+      generateWithTools,
+      generate: vi.fn().mockResolvedValue('Timed out answer'),
+    });
+
+    const result = await executeAgentLoop(
+      createBaseOptions({
+        provider,
+        tools: [tool],
+      })
+    );
+
+    expect(provider.generate).toHaveBeenCalledOnce();
+    expect(result.stopReason).toBe('tool_timeout');
+    expect(result.content).toBe('Timed out answer');
+    expect(result.agentTrace[0]?.toolResults[0]).toMatchObject({
+      name: 'slow_tool',
+      isError: true,
+      isTimeout: true,
+    });
+  });
+
+  it('marks answered tool runs without citations as insufficient_evidence for knowledge tools', async () => {
+    const tool = createMockTool('outline_search', 'no matches', 'structured');
+    const generateWithTools = vi
+      .fn()
+      .mockResolvedValueOnce({
+        finishReason: 'tool_calls',
+        content: '',
+        toolCalls: [{ id: 'tc-1', name: 'outline_search', arguments: { query: 'missing' } }],
+      })
+      .mockResolvedValueOnce({
+        finishReason: 'text',
+        content: 'I could not find enough support in the indexed documents.',
+        toolCalls: [],
+      });
+
+    const provider = createMockProvider({ generateWithTools });
+
+    const result = await executeAgentLoop(
+      createBaseOptions({
+        provider,
+        tools: [tool],
+      })
+    );
+
+    expect(result.stopReason).toBe('insufficient_evidence');
+    expect(result.citations).toEqual([]);
+    expect(result.retrievedCitations).toEqual([]);
   });
 });

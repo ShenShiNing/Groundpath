@@ -2,6 +2,7 @@ import { agentConfig, documentIndexConfig } from '@config/env';
 import type { Citation } from '@knowledge-agent/shared/types';
 import { documentNodeRepository } from '../../repositories/document-node.repository';
 import { documentNodeSearchRepository } from '../../repositories/document-node-search.repository';
+import { documentIndexCacheService } from '../document-index-cache.service';
 
 export interface NodeReadInput {
   userId: string;
@@ -15,6 +16,15 @@ interface RelatedNodeRef {
   nodeId: string;
   title: string;
   sectionPath: string[];
+}
+
+interface CachedIndexVersionNode {
+  id: string;
+  title: string | null;
+  sectionPath: string[] | null;
+  parentId: string | null;
+  orderNo: number;
+  stableLocator: string | null;
 }
 
 export interface NodeReadResultItem {
@@ -93,90 +103,109 @@ export const nodeReadService = {
     results: NodeReadResultItem[];
     citations: Citation[];
   }> {
-    if (input.nodeIds.length === 0) {
-      return { results: [], citations: [] };
-    }
-
-    const rows = await documentNodeSearchRepository.getAccessibleNodesByIds({
-      userId: input.userId,
-      knowledgeBaseId: input.knowledgeBaseId,
-      documentIds: input.documentIds,
-      nodeIds: input.nodeIds,
-    });
-
-    if (rows.length === 0) {
+    const uniqueNodeIds = [...new Set(input.nodeIds.map((nodeId) => nodeId.trim()).filter(Boolean))];
+    if (uniqueNodeIds.length === 0) {
       return { results: [], citations: [] };
     }
 
     const maxTokensPerNode = input.maxTokensPerNode ?? agentConfig.maxNodeReadTokens;
-    const indexVersionMaps = new Map<
-      string,
+    return documentIndexCacheService.getNodeReadResult(
       {
-        byId: Map<
+        userId: input.userId,
+        knowledgeBaseId: input.knowledgeBaseId,
+        documentIds: input.documentIds,
+        nodeIds: uniqueNodeIds,
+        maxTokensPerNode,
+      },
+      async () => {
+        const rows = await documentNodeSearchRepository.getAccessibleNodesByIds({
+          userId: input.userId,
+          knowledgeBaseId: input.knowledgeBaseId,
+          documentIds: input.documentIds,
+          nodeIds: uniqueNodeIds,
+        });
+
+        if (rows.length === 0) {
+          return { results: [], citations: [] };
+        }
+
+        const indexVersionMaps = new Map<
           string,
-          Awaited<ReturnType<typeof documentNodeRepository.listByIndexVersionId>>[number]
-        >;
-        byOrder: Map<
-          number,
-          Awaited<ReturnType<typeof documentNodeRepository.listByIndexVersionId>>[number]
-        >;
-      }
-    >();
+          {
+            byId: Map<string, CachedIndexVersionNode>;
+            byOrder: Map<number, CachedIndexVersionNode>;
+          }
+        >();
 
-    for (const indexVersionId of [...new Set(rows.map((row) => row.indexVersionId))]) {
-      const nodes = await documentNodeRepository.listByIndexVersionId(indexVersionId);
-      indexVersionMaps.set(indexVersionId, {
-        byId: new Map(nodes.map((node) => [node.id, node])),
-        byOrder: new Map(nodes.map((node) => [node.orderNo, node])),
-      });
-    }
+        for (const indexVersionId of [...new Set(rows.map((row) => row.indexVersionId))]) {
+          const nodes = await documentIndexCacheService.getIndexVersionNodes(indexVersionId, () =>
+            documentNodeRepository.listByIndexVersionId(indexVersionId)
+          );
+          indexVersionMaps.set(indexVersionId, {
+            byId: new Map(nodes.map((node) => [node.id, node])),
+            byOrder: new Map(nodes.map((node) => [node.orderNo, node])),
+          });
+        }
 
-    const rowByNodeId = new Map(rows.map((row) => [row.nodeId, row]));
-    const results = input.nodeIds
-      .map((nodeId) => rowByNodeId.get(nodeId))
-      .filter((row): row is NonNullable<typeof row> => !!row)
-      .map((row) => {
-        const content = row.content ?? '';
-        const truncation = truncateByTokens(content, maxTokensPerNode);
-        const maps = indexVersionMaps.get(row.indexVersionId);
-        const parentNode = row.parentId ? maps?.byId.get(row.parentId) : undefined;
-        const prevNode = maps?.byOrder.get(row.orderNo - 1);
-        const nextNode = maps?.byOrder.get(row.orderNo + 1);
+        const rowByNodeId = new Map(rows.map((row) => [row.nodeId, row]));
+        const results: NodeReadResultItem[] = [];
+        for (const nodeId of uniqueNodeIds) {
+          const row = rowByNodeId.get(nodeId);
+          if (!row) continue;
 
-        return {
-          nodeId: row.nodeId,
+          const item = await documentIndexCacheService.getNodeReadItem(
+            {
+              documentId: row.documentId,
+              nodeId,
+              maxTokensPerNode,
+            },
+            async () => {
+              const content = row.content ?? '';
+              const truncation = truncateByTokens(content, maxTokensPerNode);
+              const maps = indexVersionMaps.get(row.indexVersionId);
+              const parentNode = row.parentId ? maps?.byId.get(row.parentId) : undefined;
+              const prevNode = maps?.byOrder.get(row.orderNo - 1);
+              const nextNode = maps?.byOrder.get(row.orderNo + 1);
+
+              return {
+                nodeId: row.nodeId,
+                documentId: row.documentId,
+                documentTitle: row.documentTitle,
+                documentVersion: row.documentVersion,
+                indexVersion: row.indexVersion,
+                title: row.title || row.stableLocator || row.sectionPath?.join(' > ') || row.nodeId,
+                sectionPath: row.sectionPath ?? [],
+                content: truncation.content,
+                locator: toLocator(row),
+                pageStart: row.pageStart ?? undefined,
+                pageEnd: row.pageEnd ?? undefined,
+                truncated: truncation.truncated,
+                remainingTokenEstimate: truncation.remainingTokenEstimate,
+                parent: toRelatedNodeRef(parentNode),
+                prev: toRelatedNodeRef(prevNode),
+                next: toRelatedNodeRef(nextNode),
+              } satisfies NodeReadResultItem;
+            }
+          );
+          results.push(item);
+        }
+
+        const citations: Citation[] = results.map((row) => ({
+          sourceType: 'node',
           documentId: row.documentId,
           documentTitle: row.documentTitle,
           documentVersion: row.documentVersion,
           indexVersion: row.indexVersion,
-          title: row.title || row.stableLocator || row.sectionPath?.join(' > ') || row.nodeId,
-          sectionPath: row.sectionPath ?? [],
-          content: truncation.content,
-          locator: toLocator(row),
-          pageStart: row.pageStart ?? undefined,
-          pageEnd: row.pageEnd ?? undefined,
-          truncated: truncation.truncated,
-          remainingTokenEstimate: truncation.remainingTokenEstimate,
-          parent: toRelatedNodeRef(parentNode),
-          prev: toRelatedNodeRef(prevNode),
-          next: toRelatedNodeRef(nextNode),
-        } satisfies NodeReadResultItem;
-      });
+          nodeId: row.nodeId,
+          sectionPath: row.sectionPath,
+          pageStart: row.pageStart,
+          pageEnd: row.pageEnd,
+          locator: row.locator,
+          excerpt: row.content,
+        }));
 
-    const citations: Citation[] = results.map((row) => ({
-      sourceType: 'node',
-      documentId: row.documentId,
-      documentTitle: row.documentTitle,
-      documentVersion: row.documentVersion,
-      indexVersion: row.indexVersion,
-      nodeId: row.nodeId,
-      sectionPath: row.sectionPath,
-      pageStart: row.pageStart,
-      pageEnd: row.pageEnd,
-      locator: row.locator,
-      excerpt: row.content,
-    }));
-
-    return { results, citations };
+        return { results, citations };
+      }
+    );
   },
 };

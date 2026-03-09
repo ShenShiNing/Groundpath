@@ -5,6 +5,7 @@ export * from './document';
 export * from './knowledge-base';
 export * from './llm';
 export * from './chat';
+export * from './logs';
 export * from './document-ai';
 
 // Unified error code type

@@ -31,6 +31,18 @@ const booleanString = (defaultValue: boolean = false) =>
     .default(defaultValue ? 'true' : 'false')
     .transform((v) => v === 'true');
 
+/** Helper for comma-separated string arrays */
+const csvStringArray = () =>
+  z
+    .string()
+    .default('')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    );
+
 // -------------------- Server --------------------
 const serverSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -128,6 +140,9 @@ const documentSchema = z.object({
 const documentIndexSchema = z.object({
   DOCUMENT_INDEX_ROUTE_TOKEN_THRESHOLD: z.coerce.number().int().min(1).default(5000),
   DOCUMENT_INDEX_CHARS_PER_TOKEN: z.coerce.number().min(1).default(4),
+  DOCUMENT_INDEX_PDF_RUNTIME: z.enum(['pdf-parse', 'marker', 'docling']).default('pdf-parse'),
+  DOCUMENT_INDEX_PDF_TIMEOUT: z.coerce.number().int().min(1000).max(600000).default(30000),
+  DOCUMENT_INDEX_PDF_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
 });
 
 // -------------------- RAG Search Defaults --------------------
@@ -185,6 +200,12 @@ const queueSchema = z.object({
   QUEUE_BACKOFF_TYPE: z.enum(['fixed', 'exponential']).default('exponential'),
 });
 
+// -------------------- Backfill --------------------
+const backfillSchema = z.object({
+  BACKFILL_BATCH_SIZE: z.coerce.number().int().min(1).max(1000).default(100),
+  BACKFILL_ENQUEUE_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(0),
+});
+
 // -------------------- Agent / Web Search --------------------
 const agentSchema = z.object({
   TAVILY_API_KEY: z.string().optional(),
@@ -209,12 +230,29 @@ const loggingSchema = z.object({
   LOG_CLEANUP_ENABLED: booleanString(true),
 });
 
+// -------------------- Structured RAG Observability --------------------
+const structuredRagObservabilitySchema = z.object({
+  STRUCTURED_RAG_ALERTS_ENABLED: booleanString(false),
+  STRUCTURED_RAG_ALERT_EMAIL_TO: csvStringArray(),
+  STRUCTURED_RAG_ALERT_WINDOW_HOURS: z.coerce.number().int().min(1).max(24 * 30).default(24),
+  STRUCTURED_RAG_ALERT_SCHEDULE_CRON: z.string().default('0 5 * * *'),
+  STRUCTURED_RAG_ALERT_COOLDOWN_HOURS: z.coerce.number().int().min(1).max(24 * 30).default(6),
+  STRUCTURED_RAG_ALERT_REMINDER_HOURS: z.coerce.number().int().min(1).max(24 * 90).default(24),
+  STRUCTURED_RAG_ALERT_FALLBACK_RATIO_THRESHOLD: z.coerce.number().min(0).max(100).default(35),
+  STRUCTURED_RAG_ALERT_BUDGET_EXHAUSTION_THRESHOLD: z.coerce.number().min(0).max(100).default(10),
+  STRUCTURED_RAG_ALERT_PROVIDER_ERROR_THRESHOLD: z.coerce.number().min(0).max(100).default(3),
+  STRUCTURED_RAG_ALERT_FRESHNESS_LAG_MS_THRESHOLD: z.coerce.number().int().min(0).default(300000),
+  STRUCTURED_RAG_REPORT_DEFAULT_DAYS: z.coerce.number().int().min(7).max(365).default(30),
+});
+
 // -------------------- Feature Flags --------------------
 const featureFlagsSchema = z.object({
   DISABLE_RATE_LIMIT: booleanString(false),
   COUNTER_SYNC_ENABLED: booleanString(false),
   STRUCTURED_RAG_ENABLED: booleanString(false),
   STRUCTURED_RAG_ROLLOUT_MODE: z.enum(['disabled', 'internal', 'all']).default('disabled'),
+  STRUCTURED_RAG_INTERNAL_USER_IDS: csvStringArray(),
+  STRUCTURED_RAG_INTERNAL_KB_IDS: csvStringArray(),
 });
 
 // ==================== Combined Schema ====================
@@ -231,11 +269,13 @@ const envSchema = serverSchema
   .extend(ragSchema.shape)
   .extend(documentAISchema.shape)
   .extend(queueSchema.shape)
+  .extend(backfillSchema.shape)
   .extend(embeddingSchema.shape)
   .extend(vectorSchema.shape)
   .extend(llmSchema.shape)
   .extend(agentSchema.shape)
   .extend(loggingSchema.shape)
+  .extend(structuredRagObservabilitySchema.shape)
   .extend(featureFlagsSchema.shape);
 
 // ==================== Validation ====================
@@ -381,6 +421,9 @@ export const documentConfig = {
 export const documentIndexConfig = {
   routeTokenThreshold: validatedEnv.DOCUMENT_INDEX_ROUTE_TOKEN_THRESHOLD,
   charsPerToken: validatedEnv.DOCUMENT_INDEX_CHARS_PER_TOKEN,
+  pdfRuntime: validatedEnv.DOCUMENT_INDEX_PDF_RUNTIME,
+  pdfTimeoutMs: validatedEnv.DOCUMENT_INDEX_PDF_TIMEOUT,
+  pdfConcurrency: validatedEnv.DOCUMENT_INDEX_PDF_CONCURRENCY,
 } as const;
 
 /** RAG search defaults */
@@ -460,6 +503,12 @@ export const queueConfig = {
   backoffType: validatedEnv.QUEUE_BACKOFF_TYPE,
 } as const;
 
+/** Backfill configuration */
+export const backfillConfig = {
+  batchSize: validatedEnv.BACKFILL_BATCH_SIZE,
+  enqueueDelayMs: validatedEnv.BACKFILL_ENQUEUE_DELAY_MS,
+} as const;
+
 /** Logging configuration */
 export const loggingConfig = {
   level: validatedEnv.LOG_LEVEL,
@@ -474,12 +523,31 @@ export const loggingConfig = {
   },
 } as const;
 
+/** Structured RAG observability configuration */
+export const structuredRagObservabilityConfig = {
+  alertsEnabled: validatedEnv.STRUCTURED_RAG_ALERTS_ENABLED,
+  alertEmailTo: validatedEnv.STRUCTURED_RAG_ALERT_EMAIL_TO,
+  alertWindowHours: validatedEnv.STRUCTURED_RAG_ALERT_WINDOW_HOURS,
+  alertScheduleCron: validatedEnv.STRUCTURED_RAG_ALERT_SCHEDULE_CRON,
+  alertCooldownHours: validatedEnv.STRUCTURED_RAG_ALERT_COOLDOWN_HOURS,
+  alertReminderHours: validatedEnv.STRUCTURED_RAG_ALERT_REMINDER_HOURS,
+  thresholds: {
+    fallbackRatio: validatedEnv.STRUCTURED_RAG_ALERT_FALLBACK_RATIO_THRESHOLD,
+    budgetExhaustionRate: validatedEnv.STRUCTURED_RAG_ALERT_BUDGET_EXHAUSTION_THRESHOLD,
+    providerErrorRate: validatedEnv.STRUCTURED_RAG_ALERT_PROVIDER_ERROR_THRESHOLD,
+    freshnessLagMs: validatedEnv.STRUCTURED_RAG_ALERT_FRESHNESS_LAG_MS_THRESHOLD,
+  },
+  reportDefaultDays: validatedEnv.STRUCTURED_RAG_REPORT_DEFAULT_DAYS,
+} as const;
+
 /** Feature flags */
 export const featureFlags = {
   disableRateLimit: validatedEnv.DISABLE_RATE_LIMIT,
   counterSyncEnabled: validatedEnv.COUNTER_SYNC_ENABLED,
   structuredRagEnabled: validatedEnv.STRUCTURED_RAG_ENABLED,
   structuredRagRolloutMode: validatedEnv.STRUCTURED_RAG_ROLLOUT_MODE,
+  structuredRagInternalUserIds: validatedEnv.STRUCTURED_RAG_INTERNAL_USER_IDS,
+  structuredRagInternalKnowledgeBaseIds: validatedEnv.STRUCTURED_RAG_INTERNAL_KB_IDS,
 } as const;
 
 // ==================== Utilities ====================

@@ -48,4 +48,10 @@ export const queryKeys = {
     searchConversations: (params: Record<string, unknown>) =>
       ['chat', 'searchConversations', params] as const,
   },
+
+  // Logs / Observability
+  logs: {
+    structuredRagSummary: (params: Record<string, unknown>) =>
+      ['logs', 'structuredRagSummary', params] as const,
+  },
 };
