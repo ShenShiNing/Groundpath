@@ -56,6 +56,46 @@ Guidelines:
 - Use markdown formatting when appropriate
 - Respond in the same language as the user's question`;
 
+const AGENT_SYSTEM_PROMPT_STRUCTURED_KB = `You are a helpful AI assistant with access to a structured knowledge base.
+
+IMPORTANT: You MUST use outline_search first to locate relevant sections before answering. Do not answer from memory alone.
+IMPORTANT: After locating relevant sections, use node_read to inspect the best candidates before answering.
+IMPORTANT: If structured evidence is insufficient, use knowledge_base_search as a fallback.
+IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
+
+When to use tools:
+- ALWAYS use outline_search first for every knowledge-base question
+- Use node_read to inspect the most relevant nodes returned by outline_search
+- Use knowledge_base_search only when the structured index does not provide enough evidence
+- Keep tool usage focused: locate first, then read, then answer
+
+Guidelines:
+- Cite sources using [1], [2], etc. based on the evidence you actually used
+- If no relevant information is found after searching, clearly state that
+- Be concise and direct
+- Use markdown formatting when appropriate
+- Respond in the same language as the user's question`;
+
+const AGENT_SYSTEM_PROMPT_STRUCTURED_KB_AND_WEB = `You are a helpful AI assistant with access to a structured knowledge base and web search.
+
+IMPORTANT: You MUST use outline_search first to locate relevant sections before answering knowledge-base questions.
+IMPORTANT: After locating relevant sections, use node_read to inspect the best candidates before answering.
+IMPORTANT: If structured evidence is insufficient, use knowledge_base_search as a fallback. Use web_search only for real-time or external information.
+IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
+
+When to use tools:
+- ALWAYS use outline_search first for knowledge-base questions
+- Use node_read to inspect returned nodes
+- Use knowledge_base_search only when structured evidence is insufficient
+- Use web_search when the answer depends on current or external information
+
+Guidelines:
+- Cite knowledge base sources using [1], [2], etc.
+- After using web_search, include relevant source URLs
+- Be concise and direct
+- Use markdown formatting when appropriate
+- Respond in the same language as the user's question`;
+
 const AGENT_SYSTEM_PROMPT_KB_AND_WEB = `You are a helpful AI assistant with access to a knowledge base and web search.
 
 IMPORTANT: You MUST use the knowledge_base_search tool first before answering. Do not answer from memory alone.
@@ -189,13 +229,23 @@ export const promptService = {
   /**
    * Build system prompt for agent mode based on available tools
    */
-  buildAgentSystemPrompt(options: { hasKnowledgeBase: boolean; hasWebSearch: boolean }): string {
-    const { hasKnowledgeBase, hasWebSearch } = options;
+  buildAgentSystemPrompt(options: {
+    hasKnowledgeBase: boolean;
+    hasWebSearch: boolean;
+    hasStructuredKnowledgeBase?: boolean;
+  }): string {
+    const { hasKnowledgeBase, hasWebSearch, hasStructuredKnowledgeBase = false } = options;
 
     if (hasKnowledgeBase && hasWebSearch) {
+      if (hasStructuredKnowledgeBase) {
+        return AGENT_SYSTEM_PROMPT_STRUCTURED_KB_AND_WEB;
+      }
       return AGENT_SYSTEM_PROMPT_KB_AND_WEB;
     }
     if (hasKnowledgeBase) {
+      if (hasStructuredKnowledgeBase) {
+        return AGENT_SYSTEM_PROMPT_STRUCTURED_KB;
+      }
       return AGENT_SYSTEM_PROMPT_KB;
     }
     return AGENT_SYSTEM_PROMPT_WEB;

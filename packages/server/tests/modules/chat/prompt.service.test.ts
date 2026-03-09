@@ -6,6 +6,7 @@ describe('promptService.buildAgentSystemPrompt', () => {
     const prompt = promptService.buildAgentSystemPrompt({
       hasKnowledgeBase: true,
       hasWebSearch: false,
+      hasStructuredKnowledgeBase: false,
     });
 
     expect(prompt).toContain('knowledge_base_search');
@@ -17,6 +18,7 @@ describe('promptService.buildAgentSystemPrompt', () => {
     const prompt = promptService.buildAgentSystemPrompt({
       hasKnowledgeBase: false,
       hasWebSearch: true,
+      hasStructuredKnowledgeBase: false,
     });
 
     expect(prompt).toContain('web_search');
@@ -27,6 +29,7 @@ describe('promptService.buildAgentSystemPrompt', () => {
     const prompt = promptService.buildAgentSystemPrompt({
       hasKnowledgeBase: true,
       hasWebSearch: true,
+      hasStructuredKnowledgeBase: false,
     });
 
     expect(prompt).toContain('knowledge_base_search');
@@ -38,10 +41,12 @@ describe('promptService.buildAgentSystemPrompt', () => {
     const kbOnly = promptService.buildAgentSystemPrompt({
       hasKnowledgeBase: true,
       hasWebSearch: false,
+      hasStructuredKnowledgeBase: false,
     });
     const kbAndWeb = promptService.buildAgentSystemPrompt({
       hasKnowledgeBase: true,
       hasWebSearch: true,
+      hasStructuredKnowledgeBase: false,
     });
 
     // Both KB prompts should enforce searching first
@@ -55,9 +60,22 @@ describe('promptService.buildAgentSystemPrompt', () => {
     const prompt = promptService.buildAgentSystemPrompt({
       hasKnowledgeBase: true,
       hasWebSearch: false,
+      hasStructuredKnowledgeBase: false,
     });
 
     expect(prompt).toContain('rephrasing your query');
+  });
+
+  it('returns structured KB prompt when structured tools are available', () => {
+    const prompt = promptService.buildAgentSystemPrompt({
+      hasKnowledgeBase: true,
+      hasWebSearch: false,
+      hasStructuredKnowledgeBase: true,
+    });
+
+    expect(prompt).toContain('outline_search');
+    expect(prompt).toContain('node_read');
+    expect(prompt).toContain('knowledge_base_search as a fallback');
   });
 });
 

@@ -190,6 +190,7 @@ const agentSchema = z.object({
   TAVILY_API_KEY: z.string().optional(),
   AGENT_MAX_ITERATIONS: z.coerce.number().int().min(1).max(20).default(5),
   AGENT_TOOL_TIMEOUT: z.coerce.number().default(15000),
+  AGENT_MAX_NODE_READ_TOKENS: z.coerce.number().int().min(100).max(8000).default(1200),
   TAVILY_MAX_RESULTS: z.coerce.number().int().min(1).max(10).default(5),
   TAVILY_CONTENT_MAX_LENGTH: z.coerce.number().int().min(200).max(10000).default(2000),
 });
@@ -438,6 +439,7 @@ export const agentConfig = {
   tavilyApiKey: validatedEnv.TAVILY_API_KEY,
   maxIterations: validatedEnv.AGENT_MAX_ITERATIONS,
   toolTimeout: validatedEnv.AGENT_TOOL_TIMEOUT,
+  maxNodeReadTokens: validatedEnv.AGENT_MAX_NODE_READ_TOKENS,
   tavilyMaxResults: validatedEnv.TAVILY_MAX_RESULTS,
   tavilyContentMaxLength: validatedEnv.TAVILY_CONTENT_MAX_LENGTH,
 } as const;

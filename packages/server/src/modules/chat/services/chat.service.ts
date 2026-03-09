@@ -207,12 +207,14 @@ export const chatService = {
     const { res, conversationId, content, userId, provider, genOptions, abortController } = ctx;
     const hasKnowledgeBase = !!ctx.knowledgeBaseId;
     const hasWebSearch = tools.some((t) => t.definition.name === 'web_search');
+    const hasStructuredKnowledgeBase = tools.some((t) => t.definition.name === 'outline_search');
 
     logger.debug(
       {
         conversationId,
         toolCount: tools.length,
         hasKnowledgeBase,
+        hasStructuredKnowledgeBase,
         hasWebSearch,
         provider: provider.name,
       },
@@ -221,7 +223,11 @@ export const chatService = {
 
     const history = await messageService.getRecentForContext(conversationId, 10);
     const truncatedHistory = promptService.truncateHistory(history, 4000);
-    const systemPrompt = promptService.buildAgentSystemPrompt({ hasKnowledgeBase, hasWebSearch });
+    const systemPrompt = promptService.buildAgentSystemPrompt({
+      hasKnowledgeBase,
+      hasWebSearch,
+      hasStructuredKnowledgeBase,
+    });
     const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
 
     const agentResult = await executeAgentLoop({
