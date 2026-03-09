@@ -24,6 +24,7 @@ const {
   withTransactionMock,
   documentParseRouterServiceMock,
   documentIndexServiceMock,
+  markdownStructureParserMock,
 } = vi.hoisted(() => ({
   documentRepositoryMock: {
     findById: vi.fn(),
@@ -68,6 +69,10 @@ const {
     completeBuild: vi.fn(),
     failBuild: vi.fn(),
     supersedeBuild: vi.fn(),
+    replaceGraph: vi.fn(),
+  },
+  markdownStructureParserMock: {
+    parse: vi.fn(),
   },
 }));
 
@@ -100,6 +105,10 @@ vi.mock('@modules/document-index/services/document-parse-router.service', () => 
 
 vi.mock('@modules/document-index/services/document-index.service', () => ({
   documentIndexService: documentIndexServiceMock,
+}));
+
+vi.mock('@modules/document-index/services/parsers/markdown-structure.parser', () => ({
+  markdownStructureParser: markdownStructureParserMock,
 }));
 
 vi.mock('uuid', () => ({
@@ -177,6 +186,14 @@ describe('RAG Processing Error Injection', () => {
     documentIndexServiceMock.completeBuild.mockResolvedValue(undefined);
     documentIndexServiceMock.failBuild.mockResolvedValue(undefined);
     documentIndexServiceMock.supersedeBuild.mockResolvedValue(undefined);
+    documentIndexServiceMock.replaceGraph.mockResolvedValue(undefined);
+    markdownStructureParserMock.parse.mockReturnValue({
+      nodes: [],
+      edges: [],
+      parseMethod: 'structured',
+      parserRuntime: 'markdown',
+      headingCount: 0,
+    });
   });
 
   it('should mark as failed and release lock when embedding fails', async () => {
@@ -294,6 +311,13 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should record a structured route but continue with chunk fallback pipeline', async () => {
+    documentRepositoryMock.findById.mockResolvedValue({
+      id: docId,
+      knowledgeBaseId: kbId,
+      chunkCount: 0,
+      currentVersion: 1,
+      documentType: 'pdf',
+    });
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       textContent: 'Some long text',
     });
@@ -329,6 +353,77 @@ describe('RAG Processing Error Injection', () => {
       expect.objectContaining({
         indexVersionId: 'idx-build-1',
         parseMethod: 'legacy-chunk-fallback',
+      })
+    );
+    expect(documentIndexServiceMock.replaceGraph).not.toHaveBeenCalled();
+  });
+
+  it('should persist markdown structure graph when structured markdown parse succeeds', async () => {
+    documentRepositoryMock.findById.mockResolvedValue({
+      id: docId,
+      knowledgeBaseId: kbId,
+      chunkCount: 0,
+      currentVersion: 1,
+      documentType: 'markdown',
+    });
+    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+      textContent: '# Heading\n\nBody',
+    });
+    documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-2' });
+    documentParseRouterServiceMock.decideRoute.mockReturnValue({
+      routeMode: 'structured',
+      reason: 'meets_threshold',
+      estimatedTokens: 6000,
+      thresholdTokens: 5000,
+      structuredCandidate: true,
+      rolloutMode: 'all',
+    });
+    markdownStructureParserMock.parse.mockReturnValue({
+      nodes: [
+        {
+          id: 'root',
+          parentId: null,
+          nodeType: 'document',
+          title: null,
+          depth: 0,
+          sectionPath: [],
+          orderNo: 0,
+          stableLocator: 'Document',
+          content: '',
+          contentPreview: '',
+          tokenCount: 0,
+        },
+      ],
+      edges: [],
+      parseMethod: 'structured',
+      parserRuntime: 'markdown',
+      headingCount: 1,
+    });
+    chunkingServiceMock.chunkText.mockReturnValue([
+      { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
+    ]);
+    embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
+    vectorRepositoryMock.upsert.mockResolvedValue(undefined);
+    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
+    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
+    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
+    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+
+    await processingService.processDocument(docId, userId);
+
+    expect(markdownStructureParserMock.parse).toHaveBeenCalledWith('# Heading\n\nBody');
+    expect(documentIndexServiceMock.replaceGraph).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: docId,
+        indexVersionId: 'idx-build-2',
+      })
+    );
+    expect(documentIndexServiceMock.completeBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexVersionId: 'idx-build-2',
+        parseMethod: 'structured',
+        parserRuntime: 'markdown',
+        headingCount: 1,
       })
     );
   });

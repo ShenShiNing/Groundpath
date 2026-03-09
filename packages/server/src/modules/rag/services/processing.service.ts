@@ -19,6 +19,8 @@ import { knowledgeBaseService } from '@modules/knowledge-base';
 import type { DocumentProcessingEnqueueOptions } from '../queue/document-processing.types';
 import { documentParseRouterService } from '@modules/document-index/services/document-parse-router.service';
 import { documentIndexService } from '@modules/document-index/services/document-index.service';
+import { markdownStructureParser } from '@modules/document-index/services/parsers/markdown-structure.parser';
+import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
 
 const logger = createLogger('processing.service');
 
@@ -130,6 +132,7 @@ export const processingService = {
     let oldChunkIds: string[] = [];
     let collectionName: string | undefined;
     let indexBuildId: string | undefined;
+    let parsedStructure: ParsedDocumentStructure | null = null;
 
     try {
       // Get the document
@@ -230,6 +233,17 @@ export const processingService = {
         createdBy: userId,
       });
       indexBuildId = indexBuild.id;
+
+      if (routeDecision.routeMode === 'structured' && document.documentType === 'markdown') {
+        try {
+          parsedStructure = markdownStructureParser.parse(version.textContent);
+        } catch (parseError) {
+          logger.warn(
+            { documentId, error: parseError },
+            'Markdown structured parse failed; continuing with chunk fallback'
+          );
+        }
+      }
 
       // Chunk the text
       const chunks = chunkingService.chunkText(version.textContent);
@@ -389,6 +403,14 @@ export const processingService = {
         }
       });
 
+      if (parsedStructure) {
+        await documentIndexService.replaceGraph({
+          documentId,
+          indexVersionId: indexBuild.id,
+          structure: parsedStructure,
+        });
+      }
+
       // Phase 3: Cleanup old vectors in Qdrant (best effort)
       // This is safe because new vectors are already searchable
       if (oldChunkIds.length > 0) {
@@ -405,9 +427,11 @@ export const processingService = {
 
       await documentIndexService.completeBuild({
         indexVersionId: indexBuild.id,
-        parseMethod: routeDecision.routeMode === 'structured' ? 'legacy-chunk-fallback' : 'chunked',
-        parserRuntime: 'legacy-rag',
-        headingCount: 0,
+        parseMethod:
+          parsedStructure?.parseMethod ??
+          (routeDecision.routeMode === 'structured' ? 'legacy-chunk-fallback' : 'chunked'),
+        parserRuntime: parsedStructure?.parserRuntime ?? 'legacy-rag',
+        headingCount: parsedStructure?.headingCount ?? 0,
         parseDurationMs: Date.now() - processStartedAt,
       });
 

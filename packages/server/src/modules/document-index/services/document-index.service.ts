@@ -1,6 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
+import { withTransaction } from '@shared/db/db.utils';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';
+import { documentNodeRepository } from '../repositories/document-node.repository';
+import { documentNodeContentRepository } from '../repositories/document-node-content.repository';
+import { documentEdgeRepository } from '../repositories/document-edge.repository';
 import { documentIndexActivationService } from './document-index-activation.service';
+import type { ParsedDocumentStructure } from './parsers/types';
 
 export interface StartIndexBuildInput {
   documentId: string;
@@ -18,6 +23,12 @@ export interface CompleteIndexBuildInput {
   headingCount?: number;
   parseDurationMs?: number;
   error?: string | null;
+}
+
+export interface ReplaceGraphInput {
+  documentId: string;
+  indexVersionId: string;
+  structure: ParsedDocumentStructure;
 }
 
 export const documentIndexService = {
@@ -53,5 +64,59 @@ export const documentIndexService = {
 
   async supersedeBuild(indexVersionId: string) {
     return documentIndexActivationService.markSuperseded(indexVersionId);
+  },
+
+  async replaceGraph(input: ReplaceGraphInput) {
+    return withTransaction(async (tx) => {
+      const nodeIdMap = new Map(input.structure.nodes.map((node) => [node.id, uuidv4()]));
+
+      const nodes = input.structure.nodes.map((node) => ({
+        id: nodeIdMap.get(node.id)!,
+        documentId: input.documentId,
+        indexVersionId: input.indexVersionId,
+        nodeType: node.nodeType,
+        title: node.title,
+        depth: node.depth,
+        sectionPath: node.sectionPath,
+        pageStart: node.pageStart ?? null,
+        pageEnd: node.pageEnd ?? null,
+        parentId: node.parentId ? nodeIdMap.get(node.parentId)! : null,
+        orderNo: node.orderNo,
+        tokenCount: node.tokenCount,
+        stableLocator: node.stableLocator,
+      }));
+
+      const contents = input.structure.nodes.map((node) => ({
+        nodeId: nodeIdMap.get(node.id)!,
+        documentId: input.documentId,
+        indexVersionId: input.indexVersionId,
+        content: node.content,
+        contentPreview: node.contentPreview || null,
+        tokenCount: node.tokenCount,
+      }));
+
+      const edges = input.structure.edges.map((edge) => ({
+        id: uuidv4(),
+        documentId: input.documentId,
+        indexVersionId: input.indexVersionId,
+        fromNodeId: nodeIdMap.get(edge.fromNodeId)!,
+        toNodeId: nodeIdMap.get(edge.toNodeId)!,
+        edgeType: edge.edgeType,
+        anchorText: edge.anchorText ?? null,
+      }));
+
+      await documentEdgeRepository.deleteByIndexVersionId(input.indexVersionId, tx);
+      await documentNodeContentRepository.deleteByIndexVersionId(input.indexVersionId, tx);
+      await documentNodeRepository.deleteByIndexVersionId(input.indexVersionId, tx);
+
+      await documentNodeRepository.createMany(nodes, tx);
+      await documentNodeContentRepository.createMany(contents, tx);
+      await documentEdgeRepository.createMany(edges, tx);
+
+      return {
+        nodeCount: nodes.length,
+        edgeCount: edges.length,
+      };
+    });
   },
 };
