@@ -5,5 +5,8 @@ export * from './repositories/document-edge.repository';
 export * from './services/document-index.service';
 export * from './services/document-index-activation.service';
 export * from './services/document-parse-router.service';
+export * from './services/parsers/docx-structure.parser';
+export * from './services/parsers/pdf-structure.parser';
 export * from './services/parsers/markdown-structure.parser';
+export * from './services/parsers/heuristic-structure.parser';
 export * from './services/parsers/types';

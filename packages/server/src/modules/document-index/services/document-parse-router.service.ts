@@ -19,7 +19,7 @@ export interface DocumentRouteDecision {
   rolloutMode: (typeof featureFlags)['structuredRagRolloutMode'];
 }
 
-const STRUCTURED_DOCUMENT_TYPES = new Set<DocumentType>(['markdown', 'text', 'docx', 'pdf']);
+const STRUCTURED_DOCUMENT_TYPES = new Set<DocumentType>(['markdown', 'docx', 'pdf']);
 
 export const documentParseRouterService = {
   estimateTokens(textContent: string): number {

@@ -25,6 +25,8 @@ const {
   documentParseRouterServiceMock,
   documentIndexServiceMock,
   markdownStructureParserMock,
+  docxStructureParserMock,
+  pdfStructureParserMock,
 } = vi.hoisted(() => ({
   documentRepositoryMock: {
     findById: vi.fn(),
@@ -74,6 +76,12 @@ const {
   markdownStructureParserMock: {
     parse: vi.fn(),
   },
+  docxStructureParserMock: {
+    parseFromStorage: vi.fn(),
+  },
+  pdfStructureParserMock: {
+    parseFromStorage: vi.fn(),
+  },
 }));
 
 vi.mock('@modules/document', () => ({
@@ -109,6 +117,14 @@ vi.mock('@modules/document-index/services/document-index.service', () => ({
 
 vi.mock('@modules/document-index/services/parsers/markdown-structure.parser', () => ({
   markdownStructureParser: markdownStructureParserMock,
+}));
+
+vi.mock('@modules/document-index/services/parsers/docx-structure.parser', () => ({
+  docxStructureParser: docxStructureParserMock,
+}));
+
+vi.mock('@modules/document-index/services/parsers/pdf-structure.parser', () => ({
+  pdfStructureParser: pdfStructureParserMock,
 }));
 
 vi.mock('uuid', () => ({
@@ -192,6 +208,20 @@ describe('RAG Processing Error Injection', () => {
       edges: [],
       parseMethod: 'structured',
       parserRuntime: 'markdown',
+      headingCount: 0,
+    });
+    docxStructureParserMock.parseFromStorage.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      parseMethod: 'structured',
+      parserRuntime: 'docx',
+      headingCount: 0,
+    });
+    pdfStructureParserMock.parseFromStorage.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      parseMethod: 'structured',
+      parserRuntime: 'pdf',
       headingCount: 0,
     });
   });
@@ -310,13 +340,13 @@ describe('RAG Processing Error Injection', () => {
     expect(documentIndexServiceMock.startBuild).not.toHaveBeenCalled();
   });
 
-  it('should record a structured route but continue with chunk fallback pipeline', async () => {
+  it('should continue with chunk fallback when markdown structured parsing fails', async () => {
     documentRepositoryMock.findById.mockResolvedValue({
       id: docId,
       knowledgeBaseId: kbId,
       chunkCount: 0,
       currentVersion: 1,
-      documentType: 'pdf',
+      documentType: 'markdown',
     });
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       textContent: 'Some long text',
@@ -329,6 +359,9 @@ describe('RAG Processing Error Injection', () => {
       thresholdTokens: 5000,
       structuredCandidate: true,
       rolloutMode: 'all',
+    });
+    markdownStructureParserMock.parse.mockImplementation(() => {
+      throw new Error('markdown parse failed');
     });
     chunkingServiceMock.chunkText.mockReturnValue([
       { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
@@ -348,6 +381,7 @@ describe('RAG Processing Error Injection', () => {
         routeMode: 'structured',
       })
     );
+    expect(markdownStructureParserMock.parse).toHaveBeenCalledWith('Some long text');
     expect(chunkingServiceMock.chunkText).toHaveBeenCalledWith('Some long text');
     expect(documentIndexServiceMock.completeBuild).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -424,6 +458,118 @@ describe('RAG Processing Error Injection', () => {
         parseMethod: 'structured',
         parserRuntime: 'markdown',
         headingCount: 1,
+      })
+    );
+  });
+
+  it('should persist docx structure graph when structured docx parse succeeds', async () => {
+    documentRepositoryMock.findById.mockResolvedValue({
+      id: docId,
+      knowledgeBaseId: kbId,
+      chunkCount: 0,
+      currentVersion: 1,
+      documentType: 'docx',
+    });
+    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+      storageKey: 'docx-key',
+      textContent: 'Docx extracted text',
+    });
+    documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-docx' });
+    documentParseRouterServiceMock.decideRoute.mockReturnValue({
+      routeMode: 'structured',
+      reason: 'meets_threshold',
+      estimatedTokens: 6000,
+      thresholdTokens: 5000,
+      structuredCandidate: true,
+      rolloutMode: 'all',
+    });
+    docxStructureParserMock.parseFromStorage.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      parseMethod: 'structured',
+      parserRuntime: 'docx',
+      headingCount: 2,
+    });
+    chunkingServiceMock.chunkText.mockReturnValue([
+      { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
+    ]);
+    embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
+    vectorRepositoryMock.upsert.mockResolvedValue(undefined);
+    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
+    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
+    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
+    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+
+    await processingService.processDocument(docId, userId);
+
+    expect(docxStructureParserMock.parseFromStorage).toHaveBeenCalledWith('docx-key');
+    expect(documentIndexServiceMock.replaceGraph).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: docId,
+        indexVersionId: 'idx-build-docx',
+      })
+    );
+    expect(documentIndexServiceMock.completeBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexVersionId: 'idx-build-docx',
+        parserRuntime: 'docx',
+        headingCount: 2,
+      })
+    );
+  });
+
+  it('should persist pdf structure graph when structured pdf parse succeeds', async () => {
+    documentRepositoryMock.findById.mockResolvedValue({
+      id: docId,
+      knowledgeBaseId: kbId,
+      chunkCount: 0,
+      currentVersion: 1,
+      documentType: 'pdf',
+    });
+    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+      storageKey: 'pdf-key',
+      textContent: 'Pdf extracted text',
+    });
+    documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-pdf' });
+    documentParseRouterServiceMock.decideRoute.mockReturnValue({
+      routeMode: 'structured',
+      reason: 'meets_threshold',
+      estimatedTokens: 6000,
+      thresholdTokens: 5000,
+      structuredCandidate: true,
+      rolloutMode: 'all',
+    });
+    pdfStructureParserMock.parseFromStorage.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      parseMethod: 'structured',
+      parserRuntime: 'pdf',
+      headingCount: 3,
+    });
+    chunkingServiceMock.chunkText.mockReturnValue([
+      { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
+    ]);
+    embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
+    vectorRepositoryMock.upsert.mockResolvedValue(undefined);
+    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
+    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
+    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
+    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+
+    await processingService.processDocument(docId, userId);
+
+    expect(pdfStructureParserMock.parseFromStorage).toHaveBeenCalledWith('pdf-key');
+    expect(documentIndexServiceMock.replaceGraph).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: docId,
+        indexVersionId: 'idx-build-pdf',
+      })
+    );
+    expect(documentIndexServiceMock.completeBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexVersionId: 'idx-build-pdf',
+        parserRuntime: 'pdf',
+        headingCount: 3,
       })
     );
   });

@@ -49,7 +49,7 @@ describe('documentParseRouterService', () => {
     envMocks.featureFlags.structuredRagRolloutMode = 'internal';
 
     const result = documentParseRouterService.decideRoute({
-      documentType: 'pdf',
+      documentType: 'docx',
       textContent: 'a'.repeat(40000),
     });
 
@@ -63,16 +63,18 @@ describe('documentParseRouterService', () => {
     envMocks.featureFlags.structuredRagEnabled = true;
     envMocks.featureFlags.structuredRagRolloutMode = 'all';
 
-    const result = documentParseRouterService.decideRoute({
-      documentType: 'other',
-      textContent: 'a'.repeat(40000),
-    });
+    for (const documentType of ['other', 'text'] as const) {
+      const result = documentParseRouterService.decideRoute({
+        documentType,
+        textContent: 'a'.repeat(40000),
+      });
 
-    expect(result).toMatchObject({
-      routeMode: 'chunked',
-      reason: 'unsupported_document_type',
-      structuredCandidate: false,
-    });
+      expect(result).toMatchObject({
+        routeMode: 'chunked',
+        reason: 'unsupported_document_type',
+        structuredCandidate: false,
+      });
+    }
   });
 
   it('returns chunked when estimated tokens are below threshold', () => {
@@ -91,20 +93,22 @@ describe('documentParseRouterService', () => {
     });
   });
 
-  it('returns structured for long supported documents when rollout mode is all', () => {
+  it('returns structured for long markdown/pdf/docx documents when rollout mode is all', () => {
     envMocks.featureFlags.structuredRagEnabled = true;
     envMocks.featureFlags.structuredRagRolloutMode = 'all';
 
-    const result = documentParseRouterService.decideRoute({
-      documentType: 'pdf',
-      textContent: 'a'.repeat(24000),
-    });
+    for (const documentType of ['markdown', 'pdf', 'docx'] as const) {
+      const result = documentParseRouterService.decideRoute({
+        documentType,
+        textContent: 'a'.repeat(24000),
+      });
 
-    expect(result).toMatchObject({
-      routeMode: 'structured',
-      reason: 'meets_threshold',
-      estimatedTokens: 6000,
-      structuredCandidate: true,
-    });
+      expect(result).toMatchObject({
+        routeMode: 'structured',
+        reason: 'meets_threshold',
+        estimatedTokens: 6000,
+        structuredCandidate: true,
+      });
+    }
   });
 });

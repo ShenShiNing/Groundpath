@@ -20,6 +20,8 @@ import type { DocumentProcessingEnqueueOptions } from '../queue/document-process
 import { documentParseRouterService } from '@modules/document-index/services/document-parse-router.service';
 import { documentIndexService } from '@modules/document-index/services/document-index.service';
 import { markdownStructureParser } from '@modules/document-index/services/parsers/markdown-structure.parser';
+import { docxStructureParser } from '@modules/document-index/services/parsers/docx-structure.parser';
+import { pdfStructureParser } from '@modules/document-index/services/parsers/pdf-structure.parser';
 import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
 
 const logger = createLogger('processing.service');
@@ -234,9 +236,15 @@ export const processingService = {
       });
       indexBuildId = indexBuild.id;
 
-      if (routeDecision.routeMode === 'structured' && document.documentType === 'markdown') {
+      if (routeDecision.routeMode === 'structured') {
         try {
-          parsedStructure = markdownStructureParser.parse(version.textContent);
+          if (document.documentType === 'markdown') {
+            parsedStructure = markdownStructureParser.parse(version.textContent);
+          } else if (document.documentType === 'docx') {
+            parsedStructure = await docxStructureParser.parseFromStorage(version.storageKey);
+          } else if (document.documentType === 'pdf') {
+            parsedStructure = await pdfStructureParser.parseFromStorage(version.storageKey);
+          }
         } catch (parseError) {
           logger.warn(
             { documentId, error: parseError },
