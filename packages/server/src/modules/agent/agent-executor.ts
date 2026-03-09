@@ -27,8 +27,31 @@ export interface AgentExecutorOptions {
 export interface AgentExecutorResult {
   content: string;
   citations: Citation[];
+  retrievedCitations: Citation[];
   agentTrace: AgentStep[];
   stopReason?: AgentStopReason;
+}
+
+function getCitationKey(citation: Citation): string {
+  if (citation.sourceType === 'node') {
+    return `node:${citation.documentId}:${citation.indexVersion ?? ''}:${citation.nodeId}`;
+  }
+
+  return `chunk:${citation.documentId}:${citation.documentVersion ?? ''}:${citation.chunkIndex}`;
+}
+
+function finalizeCitations(citations: Citation[], maxItems: number = 8): Citation[] {
+  const deduped = new Map<string, Citation>();
+
+  for (const citation of citations) {
+    const key = getCitationKey(citation);
+    const previous = deduped.get(key);
+    if (!previous || (citation.score ?? 0) > (previous.score ?? 0)) {
+      deduped.set(key, citation);
+    }
+  }
+
+  return [...deduped.values()].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, maxItems);
 }
 
 export async function executeAgentLoop(
@@ -44,7 +67,13 @@ export async function executeAgentLoop(
       'Provider does not support tools, falling back to plain generate'
     );
     const content = await provider.generate(messages, genOptions);
-    return { content, citations: [], agentTrace: [], stopReason: 'answered' };
+    return {
+      content,
+      citations: [],
+      retrievedCitations: [],
+      agentTrace: [],
+      stopReason: 'answered',
+    };
   }
 
   const toolMap = new Map(tools.map((t) => [t.definition.name, t]));
@@ -81,7 +110,8 @@ export async function executeAgentLoop(
     if (result.finishReason === 'text') {
       return {
         content: result.content ?? '',
-        citations: allCitations,
+        citations: finalizeCitations(allCitations),
+        retrievedCitations: allCitations,
         agentTrace,
         stopReason: 'answered',
       };
@@ -92,7 +122,8 @@ export async function executeAgentLoop(
     if (toolCalls.length === 0) {
       return {
         content: result.content ?? '',
-        citations: allCitations,
+        citations: finalizeCitations(allCitations),
+        retrievedCitations: allCitations,
         agentTrace,
         stopReason: 'answered',
       };
@@ -127,7 +158,8 @@ export async function executeAgentLoop(
       const finalContent = await provider.generate(plainMessages, genOptions);
       return {
         content: finalContent,
-        citations: allCitations,
+        citations: finalizeCitations(allCitations),
+        retrievedCitations: allCitations,
         agentTrace,
         stopReason: 'budget_exhausted',
       };
@@ -213,7 +245,8 @@ export async function executeAgentLoop(
 
   return {
     content: finalContent,
-    citations: allCitations,
+    citations: finalizeCitations(allCitations),
+    retrievedCitations: allCitations,
     agentTrace,
     stopReason: 'budget_exhausted',
   };

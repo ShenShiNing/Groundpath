@@ -1,6 +1,12 @@
 import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import type { Citation, MessageMetadata, SSEEvent } from '@knowledge-agent/shared/types';
+import type {
+  Citation,
+  MessageMetadata,
+  SSEEvent,
+  ToolCallInfo,
+  ToolResultInfo,
+} from '@knowledge-agent/shared/types';
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { llmService } from '@modules/llm';
 import { searchService } from '@modules/rag';
@@ -34,12 +40,25 @@ interface EnrichedSearchResult {
   };
 }
 
+interface AgentExecutionContext {
+  conversationId: string;
+  content: string;
+  userId: string;
+  documentIds?: string[];
+  knowledgeBaseId: string | null;
+  provider: Awaited<ReturnType<typeof llmService.getProviderForUser>>;
+  genOptions: Awaited<ReturnType<typeof llmService.getOptionsForUser>>;
+}
+
 function buildCitationMetadata(
-  citations?: Citation[],
-  extras?: Pick<MessageMetadata, 'agentTrace' | 'stopReason' | 'tokenUsage'>
+  finalCitations?: Citation[],
+  extras?: Pick<MessageMetadata, 'agentTrace' | 'stopReason' | 'tokenUsage'> & {
+    retrievedSources?: Citation[];
+  }
 ): MessageMetadata | undefined {
   if (
-    !citations?.length &&
+    !finalCitations?.length &&
+    !extras?.retrievedSources?.length &&
     !extras?.agentTrace?.length &&
     !extras?.stopReason &&
     !extras?.tokenUsage
@@ -48,9 +67,9 @@ function buildCitationMetadata(
   }
 
   return {
-    citations,
-    retrievedSources: citations,
-    finalCitations: citations,
+    citations: finalCitations,
+    retrievedSources: extras?.retrievedSources ?? finalCitations,
+    finalCitations,
     ...extras,
   };
 }
@@ -73,6 +92,57 @@ async function enrichSearchResults(results: SearchResult[]): Promise<EnrichedSea
     score: r.score,
     metadata: {},
   }));
+}
+
+async function executeAgentConversation(
+  ctx: AgentExecutionContext,
+  tools: ReturnType<typeof resolveTools>,
+  callbacks?: {
+    onToolStart?: (stepIndex: number, toolCalls: ToolCallInfo[]) => void;
+    onToolEnd?: (stepIndex: number, toolResults: ToolResultInfo[], durationMs: number) => void;
+  }
+) {
+  const { conversationId, content, userId, provider, genOptions, knowledgeBaseId, documentIds } =
+    ctx;
+  const hasKnowledgeBase = !!knowledgeBaseId;
+  const hasWebSearch = tools.some((t) => t.definition.name === 'web_search');
+  const hasStructuredKnowledgeBase = tools.some((t) => t.definition.name === 'outline_search');
+
+  logger.debug(
+    {
+      conversationId,
+      toolCount: tools.length,
+      hasKnowledgeBase,
+      hasStructuredKnowledgeBase,
+      hasWebSearch,
+      provider: provider.name,
+    },
+    'Using agent mode'
+  );
+
+  const history = await messageService.getRecentForContext(conversationId, 10);
+  const truncatedHistory = promptService.truncateHistory(history, 4000);
+  const systemPrompt = promptService.buildAgentSystemPrompt({
+    hasKnowledgeBase,
+    hasWebSearch,
+    hasStructuredKnowledgeBase,
+  });
+  const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
+
+  return executeAgentLoop({
+    provider,
+    messages,
+    tools,
+    toolContext: {
+      userId,
+      conversationId,
+      knowledgeBaseId: knowledgeBaseId ?? undefined,
+      documentIds,
+    },
+    genOptions,
+    onToolStart: callbacks?.onToolStart,
+    onToolEnd: callbacks?.onToolEnd,
+  });
 }
 
 function sendChunkedSSE(res: Response, content: string, chunkSize: number = 80): void {
@@ -210,54 +280,30 @@ export const chatService = {
     tools: ReturnType<typeof resolveTools>
   ): Promise<void> {
     const { res, conversationId, content, userId, provider, genOptions, abortController } = ctx;
-    const hasKnowledgeBase = !!ctx.knowledgeBaseId;
-    const hasWebSearch = tools.some((t) => t.definition.name === 'web_search');
-    const hasStructuredKnowledgeBase = tools.some((t) => t.definition.name === 'outline_search');
-
-    logger.debug(
+    const agentResult = await executeAgentConversation(
       {
         conversationId,
-        toolCount: tools.length,
-        hasKnowledgeBase,
-        hasStructuredKnowledgeBase,
-        hasWebSearch,
-        provider: provider.name,
-      },
-      'Using agent mode'
-    );
-
-    const history = await messageService.getRecentForContext(conversationId, 10);
-    const truncatedHistory = promptService.truncateHistory(history, 4000);
-    const systemPrompt = promptService.buildAgentSystemPrompt({
-      hasKnowledgeBase,
-      hasWebSearch,
-      hasStructuredKnowledgeBase,
-    });
-    const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
-
-    const agentResult = await executeAgentLoop({
-      provider,
-      messages,
-      tools,
-      toolContext: {
+        content,
         userId,
-        conversationId,
-        knowledgeBaseId: ctx.knowledgeBaseId ?? undefined,
         documentIds: ctx.documentIds,
-        signal: abortController.signal,
+        knowledgeBaseId: ctx.knowledgeBaseId,
+        provider,
+        genOptions: { ...genOptions, signal: abortController.signal },
       },
-      genOptions: { ...genOptions, signal: abortController.signal },
-      onToolStart: (stepIndex, toolCalls) => {
-        if (!ctx.isDisconnected()) {
-          sendSSE(res, { type: 'tool_start', data: { stepIndex, toolCalls } });
-        }
-      },
-      onToolEnd: (stepIndex, toolResults, durationMs) => {
-        if (!ctx.isDisconnected()) {
-          sendSSE(res, { type: 'tool_end', data: { stepIndex, toolResults, durationMs } });
-        }
-      },
-    });
+      tools,
+      {
+        onToolStart: (stepIndex, toolCalls) => {
+          if (!ctx.isDisconnected()) {
+            sendSSE(res, { type: 'tool_start', data: { stepIndex, toolCalls } });
+          }
+        },
+        onToolEnd: (stepIndex, toolResults, durationMs) => {
+          if (!ctx.isDisconnected()) {
+            sendSSE(res, { type: 'tool_end', data: { stepIndex, toolResults, durationMs } });
+          }
+        },
+      }
+    );
 
     if (ctx.isDisconnected()) return;
     ctx.completionStopReason = agentResult.stopReason;
@@ -290,6 +336,8 @@ export const chatService = {
       metadata: buildCitationMetadata(
         agentResult.citations.length > 0 ? agentResult.citations : undefined,
         {
+          retrievedSources:
+            agentResult.retrievedCitations.length > 0 ? agentResult.retrievedCitations : undefined,
           agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
           stopReason: agentResult.stopReason,
         }
@@ -404,6 +452,57 @@ export const chatService = {
       await conversationRepository.update(conversationId, { title, updatedBy: userId });
     }
 
+    const toolContext = {
+      userId,
+      conversationId,
+      knowledgeBaseId: conversation.knowledgeBaseId,
+      documentIds,
+    };
+    const tools = resolveTools(toolContext);
+    const provider = await llmService.getProviderForUser(userId);
+    const genOptions = await llmService.getOptionsForUser(userId);
+
+    const useAgentMode = tools.length > 0 && !!provider.generateWithTools;
+    if (useAgentMode) {
+      const agentResult = await executeAgentConversation(
+        {
+          conversationId,
+          content,
+          userId,
+          documentIds,
+          knowledgeBaseId: conversation.knowledgeBaseId,
+          provider,
+          genOptions,
+        },
+        tools
+      );
+
+      const assistantMessage = await messageService.create({
+        conversationId,
+        role: 'assistant',
+        content: agentResult.content,
+        metadata: buildCitationMetadata(
+          agentResult.citations.length > 0 ? agentResult.citations : undefined,
+          {
+            retrievedSources:
+              agentResult.retrievedCitations.length > 0
+                ? agentResult.retrievedCitations
+                : undefined,
+            agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
+            stopReason: agentResult.stopReason,
+          }
+        ),
+      });
+
+      await conversationRepository.touch(conversationId, userId);
+
+      return {
+        messageId: assistantMessage.id,
+        content: agentResult.content,
+        citations: agentResult.citations,
+      };
+    }
+
     let searchResults: EnrichedSearchResult[] = [];
     if (conversation.knowledgeBaseId) {
       try {
@@ -425,9 +524,6 @@ export const chatService = {
     const truncatedHistory = promptService.truncateHistory(history, 4000);
     const systemPrompt = promptService.buildSystemPrompt(searchResults);
     const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
-
-    const provider = await llmService.getProviderForUser(userId);
-    const genOptions = await llmService.getOptionsForUser(userId);
     const responseContent = await provider.generate(messages, genOptions);
 
     const citations =

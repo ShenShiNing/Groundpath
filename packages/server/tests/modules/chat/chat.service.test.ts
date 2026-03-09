@@ -202,6 +202,7 @@ describe('chatService.sendMessageWithSSE', () => {
     mocks.executeAgentLoop.mockResolvedValue({
       content: 'Agent answer',
       citations: [],
+      retrievedCitations: [],
       agentTrace: [],
       stopReason: 'answered',
     });
@@ -254,6 +255,16 @@ describe('chatService.sendMessageWithSSE', () => {
     mocks.executeAgentLoop.mockResolvedValue({
       content: 'Combined answer',
       citations: [
+        {
+          sourceType: 'chunk',
+          documentId: 'doc-1',
+          documentTitle: 'Test',
+          chunkIndex: 0,
+          content: 'c',
+          score: 0.9,
+        },
+      ],
+      retrievedCitations: [
         {
           sourceType: 'chunk',
           documentId: 'doc-1',
@@ -338,6 +349,7 @@ describe('chatService.sendMessageWithSSE', () => {
     mocks.executeAgentLoop.mockResolvedValue({
       content: '   ',
       citations: [],
+      retrievedCitations: [],
       agentTrace: [],
       stopReason: 'answered',
     });
@@ -365,5 +377,127 @@ describe('chatService.sendMessageWithSSE', () => {
     const createCalls = mocks.messageService.create.mock.calls;
     const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
     expect(assistantCalls).toHaveLength(0);
+  });
+});
+
+describe('chatService.sendMessage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mocks.conversationService.validateOwnership.mockResolvedValue({
+      id: 'conv-1',
+      knowledgeBaseId: 'kb-1',
+    });
+    mocks.messageService.create.mockResolvedValue({ id: 'msg-2' });
+    mocks.messageService.count.mockResolvedValue(2);
+    mocks.messageService.getRecentForContext.mockResolvedValue([]);
+    mocks.promptService.buildSystemPrompt.mockReturnValue('system');
+    mocks.promptService.buildAgentSystemPrompt.mockReturnValue('agent-system');
+    mocks.promptService.buildChatMessages.mockReturnValue([]);
+    mocks.promptService.truncateHistory.mockReturnValue([]);
+    mocks.llmService.getOptionsForUser.mockResolvedValue({});
+    mocks.conversationRepository.touch.mockResolvedValue(undefined);
+    mocks.resolveTools.mockReturnValue([]);
+  });
+
+  it('uses agent orchestration for non-streaming when structured tools are available', async () => {
+    const outlineTool = { definition: { name: 'outline_search', category: 'structured' } };
+    mocks.resolveTools.mockReturnValue([outlineTool]);
+    mocks.executeAgentLoop.mockResolvedValue({
+      content: 'Structured answer',
+      citations: [
+        {
+          sourceType: 'node',
+          nodeId: 'node-1',
+          documentId: 'doc-1',
+          documentTitle: 'Doc',
+          excerpt: 'preview',
+        },
+      ],
+      retrievedCitations: [
+        {
+          sourceType: 'node',
+          nodeId: 'node-1',
+          documentId: 'doc-1',
+          documentTitle: 'Doc',
+          excerpt: 'preview',
+        },
+      ],
+      agentTrace: [{ step: 0 }],
+      stopReason: 'answered',
+    });
+    mocks.llmService.getProviderForUser.mockResolvedValue({
+      name: 'test-provider',
+      generateWithTools: vi.fn(),
+      generate: vi.fn(),
+    });
+
+    const result = await chatService.sendMessage({
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Summarize retrieval',
+    });
+
+    expect(mocks.executeAgentLoop).toHaveBeenCalledTimes(1);
+    expect(mocks.promptService.buildAgentSystemPrompt).toHaveBeenCalledWith({
+      hasKnowledgeBase: true,
+      hasWebSearch: false,
+      hasStructuredKnowledgeBase: true,
+    });
+    expect(mocks.searchService.searchInKnowledgeBase).not.toHaveBeenCalled();
+    expect(mocks.messageService.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        role: 'assistant',
+        content: 'Structured answer',
+        metadata: expect.objectContaining({
+          stopReason: 'answered',
+          agentTrace: [{ step: 0 }],
+        }),
+      })
+    );
+    expect(result).toEqual({
+      messageId: 'msg-2',
+      content: 'Structured answer',
+      citations: [
+        {
+          sourceType: 'node',
+          nodeId: 'node-1',
+          documentId: 'doc-1',
+          documentTitle: 'Doc',
+          excerpt: 'preview',
+        },
+      ],
+    });
+  });
+
+  it('keeps legacy non-streaming path when no agent tools are resolved', async () => {
+    mocks.resolveTools.mockReturnValue([]);
+    mocks.searchService.searchInKnowledgeBase.mockResolvedValue([
+      { documentId: 'doc-1', chunkIndex: 0, content: 'Chunk body', score: 0.9 },
+    ]);
+    mocks.documentRepository.getTitlesByIds.mockResolvedValue(new Map([['doc-1', 'Doc']]));
+    mocks.promptService.toCitations.mockReturnValue([
+      {
+        sourceType: 'chunk',
+        documentId: 'doc-1',
+        documentTitle: 'Doc',
+        chunkIndex: 0,
+        content: 'Chunk body',
+        excerpt: 'Chunk body',
+      },
+    ]);
+    mocks.llmService.getProviderForUser.mockResolvedValue({
+      generate: vi.fn().mockResolvedValue('Legacy answer'),
+    });
+
+    const result = await chatService.sendMessage({
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Legacy path',
+    });
+
+    expect(mocks.executeAgentLoop).not.toHaveBeenCalled();
+    expect(mocks.searchService.searchInKnowledgeBase).toHaveBeenCalledTimes(1);
+    expect(result.content).toBe('Legacy answer');
   });
 });

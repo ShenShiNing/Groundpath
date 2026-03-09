@@ -74,6 +74,7 @@ describe('executeAgentLoop', () => {
     expect(provider.generate).toHaveBeenCalledOnce();
     expect(result.content).toBe('plain response');
     expect(result.citations).toEqual([]);
+    expect(result.retrievedCitations).toEqual([]);
     expect(result.agentTrace).toEqual([]);
   });
 
@@ -94,6 +95,7 @@ describe('executeAgentLoop', () => {
     expect(result.content).toBe('Final answer');
     expect(result.agentTrace).toEqual([]);
     expect(result.stopReason).toBe('answered');
+    expect(result.retrievedCitations).toEqual([]);
   });
 
   it('should return content when LLM returns empty toolCalls', async () => {
@@ -110,6 +112,7 @@ describe('executeAgentLoop', () => {
 
     expect(result.content).toBe('No tools needed');
     expect(result.stopReason).toBe('answered');
+    expect(result.retrievedCitations).toEqual([]);
   });
 
   // ── Tool execution flow ──
@@ -354,7 +357,76 @@ describe('executeAgentLoop', () => {
     const result = await executeAgentLoop(options);
 
     expect(result.citations).toHaveLength(1);
+    expect(result.retrievedCitations).toHaveLength(1);
     expect(result.citations[0]!.documentId).toBe('doc-1');
+  });
+
+  it('deduplicates final citations while preserving retrieved citations', async () => {
+    const tool: AgentTool = {
+      definition: {
+        name: 'search',
+        description: 'search',
+        category: 'structured',
+        parameters: { type: 'object', properties: {} },
+      },
+      execute: vi
+        .fn()
+        .mockResolvedValueOnce({
+          content: 'first',
+          citations: [
+            {
+              sourceType: 'node',
+              documentId: 'doc-1',
+              documentTitle: 'Doc 1',
+              nodeId: 'node-1',
+              excerpt: 'A',
+              score: 0.4,
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          content: 'second',
+          citations: [
+            {
+              sourceType: 'node',
+              documentId: 'doc-1',
+              documentTitle: 'Doc 1',
+              nodeId: 'node-1',
+              excerpt: 'B',
+              score: 0.9,
+            },
+          ],
+        }),
+    };
+
+    const generateWithTools = vi
+      .fn()
+      .mockResolvedValueOnce({
+        finishReason: 'tool_calls',
+        content: '',
+        toolCalls: [{ id: 'tc-1', name: 'search', arguments: {} }],
+      })
+      .mockResolvedValueOnce({
+        finishReason: 'tool_calls',
+        content: '',
+        toolCalls: [{ id: 'tc-2', name: 'search', arguments: {} }],
+      })
+      .mockResolvedValueOnce({
+        finishReason: 'text',
+        content: 'Answer',
+        toolCalls: [],
+      });
+
+    const provider = createMockProvider({ generateWithTools });
+    const result = await executeAgentLoop(createBaseOptions({ provider, tools: [tool] }));
+
+    expect(result.retrievedCitations).toHaveLength(2);
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0]).toMatchObject({
+      nodeId: 'node-1',
+      excerpt: 'B',
+      score: 0.9,
+    });
   });
 
   // ── Multiple concurrent tool calls ──
