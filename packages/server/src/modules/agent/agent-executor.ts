@@ -4,6 +4,7 @@ import type {
   ToolCallInfo,
   ToolResultInfo,
   AgentStep,
+  AgentStopReason,
   Citation,
 } from '@knowledge-agent/shared/types';
 import { AGENT_ERROR_CODES } from '@knowledge-agent/shared/constants';
@@ -27,6 +28,7 @@ export interface AgentExecutorResult {
   content: string;
   citations: Citation[];
   agentTrace: AgentStep[];
+  stopReason?: AgentStopReason;
 }
 
 export async function executeAgentLoop(
@@ -42,7 +44,7 @@ export async function executeAgentLoop(
       'Provider does not support tools, falling back to plain generate'
     );
     const content = await provider.generate(messages, genOptions);
-    return { content, citations: [], agentTrace: [] };
+    return { content, citations: [], agentTrace: [], stopReason: 'answered' };
   }
 
   const toolMap = new Map(tools.map((t) => [t.definition.name, t]));
@@ -50,6 +52,8 @@ export async function executeAgentLoop(
   const agentMessages: AgentMessage[] = messages.map((m) => ({ role: m.role, content: m.content }));
   const agentTrace: AgentStep[] = [];
   const allCitations: Citation[] = [];
+  let structuredRounds = 0;
+  let fallbackRounds = 0;
 
   for (let step = 0; step < maxIterations; step++) {
     if (toolContext.signal?.aborted) {
@@ -79,6 +83,7 @@ export async function executeAgentLoop(
         content: result.content ?? '',
         citations: allCitations,
         agentTrace,
+        stopReason: 'answered',
       };
     }
 
@@ -89,6 +94,42 @@ export async function executeAgentLoop(
         content: result.content ?? '',
         citations: allCitations,
         agentTrace,
+        stopReason: 'answered',
+      };
+    }
+
+    const toolCategories = toolCalls.map(
+      (toolCall) => toolMap.get(toolCall.name)?.definition.category
+    );
+    const structuredToolCalls = toolCategories.filter(
+      (category) => category === 'structured'
+    ).length;
+    const fallbackToolCalls = toolCategories.filter((category) => category === 'fallback').length;
+
+    if (
+      structuredRounds + structuredToolCalls > agentConfig.maxStructuredRounds ||
+      fallbackRounds + fallbackToolCalls > agentConfig.maxFallbackRounds
+    ) {
+      logger.warn(
+        {
+          step,
+          structuredRounds,
+          fallbackRounds,
+          nextStructuredToolCalls: structuredToolCalls,
+          nextFallbackToolCalls: fallbackToolCalls,
+        },
+        'Agent tool budget exhausted before executing tool calls'
+      );
+      const plainMessages: ChatMessage[] = agentMessages.map((m) => ({
+        role: m.role === 'tool' ? 'user' : m.role,
+        content: m.content,
+      }));
+      const finalContent = await provider.generate(plainMessages, genOptions);
+      return {
+        content: finalContent,
+        citations: allCitations,
+        agentTrace,
+        stopReason: 'budget_exhausted',
       };
     }
 
@@ -152,6 +193,8 @@ export async function executeAgentLoop(
 
     agentTrace.push({ toolCalls, toolResults, durationMs });
     onToolEnd?.(step, toolResults, durationMs);
+    structuredRounds += structuredToolCalls;
+    fallbackRounds += fallbackToolCalls;
 
     logger.debug({ step, toolCount: toolCalls.length, durationMs }, 'Agent step completed');
   }
@@ -172,5 +215,6 @@ export async function executeAgentLoop(
     content: finalContent,
     citations: allCitations,
     agentTrace,
+    stopReason: 'budget_exhausted',
   };
 }

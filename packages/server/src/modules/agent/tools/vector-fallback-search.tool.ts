@@ -4,32 +4,32 @@ import { searchService } from '@modules/rag';
 import { documentRepository } from '@modules/document';
 import { createLogger } from '@shared/logger';
 
-const logger = createLogger('kb-search.tool');
+const logger = createLogger('vector-fallback-search.tool');
 
-const KB_SEARCH_DEFINITION: ToolDefinition = {
-  name: 'knowledge_base_search',
+const VECTOR_FALLBACK_SEARCH_DEFINITION: ToolDefinition = {
+  name: 'vector_fallback_search',
   description:
-    'Search the associated knowledge base documents. Use this when the user question might be answered by uploaded documents.',
+    'Search the knowledge base with vector similarity as a fallback when structured outline and node evidence are insufficient.',
   category: 'fallback',
   parameters: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'The search query to find relevant document chunks',
+        description: 'The fallback search query to find relevant document chunks',
       },
     },
     required: ['query'],
   },
 };
 
-export class KBSearchTool implements AgentTool {
-  readonly definition = KB_SEARCH_DEFINITION;
+export class VectorFallbackSearchTool implements AgentTool {
+  readonly definition = VECTOR_FALLBACK_SEARCH_DEFINITION;
 
   async execute(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolExecutionResult> {
     const query = String(args.query ?? '');
     if (!query.trim()) {
-      return { content: 'Error: search query is empty.' };
+      return { content: 'Error: fallback search query is empty.' };
     }
     if (!ctx.knowledgeBaseId) {
       return { content: 'No knowledge base is associated with this conversation.' };
@@ -37,7 +37,7 @@ export class KBSearchTool implements AgentTool {
 
     logger.debug(
       { query: query.substring(0, 80), kbId: ctx.knowledgeBaseId },
-      'KB search tool executing'
+      'Vector fallback search tool executing'
     );
 
     const rawResults = await searchService.searchInKnowledgeBase({
@@ -50,10 +50,9 @@ export class KBSearchTool implements AgentTool {
     });
 
     if (rawResults.length === 0) {
-      return { content: 'No relevant documents found in the knowledge base.' };
+      return { content: 'No relevant fallback results found in the knowledge base.' };
     }
 
-    // Batch-fetch document titles
     const docIds = [...new Set(rawResults.map((r) => r.documentId))];
     const docTitles = await documentRepository.getTitlesByIds(docIds);
 
@@ -62,7 +61,7 @@ export class KBSearchTool implements AgentTool {
 
     rawResults.forEach((r, idx) => {
       const title = docTitles.get(r.documentId) ?? 'Unknown Document';
-      parts.push(`[Source ${idx + 1}: ${title}]\n${r.content}`);
+      parts.push(`[Fallback Source ${idx + 1}: ${title}]\n${r.content}`);
       citations.push({
         sourceType: 'chunk',
         documentId: r.documentId,
@@ -74,7 +73,7 @@ export class KBSearchTool implements AgentTool {
       });
     });
 
-    logger.debug({ resultCount: rawResults.length }, 'KB search tool completed');
+    logger.debug({ resultCount: rawResults.length }, 'Vector fallback search completed');
 
     return {
       content: parts.join('\n\n---\n\n'),

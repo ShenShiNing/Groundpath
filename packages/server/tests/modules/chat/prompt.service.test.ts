@@ -75,7 +75,7 @@ describe('promptService.buildAgentSystemPrompt', () => {
 
     expect(prompt).toContain('outline_search');
     expect(prompt).toContain('node_read');
-    expect(prompt).toContain('knowledge_base_search as a fallback');
+    expect(prompt).toContain('vector_fallback_search');
   });
 });
 

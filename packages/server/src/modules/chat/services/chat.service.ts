@@ -95,6 +95,7 @@ interface StreamContext {
   genOptions: Awaited<ReturnType<typeof llmService.getOptionsForUser>>;
   abortController: AbortController;
   isDisconnected: () => boolean;
+  completionStopReason?: MessageMetadata['stopReason'];
 }
 
 export const chatService = {
@@ -154,6 +155,7 @@ export const chatService = {
         genOptions,
         abortController,
         isDisconnected: () => clientDisconnected,
+        completionStopReason: undefined,
       };
 
       try {
@@ -170,7 +172,10 @@ export const chatService = {
       if (clientDisconnected) return;
 
       await conversationRepository.touch(conversationId, userId);
-      sendSSE(res, { type: 'done', data: { messageId: assistantMessageId } });
+      sendSSE(res, {
+        type: 'done',
+        data: { messageId: assistantMessageId, stopReason: ctx.completionStopReason },
+      });
       res.end();
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
@@ -255,6 +260,7 @@ export const chatService = {
     });
 
     if (ctx.isDisconnected()) return;
+    ctx.completionStopReason = agentResult.stopReason;
 
     if (agentResult.citations.length > 0) {
       sendSSE(res, { type: 'sources', data: agentResult.citations });
@@ -285,6 +291,7 @@ export const chatService = {
         agentResult.citations.length > 0 ? agentResult.citations : undefined,
         {
           agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
+          stopReason: agentResult.stopReason,
         }
       ),
     });
@@ -372,8 +379,9 @@ export const chatService = {
       conversationId,
       role: 'assistant',
       content: fullContent,
-      metadata: buildCitationMetadata(citations),
+      metadata: buildCitationMetadata(citations, { stopReason: 'answered' }),
     });
+    ctx.completionStopReason = 'answered';
   },
 
   /**
@@ -428,7 +436,7 @@ export const chatService = {
       conversationId,
       role: 'assistant',
       content: responseContent,
-      metadata: buildCitationMetadata(citations),
+      metadata: buildCitationMetadata(citations, { stopReason: 'answered' }),
     });
 
     await conversationRepository.touch(conversationId, userId);

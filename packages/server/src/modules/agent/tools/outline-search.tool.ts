@@ -5,6 +5,7 @@ const OUTLINE_SEARCH_DEFINITION: ToolDefinition = {
   name: 'outline_search',
   description:
     'Search structured document outlines and section candidates in the associated knowledge base. Use this first to locate relevant chapters or sections before reading node content.',
+  category: 'structured',
   parameters: {
     type: 'object',
     properties: {

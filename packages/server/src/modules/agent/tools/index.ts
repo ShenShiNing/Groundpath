@@ -3,21 +3,24 @@ import { agentConfig, featureFlags } from '@shared/config/env';
 import { KBSearchTool } from './kb-search.tool';
 import { OutlineSearchTool } from './outline-search.tool';
 import { NodeReadTool } from './node-read.tool';
+import { VectorFallbackSearchTool } from './vector-fallback-search.tool';
 import { WebSearchTool } from './web-search.tool';
 
 export type { AgentTool, ToolContext, ToolExecutionResult, ToolDefinition } from './tool.interface';
 export { KBSearchTool } from './kb-search.tool';
 export { OutlineSearchTool } from './outline-search.tool';
 export { NodeReadTool } from './node-read.tool';
+export { VectorFallbackSearchTool } from './vector-fallback-search.tool';
 export { WebSearchTool } from './web-search.tool';
 
 export function resolveTools(ctx: ToolContext): AgentTool[] {
   const tools: AgentTool[] = [];
   if (ctx.knowledgeBaseId) {
     if (featureFlags.structuredRagEnabled) {
-      tools.push(new OutlineSearchTool(), new NodeReadTool());
+      tools.push(new OutlineSearchTool(), new NodeReadTool(), new VectorFallbackSearchTool());
+    } else {
+      tools.push(new KBSearchTool());
     }
-    tools.push(new KBSearchTool());
   }
   if (agentConfig.tavilyApiKey) tools.push(new WebSearchTool());
   return tools;

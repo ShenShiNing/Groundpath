@@ -197,12 +197,13 @@ describe('chatService.sendMessageWithSSE', () => {
   // --- Agent mode ---
 
   it('enters agent mode when tools available and provider supports tool calling', async () => {
-    const kbTool = { definition: { name: 'knowledge_base_search' } };
+    const kbTool = { definition: { name: 'knowledge_base_search', category: 'fallback' } };
     mocks.resolveTools.mockReturnValue([kbTool]);
     mocks.executeAgentLoop.mockResolvedValue({
       content: 'Agent answer',
       citations: [],
       agentTrace: [],
+      stopReason: 'answered',
     });
     const provider = {
       name: 'test-provider',
@@ -231,6 +232,7 @@ describe('chatService.sendMessageWithSSE', () => {
     expect(mocks.promptService.buildAgentSystemPrompt).toHaveBeenCalledWith({
       hasKnowledgeBase: true,
       hasWebSearch: false,
+      hasStructuredKnowledgeBase: false,
     });
     // Should save assistant message with agent content
     const createCalls = mocks.messageService.create.mock.calls;
@@ -246,8 +248,8 @@ describe('chatService.sendMessageWithSSE', () => {
   });
 
   it('passes all resolved tools to agent loop (KB + web)', async () => {
-    const kbTool = { definition: { name: 'knowledge_base_search' } };
-    const webTool = { definition: { name: 'web_search' } };
+    const kbTool = { definition: { name: 'outline_search', category: 'structured' } };
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
     mocks.resolveTools.mockReturnValue([kbTool, webTool]);
     mocks.executeAgentLoop.mockResolvedValue({
       content: 'Combined answer',
@@ -262,6 +264,7 @@ describe('chatService.sendMessageWithSSE', () => {
         },
       ],
       agentTrace: [{ step: 0 }],
+      stopReason: 'answered',
     });
     const provider = {
       name: 'test-provider',
@@ -293,6 +296,7 @@ describe('chatService.sendMessageWithSSE', () => {
     expect(mocks.promptService.buildAgentSystemPrompt).toHaveBeenCalledWith({
       hasKnowledgeBase: true,
       hasWebSearch: true,
+      hasStructuredKnowledgeBase: true,
     });
 
     // Citations sent via SSE
@@ -306,7 +310,7 @@ describe('chatService.sendMessageWithSSE', () => {
   });
 
   it('falls back to legacy streaming when provider lacks generateWithTools', async () => {
-    const kbTool = { definition: { name: 'knowledge_base_search' } };
+    const kbTool = { definition: { name: 'knowledge_base_search', category: 'fallback' } };
     mocks.resolveTools.mockReturnValue([kbTool]);
     // Provider WITHOUT generateWithTools
     const provider = {
@@ -329,12 +333,13 @@ describe('chatService.sendMessageWithSSE', () => {
   });
 
   it('sends error SSE when agent returns empty content', async () => {
-    const webTool = { definition: { name: 'web_search' } };
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
     mocks.resolveTools.mockReturnValue([webTool]);
     mocks.executeAgentLoop.mockResolvedValue({
       content: '   ',
       citations: [],
       agentTrace: [],
+      stopReason: 'answered',
     });
     const provider = {
       name: 'test-provider',

@@ -24,6 +24,7 @@ const WEB_SEARCH_DEFINITION: ToolDefinition = {
   name: 'web_search',
   description:
     'Search the internet for up-to-date information. Use this when the question requires real-time data, current events, or information not available in the knowledge base.',
+  category: 'external',
   parameters: {
     type: 'object',
     properties: {

@@ -5,6 +5,7 @@ const NODE_READ_DEFINITION: ToolDefinition = {
   name: 'node_read',
   description:
     'Read the content of structured document nodes returned by outline_search. Use this after locating relevant nodes to inspect the actual section text and nearby context.',
+  category: 'structured',
   parameters: {
     type: 'object',
     properties: {

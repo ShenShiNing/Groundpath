@@ -4,7 +4,7 @@ import type { AgentTool, ToolContext, ToolDefinition } from '@modules/agent/tool
 import type { LLMProvider, ChatMessage, GenerateOptions } from '@modules/llm';
 
 vi.mock('@shared/config/env', () => ({
-  agentConfig: { maxIterations: 5 },
+  agentConfig: { maxIterations: 5, maxStructuredRounds: 3, maxFallbackRounds: 1 },
 }));
 
 vi.mock('@shared/logger', () => ({
@@ -29,11 +29,16 @@ function createMockProvider(overrides: Partial<LLMProvider> = {}): LLMProvider {
   } as unknown as LLMProvider;
 }
 
-function createMockTool(name: string, result: string = 'tool result'): AgentTool {
+function createMockTool(
+  name: string,
+  result: string = 'tool result',
+  category: ToolDefinition['category'] = 'structured'
+): AgentTool {
   return {
     definition: {
       name,
       description: `Test tool: ${name}`,
+      category,
       parameters: { type: 'object', properties: {} },
     } as ToolDefinition,
     execute: vi.fn().mockResolvedValue({ content: result }),
@@ -88,6 +93,7 @@ describe('executeAgentLoop', () => {
 
     expect(result.content).toBe('Final answer');
     expect(result.agentTrace).toEqual([]);
+    expect(result.stopReason).toBe('answered');
   });
 
   it('should return content when LLM returns empty toolCalls', async () => {
@@ -103,6 +109,7 @@ describe('executeAgentLoop', () => {
     const result = await executeAgentLoop(options);
 
     expect(result.content).toBe('No tools needed');
+    expect(result.stopReason).toBe('answered');
   });
 
   // ── Tool execution flow ──
@@ -310,6 +317,7 @@ describe('executeAgentLoop', () => {
       definition: {
         name: 'search',
         description: 'search',
+        category: 'structured',
         parameters: { type: 'object', properties: {} },
       },
       execute: vi.fn().mockResolvedValue({
@@ -353,7 +361,7 @@ describe('executeAgentLoop', () => {
 
   it('should execute multiple tool calls concurrently', async () => {
     const tool1 = createMockTool('search', 'search result');
-    const tool2 = createMockTool('web_search', 'web result');
+    const tool2 = createMockTool('web_search', 'web result', 'external');
 
     const generateWithTools = vi
       .fn()
@@ -380,5 +388,34 @@ describe('executeAgentLoop', () => {
     expect(tool2.execute).toHaveBeenCalledOnce();
     expect(result.agentTrace[0]!.toolCalls).toHaveLength(2);
     expect(result.agentTrace[0]!.toolResults).toHaveLength(2);
+  });
+
+  it('should stop with budget_exhausted when structured tool budget is exceeded', async () => {
+    const tool = createMockTool('outline_search', 'structured result', 'structured');
+    const generateWithTools = vi.fn().mockResolvedValueOnce({
+      finishReason: 'tool_calls',
+      content: '',
+      toolCalls: [
+        { id: 'tc-1', name: 'outline_search', arguments: { query: 'one' } },
+        { id: 'tc-2', name: 'outline_search', arguments: { query: 'two' } },
+        { id: 'tc-3', name: 'outline_search', arguments: { query: 'three' } },
+        { id: 'tc-4', name: 'outline_search', arguments: { query: 'four' } },
+      ],
+    });
+
+    const provider = createMockProvider({
+      generateWithTools,
+      generate: vi.fn().mockResolvedValue('Budget limited answer'),
+    });
+    const options = createBaseOptions({
+      provider,
+      tools: [tool],
+    });
+
+    const result = await executeAgentLoop(options);
+
+    expect(tool.execute).not.toHaveBeenCalled();
+    expect(provider.generate).toHaveBeenCalledOnce();
+    expect(result.stopReason).toBe('budget_exhausted');
   });
 });

@@ -1,8 +1,11 @@
 import type { Citation } from '@knowledge-agent/shared/types';
 
+export type ToolCategory = 'structured' | 'fallback' | 'external';
+
 export interface ToolDefinition {
   name: string;
   description: string;
+  category: ToolCategory;
   parameters: Record<string, unknown>; // JSON Schema
 }
 
