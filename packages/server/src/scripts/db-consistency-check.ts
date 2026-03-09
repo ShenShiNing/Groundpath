@@ -20,6 +20,10 @@
  *   6. documents.chunkCount mismatch
  *   7. Stale processing/failed status backlog
  *   8. Duplicate document_chunks composite key
+ *   9. Active index version pointer mismatch
+ *   10. Orphan document_nodes / missing index version
+ *   11. Orphan document_edges / missing endpoints
+ *   12. Stale document_index_versions backlog
  */
 
 // Ensure environment is loaded before any imports that depend on it
@@ -38,10 +42,12 @@ if (!databaseConfig.url) {
 }
 
 import { db } from '@shared/db';
-import { sql, eq, and, isNull, count } from 'drizzle-orm';
+import { sql, eq, and, isNull, count, or } from 'drizzle-orm';
 import { documents } from '@shared/db/schema/document/documents.schema';
 import { documentVersions } from '@shared/db/schema/document/document-versions.schema';
 import { documentChunks } from '@shared/db/schema/document/document-chunks.schema';
+import { documentIndexVersions } from '@shared/db/schema/document/document-index-versions.schema';
+import { documentNodes } from '@shared/db/schema/document/document-nodes.schema';
 import { knowledgeBases } from '@shared/db/schema/document/knowledge-bases.schema';
 import { counterSyncService } from '@modules/knowledge-base';
 import { closeDatabase } from '@shared/db';
@@ -63,7 +69,7 @@ async function main() {
   const results: CheckResult[] = [];
 
   try {
-    // Run all 8 checks
+    // Run all 12 checks
     results.push(await checkOrphanDocuments());
     results.push(await checkOrphanDocumentVersions());
     results.push(await checkOrphanDocumentChunks());
@@ -72,6 +78,10 @@ async function main() {
     results.push(await checkDocumentChunkCountMismatch());
     results.push(await checkStaleProcessingStatus());
     results.push(await checkDuplicateChunkKeys());
+    results.push(await checkActiveIndexVersionMismatch());
+    results.push(await checkOrphanDocumentNodes());
+    results.push(await checkOrphanDocumentEdges());
+    results.push(await checkStaleDocumentIndexBacklog());
 
     // Print report
     console.log('\n--- Report ---\n');
@@ -334,6 +344,154 @@ async function checkDuplicateChunkKeys(): Promise<CheckResult> {
     count: results.length,
     details: results.map(
       (r) => `doc=${r.document_id} v${r.version} chunk=${r.chunk_index} count=${r.cnt}`
+    ),
+  };
+}
+
+// Check 9: documents.activeIndexVersionId mismatch with actual active document_index_versions row
+async function checkActiveIndexVersionMismatch(): Promise<CheckResult> {
+  const name = '9. Active index version mismatch';
+  const rows = await db.execute(sql`
+    SELECT
+      d.id,
+      d.title,
+      d.active_index_version_id AS pointer,
+      piv.status AS pointer_status,
+      actual.id AS actual_active_id
+    FROM documents d
+    LEFT JOIN document_index_versions piv
+      ON d.active_index_version_id = piv.id
+    LEFT JOIN (
+      SELECT document_id, MIN(id) AS id
+      FROM document_index_versions
+      WHERE status = 'active'
+      GROUP BY document_id
+    ) actual
+      ON d.id = actual.document_id
+    WHERE d.deleted_at IS NULL
+      AND (
+        (d.active_index_version_id IS NOT NULL AND (piv.id IS NULL OR piv.status != 'active'))
+        OR COALESCE(d.active_index_version_id, '') != COALESCE(actual.id, '')
+      )
+  `);
+
+  const results = rows[0] as unknown as Array<{
+    id: string;
+    title: string;
+    pointer: string | null;
+    pointer_status: string | null;
+    actual_active_id: string | null;
+  }>;
+
+  return {
+    name,
+    passed: results.length === 0,
+    count: results.length,
+    details: results.map(
+      (r) =>
+        `doc=${r.id} "${r.title}" pointer=${r.pointer ?? 'null'} pointerStatus=${r.pointer_status ?? 'null'} actual=${r.actual_active_id ?? 'null'}`
+    ),
+  };
+}
+
+// Check 10: Orphan document_nodes (missing document or index version)
+async function checkOrphanDocumentNodes(): Promise<CheckResult> {
+  const name = '10. Orphan document_nodes';
+  const rows = await db
+    .select({
+      id: documentNodes.id,
+      documentId: documentNodes.documentId,
+      indexVersionId: documentNodes.indexVersionId,
+    })
+    .from(documentNodes)
+    .leftJoin(documents, eq(documentNodes.documentId, documents.id))
+    .leftJoin(documentIndexVersions, eq(documentNodes.indexVersionId, documentIndexVersions.id))
+    .where(or(isNull(documents.id), isNull(documentIndexVersions.id)));
+
+  return {
+    name,
+    passed: rows.length === 0,
+    count: rows.length,
+    details: rows.map((r) => `node=${r.id} doc=${r.documentId} indexVersionId=${r.indexVersionId}`),
+  };
+}
+
+// Check 11: Orphan document_edges (missing document, index version, or endpoint node)
+async function checkOrphanDocumentEdges(): Promise<CheckResult> {
+  const name = '11. Orphan document_edges';
+  const rows = await db.execute(sql`
+    SELECT
+      e.id,
+      e.document_id,
+      e.index_version_id,
+      e.from_node_id,
+      e.to_node_id,
+      e.edge_type
+    FROM document_edges e
+    LEFT JOIN documents d ON e.document_id = d.id
+    LEFT JOIN document_index_versions iv ON e.index_version_id = iv.id
+    LEFT JOIN document_nodes fn ON e.from_node_id = fn.id
+    LEFT JOIN document_nodes tn ON e.to_node_id = tn.id
+    WHERE d.id IS NULL
+      OR iv.id IS NULL
+      OR fn.id IS NULL
+      OR tn.id IS NULL
+  `);
+
+  const results = rows[0] as unknown as Array<{
+    id: string;
+    document_id: string;
+    index_version_id: string;
+    from_node_id: string;
+    to_node_id: string;
+    edge_type: string;
+  }>;
+
+  return {
+    name,
+    passed: results.length === 0,
+    count: results.length,
+    details: results.map(
+      (r) =>
+        `edge=${r.id} doc=${r.document_id} indexVersionId=${r.index_version_id} from=${r.from_node_id} to=${r.to_node_id} type=${r.edge_type}`
+    ),
+  };
+}
+
+// Check 12: Stale building/failed document_index_versions backlog
+async function checkStaleDocumentIndexBacklog(): Promise<CheckResult> {
+  const name = '12. Stale document_index_versions backlog';
+  const rows = await db.execute(sql`
+    SELECT
+      id,
+      document_id,
+      document_version,
+      index_version,
+      status,
+      built_at
+    FROM document_index_versions
+    WHERE status IN ('building', 'failed')
+      AND built_at < DATE_SUB(NOW(), INTERVAL 1 DAY)
+    ORDER BY built_at ASC
+    LIMIT 100
+  `);
+
+  const results = rows[0] as unknown as Array<{
+    id: string;
+    document_id: string;
+    document_version: number;
+    index_version: string;
+    status: string;
+    built_at: string;
+  }>;
+
+  return {
+    name,
+    passed: results.length === 0,
+    count: results.length,
+    details: results.map(
+      (r) =>
+        `index=${r.id} doc=${r.document_id} v${r.document_version} indexVersion=${r.index_version} status=${r.status} builtAt=${r.built_at}`
     ),
   };
 }
