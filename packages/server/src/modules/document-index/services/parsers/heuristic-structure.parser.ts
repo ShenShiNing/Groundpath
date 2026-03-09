@@ -1,5 +1,6 @@
 import { documentIndexConfig } from '@config/env';
 import type { ParsedDocumentEdge, ParsedDocumentNode, ParsedDocumentStructure } from './types';
+import { buildReferenceEdges, inferStructuredNodeType } from './reference-edge-extractor';
 
 function estimateTokens(text: string): number {
   if (!text.trim()) return 0;
@@ -113,7 +114,7 @@ export function parseHeuristicStructuredText(
     const node: MutableNode = {
       id: `node-${nextNodeOrder}`,
       parentId: parentNode.id,
-      nodeType: heading.level === 1 ? 'chapter' : 'section',
+      nodeType: inferStructuredNodeType(heading.title, heading.level),
       title: heading.title,
       depth: heading.level,
       sectionPath,
@@ -166,7 +167,7 @@ export function parseHeuristicStructuredText(
 
   return {
     nodes: finalizedNodes,
-    edges,
+    edges: [...edges, ...buildReferenceEdges(finalizedNodes)],
     parseMethod: 'structured',
     parserRuntime,
     headingCount,

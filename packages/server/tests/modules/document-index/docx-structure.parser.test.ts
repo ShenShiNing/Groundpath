@@ -26,4 +26,25 @@ Goal text.`);
       ])
     );
   });
+
+  it('extracts appendix references into graph edges', () => {
+    const result = docxStructureParser.parseTextContent(`Appendix A Supporting Tables
+
+See Appendix B for more tables.
+
+Appendix B Extra Tables
+
+More content.`);
+
+    expect(result.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fromNodeId: 'node-1',
+          toNodeId: 'node-2',
+          edgeType: 'refers_to',
+          anchorText: 'Appendix B',
+        }),
+      ])
+    );
+  });
 });

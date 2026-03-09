@@ -10,6 +10,7 @@ export * from './services/parsers/docx-structure.parser';
 export * from './services/parsers/pdf-structure.parser';
 export * from './services/parsers/markdown-structure.parser';
 export * from './services/parsers/heuristic-structure.parser';
+export * from './services/parsers/reference-edge-extractor';
 export * from './services/parsers/types';
 export * from './services/search/outline-search.service';
 export * from './services/search/node-read.service';

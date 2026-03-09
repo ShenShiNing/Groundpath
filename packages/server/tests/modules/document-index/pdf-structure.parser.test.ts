@@ -26,4 +26,25 @@ Planning text.`);
       ])
     );
   });
+
+  it('extracts citation-like chapter references into graph edges', () => {
+    const result = pdfStructureParser.parseTextContent(`CHAPTER 1 Retrieval
+
+This section cites Chapter 2 for benchmarks.
+
+CHAPTER 2 Benchmarks
+
+Benchmark text.`);
+
+    expect(result.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fromNodeId: 'node-1',
+          toNodeId: 'node-2',
+          edgeType: 'cites',
+          anchorText: 'Chapter 2',
+        }),
+      ])
+    );
+  });
 });

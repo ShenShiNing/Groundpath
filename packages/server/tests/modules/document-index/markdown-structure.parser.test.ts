@@ -74,4 +74,25 @@ More text`);
       ])
     );
   });
+
+  it('extracts refers_to edges from explicit section references', () => {
+    const result = markdownStructureParser.parse(`# Chapter 1
+
+See Section 1.1 for details.
+
+## 1.1 Details
+
+More details.`);
+
+    expect(result.edges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fromNodeId: 'node-1',
+          toNodeId: 'node-2',
+          edgeType: 'refers_to',
+          anchorText: 'Section 1.1',
+        }),
+      ])
+    );
+  });
 });
