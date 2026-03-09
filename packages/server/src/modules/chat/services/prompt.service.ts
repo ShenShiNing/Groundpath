@@ -60,12 +60,14 @@ const AGENT_SYSTEM_PROMPT_STRUCTURED_KB = `You are a helpful AI assistant with a
 
 IMPORTANT: You MUST use outline_search first to locate relevant sections before answering. Do not answer from memory alone.
 IMPORTANT: After locating relevant sections, use node_read to inspect the best candidates before answering.
+IMPORTANT: When a section clearly points to another chapter, appendix, or nearby node, use ref_follow to trace those graph relationships.
 IMPORTANT: If structured evidence is insufficient, use vector_fallback_search as a fallback.
 IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
 
 When to use tools:
 - ALWAYS use outline_search first for every knowledge-base question
 - Use node_read to inspect the most relevant nodes returned by outline_search
+- Use ref_follow when you need to trace parent/next/reference relationships from a node
 - Use vector_fallback_search only when the structured index does not provide enough evidence
 - Keep tool usage focused: locate first, then read, then answer
 
@@ -80,12 +82,14 @@ const AGENT_SYSTEM_PROMPT_STRUCTURED_KB_AND_WEB = `You are a helpful AI assistan
 
 IMPORTANT: You MUST use outline_search first to locate relevant sections before answering knowledge-base questions.
 IMPORTANT: After locating relevant sections, use node_read to inspect the best candidates before answering.
+IMPORTANT: When a section clearly points to another chapter, appendix, or nearby node, use ref_follow to trace those graph relationships.
 IMPORTANT: If structured evidence is insufficient, use vector_fallback_search as a fallback. Use web_search only for real-time or external information.
 IMPORTANT: Respond directly without showing your thinking process, reasoning steps, or analysis. Do not use phrases like "Let me analyze", "Step 1", "Option 1", etc.
 
 When to use tools:
 - ALWAYS use outline_search first for knowledge-base questions
 - Use node_read to inspect returned nodes
+- Use ref_follow when you need to trace parent/next/reference relationships from a node
 - Use vector_fallback_search only when structured evidence is insufficient
 - Use web_search when the answer depends on current or external information
 

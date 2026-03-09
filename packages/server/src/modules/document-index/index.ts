@@ -13,3 +13,4 @@ export * from './services/parsers/heuristic-structure.parser';
 export * from './services/parsers/types';
 export * from './services/search/outline-search.service';
 export * from './services/search/node-read.service';
+export * from './services/search/ref-follow.service';

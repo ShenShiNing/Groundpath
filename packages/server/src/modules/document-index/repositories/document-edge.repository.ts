@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
@@ -21,6 +21,28 @@ export const documentEdgeRepository = {
   async listByFromNodeIds(fromNodeIds: string[]): Promise<DocumentEdge[]> {
     if (fromNodeIds.length === 0) return [];
     return db.select().from(documentEdges).where(inArray(documentEdges.fromNodeId, fromNodeIds));
+  },
+
+  async listByIndexVersionAndFromNodeIds(
+    indexVersionId: string,
+    fromNodeIds: string[],
+    edgeTypes?: DocumentEdge['edgeType'][]
+  ): Promise<DocumentEdge[]> {
+    if (fromNodeIds.length === 0) return [];
+
+    const conditions = [
+      eq(documentEdges.indexVersionId, indexVersionId),
+      inArray(documentEdges.fromNodeId, fromNodeIds),
+    ];
+
+    if (edgeTypes?.length) {
+      conditions.push(inArray(documentEdges.edgeType, edgeTypes));
+    }
+
+    return db
+      .select()
+      .from(documentEdges)
+      .where(and(...conditions));
   },
 
   async deleteByIndexVersionId(indexVersionId: string, tx?: Transaction): Promise<void> {
