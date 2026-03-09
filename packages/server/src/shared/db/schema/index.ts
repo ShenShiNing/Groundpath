@@ -18,6 +18,10 @@ export * from './document/knowledge-bases.schema';
 export * from './document/documents.schema';
 export * from './document/document-versions.schema';
 export * from './document/document-chunks.schema';
+export * from './document/document-index-versions.schema';
+export * from './document/document-nodes.schema';
+export * from './document/document-node-contents.schema';
+export * from './document/document-edges.schema';
 
 // AI schemas
 export * from './ai/llm-configs.schema';

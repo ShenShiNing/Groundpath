@@ -116,6 +116,7 @@ export const documentRepository = {
         | 'fileSize'
         | 'fileExtension'
         | 'documentType'
+        | 'activeIndexVersionId'
         | 'processingStatus'
         | 'processingError'
         | 'chunkCount'

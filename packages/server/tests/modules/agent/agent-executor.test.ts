@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AgentExecutorOptions, AgentExecutorResult } from '@modules/agent/agent-executor';
+import type { AgentExecutorOptions } from '@modules/agent/agent-executor';
 import type { AgentTool, ToolContext, ToolDefinition } from '@modules/agent/tools/tool.interface';
 import type { LLMProvider, ChatMessage, GenerateOptions } from '@modules/llm';
 

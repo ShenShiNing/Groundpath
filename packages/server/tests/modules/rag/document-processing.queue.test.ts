@@ -94,8 +94,10 @@ describe('document-processing.queue', () => {
         reason: 'backfill',
       });
 
-      const callArgs = queueAddMock.mock.calls[0];
-      expect(callArgs![2]).toEqual({ jobId: 'doc-doc-abc-v7-idx-idx-2' });
+      const callArgs = queueAddMock.mock.calls.at(0);
+      expect(callArgs).toBeDefined();
+      const jobOptions = (callArgs as unknown[] | undefined)?.[2] as { jobId: string } | undefined;
+      expect(jobOptions).toEqual({ jobId: 'doc-doc-abc-v7-idx-idx-2' });
     });
   });
 

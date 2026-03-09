@@ -39,6 +39,7 @@ export const mockDocument: Document = {
   fileExtension: 'pdf',
   documentType: 'pdf',
   currentVersion: 1,
+  activeIndexVersionId: null,
   processingStatus: 'completed',
   processingError: null,
   chunkCount: 0,

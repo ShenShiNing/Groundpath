@@ -141,9 +141,10 @@ describe('KBSearchTool', () => {
     await tool.execute({ query: 'test' }, baseCtx);
 
     // Should only pass unique doc IDs
-    const calledIds = getTitlesByIdsMock.mock.calls[0][0] as string[];
-    expect(calledIds).toHaveLength(1);
-    expect(calledIds[0]).toBe('doc-1');
+    const firstCall = getTitlesByIdsMock.mock.calls.at(0);
+    expect(firstCall).toBeDefined();
+    const calledIds = (firstCall?.[0] ?? []) as string[];
+    expect(calledIds).toEqual(['doc-1']);
   });
 
   it('should coerce non-string query args to string', async () => {

@@ -13,6 +13,7 @@ import { users } from '../user/users.schema';
 import { documentVersions } from './document-versions.schema';
 import { documentChunks } from './document-chunks.schema';
 import { knowledgeBases } from './knowledge-bases.schema';
+import { documentIndexVersions } from './document-index-versions.schema';
 
 export const documents = mysqlTable(
   'documents',
@@ -31,6 +32,7 @@ export const documents = mysqlTable(
 
     // Version pointer
     currentVersion: int('current_version').notNull().default(1),
+    activeIndexVersionId: varchar('active_index_version_id', { length: 36 }),
 
     // Cached fields (from current version, for list display without JOIN)
     fileName: varchar('file_name', { length: 255 }).notNull(),
@@ -65,6 +67,7 @@ export const documents = mysqlTable(
     index('user_id_idx').on(table.userId),
     index('knowledge_base_id_idx').on(table.knowledgeBaseId),
     index('processing_status_idx').on(table.processingStatus),
+    index('active_index_version_id_idx').on(table.activeIndexVersionId),
     index('deleted_at_idx').on(table.deletedAt),
     index('created_at_idx').on(table.createdAt),
   ]
@@ -82,6 +85,7 @@ export const documentsRelations = relations(documents, ({ one, many }) => ({
   }),
   versions: many(documentVersions),
   chunks: many(documentChunks),
+  indexVersions: many(documentIndexVersions),
 }));
 
 export type Document = typeof documents.$inferSelect;

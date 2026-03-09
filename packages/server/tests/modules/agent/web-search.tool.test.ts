@@ -76,7 +76,10 @@ describe('WebSearchTool', () => {
       })
     );
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    const firstCall = mockFetch.mock.calls.at(0);
+    expect(firstCall).toBeDefined();
+    const requestInit = firstCall?.[1] as RequestInit;
+    const body = JSON.parse(String(requestInit.body));
     expect(body.api_key).toBe('test-tavily-key');
     expect(body.query).toBe('latest news');
     expect(body.max_results).toBe(3);
