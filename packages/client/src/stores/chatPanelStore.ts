@@ -143,7 +143,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         },
         onSources: (citations) => {
           const storeCitations = citations.map(toStoreCitation);
-          updateLastMessage({ citations: storeCitations });
+          updateLastMessage({ citations: storeCitations, retrievedSources: storeCitations });
         },
         onToolStart: (data) => {
           addToolStep({
@@ -165,10 +165,15 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
             updateLastMessage({
               id: data.messageId,
               content: i18n.t('error.emptyResponse', { ns: 'chat' }),
+              stopReason: data.stopReason,
               isLoading: false,
             });
           } else {
-            updateLastMessage({ id: data.messageId, isLoading: false });
+            updateLastMessage({
+              id: data.messageId,
+              stopReason: data.stopReason,
+              isLoading: false,
+            });
           }
           invalidateConversationQueries();
           set({ isLoading: false, abortController: null });
@@ -243,6 +248,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           msg.metadata?.finalCitations?.map(toStoreCitation) ??
           msg.metadata?.citations?.map(toStoreCitation) ??
           msg.metadata?.retrievedSources?.map(toStoreCitation),
+        retrievedSources: msg.metadata?.retrievedSources?.map(toStoreCitation),
+        stopReason: msg.metadata?.stopReason,
         toolSteps: agentTraceToToolSteps(msg.metadata?.agentTrace),
       }));
       set({

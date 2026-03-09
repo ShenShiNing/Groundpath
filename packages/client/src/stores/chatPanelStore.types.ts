@@ -1,4 +1,5 @@
 import type {
+  AgentStopReason,
   Citation as APICitation,
   ToolCallInfo,
   ToolResultInfo,
@@ -27,6 +28,8 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   citations?: Citation[];
+  retrievedSources?: Citation[];
+  stopReason?: AgentStopReason;
   isLoading?: boolean;
   toolSteps?: ToolStep[];
 }
@@ -116,6 +119,27 @@ export function toStoreCitation(citation: APICitation, index: number): Citation 
     ...citation,
     excerpt: citation.excerpt ?? citation.content,
   };
+}
+
+export function toStopReasonLabelKey(
+  stopReason?: AgentStopReason
+): `message.stopReason.${string}` | null {
+  if (!stopReason || stopReason === 'answered') return null;
+
+  switch (stopReason) {
+    case 'budget_exhausted':
+      return 'message.stopReason.budgetExhausted';
+    case 'insufficient_evidence':
+      return 'message.stopReason.insufficientEvidence';
+    case 'tool_timeout':
+      return 'message.stopReason.toolTimeout';
+    case 'user_aborted':
+      return 'message.stopReason.userAborted';
+    case 'provider_error':
+      return 'message.stopReason.providerError';
+    default:
+      return null;
+  }
 }
 
 export function agentTraceToToolSteps(trace?: AgentStep[]): ToolStep[] | undefined {

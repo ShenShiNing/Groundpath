@@ -37,7 +37,14 @@
     "copy": "复制",
     "copyPlain": "复制纯文本",
     "copyMarkdown": "复制 Markdown",
-    "regenerate": "重新生成"
+    "regenerate": "重新生成",
+    "stopReason": {
+      "budgetExhausted": "本次回答在工具预算耗尽后提前收口。",
+      "insufficientEvidence": "当前证据不足，回答可能不完整。",
+      "toolTimeout": "部分检索步骤超时，回答可能不完整。",
+      "userAborted": "本次回答被手动中断。",
+      "providerError": "模型或工具调用异常，回答可能不完整。"
+    }
   },
   "markdown": {
     "codeCopied": "已复制代码"

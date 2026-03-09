@@ -53,10 +53,11 @@ describe('chatPanelStore onDone empty content guard', () => {
     expect(stateAfterSend.messages[1]?.content).toBe('');
 
     // Simulate onDone with empty content still in assistant message
-    capturedHandlers!.onDone({ messageId: 'msg-server-1' });
+    capturedHandlers!.onDone({ messageId: 'msg-server-1', stopReason: 'budget_exhausted' });
 
     const finalState = useChatPanelStore.getState();
     expect(finalState.messages[1]?.content).toContain('error.emptyResponse');
+    expect(finalState.messages[1]?.stopReason).toBe('budget_exhausted');
     expect(finalState.messages[1]?.isLoading).toBe(false);
     expect(finalState.isLoading).toBe(false);
   });
@@ -67,11 +68,12 @@ describe('chatPanelStore onDone empty content guard', () => {
     // Simulate receiving a chunk before done
     capturedHandlers!.onChunk('Real answer');
 
-    capturedHandlers!.onDone({ messageId: 'msg-server-2' });
+    capturedHandlers!.onDone({ messageId: 'msg-server-2', stopReason: 'answered' });
 
     const finalState = useChatPanelStore.getState();
     expect(finalState.messages[1]?.content).toBe('Real answer');
     expect(finalState.messages[1]?.id).toBe('msg-server-2');
+    expect(finalState.messages[1]?.stopReason).toBe('answered');
     expect(finalState.messages[1]?.isLoading).toBe(false);
   });
 });

@@ -128,7 +128,10 @@ export const messageApi = {
 export interface SSEHandlers {
   onChunk: (text: string) => void;
   onSources: (citations: Citation[]) => void;
-  onDone: (data: { messageId: string }) => void;
+  onDone: (data: {
+    messageId: string;
+    stopReason?: import('@knowledge-agent/shared/types').AgentStopReason;
+  }) => void;
   onError: (error: { code: string; message: string }) => void;
   onToolStart?: (data: { stepIndex: number; toolCalls: ToolCallInfo[] }) => void;
   onToolEnd?: (data: {

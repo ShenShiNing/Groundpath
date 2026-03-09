@@ -11,6 +11,7 @@ import { CitationSources } from './CitationSources';
 import { ChatMarkdown } from './ChatMarkdown';
 import { ToolStepsDisplay } from './ToolStepsDisplay';
 import type { ChatMessage as ChatMessageType, Citation } from '@/stores';
+import { toStopReasonLabelKey } from '@/stores/chatPanelStore.types';
 import type { CopyFormat } from '@/lib/chat';
 import { useTranslation } from 'react-i18next';
 
@@ -42,6 +43,7 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
   const { t } = useTranslation('chat');
   const isUser = message.role === 'user';
   const isPureCodeBlock = !isUser && PURE_CODE_BLOCK_PATTERN.test(message.content);
+  const stopReasonLabelKey = toStopReasonLabelKey(message.stopReason);
   const [copiedFormat, setCopiedFormat] = useState<CopyFormat | null>(null);
   const copyTimerRef = useRef<number | null>(null);
 
@@ -136,6 +138,10 @@ export function ChatMessage({ message, onCitationClick, onCopy, onRegenerate }: 
         {/* Citations */}
         {message.citations && message.citations.length > 0 && (
           <CitationSources citations={message.citations} onCitationClick={onCitationClick} />
+        )}
+
+        {stopReasonLabelKey && (
+          <div className="mt-2 text-[11px] text-amber-700">{t(stopReasonLabelKey)}</div>
         )}
 
         {/* Actions */}

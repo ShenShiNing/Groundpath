@@ -37,7 +37,14 @@
     "copy": "Copy",
     "copyPlain": "Copy plain text",
     "copyMarkdown": "Copy Markdown",
-    "regenerate": "Regenerate"
+    "regenerate": "Regenerate",
+    "stopReason": {
+      "budgetExhausted": "The response was finalized after the tool budget was exhausted.",
+      "insufficientEvidence": "Available evidence was insufficient, so the answer may be incomplete.",
+      "toolTimeout": "Some retrieval steps timed out, so the answer may be incomplete.",
+      "userAborted": "This response was manually stopped.",
+      "providerError": "A model or tool error occurred, so the answer may be incomplete."
+    }
   },
   "markdown": {
     "codeCopied": "Code copied"
