@@ -231,4 +231,77 @@ describe('refFollowService', () => {
 
     expect(result.truncated).toBe(true);
   });
+
+  it('uses granular appendix/figure/table citations for discovered nodes', async () => {
+    mocks.searchRepo.getAccessibleNodesByIds
+      .mockResolvedValueOnce([
+        {
+          nodeId: 'node-1',
+          documentId: 'doc-1',
+          documentTitle: 'Guide',
+          documentVersion: 1,
+          indexVersion: 'idx-1',
+          indexVersionId: 'row-1',
+          nodeType: 'chapter',
+          title: 'Root',
+          depth: 1,
+          sectionPath: ['Root'],
+          pageStart: 1,
+          pageEnd: 1,
+          parentId: null,
+          orderNo: 1,
+          stableLocator: 'Root',
+          content: null,
+          contentPreview: 'Root preview',
+          tokenCount: 1,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          nodeId: 'node-figure',
+          documentId: 'doc-1',
+          documentTitle: 'Guide',
+          documentVersion: 1,
+          indexVersion: 'idx-1',
+          indexVersionId: 'row-1',
+          nodeType: 'figure',
+          title: 'Figure 2-1. Pipeline',
+          depth: 2,
+          sectionPath: ['Root', 'Figure 2-1. Pipeline'],
+          pageStart: 3,
+          pageEnd: 3,
+          parentId: 'node-1',
+          orderNo: 2,
+          stableLocator: 'Root > Figure 2-1. Pipeline',
+          content: null,
+          contentPreview: 'Figure preview',
+          tokenCount: 1,
+        },
+      ]);
+
+    mocks.edgeRepo.listByIndexVersionAndFromNodeIds.mockResolvedValueOnce([
+      {
+        id: 'edge-1',
+        documentId: 'doc-1',
+        indexVersionId: 'row-1',
+        fromNodeId: 'node-1',
+        toNodeId: 'node-figure',
+        edgeType: 'refers_to',
+        anchorText: 'Figure 2-1',
+        createdAt: new Date(),
+      },
+    ]);
+
+    const result = await refFollowService.follow({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      nodeId: 'node-1',
+      edgeTypes: ['refers_to'],
+    });
+
+    expect(result.citations[0]).toMatchObject({
+      locator: 'Root > Figure 2-1. Pipeline / p.3',
+      excerpt: 'Figure 2-1. Pipeline',
+    });
+  });
 });

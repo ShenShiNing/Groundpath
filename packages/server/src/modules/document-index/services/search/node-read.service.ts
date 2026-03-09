@@ -3,6 +3,7 @@ import type { Citation } from '@knowledge-agent/shared/types';
 import { documentNodeRepository } from '../../repositories/document-node.repository';
 import { documentNodeSearchRepository } from '../../repositories/document-node-search.repository';
 import { documentIndexCacheService } from '../document-index-cache.service';
+import { buildNodeExcerpt, buildNodeLocator } from './node-presentation';
 
 export interface NodeReadInput {
   userId: string;
@@ -66,6 +67,7 @@ function truncateByTokens(text: string, maxTokens: number) {
 }
 
 function toLocator(row: {
+  nodeType?: string | null;
   stableLocator: string | null;
   sectionPath: string[] | null;
   title: string | null;
@@ -73,15 +75,7 @@ function toLocator(row: {
   pageStart: number | null;
   pageEnd: number | null;
 }) {
-  const base = row.stableLocator || row.sectionPath?.join(' > ') || row.title || row.documentTitle;
-  if (row.pageStart && row.pageEnd) {
-    return row.pageStart === row.pageEnd
-      ? `${base} / p.${row.pageStart}`
-      : `${base} / p.${row.pageStart}-${row.pageEnd}`;
-  }
-  if (row.pageStart) return `${base} / p.${row.pageStart}`;
-  if (row.pageEnd) return `${base} / p.${row.pageEnd}`;
-  return base;
+  return buildNodeLocator(row);
 }
 
 function toRelatedNodeRef(row?: {
@@ -103,7 +97,9 @@ export const nodeReadService = {
     results: NodeReadResultItem[];
     citations: Citation[];
   }> {
-    const uniqueNodeIds = [...new Set(input.nodeIds.map((nodeId) => nodeId.trim()).filter(Boolean))];
+    const uniqueNodeIds = [
+      ...new Set(input.nodeIds.map((nodeId) => nodeId.trim()).filter(Boolean)),
+    ];
     if (uniqueNodeIds.length === 0) {
       return { results: [], citations: [] };
     }
@@ -190,19 +186,29 @@ export const nodeReadService = {
           results.push(item);
         }
 
-        const citations: Citation[] = results.map((row) => ({
-          sourceType: 'node',
-          documentId: row.documentId,
-          documentTitle: row.documentTitle,
-          documentVersion: row.documentVersion,
-          indexVersion: row.indexVersion,
-          nodeId: row.nodeId,
-          sectionPath: row.sectionPath,
-          pageStart: row.pageStart,
-          pageEnd: row.pageEnd,
-          locator: row.locator,
-          excerpt: row.content,
-        }));
+        const citations: Citation[] = results.map((row) => {
+          const sourceRow = rowByNodeId.get(row.nodeId);
+          return {
+            sourceType: 'node',
+            documentId: row.documentId,
+            documentTitle: row.documentTitle,
+            documentVersion: row.documentVersion,
+            indexVersion: row.indexVersion,
+            nodeId: row.nodeId,
+            sectionPath: row.sectionPath,
+            pageStart: row.pageStart,
+            pageEnd: row.pageEnd,
+            locator: row.locator,
+            excerpt: buildNodeExcerpt({
+              nodeType: sourceRow?.nodeType,
+              title: row.title,
+              locator: row.locator,
+              sectionPath: row.sectionPath,
+              content: row.content,
+              contentPreview: sourceRow?.contentPreview,
+            }),
+          };
+        });
 
         return { results, citations };
       }

@@ -5,6 +5,7 @@
 > 文档状态：截至 `2026-03-10` 已按仓库真实进度更新。
 >
 > 用途：
+>
 > 1. 作为 implementation checklist 逐项执行
 > 2. 作为 issue backlog 来源，直接拆到项目管理工具
 > 3. 作为阶段验收和依赖检查清单
@@ -37,16 +38,16 @@
 2. `P0-B` 大体完成。
 3. `P1` 部分完成。
 4. `P2` 已启动，backfill、结构化观测/报表/邮件告警、缓存第二阶段都已落地。
-5. 当前主要剩余工作已转向 `PDF 选型验证 / backfill 进度与调度 / 专项集成测试 / evidence selection 收口 / 缓存收益验证与深化`。
+5. 当前主要剩余工作已转向 `marker 运行时结论 / backfill 进度与调度 / 更高层 e2e 与 UI 专项测试 / evidence selection 收口 / 缓存收益验证与深化`。
 
 ## 2. 实施总 Checklist
 
 ### 2.1 P-1 技术验证 Checklist
 
-- [ ] 确定 PDF 解析运行方式：`sidecar / 子进程 / 独立 worker`（当前仅落地 `pdf-parse` 受控 runtime）
+- [ ] 确定 PDF 解析运行方式：`sidecar / 子进程 / 独立 worker`（当前已落地 `pdf-parse` 受控 runtime + `docling` 真实 helper 接线）
 - [ ] 准备 3-5 个典型文档样本
 - [ ] 对 `marker` 做解析质量与耗时验证
-- [ ] 对 `docling` 做解析质量与耗时验证
+- [x] 对 `docling` 做解析质量与耗时验证（`quick` 样本集已跑通，并沉淀对比脚本/样本/报告）
 - [ ] 输出解析选型结论与运行时限制
 - [x] 产出 citation/source 新契约草案
 - [x] 产出 `activeIndexVersion` 设计说明
@@ -55,7 +56,7 @@
 - [x] 实现 `outline_search` 关键词版 MVP
 - [x] 实现 `node_read` MVP
 - [x] 跑通单文档结构化问答闭环
-- [ ] 记录一次完整 MVP 的 token / 延迟 / citation 样例
+- [ ] 记录一次完整 MVP 的 token / 延迟 / citation 样例（当前已有 `quick` 对比耗时，仍缺最终沉淀模板）
 
 ### 2.2 P0-A 基础契约与一致性 Checklist
 
@@ -96,13 +97,13 @@
 - [x] non-streaming 聊天链路切到统一编排
 - [x] 为结构化链路增加 feature flag
 - [x] 支持按用户 / 知识库灰度
-- [ ] 补齐最小端到端测试（当前已有大量 unit / service / error-injection，仍缺 dedicated e2e / UI 专项）
+- [ ] 补齐最小端到端测试（当前已新增 `docling` parser fixture、`pdf runtime`、`outline_search / node_read / ref_follow` integration 覆盖，仍缺 dedicated e2e / UI 专项）
 
 ### 2.4 P1 跨引用与质量增强 Checklist
 
 - [x] 新增 `refers_to / cites` 边类型
 - [x] 实现 `ref_follow`
-- [ ] 解析图表 / 附录 / 引用锚点（已支持一部分 appendix / chapter alias，图表锚点仍需补强）
+- [ ] 解析图表 / 附录 / 引用锚点（当前已支持 `front matter` 标注、`table / figure / appendix` 子节点与首版 anchor/citation 收口，caption 清洗仍需补强）
 - [x] 检索材料纳入 `sectionPath / parent titles / alias anchors / contentPreview`
 - [ ] 增加跨章节 / 附录 / 图表评测集
 - [ ] 优化 evidence selection 与 citation 收口
@@ -221,32 +222,32 @@
 
 ### 5.0 当前 Issue 状态总览
 
-| Issue | 状态 | 备注 |
-| ----- | ---- | ---- |
-| 1 | 部分完成 | 已有受控 `pdf-parse` runtime，`marker / docling` 选型未完成 |
-| 2 | 已完成 | citation / source 契约已落地 |
-| 3 | 已完成 | active version / freshness / superseded 已落地 |
-| 4 | 已完成 | 结构化 MVP 闭环已可运行 |
-| 5 | 已完成 | schema + migration 已落地 |
-| 6 | 已完成 | shared / metadata / SSE 契约已落地 |
-| 7 | 已完成 | client 节点级 citation 展示已落地 |
-| 8 | 已完成 | 队列 payload 与 Worker 状态机已落地 |
-| 9 | 已完成 | `db:check` 已扩展结构化巡检 |
-| 10 | 已完成 | Worker 路由与结构化解析入口已落地 |
-| 11 | 已完成 | Markdown / DOCX / PDF 首版解析已落地 |
-| 12 | 已完成 | `outline_search` 已落地 |
-| 13 | 已完成 | `node_read` 已落地 |
-| 14 | 已完成 | `vector_fallback_search` 已落地 |
-| 15 | 已完成 | 预算与 `stopReason` 已落地 |
-| 16 | 已完成 | streaming / non-streaming 编排已统一 |
-| 17 | 已完成 | feature flag + internal allowlist 灰度已落地 |
-| 18 | 部分完成 | 已有较多测试，仍缺 dedicated e2e / UI 专项 |
-| 19 | 已完成 | 引用边与 `ref_follow` 已落地 |
-| 20 | 已完成 | 检索材料增强首版已落地 |
-| 21 | 部分完成 | backfill service / CLI 已落地，仍缺进度统计与调度 |
-| 22 | 部分完成 | 结构化日志指标、summary API、dashboard v4、长期报表导出、邮件外部告警与基础告警治理已落地，归档与多渠道外发未实现 |
-| 23 | 部分完成 | `outline_search` / `node_read` / 单节点读取 / `indexVersionId -> nodes` 缓存、preview 热点缓存、写路径精细失效、executor 级结果复用已落地，收益量化与更强 selective invalidation 未实现 |
-| 24 | 未开始 | Go / No-Go 评估未开始 |
+| Issue | 状态     | 备注                                                                                                                                                                                    |
+| ----- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | 部分完成 | 已有受控 `pdf-parse` runtime、`docling` 真实 runtime 接线、quick compare 与 normalize/integration 覆盖；`marker` 与最终选型未完成                                                       |
+| 2     | 已完成   | citation / source 契约已落地                                                                                                                                                            |
+| 3     | 已完成   | active version / freshness / superseded 已落地                                                                                                                                          |
+| 4     | 已完成   | 结构化 MVP 闭环已可运行                                                                                                                                                                 |
+| 5     | 已完成   | schema + migration 已落地                                                                                                                                                               |
+| 6     | 已完成   | shared / metadata / SSE 契约已落地                                                                                                                                                      |
+| 7     | 已完成   | client 节点级 citation 展示已落地                                                                                                                                                       |
+| 8     | 已完成   | 队列 payload 与 Worker 状态机已落地                                                                                                                                                     |
+| 9     | 已完成   | `db:check` 已扩展结构化巡检                                                                                                                                                             |
+| 10    | 已完成   | Worker 路由与结构化解析入口已落地                                                                                                                                                       |
+| 11    | 已完成   | Markdown / DOCX / PDF 首版解析已落地                                                                                                                                                    |
+| 12    | 已完成   | `outline_search` 已落地                                                                                                                                                                 |
+| 13    | 已完成   | `node_read` 已落地                                                                                                                                                                      |
+| 14    | 已完成   | `vector_fallback_search` 已落地                                                                                                                                                         |
+| 15    | 已完成   | 预算与 `stopReason` 已落地                                                                                                                                                              |
+| 16    | 已完成   | streaming / non-streaming 编排已统一                                                                                                                                                    |
+| 17    | 已完成   | feature flag + internal allowlist 灰度已落地                                                                                                                                            |
+| 18    | 部分完成 | 已新增 `docling` parser fixture、`pdf runtime`、`outline_search / node_read / ref_follow` integration 覆盖，仍缺 dedicated e2e / UI 专项                                                |
+| 19    | 已完成   | 引用边与 `ref_follow` 已落地                                                                                                                                                            |
+| 20    | 已完成   | 检索材料增强首版已落地，并补了 `front matter` 降权、`table / figure / appendix` 子节点与更细粒度 citation excerpt                                                                       |
+| 21    | 部分完成 | backfill service / CLI 已落地，仍缺进度统计与调度                                                                                                                                       |
+| 22    | 部分完成 | 结构化日志指标、summary API、dashboard v4、长期报表导出、邮件外部告警与基础告警治理已落地，归档与多渠道外发未实现                                                                       |
+| 23    | 部分完成 | `outline_search` / `node_read` / 单节点读取 / `indexVersionId -> nodes` 缓存、preview 热点缓存、写路径精细失效、executor 级结果复用已落地，收益量化与更强 selective invalidation 未实现 |
+| 24    | 未开始   | Go / No-Go 评估未开始                                                                                                                                                                   |
 
 ### P-1 / Issue 1: 验证 PDF 解析运行时方案
 

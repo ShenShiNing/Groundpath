@@ -4,6 +4,8 @@ import {
   type AccessibleNodeHeadRow,
 } from '../../repositories/document-node-search.repository';
 import { documentIndexCacheService } from '../document-index-cache.service';
+import { isFrontMatterSectionPath } from '../parsers/front-matter';
+import { buildNodeExcerpt, buildNodeLocator } from './node-presentation';
 
 export interface OutlineSearchInput {
   userId: string;
@@ -35,15 +37,7 @@ interface ScoredOutlineRow extends OutlineSearchResultItem {
 }
 
 function toLocator(row: AccessibleNodeHeadRow): string {
-  const base = row.stableLocator || row.sectionPath?.join(' > ') || row.title || row.documentTitle;
-  if (row.pageStart && row.pageEnd) {
-    return row.pageStart === row.pageEnd
-      ? `${base} / p.${row.pageStart}`
-      : `${base} / p.${row.pageStart}-${row.pageEnd}`;
-  }
-  if (row.pageStart) return `${base} / p.${row.pageStart}`;
-  if (row.pageEnd) return `${base} / p.${row.pageEnd}`;
-  return base;
+  return buildNodeLocator(row);
 }
 
 function extractAliases(row: AccessibleNodeHeadRow): string[] {
@@ -120,7 +114,20 @@ function scoreRow(row: AccessibleNodeHeadRow, query: string, terms: string[], pr
 
   if (row.nodeType === 'chapter') score += 1.5;
   if (row.nodeType === 'section') score += 1;
+  if (row.nodeType === 'appendix') score += 1.5;
+  if (row.nodeType === 'table' || row.nodeType === 'figure') score += 2;
   if (row.depth <= 2) score += 0.5;
+  if (isFrontMatterSectionPath(row.sectionPath)) {
+    score -= 4;
+  }
+
+  if (
+    /(appendix|附录|figure|fig\.?|图|table|表)/iu.test(query) &&
+    ['appendix', 'figure', 'table'].includes(row.nodeType)
+  ) {
+    score += 3;
+    if (matchReason === 'preview') matchReason = 'alias';
+  }
 
   return { score, matchReason };
 }
@@ -206,9 +213,8 @@ export const outlineSearchService = {
           .map((row) => row.nodeId);
 
         if (missingPreviewIds.length > 0) {
-          const loadedPreviews = await documentNodeSearchRepository.getContentPreviewsByNodeIds(
-            missingPreviewIds
-          );
+          const loadedPreviews =
+            await documentNodeSearchRepository.getContentPreviewsByNodeIds(missingPreviewIds);
           for (const row of scoredHeads) {
             const preview = loadedPreviews.get(row.nodeId);
             if (preview) {
@@ -240,7 +246,13 @@ export const outlineSearchService = {
           pageStart: row.pageStart,
           pageEnd: row.pageEnd,
           locator: row.locator,
-          excerpt: row.contentPreview ?? row.title ?? row.locator,
+          excerpt: buildNodeExcerpt({
+            nodeType: row.rawRow.nodeType,
+            title: row.title,
+            locator: row.locator,
+            sectionPath: row.sectionPath,
+            contentPreview: row.contentPreview ?? row.rawRow.contentPreview,
+          }),
           score: row.score,
         }));
 

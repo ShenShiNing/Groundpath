@@ -2,6 +2,7 @@ import { agentConfig } from '@config/env';
 import type { Citation } from '@knowledge-agent/shared/types';
 import { documentEdgeRepository } from '../../repositories/document-edge.repository';
 import { documentNodeSearchRepository } from '../../repositories/document-node-search.repository';
+import { buildNodeExcerpt, buildNodeLocator } from './node-presentation';
 
 export interface RefFollowInput {
   userId: string;
@@ -24,6 +25,7 @@ export interface RefFollowPathItem {
     documentTitle: string;
     documentVersion: number;
     indexVersion: string;
+    nodeType?: string;
     title: string;
     sectionPath: string[];
     locator: string;
@@ -35,6 +37,7 @@ export interface RefFollowPathItem {
 const DEFAULT_EDGE_TYPES: RefFollowInput['edgeTypes'] = ['refers_to', 'cites', 'parent', 'next'];
 
 function toLocator(row: {
+  nodeType?: string | null;
   stableLocator: string | null;
   sectionPath: string[] | null;
   title: string | null;
@@ -42,15 +45,7 @@ function toLocator(row: {
   pageStart: number | null;
   pageEnd: number | null;
 }) {
-  const base = row.stableLocator || row.sectionPath?.join(' > ') || row.title || row.documentTitle;
-  if (row.pageStart && row.pageEnd) {
-    return row.pageStart === row.pageEnd
-      ? `${base} / p.${row.pageStart}`
-      : `${base} / p.${row.pageStart}-${row.pageEnd}`;
-  }
-  if (row.pageStart) return `${base} / p.${row.pageStart}`;
-  if (row.pageEnd) return `${base} / p.${row.pageEnd}`;
-  return base;
+  return buildNodeLocator(row);
 }
 
 export const refFollowService = {
@@ -135,6 +130,7 @@ export const refFollowService = {
             documentTitle: targetRow.documentTitle,
             documentVersion: targetRow.documentVersion,
             indexVersion: targetRow.indexVersion,
+            nodeType: targetRow.nodeType,
             title:
               targetRow.title ||
               targetRow.stableLocator ||
@@ -165,7 +161,13 @@ export const refFollowService = {
         pageStart: path.target.pageStart,
         pageEnd: path.target.pageEnd,
         locator: path.target.locator,
-        excerpt: path.target.title,
+        excerpt: buildNodeExcerpt({
+          nodeType: path.target.nodeType,
+          title: path.target.title,
+          locator: path.target.locator,
+          sectionPath: path.target.sectionPath,
+          contentPreview: path.target.title,
+        }),
       });
     }
 

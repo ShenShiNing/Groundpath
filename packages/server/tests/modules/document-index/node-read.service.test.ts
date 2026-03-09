@@ -25,24 +25,28 @@ vi.mock('@modules/document-index/repositories/document-node.repository', () => (
 
 vi.mock('@modules/document-index/services/document-index-cache.service', () => ({
   documentIndexCacheService: {
-    getNodeReadResult: vi.fn(async (input: Record<string, unknown>, factory: () => Promise<unknown>) => {
-      const key = JSON.stringify(input);
-      if (mocks.resultCacheStore.has(key)) {
-        return mocks.resultCacheStore.get(key);
+    getNodeReadResult: vi.fn(
+      async (input: Record<string, unknown>, factory: () => Promise<unknown>) => {
+        const key = JSON.stringify(input);
+        if (mocks.resultCacheStore.has(key)) {
+          return mocks.resultCacheStore.get(key);
+        }
+        const value = await factory();
+        mocks.resultCacheStore.set(key, value);
+        return value;
       }
-      const value = await factory();
-      mocks.resultCacheStore.set(key, value);
-      return value;
-    }),
-    getNodeReadItem: vi.fn(async (input: Record<string, unknown>, factory: () => Promise<unknown>) => {
-      const key = JSON.stringify(input);
-      if (mocks.resultCacheStore.has(key)) {
-        return mocks.resultCacheStore.get(key);
+    ),
+    getNodeReadItem: vi.fn(
+      async (input: Record<string, unknown>, factory: () => Promise<unknown>) => {
+        const key = JSON.stringify(input);
+        if (mocks.resultCacheStore.has(key)) {
+          return mocks.resultCacheStore.get(key);
+        }
+        const value = await factory();
+        mocks.resultCacheStore.set(key, value);
+        return value;
       }
-      const value = await factory();
-      mocks.resultCacheStore.set(key, value);
-      return value;
-    }),
+    ),
     getIndexVersionNodes: vi.fn(async (indexVersionId: string, factory: () => Promise<unknown>) => {
       if (mocks.indexNodesCacheStore.has(indexVersionId)) {
         return mocks.indexNodesCacheStore.get(indexVersionId);
@@ -231,5 +235,76 @@ describe('nodeReadService', () => {
 
     expect(mocks.searchRepo.getAccessibleNodesByIds).toHaveBeenCalledTimes(1);
     expect(mocks.nodeRepo.listByIndexVersionId).toHaveBeenCalledTimes(1);
+  });
+
+  it('builds table citations using caption and header instead of full table body', async () => {
+    mocks.searchRepo.getAccessibleNodesByIds.mockResolvedValue([
+      {
+        nodeId: 'node-table',
+        documentId: 'doc-1',
+        documentTitle: 'Architecture Guide',
+        documentVersion: 2,
+        indexVersion: 'idx-1',
+        indexVersionId: 'row-1',
+        nodeType: 'table',
+        title: 'Table 1',
+        depth: 2,
+        sectionPath: ['Retrieval', 'Table 1'],
+        pageStart: 14,
+        pageEnd: 14,
+        parentId: 'node-1',
+        orderNo: 2,
+        stableLocator: 'Retrieval > Table 1',
+        content:
+          '| Metric | Baseline | Scenario A |\n| --- | --- | --- |\n| Capacity reserve | 14% | 18% |',
+        contentPreview: '| Metric | Baseline | Scenario A |',
+        tokenCount: 20,
+      },
+    ]);
+    mocks.nodeRepo.listByIndexVersionId.mockResolvedValue([
+      {
+        id: 'node-1',
+        documentId: 'doc-1',
+        indexVersionId: 'row-1',
+        nodeType: 'chapter',
+        title: 'Retrieval',
+        depth: 1,
+        sectionPath: ['Retrieval'],
+        pageStart: 12,
+        pageEnd: 13,
+        parentId: 'root',
+        orderNo: 1,
+        tokenCount: 10,
+        stableLocator: 'Retrieval',
+        createdAt: new Date(),
+      },
+      {
+        id: 'node-table',
+        documentId: 'doc-1',
+        indexVersionId: 'row-1',
+        nodeType: 'table',
+        title: 'Table 1',
+        depth: 2,
+        sectionPath: ['Retrieval', 'Table 1'],
+        pageStart: 14,
+        pageEnd: 14,
+        parentId: 'node-1',
+        orderNo: 2,
+        tokenCount: 20,
+        stableLocator: 'Retrieval > Table 1',
+        createdAt: new Date(),
+      },
+    ]);
+
+    const result = await nodeReadService.read({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      nodeIds: ['node-table'],
+    });
+
+    expect(result.citations[0]).toMatchObject({
+      excerpt: 'Table 1: Metric | Baseline | Scenario A',
+      locator: 'Retrieval > Table 1 / p.14',
+    });
   });
 });

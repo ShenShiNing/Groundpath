@@ -1,6 +1,7 @@
 import { documentIndexConfig } from '@config/env';
 import type { ParsedDocumentEdge, ParsedDocumentNode, ParsedDocumentStructure } from './types';
 import { buildReferenceEdges, inferStructuredNodeType } from './reference-edge-extractor';
+import { buildStructuredContentNodes } from './structured-node-builder';
 
 function estimateTokens(text: string): number {
   if (!text.trim()) return 0;
@@ -21,7 +22,7 @@ type MutableNode = ParsedDocumentNode & {
 };
 
 export const markdownStructureParser = {
-  parse(textContent: string): ParsedDocumentStructure {
+  parse(textContent: string, parserRuntime: string = 'markdown'): ParsedDocumentStructure {
     const lines = textContent.split(/\r?\n/);
     const nodes: MutableNode[] = [];
     const edges: ParsedDocumentEdge[] = [];
@@ -120,12 +121,13 @@ export const markdownStructureParser = {
         tokenCount: estimateTokens(content),
       };
     });
+    const structured = buildStructuredContentNodes(finalizedNodes);
 
     return {
-      nodes: finalizedNodes,
-      edges: [...edges, ...buildReferenceEdges(finalizedNodes)],
+      nodes: structured.nodes,
+      edges: [...structured.edges, ...buildReferenceEdges(structured.nodes)],
       parseMethod: 'structured',
-      parserRuntime: 'markdown',
+      parserRuntime,
       headingCount,
     };
   },

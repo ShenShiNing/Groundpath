@@ -47,4 +47,34 @@ Benchmark text.`);
       ])
     );
   });
+
+  it('normalizes docling markdown before building structured nodes', () => {
+    const result = pdfStructureParser.parseDoclingMarkdown(`## Demand index
+
+124
+
+## 1. Key findings
+
+- Scenario A keeps total demand growth below the baseline path.
+
+## Callout
+
+Cross-reference check.`);
+
+    expect(result.parserRuntime).toBe('docling');
+    expect(result.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: '1. Key findings',
+          sectionPath: ['1. Key findings'],
+        }),
+      ])
+    );
+    expect(result.nodes).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ title: 'Demand index' }),
+        expect.objectContaining({ title: 'Callout' }),
+      ])
+    );
+  });
 });

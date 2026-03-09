@@ -1,9 +1,10 @@
 # Tool-Driven + Context Reasoning RAG 文件落点开发清单
 
 > 配套文档：
+>
 > 1. `docs/tool-driven-reasoning-rag-migration-plan.md`
 > 2. `docs/tool-driven-reasoning-rag-implementation-checklist.md`
-> 文档状态：截至 `2026-03-10` 已按仓库真实进度更新。
+>    文档状态：截至 `2026-03-10` 已按仓库真实进度更新。
 
 ## 1. 说明
 
@@ -26,17 +27,17 @@
 
 当前 24 个 issue 的真实状态如下：
 
-| Issue | 状态 | 说明 |
-| ----- | ---- | ---- |
-| 1 | 部分完成 | `pdf-parse` 受控 runtime 已落地；`marker / docling` 验证未完成 |
-| 2-10 | 已完成 | citation 契约、索引版本、队列 payload、Worker 路由、巡检脚本均已落地 |
-| 11-17 | 已完成 | parser 首版、结构化工具链、统一聊天编排、灰度控制已落地 |
-| 18 | 部分完成 | 已有大量 unit / service / error-injection 测试，仍缺 dedicated e2e / UI 专项 |
-| 19-20 | 已完成 | `ref_follow`、引用边、检索材料增强首版已落地 |
-| 21 | 部分完成 | backfill service / CLI 已落地，仍缺进度统计与调度 |
-| 22 | 部分完成 | `shared/observability/structured-rag.metrics.ts`、summary API、dashboard v4、长期报表导出、邮件外部告警与基础告警治理已落地，告警归档与多渠道外发未实现 |
-| 23 | 部分完成 | `document-index-cache.service.ts`、`outline_search` / `node_read` / 单节点读取 / `indexVersionId -> nodes` 缓存、preview 热点缓存、写路径精细失效、executor 级结果复用已落地，收益量化与更强 selective invalidation 未实现 |
-| 24 | 未开始 | 默认开启评估未落地 |
+| Issue | 状态     | 说明                                                                                                                                                                                                                       |
+| ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | 部分完成 | `pdf-parse` 受控 runtime、`docling` 真实 helper/runtime 接线、quick compare、normalize v1 已落地；`marker` 验证未完成                                                                                                      |
+| 2-10  | 已完成   | citation 契约、索引版本、队列 payload、Worker 路由、巡检脚本均已落地                                                                                                                                                       |
+| 11-17 | 已完成   | parser 首版、结构化工具链、统一聊天编排、灰度控制已落地                                                                                                                                                                    |
+| 18    | 部分完成 | 已有大量 unit / service / error-injection 测试，并新增 `docling` parser fixture、`pdf runtime`、`outline_search / node_read / ref_follow` integration 覆盖，仍缺 dedicated e2e / UI 专项                                   |
+| 19-20 | 已完成   | `ref_follow`、引用边、检索材料增强首版已落地                                                                                                                                                                               |
+| 21    | 部分完成 | backfill service / CLI 已落地，仍缺进度统计与调度                                                                                                                                                                          |
+| 22    | 部分完成 | `shared/observability/structured-rag.metrics.ts`、summary API、dashboard v4、长期报表导出、邮件外部告警与基础告警治理已落地，告警归档与多渠道外发未实现                                                                    |
+| 23    | 部分完成 | `document-index-cache.service.ts`、`outline_search` / `node_read` / 单节点读取 / `indexVersionId -> nodes` 缓存、preview 热点缓存、写路径精细失效、executor 级结果复用已落地，收益量化与更强 selective invalidation 未实现 |
+| 24    | 未开始   | 默认开启评估未落地                                                                                                                                                                                                         |
 
 使用方式调整：
 

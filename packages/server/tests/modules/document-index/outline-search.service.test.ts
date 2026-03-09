@@ -15,15 +15,17 @@ vi.mock('@modules/document-index/repositories/document-node-search.repository', 
 
 vi.mock('@modules/document-index/services/document-index-cache.service', () => ({
   documentIndexCacheService: {
-    getOutlineSearch: vi.fn(async (input: Record<string, unknown>, factory: () => Promise<unknown>) => {
-      const key = JSON.stringify(input);
-      if (mocks.cacheStore.has(key)) {
-        return mocks.cacheStore.get(key);
+    getOutlineSearch: vi.fn(
+      async (input: Record<string, unknown>, factory: () => Promise<unknown>) => {
+        const key = JSON.stringify(input);
+        if (mocks.cacheStore.has(key)) {
+          return mocks.cacheStore.get(key);
+        }
+        const value = await factory();
+        mocks.cacheStore.set(key, value);
+        return value;
       }
-      const value = await factory();
-      mocks.cacheStore.set(key, value);
-      return value;
-    }),
+    ),
     getNodePreview: vi.fn(async (documentId: string, nodeId: string) => {
       return mocks.previewStore.get(`${documentId}:${nodeId}`) ?? null;
     }),
@@ -153,6 +155,62 @@ describe('outlineSearchService', () => {
     expect(appendix.results[0]).toMatchObject({
       nodeId: 'node-3',
       matchReason: 'alias',
+    });
+  });
+
+  it('downweights front matter and boosts structural appendix/figure/table nodes', async () => {
+    mocks.repo.searchActiveNodeHeads.mockResolvedValue([
+      {
+        nodeId: 'node-front',
+        documentId: 'doc-1',
+        documentTitle: 'Guide',
+        documentVersion: 1,
+        indexVersion: 'idx-1',
+        indexVersionId: 'row-1',
+        nodeType: 'section',
+        title: 'Table of Contents',
+        depth: 1,
+        sectionPath: ['Table of Contents'],
+        pageStart: 1,
+        pageEnd: 1,
+        parentId: 'root',
+        orderNo: 1,
+        stableLocator: 'Table of Contents',
+        content: null,
+        contentPreview: 'Appendix B',
+        tokenCount: 5,
+      },
+      {
+        nodeId: 'node-appendix',
+        documentId: 'doc-1',
+        documentTitle: 'Guide',
+        documentVersion: 1,
+        indexVersion: 'idx-1',
+        indexVersionId: 'row-1',
+        nodeType: 'appendix',
+        title: 'Appendix B Extra Tables',
+        depth: 2,
+        sectionPath: ['Appendix B Extra Tables'],
+        pageStart: 20,
+        pageEnd: 21,
+        parentId: 'root',
+        orderNo: 2,
+        stableLocator: 'Appendix B Extra Tables',
+        content: null,
+        contentPreview: 'Appendix material',
+        tokenCount: 5,
+      },
+    ]);
+    mocks.repo.getContentPreviewsByNodeIds.mockResolvedValue(new Map());
+
+    const result = await outlineSearchService.search({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      query: 'appendix b',
+    });
+
+    expect(result.results[0]).toMatchObject({
+      nodeId: 'node-appendix',
     });
   });
 
