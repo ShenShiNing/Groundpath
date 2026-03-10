@@ -40,4 +40,49 @@ Keep this note attached to the paragraph.`);
     expect(result).not.toContain('| Introduction | Introduction |');
     expect(result).toContain('| 2. | Risks |');
   });
+
+  it('normalizes appendix/figure/table anchor hyphens', () => {
+    const result = normalizeDoclingMarkdown(`Figure 2 - 1 overview
+Table 3 - 2 data
+Appendix A - 1 assumptions`);
+
+    expect(result).toContain('Figure 2-1');
+    expect(result).toContain('Table 3-2');
+    expect(result).toContain('Appendix A-1');
+  });
+
+  it('wraps early headings into a front matter section and removes author lines', () => {
+    const result = normalizeDoclingMarkdown(`## Paper Title
+
+| Jane Doe * Example Lab jane@example.com |
+| --------------------------------------- |
+| John Roe * Example Institute john@example.org |
+
+## Abstract
+
+Body text.`);
+
+    expect(result).toContain('## Front Matter');
+    expect(result).not.toContain('jane@example.com');
+    expect(result).toContain('## Abstract');
+  });
+
+  it('normalizes table of contents dot leaders', () => {
+    const result = normalizeDoclingMarkdown(`## Table of Contents
+
+1. Introduction .............................................. 1
+2. Risks ............. 2
+`);
+
+    expect(result).toContain('1. Introduction');
+    expect(result).not.toContain('........');
+  });
+
+  it('normalizes formula placeholders', () => {
+    const result = normalizeDoclingMarkdown(`## 3.2.1 Scaled Dot-Product Attention
+
+<!-- formula-not-decoded -->`);
+
+    expect(result).toContain('[Formula]');
+  });
 });

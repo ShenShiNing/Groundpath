@@ -29,7 +29,7 @@
 
 | Issue | 状态     | 说明                                                                                                                                                                                                                       |
 | ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | 部分完成 | `pdf-parse` 受控 runtime、`docling` 真实 helper/runtime 接线、quick compare、normalize v1 已落地；`marker` 验证未完成                                                                                                      |
+| 1     | 部分完成 | `pdf-parse` 受控 runtime、`docling` 真实 helper/runtime 接线、quick compare、normalize v1 已落地；`marker` 运行时已接入但验证与选型未完成（quick 对比报告：`.cache/structured-rag/pdf-runtime-compare/latest.md`）        |
 | 2-10  | 已完成   | citation 契约、索引版本、队列 payload、Worker 路由、巡检脚本均已落地                                                                                                                                                       |
 | 11-17 | 已完成   | parser 首版、结构化工具链、统一聊天编排、灰度控制已落地                                                                                                                                                                    |
 | 18    | 部分完成 | 已有大量 unit / service / error-injection 测试，并新增 `docling` parser fixture、`pdf runtime`、`outline_search / node_read / ref_follow` integration 覆盖，仍缺 dedicated e2e / UI 专项                                   |
@@ -123,6 +123,7 @@
   - `DOCUMENT_INDEX_PDF_RUNTIME`
   - `DOCUMENT_INDEX_PDF_TIMEOUT`
   - `DOCUMENT_INDEX_PDF_CONCURRENCY`
+- 可选：增加 `DOCUMENT_INDEX_MARKER_COMMAND` 以覆盖 marker 运行命令。
 - 在 `.env.example` 同步新增配置模板。
 - 若采用子进程 / sidecar，先把调用边界、错误分类、超时分类写入 parser runtime 适配层。
 

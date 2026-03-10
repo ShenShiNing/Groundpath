@@ -23,6 +23,7 @@ describe('pdfStructureParser docling fixtures', () => {
     );
     expect(normalized).toContain('## 1. Introduction');
     expect(normalized).toContain('cross-sectoral profile');
+    expect(normalized).toContain('profiles assist organizations');
     expect(result.nodes).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -53,6 +54,17 @@ describe('pdfStructureParser docling fixtures', () => {
           title: '3.1 Encoder and Decoder Stacks',
           sectionPath: ['3.1 Encoder and Decoder Stacks'],
         }),
+        expect.objectContaining({
+          nodeType: 'figure',
+          title: 'Figure 1: The Transformer-model architecture.',
+        }),
+        expect.objectContaining({
+          title: '3.2.1 Scaled Dot-Product Attention',
+        }),
+        expect.objectContaining({
+          title: 'Attention Is All You Need',
+          sectionPath: ['Front Matter', 'Attention Is All You Need'],
+        }),
       ])
     );
   });
@@ -64,6 +76,7 @@ describe('pdfStructureParser docling fixtures', () => {
     );
 
     expect(normalized).not.toContain('## Callout');
+    expect(normalized).not.toContain('## Demand index');
     expect(normalized).toContain('| Metric | Baseline | Scenario A | Scenario B |');
     expect(result.nodes).toEqual(
       expect.arrayContaining([

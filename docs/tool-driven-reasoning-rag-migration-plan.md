@@ -25,7 +25,7 @@
 
 | 阶段     | 当前状态     | 说明                                                                                                                                         |
 | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **P-1**  | **部分完成** | citation 契约、active version、MVP、受控 PDF runtime、`docling` quick compare、normalize v1 与 runtime 接线已落地；`marker` 与最终选型未完成 |
+| **P-1**  | **部分完成** | citation 契约、active version、MVP、受控 PDF runtime、`docling` quick compare、normalize v1 与 runtime 接线已落地；`marker` 运行时已接入但模型与选型验证未完成 |
 | **P0-A** | **已完成**   | schema、migration、shared 契约、消息 metadata、队列新鲜度、巡检脚本均已落地                                                                  |
 | **P0-B** | **大体完成** | 主链路与灰度已上线到代码层；专门的 e2e / UI 集成测试与更强 evidence selection 仍缺                                                           |
 | **P1**   | **部分完成** | `ref_follow`、引用边、检索材料增强已实现；评测集与收口优化未完成                                                                             |
@@ -36,7 +36,7 @@
 
 | 优先级    | 必做事项                                      | 原因                                                                                                   |
 | --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Now-1** | 收口 `marker` 运行时结论并完成最终 PDF 选型   | `docling` 已接入真实运行时并通过 quick compare，但 `marker` 缺本地模型、最终运行方式与选型结论仍未收口 |
+| **Now-1** | 收口 `marker` 运行时结论并完成最终 PDF 选型   | `docling` 已接入真实运行时并通过 quick compare，`marker` 运行时已接入但仍缺本地模型、验证数据与最终选型结论 |
 | **Now-2** | 完善 backfill 调度、进度与批次治理            | backfill 首版已落地，但还缺进度统计与运维能力                                                          |
 | **Now-3** | 补专门的 integration / e2e / client UI 测试   | 目前测试以 unit / service / error-injection 为主，少量专项集成测试仍缺                                 |
 | **Now-4** | 做缓存收益验证与进一步 selective invalidation | 缓存已进第二阶段，但仍缺命中率 / token 节省的量化验证                                                  |
@@ -79,7 +79,7 @@
 
 1. **PDF 技术验证还未收口**
    - 当前已落地的是 `pdf-parse + heuristic` 首版、`docling` 真实 runtime 接线、`quick` 样本对比、`docling` normalize v1，以及 parser/search/read/follow 集成覆盖
-   - `marker` 本地模型与运行方式仍未收口，最终选型结论和资源结论仍未完成
+   - `marker` 运行时已接入，但本地模型可用性、质量验证与选型结论仍未收口（`2026-03-10` quick 样本对比显示：marker 全部 `unavailable`，缺少 `table_recognition / text_detection / ocr_error_detection` 模型资产）
 2. **backfill 仅完成首版**
    - 已有 `documentIndexBackfillService` 与 CLI 脚本，可按知识库 / 文档类型 / 批次入队
    - 仍缺进度统计、批量调度、失败重试治理
@@ -564,8 +564,8 @@ CI 架构门禁仍建议独立 issue 跟踪，但至少补充以下约束：
 
 1. 已完成 citation 契约、active version 语义、队列 payload 扩展、`outline_search + node_read` MVP、单文档结构化问答闭环。
 2. 已补 `pdf-parse` 受控 runtime 的 `timeout / concurrency / runtime` 配置与错误分类。
-3. 已完成 `docling` quick 样本验证、真实 runtime 接线、normalize v1 与 parser/search/read/follow integration 覆盖。
-4. 仍未完成 `marker` 运行时收口、最终选型结论与 token / 延迟样例沉淀。
+3. 已完成 `docling` quick 样本验证、真实 runtime 接线、normalize v1（含 front matter / 目录点线 / 公式占位 / 锚点归一化）与 parser/search/read/follow integration 覆盖。
+4. `marker` 运行时已接入，但仍未完成收口验证、最终选型结论与 token / 延迟样例沉淀（quick 样本对比：marker unavailable；docling 均成功）。
 
 当前剩余动作：
 

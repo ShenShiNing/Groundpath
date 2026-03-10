@@ -44,9 +44,9 @@
 
 ### 2.1 P-1 技术验证 Checklist
 
-- [ ] 确定 PDF 解析运行方式：`sidecar / 子进程 / 独立 worker`（当前已落地 `pdf-parse` 受控 runtime + `docling` 真实 helper 接线）
-- [ ] 准备 3-5 个典型文档样本
-- [ ] 对 `marker` 做解析质量与耗时验证
+- [ ] 确定 PDF 解析运行方式：`sidecar / 子进程 / 独立 worker`（已落地 `pdf-parse` 受控 runtime + `docling` 真实 helper 接线；`marker` 运行时已接入但验证未完成）
+- [x] 准备 3-5 个典型文档样本（`quick` 样本集已准备并用于对比）
+- [ ] 对 `marker` 做解析质量与耗时验证（`2026-03-10` quick 对比：marker 全部 `unavailable`，需补模型资产后重跑）
 - [x] 对 `docling` 做解析质量与耗时验证（`quick` 样本集已跑通，并沉淀对比脚本/样本/报告）
 - [ ] 输出解析选型结论与运行时限制
 - [x] 产出 citation/source 新契约草案
@@ -224,7 +224,7 @@
 
 | Issue | 状态     | 备注                                                                                                                                                                                    |
 | ----- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | 部分完成 | 已有受控 `pdf-parse` runtime、`docling` 真实 runtime 接线、quick compare 与 normalize/integration 覆盖；`marker` 与最终选型未完成                                                       |
+| 1     | 部分完成 | 已有受控 `pdf-parse` runtime、`docling` 真实 runtime 接线、quick compare 与 normalize/integration 覆盖；`marker` 运行时已接入但验证与最终选型未完成                                 |
 | 2     | 已完成   | citation / source 契约已落地                                                                                                                                                            |
 | 3     | 已完成   | active version / freshness / superseded 已落地                                                                                                                                          |
 | 4     | 已完成   | 结构化 MVP 闭环已可运行                                                                                                                                                                 |

@@ -2,6 +2,8 @@ const PREFIX_TOKEN_PATTERN =
   /\b(cross|inter|multi|non|pre|post|re|de|co|pro|sub|trans|under|over)[ \t]+([a-z]{3,})\b/g;
 const SUFFIX_TOKEN_PATTERN =
   /\b([a-z]{4,})[ \t]+(s|ed|ing|tion|tions|ment|ments|le|ly|ness|able|ible|ous|ive)\b/g;
+const AUTHOR_LINE_PATTERN =
+  /^[A-Za-z][A-Za-z\s.'-]{1,40}\s+\*?\s*[A-Za-z][A-Za-z\s.&-]{1,60}\s+\S+@\S+/;
 const NUMBERED_HEADING_PATTERN =
   /^(?:\d+(?:\.\d+)*|chapter\s+\d+|appendix\s+[a-z0-9]+|abstract|references?|acknowledgements?)\b/i;
 const DEMOTED_HEADING_TITLES = new Set(['callout']);
@@ -20,13 +22,14 @@ function normalizeSpacing(value: string): string {
     .replace(/\(\s+/g, '(')
     .replace(/\[\s+/g, '[')
     .replace(/\s+\)/g, ')')
-    .replace(/\s+\]/g, ']');
+    .replace(/\s+\]/g, ']')
+    .replace(/\s*-\s*model\b/gi, '-model');
 }
 
 function fixBrokenTokens(value: string): string {
   return value
     .replace(/\b([A-Za-z]{3,})[ \t]*-[ \t]*([A-Za-z]{2,})\b/g, '$1-$2')
-    .replace(/\b(Figure|Table|Appendix)\s+([A-Z]?\d+)\s*-\s*(\d+)\b/g, '$1 $2-$3')
+    .replace(/\b(Figure|Table|Appendix)\s+([A-Z]?\d+|[A-Z]+)\s*-\s*(\d+)\b/g, '$1 $2-$3')
     .replace(PREFIX_TOKEN_PATTERN, '$1$2')
     .replace(SUFFIX_TOKEN_PATTERN, '$1$2')
     .replace(SUFFIX_TOKEN_PATTERN, '$1$2');
@@ -63,6 +66,7 @@ function shouldDemoteHeading(
 function normalizeHeadings(lines: string[]): string[] {
   const normalizedLines: string[] = [];
   let previousHeading: string | null = null;
+  let frontMatterCaptured = false;
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? '';
@@ -77,6 +81,12 @@ function normalizeHeadings(lines: string[]): string[] {
       .slice(index + 1)
       .find((item) => item.trim().length > 0)
       ?.trim();
+
+    if (!frontMatterCaptured && headingMatch[1] === '##' && title) {
+      normalizedLines.push('## Front Matter');
+      frontMatterCaptured = true;
+    }
+
     if (shouldDemoteHeading(title, nextNonEmptyLine, previousHeading)) {
       normalizedLines.push(title);
       continue;
@@ -184,9 +194,91 @@ function dedupeRepeatedLines(lines: string[]): string[] {
   return normalized;
 }
 
+function normalizeFrontMatter(lines: string[]): string[] {
+  const normalized: string[] = [];
+  let inFrontMatter = false;
+  let frontMatterHeadingCount = 0;
+
+  for (const line of lines) {
+    const match = line.match(/^(#{1,6})\s+(.*)$/);
+    if (match && match[2]) {
+      const title = match[2].trim().toLowerCase();
+      if (title === 'front matter') {
+        inFrontMatter = true;
+        frontMatterHeadingCount += 1;
+        if (frontMatterHeadingCount > 1) continue;
+        normalized.push('## Front Matter');
+        continue;
+      }
+    }
+
+    if (inFrontMatter) {
+      if (match && NUMBERED_HEADING_PATTERN.test(match[2]?.trim() ?? '')) {
+        inFrontMatter = false;
+      } else {
+        const trimmed = line.trim();
+        const strippedTableLine = trimmed.replace(/^\|/, '').replace(/\|$/, '').trim();
+        if (AUTHOR_LINE_PATTERN.test(trimmed) || AUTHOR_LINE_PATTERN.test(strippedTableLine)) {
+          continue;
+        }
+      }
+    }
+
+    normalized.push(line);
+  }
+
+  return normalized;
+}
+
+function normalizeTableOfContents(lines: string[]): string[] {
+  const normalized: string[] = [];
+  let inToc = false;
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+    if (headingMatch) {
+      const title = headingMatch[2]?.trim().toLowerCase() ?? '';
+      inToc = title === 'table of contents' || title === 'contents';
+      normalized.push(line);
+      continue;
+    }
+
+    if (!inToc) {
+      normalized.push(line);
+      continue;
+    }
+
+    if (isMarkdownTableLine(line) || line.trim().length === 0) {
+      normalized.push(line);
+      continue;
+    }
+
+    if (/\.{8,}\s*\d+\s*$/.test(line)) {
+      normalized.push(line.replace(/\.{4,}\s*\d+\s*$/, '').trimEnd());
+      continue;
+    }
+
+    normalized.push(line);
+  }
+
+  return normalized;
+}
+
+function normalizeFormulaPlaceholders(lines: string[]): string[] {
+  return lines.map((line) =>
+    line.trim() === '<!-- formula-not-decoded -->' ? '[Formula]' : line
+  );
+}
+
 export function normalizeDoclingMarkdown(markdown: string): string {
   const normalizedText = collapseBlankLines(fixBrokenTokens(normalizeSpacing(markdown)));
   const lines = normalizedText.split('\n');
-  const normalizedLines = normalizeMarkdownTables(normalizeHeadings(dedupeRepeatedLines(lines)));
+  const normalizedLines = normalizeMarkdownTables(
+    normalizeTableOfContents(
+      normalizeFrontMatter(
+        normalizeHeadings(normalizeFormulaPlaceholders(dedupeRepeatedLines(lines)))
+      )
+    )
+  );
   return collapseBlankLines(normalizedLines.join('\n')).trim();
 }

@@ -143,6 +143,7 @@ const documentIndexSchema = z.object({
   DOCUMENT_INDEX_PDF_RUNTIME: z.enum(['pdf-parse', 'marker', 'docling']).default('pdf-parse'),
   DOCUMENT_INDEX_PDF_TIMEOUT: z.coerce.number().int().min(1000).max(600000).default(30000),
   DOCUMENT_INDEX_PDF_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+  DOCUMENT_INDEX_MARKER_COMMAND: z.string().default(''),
 });
 
 // -------------------- RAG Search Defaults --------------------
@@ -424,6 +425,7 @@ export const documentIndexConfig = {
   pdfRuntime: validatedEnv.DOCUMENT_INDEX_PDF_RUNTIME,
   pdfTimeoutMs: validatedEnv.DOCUMENT_INDEX_PDF_TIMEOUT,
   pdfConcurrency: validatedEnv.DOCUMENT_INDEX_PDF_CONCURRENCY,
+  markerCommand: validatedEnv.DOCUMENT_INDEX_MARKER_COMMAND,
 } as const;
 
 /** RAG search defaults */

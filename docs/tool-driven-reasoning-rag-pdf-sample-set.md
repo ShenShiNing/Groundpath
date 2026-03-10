@@ -39,6 +39,26 @@
 2. 双栏论文
 3. 图表密集杂志式报告
 
+## 最新对比结果（quick）
+
+执行时间：`2026-03-10`
+
+结论摘要：
+
+1. `pdf-parse`：3/3 成功，平均耗时约 `238ms`。
+2. `docling`：3/3 成功，平均耗时约 `18s`。
+3. `marker`：3/3 均为 `unavailable`（缺少本地模型资产 `table_recognition / text_detection / ocr_error_detection`）。
+
+报告产物：
+
+- `.cache/structured-rag/pdf-runtime-compare/latest.md`
+- `.cache/structured-rag/pdf-runtime-compare/latest.json`
+
+下一步：
+
+1. 补齐 marker 本地模型或开启 `--allow-model-download` 后重跑对比。
+2. 记录 marker 的成功率、耗时与标题/图表锚点质量指标，用于最终选型结论。
+
 ## 推荐评测维度
 
 每份 PDF 至少记录以下结果：

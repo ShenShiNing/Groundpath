@@ -21,6 +21,7 @@
    - 断词、粘词、异常空格
    - `<!-- image -->` / `<!-- formula-not-decoded -->` 占位节点未结构化
 3. 因此下一步不应直接把 `docling` 原始 Markdown 入图，而应先补“规范化层”。
+4. 目前已落地的规范化能力包括：`Front Matter` 包裹、作者行过滤、目录点线清理、公式占位替换、基础断词/空白/表格列去重与锚点连字符归一化；图像占位绑定、目录权重下调、列表与表格更细粒度绑定仍需补强。
 
 ---
 
@@ -61,7 +62,7 @@
 
 ### P0. 接入与可回退
 
-- [ ] 在 `pdf-structure.parser.ts` 中为 `parserRuntime=docling` 单独走规范化分支，而不是直接复用纯文本 heuristic。
+- [x] 在 `pdf-structure.parser.ts` 中为 `parserRuntime=docling` 单独走规范化分支，而不是直接复用纯文本 heuristic。
 - [ ] 保留原始 `docling` 输出作为调试产物，避免规范化后难以排查。
 - [ ] 规范化失败时允许回退到当前 `parseHeuristicStructuredText(...)`，但必须记录 `parseMethod=fallback`。
 
@@ -72,9 +73,9 @@
 
 ### P1. 基础文本归一化
 
-- [ ] 合并连续空白行，最多保留 1 个空行
-- [ ] 统一中英文标点两侧异常空格
-- [ ] 清理明显 OCR/切词噪声：
+- [x] 合并连续空白行，最多保留 1 个空行
+- [x] 统一中英文标点两侧异常空格
+- [x] 清理明显 OCR/切词噪声：
   - `cross -sectoral -> cross-sectoral`
   - `profile s -> profiles`
   - `de sign -> design`
@@ -92,12 +93,12 @@
 
 ### P2. 标题清洗与降噪
 
-- [ ] 保留真正章节标题：如 `## 1. Introduction`、`## 3.2 Attention`
-- [ ] 对明显误判标题做降级：
+- [x] 保留真正章节标题：如 `## 1. Introduction`、`## 3.2 Attention`
+- [x] 对明显误判标题做降级：
   - 单个 KPI 名称：`Demand index`
   - 样式 callout：`Callout`
   - 普通元信息块：作者/机构/联系信息
-- [ ] 为“编号标题 / Chapter / Appendix / 第X章 / 附录X”建立稳定 heading 规则
+- [x] 为“编号标题 / Chapter / Appendix / 第X章 / 附录X”建立稳定 heading 规则
 - [ ] 对无编号但位于目录/封面区的展示型大字标题，允许作为根级 heading 保留
 
 落点：
@@ -113,8 +114,8 @@
 
 ### P3. 首页元数据与作者区处理
 
-- [ ] 检测论文首页“作者矩阵/机构表格”，避免误当正文表格或章节
-- [ ] 将作者区整体归入 front matter，而不是拆成多个正文节点
+- [x] 检测论文首页“作者矩阵/机构表格”，避免误当正文表格或章节
+- [x] 将作者区整体归入 front matter，而不是拆成多个正文节点
 - [ ] 对首页重复作者/机构行做去重
 - [ ] front matter 不参与 `outline_search` 的高权重标题召回
 
@@ -131,8 +132,8 @@
 ### P4. 目录页处理
 
 - [ ] 将目录识别为 `toc` 区块或低权重节点，而不是普通正文表格
-- [ ] 清理目录表格中的重复列和重复文本
-- [ ] 将目录项保留为 heading 候选，但不把页码点线当正文内容
+- [x] 清理目录表格中的重复列和重复文本
+- [x] 将目录项保留为 heading 候选，但不把页码点线当正文内容
 - [ ] 目录项可用于补强标题召回，但不应优先于真实正文节点
 
 落点：
@@ -147,9 +148,9 @@
 
 ### P5. 表格规范化
 
-- [ ] 保留 Markdown 表格结构，不回退成纯文本段落
-- [ ] 对列数不一致的表格做补齐或降级，避免生成损坏 Markdown
-- [ ] 表头重复、空列、明显重复列要去重
+- [x] 保留 Markdown 表格结构，不回退成纯文本段落
+- [x] 对列数不一致的表格做补齐或降级，避免生成损坏 Markdown
+- [x] 表头重复、空列、明显重复列要去重
 - [ ] 表格标题或前导 caption 尽量绑定到表格节点
 
 落点：
@@ -165,7 +166,7 @@
 
 - [ ] 对 `<!-- image -->` 生成结构化占位，不让它孤立成空段落
 - [ ] 若前一行/后一行存在 `Figure X` 标题，绑定为 `figure` 节点
-- [ ] 对 `<!-- formula-not-decoded -->` 生成 `equation-placeholder` 或合并到所属段落
+- [x] 对 `<!-- formula-not-decoded -->` 生成 `equation-placeholder` 或合并到所属段落
 - [ ] 避免图像占位切断标题和正文的连续关系
 
 落点：
@@ -195,7 +196,7 @@
 
 ### P8. 附录 / 图表锚点 / locator 清洗
 
-- [ ] 规范化：
+- [x] 规范化：
   - `Appendix A`
   - `Figure 2-1`
   - `Table 3-1`
@@ -252,8 +253,8 @@
 
 建议新增测试：
 
-- [ ] `docling-markdown-normalizer.test.ts`
-- [ ] `pdf-docling.integration.test.ts` 或并入现有 `pdf-structure.parser.test.ts`
+- [x] `docling-markdown-normalizer.test.ts`
+- [x] `pdf-docling.integration.test.ts` 或并入现有 `pdf-structure.parser.test.ts`（已由 `docling-structured-flow.integration.test.ts` 覆盖）
 
 必测用例：
 

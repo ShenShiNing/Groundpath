@@ -18,6 +18,7 @@ const localPythonPath = path.join(
   process.platform === 'win32' ? 'python.exe' : 'bin/python3'
 );
 const defaultDoclingHelperPath = path.join(workspaceRoot, 'scripts', 'docling-export-single.py');
+const TEXT_ARTIFACT_EXT_PRIORITY = ['.md', '.markdown', '.txt', '.text', '.json'];
 
 type SupportedPdfRuntime = (typeof documentIndexConfig)['pdfRuntime'];
 
@@ -110,6 +111,29 @@ async function commandExists(filePath: string): Promise<boolean> {
   }
 }
 
+async function resolveExecutable(command: string): Promise<string | null> {
+  const trimmed = command.trim();
+  if (!trimmed) return null;
+
+  if (path.isAbsolute(trimmed) || trimmed.includes(path.sep)) {
+    return (await commandExists(trimmed)) ? trimmed : null;
+  }
+
+  const pathEntries = (process.env.PATH ?? '').split(path.delimiter).filter(Boolean);
+  const extensions = process.platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : [''];
+
+  for (const entry of pathEntries) {
+    for (const extension of extensions) {
+      const candidate = path.join(entry, `${trimmed}${extension}`);
+      if (await commandExists(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
 async function runCommand(
   command: string,
   args: string[],
@@ -139,7 +163,7 @@ async function runCommand(
   });
 }
 
-function buildDoclingEnv(tempDir: string): NodeJS.ProcessEnv {
+function buildPdfRuntimeEnv(tempDir: string): NodeJS.ProcessEnv {
   const modelCacheRoot = path.join(workspaceRoot, '.cache', 'structured-rag', 'model-cache');
   const hfHome = process.env.HF_HOME ?? path.join(modelCacheRoot, 'hf');
   const hfHubCache = process.env.HUGGINGFACE_HUB_CACHE ?? path.join(hfHome, 'hub');
@@ -185,7 +209,7 @@ async function parseWithDocling(buffer: Buffer): Promise<string> {
     const commandPromise = runCommand(
       pythonPath,
       [helperPath, '--input', inputPath, '--output', outputPath],
-      buildDoclingEnv(tempDir)
+      buildPdfRuntimeEnv(tempDir)
     );
     const result = await withTimeout(
       commandPromise,
@@ -225,17 +249,229 @@ async function parseWithDocling(buffer: Buffer): Promise<string> {
   }
 }
 
+async function listFilesRecursively(rootDir: string): Promise<string[]> {
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(rootDir);
+  } catch {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = path.join(rootDir, entry);
+    let stats;
+    try {
+      stats = await fs.stat(fullPath);
+    } catch {
+      continue;
+    }
+
+    if (stats.isDirectory()) {
+      files.push(...(await listFilesRecursively(fullPath)));
+    } else if (stats.isFile()) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+async function findBestTextArtifact(outputDir: string): Promise<string | null> {
+  const files = await listFilesRecursively(outputDir);
+  if (files.length === 0) return null;
+
+  const candidates = await Promise.all(
+    files
+      .filter((filePath) => TEXT_ARTIFACT_EXT_PRIORITY.includes(path.extname(filePath).toLowerCase()))
+      .map(async (filePath) => {
+        const ext = path.extname(filePath).toLowerCase();
+        const stats = await fs.stat(filePath);
+        const extRank = TEXT_ARTIFACT_EXT_PRIORITY.indexOf(ext);
+        return {
+          filePath,
+          extRank: extRank === -1 ? 999 : extRank,
+          size: stats.size,
+        };
+      })
+  );
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => {
+    if (a.extRank !== b.extRank) return a.extRank - b.extRank;
+    return b.size - a.size;
+  });
+
+  return candidates[0]?.filePath ?? null;
+}
+
+async function readTextArtifact(filePath: string): Promise<string> {
+  const ext = path.extname(filePath).toLowerCase();
+  const content = await fs.readFile(filePath, 'utf-8');
+  if (ext !== '.json') return content;
+
+  try {
+    const payload = JSON.parse(content) as Record<string, unknown>;
+    if (typeof payload.markdown === 'string') return payload.markdown;
+    if (typeof payload.text === 'string') return payload.text;
+    if (typeof payload.content === 'string') return payload.content;
+  } catch (error) {
+    logger.warn({ err: error, filePath }, 'Failed to parse marker json output');
+  }
+
+  return content;
+}
+
+function isMarkerModuleMissing(message: string): boolean {
+  return /no module named (marker|marker_single)/i.test(message) || /ModuleNotFoundError/i.test(message);
+}
+
+function buildMarkerArgs(inputPath: string, outputDir: string): string[] {
+  return [
+    inputPath,
+    '--output_dir',
+    outputDir,
+    '--output_format',
+    'markdown',
+    '--disable_multiprocessing',
+    '--disable_ocr',
+  ];
+}
+
+async function parseWithMarker(buffer: Buffer): Promise<string> {
+  const configuredCommand = documentIndexConfig.markerCommand?.trim();
+  const pythonPath = (await commandExists(localPythonPath)) ? localPythonPath : 'python';
+
+  await fs.mkdir(runtimeTempRoot, { recursive: true });
+  const tempDir = await fs.mkdtemp(path.join(runtimeTempRoot, 'marker-'));
+  const inputPath = path.join(tempDir, 'input.pdf');
+  const outputDir = path.join(tempDir, 'output');
+
+  try {
+    await fs.writeFile(inputPath, buffer);
+    await fs.mkdir(outputDir, { recursive: true });
+
+    const runtimeEnv = buildPdfRuntimeEnv(tempDir);
+    let command: string;
+    let args: string[];
+
+    if (configuredCommand) {
+      const resolved = await resolveExecutable(configuredCommand);
+      if (!resolved) {
+        throw new PdfStructureParserRuntimeError(
+          'unsupported_runtime',
+          documentIndexConfig.pdfRuntime,
+          `Marker command "${configuredCommand}" not found on PATH.`
+        );
+      }
+      command = resolved;
+      args = buildMarkerArgs(inputPath, outputDir);
+    } else {
+      const resolvedPython = await resolveExecutable(pythonPath);
+      if (resolvedPython) {
+        command = resolvedPython;
+        args = [
+          '-c',
+          'from marker.scripts.convert_single import convert_single_cli; convert_single_cli()',
+          ...buildMarkerArgs(inputPath, outputDir),
+        ];
+      } else {
+        const markerBinary = await resolveExecutable('marker_single');
+        if (!markerBinary) {
+          throw new PdfStructureParserRuntimeError(
+            'unsupported_runtime',
+            documentIndexConfig.pdfRuntime,
+            'Marker runtime is not available. Install marker or configure DOCUMENT_INDEX_MARKER_COMMAND.'
+          );
+        }
+        command = markerBinary;
+        args = buildMarkerArgs(inputPath, outputDir);
+      }
+    }
+
+    let result: CommandResult;
+    try {
+      result = await withTimeout(
+        runCommand(command, args, runtimeEnv),
+        documentIndexConfig.pdfTimeoutMs,
+        documentIndexConfig.pdfRuntime
+      );
+    } catch (error) {
+      if (error instanceof PdfStructureParserRuntimeError) {
+        throw error;
+      }
+      if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
+        throw new PdfStructureParserRuntimeError(
+          'unsupported_runtime',
+          documentIndexConfig.pdfRuntime,
+          'Marker runtime is not available on this host.',
+          { cause: error }
+        );
+      }
+      throw new PdfStructureParserRuntimeError(
+        'parse_failed',
+        documentIndexConfig.pdfRuntime,
+        'Marker parser failed to run.',
+        { cause: error }
+      );
+    }
+
+    if (result.code !== 0) {
+      const stderr = result.stderr.trim();
+      const stdout = result.stdout.trim();
+      const errorOutput = [stderr, stdout].filter(Boolean).join('\n');
+      if (isMarkerModuleMissing(errorOutput)) {
+        throw new PdfStructureParserRuntimeError(
+          'unsupported_runtime',
+          documentIndexConfig.pdfRuntime,
+          errorOutput || 'Marker runtime is not installed.'
+        );
+      }
+      throw new PdfStructureParserRuntimeError(
+        'parse_failed',
+        documentIndexConfig.pdfRuntime,
+        errorOutput || 'Marker parser failed to export markdown.'
+      );
+    }
+
+    const artifact = await findBestTextArtifact(outputDir);
+    if (!artifact) {
+      throw new PdfStructureParserRuntimeError(
+        'parse_failed',
+        documentIndexConfig.pdfRuntime,
+        'Marker parser completed without producing a markdown artifact.'
+      );
+    }
+
+    return await readTextArtifact(artifact);
+  } catch (error) {
+    if (error instanceof PdfStructureParserRuntimeError) {
+      throw error;
+    }
+
+    throw new PdfStructureParserRuntimeError(
+      'parse_failed',
+      documentIndexConfig.pdfRuntime,
+      'Marker parser failed to export markdown.',
+      { cause: error }
+    );
+  } finally {
+    try {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch (error) {
+      logger.warn({ err: error, tempDir }, 'Failed to cleanup marker temp directory');
+    }
+  }
+}
+
 export async function extractStructuredPdfText(buffer: Buffer): Promise<string> {
   return pdfRuntimeLimiter(async () => {
     switch (documentIndexConfig.pdfRuntime) {
       case 'pdf-parse':
         return parseWithPdfParse(buffer);
       case 'marker':
-        throw new PdfStructureParserRuntimeError(
-          'unsupported_runtime',
-          documentIndexConfig.pdfRuntime,
-          `PDF runtime "${documentIndexConfig.pdfRuntime}" is configured but not implemented yet.`
-        );
+        return parseWithMarker(buffer);
       case 'docling':
         return parseWithDocling(buffer);
     }
