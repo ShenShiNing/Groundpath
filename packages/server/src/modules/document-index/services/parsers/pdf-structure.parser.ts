@@ -1,9 +1,10 @@
-import { documentIndexConfig } from '@config/env';
+import { documentIndexConfig, featureFlags } from '@config/env';
 import { documentStorageService } from '@modules/document/services/document-storage.service';
 import { markdownStructureParser } from './markdown-structure.parser';
 import { normalizeDoclingMarkdown } from './docling-markdown-normalizer';
 import { parseHeuristicStructuredText } from './heuristic-structure.parser';
-import { extractStructuredPdfText } from './pdf-parser.runtime';
+import { extractStructuredPdfText, extractStructuredPdfWithImages } from './pdf-parser.runtime';
+import type { ParsedDocumentStructure } from './types';
 
 export const pdfStructureParser = {
   parseTextContent(textContent: string, parserRuntime: string = 'pdf') {
@@ -26,6 +27,22 @@ export const pdfStructureParser = {
     return {
       ...parsed,
       parserRuntime: documentIndexConfig.pdfRuntime,
+    };
+  },
+
+  async parseFromStorageWithImages(storageKey: string): Promise<ParsedDocumentStructure> {
+    if (!featureFlags.imageDescriptionEnabled || documentIndexConfig.pdfRuntime !== 'docling') {
+      return this.parseFromStorage(storageKey);
+    }
+
+    const buffer = await documentStorageService.getDocumentContent(storageKey);
+    const { markdown, images } = await extractStructuredPdfWithImages(buffer);
+    const parsed = this.parseDoclingMarkdown(markdown);
+
+    return {
+      ...parsed,
+      parserRuntime: documentIndexConfig.pdfRuntime,
+      extractedImages: images,
     };
   },
 };

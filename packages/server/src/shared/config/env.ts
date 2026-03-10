@@ -207,6 +207,19 @@ const backfillSchema = z.object({
   BACKFILL_ENQUEUE_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(0),
 });
 
+// -------------------- VLM (Vision Language Model) --------------------
+const vlmSchema = z.object({
+  VLM_PROVIDER: z.enum(['openai', 'anthropic']).default('openai'),
+  VLM_MODEL: z.string().default('gpt-4o-mini'),
+  VLM_API_KEY: z.string().optional(),
+  VLM_BASE_URL: z.string().optional(),
+  VLM_TIMEOUT_MS: z.coerce.number().int().min(5000).max(120000).default(30000),
+  VLM_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+  VLM_MAX_RETRIES: z.coerce.number().int().min(0).max(5).default(2),
+  VLM_MAX_IMAGE_SIZE_BYTES: z.coerce.number().int().default(10485760), // 10 MB
+  VLM_MAX_TOKENS: z.coerce.number().int().min(100).max(4096).default(1024),
+});
+
 // -------------------- Agent / Web Search --------------------
 const agentSchema = z.object({
   TAVILY_API_KEY: z.string().optional(),
@@ -235,10 +248,25 @@ const loggingSchema = z.object({
 const structuredRagObservabilitySchema = z.object({
   STRUCTURED_RAG_ALERTS_ENABLED: booleanString(false),
   STRUCTURED_RAG_ALERT_EMAIL_TO: csvStringArray(),
-  STRUCTURED_RAG_ALERT_WINDOW_HOURS: z.coerce.number().int().min(1).max(24 * 30).default(24),
+  STRUCTURED_RAG_ALERT_WINDOW_HOURS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 30)
+    .default(24),
   STRUCTURED_RAG_ALERT_SCHEDULE_CRON: z.string().default('0 5 * * *'),
-  STRUCTURED_RAG_ALERT_COOLDOWN_HOURS: z.coerce.number().int().min(1).max(24 * 30).default(6),
-  STRUCTURED_RAG_ALERT_REMINDER_HOURS: z.coerce.number().int().min(1).max(24 * 90).default(24),
+  STRUCTURED_RAG_ALERT_COOLDOWN_HOURS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 30)
+    .default(6),
+  STRUCTURED_RAG_ALERT_REMINDER_HOURS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 90)
+    .default(24),
   STRUCTURED_RAG_ALERT_FALLBACK_RATIO_THRESHOLD: z.coerce.number().min(0).max(100).default(35),
   STRUCTURED_RAG_ALERT_BUDGET_EXHAUSTION_THRESHOLD: z.coerce.number().min(0).max(100).default(10),
   STRUCTURED_RAG_ALERT_PROVIDER_ERROR_THRESHOLD: z.coerce.number().min(0).max(100).default(3),
@@ -254,6 +282,7 @@ const featureFlagsSchema = z.object({
   STRUCTURED_RAG_ROLLOUT_MODE: z.enum(['disabled', 'internal', 'all']).default('disabled'),
   STRUCTURED_RAG_INTERNAL_USER_IDS: csvStringArray(),
   STRUCTURED_RAG_INTERNAL_KB_IDS: csvStringArray(),
+  IMAGE_DESCRIPTION_ENABLED: booleanString(false),
 });
 
 // ==================== Combined Schema ====================
@@ -274,6 +303,7 @@ const envSchema = serverSchema
   .extend(embeddingSchema.shape)
   .extend(vectorSchema.shape)
   .extend(llmSchema.shape)
+  .extend(vlmSchema.shape)
   .extend(agentSchema.shape)
   .extend(loggingSchema.shape)
   .extend(structuredRagObservabilitySchema.shape)
@@ -497,6 +527,19 @@ export const agentConfig = {
   tavilyContentMaxLength: validatedEnv.TAVILY_CONTENT_MAX_LENGTH,
 } as const;
 
+/** VLM (Vision Language Model) configuration */
+export const vlmConfig = {
+  provider: validatedEnv.VLM_PROVIDER,
+  model: validatedEnv.VLM_MODEL,
+  apiKey: validatedEnv.VLM_API_KEY,
+  baseUrl: validatedEnv.VLM_BASE_URL,
+  timeoutMs: validatedEnv.VLM_TIMEOUT_MS,
+  concurrency: validatedEnv.VLM_CONCURRENCY,
+  maxRetries: validatedEnv.VLM_MAX_RETRIES,
+  maxImageSizeBytes: validatedEnv.VLM_MAX_IMAGE_SIZE_BYTES,
+  maxTokens: validatedEnv.VLM_MAX_TOKENS,
+} as const;
+
 /** Queue / Worker configuration */
 export const queueConfig = {
   concurrency: validatedEnv.QUEUE_CONCURRENCY,
@@ -550,6 +593,7 @@ export const featureFlags = {
   structuredRagRolloutMode: validatedEnv.STRUCTURED_RAG_ROLLOUT_MODE,
   structuredRagInternalUserIds: validatedEnv.STRUCTURED_RAG_INTERNAL_USER_IDS,
   structuredRagInternalKnowledgeBaseIds: validatedEnv.STRUCTURED_RAG_INTERNAL_KB_IDS,
+  imageDescriptionEnabled: validatedEnv.IMAGE_DESCRIPTION_ENABLED,
 } as const;
 
 // ==================== Utilities ====================

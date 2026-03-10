@@ -23,6 +23,9 @@ export interface ParsedDocumentNode {
   content: string;
   contentPreview: string;
   tokenCount: number;
+  imageStorageKey?: string;
+  imageClassification?: string;
+  imageDescription?: string;
 }
 
 export interface ParsedDocumentEdge {
@@ -32,10 +35,18 @@ export interface ParsedDocumentEdge {
   anchorText?: string;
 }
 
+export interface ExtractedPdfImage {
+  index: number;
+  buffer: Buffer;
+  mimeType: string;
+  sizeBytes: number;
+}
+
 export interface ParsedDocumentStructure {
   nodes: ParsedDocumentNode[];
   edges: ParsedDocumentEdge[];
   parseMethod: string;
   parserRuntime: string;
   headingCount: number;
+  extractedImages?: ExtractedPdfImage[];
 }

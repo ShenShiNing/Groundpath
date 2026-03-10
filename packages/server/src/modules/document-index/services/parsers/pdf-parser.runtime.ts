@@ -2,9 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import pLimit from 'p-limit';
-import { documentIndexConfig } from '@config/env';
+import { documentIndexConfig, featureFlags } from '@config/env';
 import { createLogger } from '@shared/logger';
 import { PDFParse } from 'pdf-parse';
+import type { ExtractedPdfImage } from './types';
 
 const logger = createLogger('pdf-parser.runtime');
 const pdfRuntimeLimiter = pLimit(documentIndexConfig.pdfConcurrency);
@@ -283,7 +284,9 @@ async function findBestTextArtifact(outputDir: string): Promise<string | null> {
 
   const candidates = await Promise.all(
     files
-      .filter((filePath) => TEXT_ARTIFACT_EXT_PRIORITY.includes(path.extname(filePath).toLowerCase()))
+      .filter((filePath) =>
+        TEXT_ARTIFACT_EXT_PRIORITY.includes(path.extname(filePath).toLowerCase())
+      )
       .map(async (filePath) => {
         const ext = path.extname(filePath).toLowerCase();
         const stats = await fs.stat(filePath);
@@ -324,7 +327,9 @@ async function readTextArtifact(filePath: string): Promise<string> {
 }
 
 function isMarkerModuleMissing(message: string): boolean {
-  return /no module named (marker|marker_single)/i.test(message) || /ModuleNotFoundError/i.test(message);
+  return (
+    /no module named (marker|marker_single)/i.test(message) || /ModuleNotFoundError/i.test(message)
+  );
 }
 
 function buildMarkerArgs(inputPath: string, outputDir: string): string[] {
@@ -475,5 +480,134 @@ export async function extractStructuredPdfText(buffer: Buffer): Promise<string> 
       case 'docling':
         return parseWithDocling(buffer);
     }
+  });
+}
+
+export interface StructuredPdfParseResult {
+  markdown: string;
+  images: ExtractedPdfImage[];
+}
+
+async function parseWithDoclingAndImages(buffer: Buffer): Promise<StructuredPdfParseResult> {
+  const pythonPath = (await commandExists(localPythonPath)) ? localPythonPath : 'python';
+  const helperPath = defaultDoclingHelperPath;
+  if (!(await commandExists(helperPath))) {
+    throw new PdfStructureParserRuntimeError(
+      'unsupported_runtime',
+      documentIndexConfig.pdfRuntime,
+      `Docling helper script not found at "${helperPath}".`
+    );
+  }
+
+  await fs.mkdir(runtimeTempRoot, { recursive: true });
+  const tempDir = await fs.mkdtemp(path.join(runtimeTempRoot, 'docling-'));
+  const inputPath = path.join(tempDir, 'input.pdf');
+  const outputPath = path.join(tempDir, 'output.md');
+  const imageDir = path.join(tempDir, 'images');
+
+  try {
+    await fs.writeFile(inputPath, buffer);
+    await fs.mkdir(imageDir, { recursive: true });
+
+    const commandPromise = runCommand(
+      pythonPath,
+      [
+        helperPath,
+        '--input',
+        inputPath,
+        '--output',
+        outputPath,
+        '--export-images',
+        '--image-dir',
+        imageDir,
+      ],
+      buildPdfRuntimeEnv(tempDir)
+    );
+    const result = await withTimeout(
+      commandPromise,
+      documentIndexConfig.pdfTimeoutMs,
+      documentIndexConfig.pdfRuntime
+    );
+
+    if (result.code !== 0) {
+      const stderr = result.stderr.trim();
+      const stdout = result.stdout.trim();
+      throw new PdfStructureParserRuntimeError(
+        'parse_failed',
+        documentIndexConfig.pdfRuntime,
+        stderr || stdout || 'Docling parser failed to export markdown.'
+      );
+    }
+
+    const markdown = await fs.readFile(outputPath, 'utf-8');
+
+    // Read exported images
+    const images: ExtractedPdfImage[] = [];
+    try {
+      const imageFiles = await fs.readdir(imageDir);
+      const pngFiles = imageFiles
+        .filter((f) => f.endsWith('.png'))
+        .sort((a, b) => {
+          const idxA = parseInt(a.match(/(\d+)/)?.[1] ?? '0', 10);
+          const idxB = parseInt(b.match(/(\d+)/)?.[1] ?? '0', 10);
+          return idxA - idxB;
+        });
+
+      for (let i = 0; i < pngFiles.length; i++) {
+        const filePath = path.join(imageDir, pngFiles[i]!);
+        const imgBuffer = await fs.readFile(filePath);
+        images.push({
+          index: i,
+          buffer: imgBuffer,
+          mimeType: 'image/png',
+          sizeBytes: imgBuffer.length,
+        });
+      }
+    } catch {
+      // No images exported — fine, degrade gracefully
+    }
+
+    return { markdown, images };
+  } catch (error) {
+    if (error instanceof PdfStructureParserRuntimeError) {
+      throw error;
+    }
+    throw new PdfStructureParserRuntimeError(
+      'parse_failed',
+      documentIndexConfig.pdfRuntime,
+      'Docling parser failed to export markdown with images.',
+      { cause: error }
+    );
+  } finally {
+    try {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    } catch (error) {
+      logger.warn({ err: error, tempDir }, 'Failed to cleanup docling temp directory');
+    }
+  }
+}
+
+export async function extractStructuredPdfWithImages(
+  buffer: Buffer
+): Promise<StructuredPdfParseResult> {
+  return pdfRuntimeLimiter(async () => {
+    if (featureFlags.imageDescriptionEnabled && documentIndexConfig.pdfRuntime === 'docling') {
+      return parseWithDoclingAndImages(buffer);
+    }
+
+    // For non-docling runtimes or when image description is disabled,
+    // fall back to text-only extraction
+    const markdown = await (() => {
+      switch (documentIndexConfig.pdfRuntime) {
+        case 'pdf-parse':
+          return parseWithPdfParse(buffer);
+        case 'marker':
+          return parseWithMarker(buffer);
+        case 'docling':
+          return parseWithDocling(buffer);
+      }
+    })();
+
+    return { markdown, images: [] };
   });
 }

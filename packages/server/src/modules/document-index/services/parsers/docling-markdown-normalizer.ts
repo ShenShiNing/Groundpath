@@ -163,10 +163,12 @@ function normalizeMarkdownTables(lines: string[]): string[] {
       (item, blockIndex) => blockIndex !== 0 && item !== separatorLine
     );
 
-    const headerCells = splitMarkdownRow(headerLine);
+    const headerCells = splitMarkdownRow(headerLine ?? '');
     const dataCells = dataLines.map(splitMarkdownRow);
     const dedupedRows = dedupeDuplicateColumns([headerCells, ...dataCells]);
     const [normalizedHeader, ...normalizedBody] = dedupedRows;
+
+    if (!normalizedHeader) continue;
 
     normalized.push(`| ${normalizedHeader.join(' | ')} |`);
     normalized.push(`| ${normalizedHeader.map(() => '---').join(' | ')} |`);
@@ -265,9 +267,7 @@ function normalizeTableOfContents(lines: string[]): string[] {
 }
 
 function normalizeFormulaPlaceholders(lines: string[]): string[] {
-  return lines.map((line) =>
-    line.trim() === '<!-- formula-not-decoded -->' ? '[Formula]' : line
-  );
+  return lines.map((line) => (line.trim() === '<!-- formula-not-decoded -->' ? '[Formula]' : line));
 }
 
 export function normalizeDoclingMarkdown(markdown: string): string {

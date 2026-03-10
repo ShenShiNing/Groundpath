@@ -5,7 +5,7 @@ import { withTransaction } from '@shared/db/db.utils';
 import { db } from '@shared/db';
 import { documents } from '@shared/db/schema/document/documents.schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import { documentConfig } from '@config/env';
+import { documentConfig, featureFlags, vlmConfig } from '@config/env';
 import {
   documentRepository,
   documentVersionRepository,
@@ -24,6 +24,8 @@ import { markdownStructureParser } from '@modules/document-index/services/parser
 import { docxStructureParser } from '@modules/document-index/services/parsers/docx-structure.parser';
 import { pdfStructureParser } from '@modules/document-index/services/parsers/pdf-structure.parser';
 import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
+import { imageDescriptionService } from '@modules/document-index/services/image-description';
+import { storageProvider } from '@modules/storage';
 
 const logger = createLogger('processing.service');
 
@@ -260,12 +262,110 @@ export const processingService = {
           } else if (document.documentType === 'docx') {
             parsedStructure = await docxStructureParser.parseFromStorage(version.storageKey);
           } else if (document.documentType === 'pdf') {
-            parsedStructure = await pdfStructureParser.parseFromStorage(version.storageKey);
+            parsedStructure = await pdfStructureParser.parseFromStorageWithImages(
+              version.storageKey
+            );
           }
         } catch (parseError) {
           logger.warn(
             { documentId, error: parseError },
             'Markdown structured parse failed; continuing with chunk fallback'
+          );
+        }
+      }
+
+      // Image description step for figure nodes (runs only when feature flag is on)
+      if (
+        parsedStructure &&
+        featureFlags.imageDescriptionEnabled &&
+        parsedStructure.extractedImages &&
+        parsedStructure.extractedImages.length > 0
+      ) {
+        try {
+          const imageDescStartMs = Date.now();
+          const figureNodes = parsedStructure.nodes.filter((n) => n.nodeType === 'figure');
+          const extractedImages = parsedStructure.extractedImages;
+
+          // Find the document title for context
+          const documentTitle =
+            parsedStructure.nodes.find((n) => n.nodeType === 'document')?.title ?? undefined;
+
+          // Upload images to storage and build description inputs
+          const descriptionInputs = [];
+          for (let i = 0; i < figureNodes.length && i < extractedImages.length; i++) {
+            const figureNode = figureNodes[i]!;
+            const image = extractedImages[i]!;
+
+            // Upload image to storage (best effort)
+            const storageKey = `documents/${documentId}/images/figure_${i}.png`;
+            try {
+              await storageProvider.upload(storageKey, image.buffer, image.mimeType);
+              figureNode.imageStorageKey = storageKey;
+            } catch (uploadError) {
+              logger.warn(
+                { documentId, nodeId: figureNode.id, error: uploadError },
+                'Failed to upload figure image to storage'
+              );
+            }
+
+            // Find section title from parent
+            const parentNode = figureNode.parentId
+              ? parsedStructure.nodes.find((n) => n.id === figureNode.parentId)
+              : undefined;
+
+            descriptionInputs.push({
+              figureNodeId: figureNode.id,
+              imageBuffer: image.buffer,
+              imageMimeType: image.mimeType,
+              captionText: figureNode.title ?? undefined,
+              sectionTitle: parentNode?.title ?? undefined,
+              documentTitle,
+            });
+          }
+
+          if (descriptionInputs.length > 0) {
+            const descResults = await imageDescriptionService.describeImages(descriptionInputs);
+
+            let successCount = 0;
+            let failCount = 0;
+            for (const result of descResults) {
+              const figureNode = parsedStructure.nodes.find((n) => n.id === result.nodeId);
+              if (!figureNode) continue;
+
+              figureNode.imageClassification = result.classification;
+
+              if (result.success && result.description) {
+                successCount++;
+                figureNode.imageDescription = result.description;
+                // Enrich the content so it participates in embedding
+                const originalContent = figureNode.content;
+                figureNode.content =
+                  result.description +
+                  (originalContent && originalContent !== '<!-- image -->'
+                    ? `\n\n${originalContent}`
+                    : '');
+                figureNode.contentPreview = result.description.slice(0, 500);
+              } else {
+                failCount++;
+              }
+            }
+
+            structuredRagMetrics.recordImageDescription({
+              documentId,
+              userId,
+              knowledgeBaseId: kbId,
+              totalFigureNodes: figureNodes.length,
+              successfulDescriptions: successCount,
+              failedDescriptions: failCount,
+              totalLatencyMs: Date.now() - imageDescStartMs,
+              vlmProvider: vlmConfig.provider,
+              vlmModel: vlmConfig.model,
+            });
+          }
+        } catch (imageDescError) {
+          logger.warn(
+            { documentId, error: imageDescError },
+            'Image description step failed; figure nodes will retain original content'
           );
         }
       }

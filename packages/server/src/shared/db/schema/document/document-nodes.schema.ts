@@ -43,6 +43,10 @@ export const documentNodes = mysqlTable(
     tokenCount: int('token_count'),
     stableLocator: varchar('stable_locator', { length: 500 }),
 
+    // Image (figure nodes only)
+    imageStorageKey: varchar('image_storage_key', { length: 500 }),
+    imageClassification: varchar('image_classification', { length: 50 }),
+
     // Audit
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },

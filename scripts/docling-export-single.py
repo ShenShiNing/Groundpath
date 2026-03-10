@@ -13,7 +13,42 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--max-pages", type=int, default=9223372036854775807)
+    parser.add_argument("--export-images", action="store_true", default=False)
+    parser.add_argument("--image-dir", default=None)
     return parser.parse_args()
+
+
+def export_images(result, image_dir: Path) -> list[dict]:
+    """Export pictures from the converted document to image files.
+
+    Returns a list of dicts with ``index`` and ``filename`` keys.
+    Gracefully returns an empty list when the docling version does not
+    support image extraction.
+    """
+    images: list[dict] = []
+    try:
+        pictures = getattr(result.document, "pictures", None)
+        if not pictures:
+            return images
+
+        image_dir.mkdir(parents=True, exist_ok=True)
+
+        for idx, picture in enumerate(pictures):
+            try:
+                pil_image = picture.get_image(result.document)
+                if pil_image is None:
+                    continue
+                filename = f"figure_{idx}.png"
+                pil_image.save(image_dir / filename, format="PNG")
+                images.append({"index": idx, "filename": filename})
+            except Exception:
+                # Skip individual images that cannot be extracted
+                continue
+    except Exception:
+        # Docling version may not support picture extraction – degrade gracefully
+        pass
+
+    return images
 
 
 def main() -> int:
@@ -39,11 +74,16 @@ def main() -> int:
             }
             for error in (result.errors or [])
         ],
+        "images": [],
     }
 
     if payload["success"]:
         markdown = result.document.export_to_markdown()
         output_path.write_text(markdown, encoding="utf-8")
+
+        if args.export_images:
+            image_dir = Path(args.image_dir).resolve() if args.image_dir else output_path.parent / "images"
+            payload["images"] = export_images(result, image_dir)
 
     print(json.dumps(payload, ensure_ascii=False))
     return 0 if payload["success"] else 1

@@ -72,6 +72,18 @@ export interface StructuredRagIndexGraphMetric {
   edgeCount: number;
 }
 
+export interface StructuredRagImageDescriptionMetric {
+  documentId: string;
+  userId: string;
+  knowledgeBaseId: string;
+  totalFigureNodes: number;
+  successfulDescriptions: number;
+  failedDescriptions: number;
+  totalLatencyMs: number;
+  vlmProvider: string;
+  vlmModel: string;
+}
+
 export const structuredRagMetrics = {
   recordAgentExecution(input: StructuredRagAgentExecutionMetric): void {
     const metadata = {
@@ -93,7 +105,10 @@ export const structuredRagMetrics = {
       retrievedCitationCount: input.retrievedCitationCount,
       finalCitationCount: input.finalCitationCount,
     };
-    logger.info({ metric: 'structured_rag.agent_execution', durationMs: input.durationMs, ...metadata }, 'Structured RAG agent execution metric');
+    logger.info(
+      { metric: 'structured_rag.agent_execution', durationMs: input.durationMs, ...metadata },
+      'Structured RAG agent execution metric'
+    );
     persistMetric({
       level: 'info',
       category: 'performance',
@@ -119,7 +134,10 @@ export const structuredRagMetrics = {
       retrievedCitationCount: input.retrievedCitationCount,
       finalCitationCount: input.finalCitationCount,
     };
-    logger.info({ metric: 'structured_rag.chat_completion', ...metadata }, 'Structured RAG chat completion metric');
+    logger.info(
+      { metric: 'structured_rag.chat_completion', ...metadata },
+      'Structured RAG chat completion metric'
+    );
     persistMetric({
       level: 'info',
       category: 'performance',
@@ -148,12 +166,17 @@ export const structuredRagMetrics = {
       reason: input.reason ?? null,
       error: input.error ?? null,
     };
-    logger.info({ metric: 'structured_rag.index_build', parseDurationMs: input.parseDurationMs, ...metadata }, 'Structured RAG index build metric');
+    logger.info(
+      { metric: 'structured_rag.index_build', parseDurationMs: input.parseDurationMs, ...metadata },
+      'Structured RAG index build metric'
+    );
     persistMetric({
       level: input.success ? 'info' : 'warn',
       category: 'performance',
       event: 'structured_rag.index_build',
-      message: input.success ? 'Structured RAG index build metric' : 'Structured RAG index build failure metric',
+      message: input.success
+        ? 'Structured RAG index build metric'
+        : 'Structured RAG index build failure metric',
       source: 'structured-rag',
       durationMs: input.parseDurationMs ?? null,
       metadata,
@@ -169,13 +192,46 @@ export const structuredRagMetrics = {
       nodeCount: input.nodeCount,
       edgeCount: input.edgeCount,
     };
-    logger.info({ metric: 'structured_rag.index_graph', ...metadata }, 'Structured RAG index graph metric');
+    logger.info(
+      { metric: 'structured_rag.index_graph', ...metadata },
+      'Structured RAG index graph metric'
+    );
     persistMetric({
       level: 'info',
       category: 'performance',
       event: 'structured_rag.index_graph',
       message: 'Structured RAG index graph metric',
       source: 'structured-rag',
+      metadata,
+    });
+  },
+
+  recordImageDescription(input: StructuredRagImageDescriptionMetric): void {
+    const metadata = {
+      documentId: input.documentId,
+      userId: input.userId,
+      knowledgeBaseId: input.knowledgeBaseId,
+      totalFigureNodes: input.totalFigureNodes,
+      successfulDescriptions: input.successfulDescriptions,
+      failedDescriptions: input.failedDescriptions,
+      vlmProvider: input.vlmProvider,
+      vlmModel: input.vlmModel,
+    };
+    logger.info(
+      {
+        metric: 'structured_rag.image_description',
+        totalLatencyMs: input.totalLatencyMs,
+        ...metadata,
+      },
+      'Structured RAG image description metric'
+    );
+    persistMetric({
+      level: 'info',
+      category: 'performance',
+      event: 'structured_rag.image_description',
+      message: 'Structured RAG image description metric',
+      source: 'structured-rag',
+      durationMs: input.totalLatencyMs,
       metadata,
     });
   },

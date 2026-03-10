@@ -84,6 +84,8 @@ export const documentIndexService = {
         orderNo: node.orderNo,
         tokenCount: node.tokenCount,
         stableLocator: node.stableLocator,
+        imageStorageKey: node.imageStorageKey ?? null,
+        imageClassification: node.imageClassification ?? null,
       }));
 
       const contents = input.structure.nodes.map((node) => ({
@@ -93,6 +95,7 @@ export const documentIndexService = {
         content: node.content,
         contentPreview: node.contentPreview || null,
         tokenCount: node.tokenCount,
+        imageDescription: node.imageDescription ?? null,
       }));
 
       const edges = input.structure.edges.map((edge) => ({

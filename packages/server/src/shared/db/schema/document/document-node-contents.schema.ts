@@ -18,6 +18,9 @@ export const documentNodeContents = mysqlTable(
     contentPreview: text('content_preview'),
     tokenCount: int('token_count'),
 
+    // Image description (figure nodes only)
+    imageDescription: text('image_description'),
+
     // Audit
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },

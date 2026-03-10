@@ -81,6 +81,7 @@ const {
   },
   pdfStructureParserMock: {
     parseFromStorage: vi.fn(),
+    parseFromStorageWithImages: vi.fn(),
   },
 }));
 
@@ -218,6 +219,13 @@ describe('RAG Processing Error Injection', () => {
       headingCount: 0,
     });
     pdfStructureParserMock.parseFromStorage.mockResolvedValue({
+      nodes: [],
+      edges: [],
+      parseMethod: 'structured',
+      parserRuntime: 'pdf',
+      headingCount: 0,
+    });
+    pdfStructureParserMock.parseFromStorageWithImages.mockResolvedValue({
       nodes: [],
       edges: [],
       parseMethod: 'structured',
@@ -539,7 +547,7 @@ describe('RAG Processing Error Injection', () => {
       structuredCandidate: true,
       rolloutMode: 'all',
     });
-    pdfStructureParserMock.parseFromStorage.mockResolvedValue({
+    pdfStructureParserMock.parseFromStorageWithImages.mockResolvedValue({
       nodes: [],
       edges: [],
       parseMethod: 'structured',
@@ -558,7 +566,7 @@ describe('RAG Processing Error Injection', () => {
 
     await processingService.processDocument(docId, userId);
 
-    expect(pdfStructureParserMock.parseFromStorage).toHaveBeenCalledWith('pdf-key');
+    expect(pdfStructureParserMock.parseFromStorageWithImages).toHaveBeenCalledWith('pdf-key');
     expect(documentIndexServiceMock.replaceGraph).toHaveBeenCalledWith(
       expect.objectContaining({
         documentId: docId,
