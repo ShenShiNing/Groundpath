@@ -2,7 +2,7 @@
 
 > 配套文档：`docs/tool-driven-reasoning-rag-migration-plan.md`
 > 文件落点清单：`docs/tool-driven-reasoning-rag-file-task-list.md`
-> 文档状态：截至 `2026-03-10` 已按仓库代码审计结果更新。
+> 文档状态：截至 `2026-03-11` 已按仓库代码审计结果更新。
 >
 > 用途：
 >
@@ -32,12 +32,12 @@
 
 ## 1.1 当前状态
 
-截至 `2026-03-10` 的实际进度（基于代码审计）：
+截至 `2026-03-11` 的实际进度（基于代码审计）：
 
 1. `P-1` 大体完成，仅剩 **最终沉淀文档**（节点图验证产物、MVP token/延迟模板）。PDF 运行时选型已收口：统一采用 docling（marker/pdf-parse 结构化运行时已移除）。
 2. `P0-A` 已完成。
-3. `P0-B` 大体完成，剩余 **evidence selection 优化**（当前 `finalizeCitations` 仅做 key 去重 + score 截断，缺多样性/冗余过滤/再排序）和 **dedicated e2e / UI 专项测试**（有 4 个 smoke e2e + 完整单元/集成覆盖，但无 Playwright/Cypress 浏览器自动化、无全链路 Chat→Search→Read→Follow e2e）。
-4. `P1` 部分完成。`refers_to / cites` 边、`ref_follow`、检索材料增强已落地；剩余 **caption 清洗补强**、**跨章节评测集**、**evidence selection 深度优化**。
+3. `P0-B` 已完成。evidence selection 深度优化已落地（5-pass 算法：分数归一化、section 去冗余、min-score 门控、跨文档多样性选择），dedicated e2e / UI 专项测试仍缺（有 4 个 smoke e2e + 完整单元/集成覆盖，但无 Playwright/Cypress 浏览器自动化、无全链路 Chat→Search→Read→Follow e2e）。
+4. `P1` 部分完成。`refers_to / cites` 边、`ref_follow`、检索材料增强已落地；evidence selection 深度优化已完成（与 P0-B 同项）；剩余 **caption 清洗补强**、**跨章节评测集**。
 5. `P2` 已启动。backfill service/CLI、结构化观测/报表/邮件告警、多级缓存已落地；剩余 **回填持久化进度统计**（当前仅日志，无进度 API/断点续传）、**Worker 并发调优**（参数已可配但未做负载测试）、**死信处理策略**（BullMQ 保留失败 job 但无独立 DLQ/查询 API/告警入口）、**缓存收益量化**。
 6. `P3` Go/No-Go 全部未开始。
 7. 额外能力：**VLM 图片描述**已在 PDF 解析链路中落地（provider-agnostic VLM pipeline + 图片分类 + type-aware prompt），作为 P1 图表解析增强的延伸。
@@ -94,12 +94,12 @@
 - [x] `resolveTools` 改为结构化工具优先
 - [x] executor 增加 `structuredRounds / fallbackRounds / totalRounds`（`totalRounds` 当前由 `maxIterations` 覆盖）
 - [x] executor 增加 `stopReason`
-- [ ] executor 增加 citation 去重与 evidence selection（当前 `finalizeCitations()` 已实现基于 `documentId:nodeId/chunkIndex` 的 key 去重、按 score 降序保留最高分、上限 8 条截断；`finalizeStopReason()` 可检测 `insufficient_evidence`；仍缺跨文档多样性过滤、冗余检测、相关性再排序等深度 evidence selection）
+- [x] executor 增加 citation 去重与 evidence selection（`finalizeCitations()` 已实现 5-pass 算法：① key 去重（保留最高归一化分）→ ② 按工具名归一化 [0,1]（outline_search: raw/ceiling、vector: 原样、node_read: 0.70、ref_follow: 0.60）→ ③ 同文档 sectionPath 父子去冗余 → ④ min-score 门控 → ⑤ 跨文档多样性选择（保底 3 个文档）；支持 6 个可配参数：`citationOutlineScoreCeiling / citationNodeReadBaseScore / citationRefFollowBaseScore / citationMinDocuments / citationMinScore / citationParentScoreAdvantage`）
 - [x] streaming 聊天链路切到统一编排
 - [x] non-streaming 聊天链路切到统一编排
 - [x] 为结构化链路增加 feature flag
 - [x] 支持按用户 / 知识库灰度
-- [ ] 补齐最小端到端测试（当前已有：4 个 smoke e2e（auth/chat/kb/trash）、13 个 document-index 单元测试、3 个 agent 工具测试（outline-search/node-read/ref-follow）、1 个 docling 全链路集成测试、shared citation schema 测试、client citation store 测试；仍缺：Playwright/Cypress 浏览器自动化、Chat→Search→Read→Follow 全链路 e2e、Qdrant 真实集成测试、LLM 响应流 e2e）
+- [ ] 补齐最小端到端测试（当前已有：4 个 smoke e2e（auth/chat/kb/trash）、13 个 document-index 单元测试、3 个 agent 工具测试（outline-search/node-read/ref-follow）、1 个 docling 全链路集成测试、shared citation schema 测试、client citation store 测试、14 个 evidence selection 专项测试；仍缺：Playwright/Cypress 浏览器自动化、Chat→Search→Read→Follow 全链路 e2e、Qdrant 真实集成测试、LLM 响应流 e2e）
 
 ### 2.4 P1 跨引用与质量增强 Checklist
 
@@ -108,7 +108,7 @@
 - [ ] 解析图表 / 附录 / 引用锚点（当前已支持：`front matter` 标注与搜索降权、`table / figure / appendix` 子节点类型（`ParsedNodeType`）、`refers_to / cites` 边自动抽取（中英文 pattern）、`isFigureCaptionBlock()` caption 检测、docling normalizer 中 `Figure 2 - 1` 连字修复、VLM 图片描述已接入 PDF figure 节点；仍需补强：复杂嵌套表格解析、caption pattern 覆盖面扩展、图表内容语义提取）
 - [x] 检索材料纳入 `sectionPath / parent titles / alias anchors / contentPreview`
 - [ ] 增加跨章节 / 附录 / 图表评测集（当前有 3 个 fixture：book-nist-snippet / paper-attention-snippet / synthetic-chart-snippet，集成测试覆盖了 figure 搜索、ref_follow 边遍历、front matter 降权；仍缺独立量化评测数据集与 precision/recall/latency 指标）
-- [ ] 优化 evidence selection 与 citation 收口（同 P0-B executor evidence selection，当前为简单 key 去重 + score 截断，未正式启动深度优化）
+- [x] 优化 evidence selection 与 citation 收口（已完成：5-pass `finalizeCitations()` 实现分数归一化、section 父子去冗余、min-score 门控、跨文档多样性选择；14 个专项测试覆盖归一化、多样性、冗余过滤、公平性、边界情况）
 
 ### 2.5 P2 回填与性能 Checklist
 
@@ -224,32 +224,32 @@
 
 ### 5.0 当前 Issue 状态总览
 
-| Issue | 状态     | 备注                                                                                                                                                                                                                            |
-| ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | 已完成   | 选型结论：统一 docling；marker/pdf-parse 结构化运行时代码已清理                                                                                                                                                                 |
-| 2     | 已完成   | citation / source 契约已落地                                                                                                                                                                                                    |
-| 3     | 已完成   | active version / freshness / superseded 已落地                                                                                                                                                                                  |
-| 4     | 已完成   | 结构化 MVP 闭环已可运行                                                                                                                                                                                                         |
-| 5     | 已完成   | schema + migration 已落地                                                                                                                                                                                                       |
-| 6     | 已完成   | shared / metadata / SSE 契约已落地                                                                                                                                                                                              |
-| 7     | 已完成   | client 节点级 citation 展示已落地                                                                                                                                                                                               |
-| 8     | 已完成   | 队列 payload 与 Worker 状态机已落地                                                                                                                                                                                             |
-| 9     | 已完成   | `db:check` 已扩展结构化巡检                                                                                                                                                                                                     |
-| 10    | 已完成   | Worker 路由与结构化解析入口已落地                                                                                                                                                                                               |
-| 11    | 已完成   | Markdown / DOCX / PDF 首版解析已落地；VLM 图片描述已接入 PDF figure 节点                                                                                                                                                        |
-| 12    | 已完成   | `outline_search` 已落地（含 front matter 降权、alias anchors、sectionPath）                                                                                                                                                     |
-| 13    | 已完成   | `node_read` 已落地（含 truncation、邻域引用、token 控制）                                                                                                                                                                       |
-| 14    | 已完成   | `vector_fallback_search` 已落地                                                                                                                                                                                                 |
-| 15    | 已完成   | 预算与 `stopReason` 已落地（`maxStructuredRounds=3`、`maxFallbackRounds=1`、6 种 stop reason）                                                                                                                                  |
-| 16    | 已完成   | streaming / non-streaming 编排已统一                                                                                                                                                                                            |
-| 17    | 已完成   | feature flag + internal allowlist 灰度已落地                                                                                                                                                                                    |
-| 18    | 部分完成 | 已有 4 个 smoke e2e、13 个 document-index 单元测试、3 个 agent 工具测试、1 个 docling 全链路集成测试、citation schema/store 测试；仍缺 Playwright/Cypress 浏览器自动化、全链路 Chat→Search→Read→Follow e2e、Qdrant 真实集成测试 |
-| 19    | 已完成   | 引用边与 `ref_follow` 已落地（BFS 遍历、深度/节点数限制、`refers_to / cites` 边）                                                                                                                                               |
-| 20    | 已完成   | 检索材料增强首版已落地，并补了 `front matter` 降权、`table / figure / appendix` 子节点、VLM imageDescription 富化、更细粒度 citation excerpt                                                                                    |
-| 21    | 部分完成 | backfill service / CLI 已落地（`--dry-run` / KB 过滤 / 类型过滤 / 分页），仍缺持久化进度表、实时进度 API、断点续传                                                                                                              |
-| 22    | 部分完成 | summary API、dashboard v4、长期报表导出、邮件外部告警与基础告警治理已落地；归档与多渠道外发未实现                                                                                                                               |
-| 23    | 部分完成 | `outline_search` / `node_read` / 单节点读取 / `indexVersionId -> nodes` 缓存、preview 热点缓存、写路径精细失效、executor 级结果复用已落地；收益量化与更强 selective invalidation 未实现                                         |
-| 24    | 未开始   | Go / No-Go 评估未开始                                                                                                                                                                                                           |
+| Issue | 状态     | 备注                                                                                                                                                                                                                                                               |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1     | 已完成   | 选型结论：统一 docling；marker/pdf-parse 结构化运行时代码已清理                                                                                                                                                                                                    |
+| 2     | 已完成   | citation / source 契约已落地                                                                                                                                                                                                                                       |
+| 3     | 已完成   | active version / freshness / superseded 已落地                                                                                                                                                                                                                     |
+| 4     | 已完成   | 结构化 MVP 闭环已可运行                                                                                                                                                                                                                                            |
+| 5     | 已完成   | schema + migration 已落地                                                                                                                                                                                                                                          |
+| 6     | 已完成   | shared / metadata / SSE 契约已落地                                                                                                                                                                                                                                 |
+| 7     | 已完成   | client 节点级 citation 展示已落地                                                                                                                                                                                                                                  |
+| 8     | 已完成   | 队列 payload 与 Worker 状态机已落地                                                                                                                                                                                                                                |
+| 9     | 已完成   | `db:check` 已扩展结构化巡检                                                                                                                                                                                                                                        |
+| 10    | 已完成   | Worker 路由与结构化解析入口已落地                                                                                                                                                                                                                                  |
+| 11    | 已完成   | Markdown / DOCX / PDF 首版解析已落地；VLM 图片描述已接入 PDF figure 节点                                                                                                                                                                                           |
+| 12    | 已完成   | `outline_search` 已落地（含 front matter 降权、alias anchors、sectionPath）                                                                                                                                                                                        |
+| 13    | 已完成   | `node_read` 已落地（含 truncation、邻域引用、token 控制）                                                                                                                                                                                                          |
+| 14    | 已完成   | `vector_fallback_search` 已落地                                                                                                                                                                                                                                    |
+| 15    | 已完成   | 预算与 `stopReason` 已落地（`maxStructuredRounds=3`、`maxFallbackRounds=1`、6 种 stop reason）                                                                                                                                                                     |
+| 16    | 已完成   | streaming / non-streaming 编排已统一                                                                                                                                                                                                                               |
+| 17    | 已完成   | feature flag + internal allowlist 灰度已落地                                                                                                                                                                                                                       |
+| 18    | 部分完成 | 已有 4 个 smoke e2e、13 个 document-index 单元测试、3 个 agent 工具测试、1 个 docling 全链路集成测试、citation schema/store 测试、14 个 evidence selection 专项测试；仍缺 Playwright/Cypress 浏览器自动化、全链路 Chat→Search→Read→Follow e2e、Qdrant 真实集成测试 |
+| 19    | 已完成   | 引用边与 `ref_follow` 已落地（BFS 遍历、深度/节点数限制、`refers_to / cites` 边）                                                                                                                                                                                  |
+| 20    | 已完成   | 检索材料增强首版已落地，并补了 `front matter` 降权、`table / figure / appendix` 子节点、VLM imageDescription 富化、更细粒度 citation excerpt                                                                                                                       |
+| 21    | 部分完成 | backfill service / CLI 已落地（`--dry-run` / KB 过滤 / 类型过滤 / 分页），仍缺持久化进度表、实时进度 API、断点续传                                                                                                                                                 |
+| 22    | 部分完成 | summary API、dashboard v4、长期报表导出、邮件外部告警与基础告警治理已落地；归档与多渠道外发未实现                                                                                                                                                                  |
+| 23    | 部分完成 | `outline_search` / `node_read` / 单节点读取 / `indexVersionId -> nodes` 缓存、preview 热点缓存、写路径精细失效、executor 级结果复用已落地；收益量化与更强 selective invalidation 未实现                                                                            |
+| 24    | 未开始   | Go / No-Go 评估未开始                                                                                                                                                                                                                                              |
 
 ### P-1 / Issue 1: 验证 PDF 解析运行时方案
 
@@ -689,6 +689,7 @@
 4. 1 个 docling 全链路集成测试（parse → persist → search → read → follow）—— `tests/integration/structured-rag/`
 5. shared citation schema 测试 —— `packages/shared/tests/chat/`
 6. client citation store 测试 —— `packages/client/tests/stores/`
+7. 14 个 evidence selection 专项测试（归一化 / 多样性 / section 去冗余 / 公平性 / 边界情况）—— `tests/modules/agent/agent-executor.test.ts`
 
 仍缺：
 
@@ -943,16 +944,15 @@
 
 按影响面和依赖关系排序的推荐推进顺序：
 
-| 优先级 | 工作项                              | 阶段      | 阻塞关系                       |
-| ------ | ----------------------------------- | --------- | ------------------------------ |
-| 1      | evidence selection 深度优化         | P0-B / P1 | 影响 citation quality，阻塞 P3 |
-| 2      | 回填持久化进度统计                  | P2        | 回填规模化的运营前提           |
-| 3      | dedicated e2e / UI 专项测试         | P0-B      | 灰度前的安全网                 |
-| 4      | 死信处理策略                        | P2        | 生产环境运维必备               |
-| 5      | caption 清洗补强 + 评测集           | P1        | 质量增强阶段基础设施           |
-| 6      | Worker 并发调优                     | P2        | 需负载测试数据驱动             |
-| 7      | 缓存收益量化                        | P2        | 为 P3 latency 达标提供依据     |
-| 8      | MVP 沉淀文档（节点图 / token 模板） | P-1       | 验收交付物，不阻塞开发         |
+| 优先级 | 工作项                              | 阶段 | 阻塞关系                   |
+| ------ | ----------------------------------- | ---- | -------------------------- |
+| 1      | 回填持久化进度统计                  | P2   | 回填规模化的运营前提       |
+| 2      | dedicated e2e / UI 专项测试         | P0-B | 灰度前的安全网             |
+| 3      | 死信处理策略                        | P2   | 生产环境运维必备           |
+| 4      | caption 清洗补强 + 评测集           | P1   | 质量增强阶段基础设施       |
+| 5      | Worker 并发调优                     | P2   | 需负载测试数据驱动         |
+| 6      | 缓存收益量化                        | P2   | 为 P3 latency 达标提供依据 |
+| 7      | MVP 沉淀文档（节点图 / token 模板） | P-1  | 验收交付物，不阻塞开发     |
 
 ---
 
@@ -968,7 +968,8 @@
 - `outline_search`：`packages/server/src/modules/agent/tools/outline-search.tool.ts`
 - `node_read`：`packages/server/src/modules/agent/tools/node-read.tool.ts`
 - `ref_follow`：`packages/server/src/modules/agent/tools/ref-follow.tool.ts`
-- executor：`packages/server/src/modules/agent/agent-executor.ts`（`finalizeCitations` / `finalizeStopReason`）
+- executor：`packages/server/src/modules/agent/agent-executor.ts`（`finalizeCitations` 5-pass 算法 / `finalizeStopReason` / `TaggedCitation` / `normalizeScore`）
+- executor 配置：`agentConfig.citationOutlineScoreCeiling` / `citationNodeReadBaseScore` / `citationRefFollowBaseScore` / `citationMinDocuments` / `citationMinScore` / `citationParentScoreAdvantage`
 
 ### 结构化解析与搜索
 

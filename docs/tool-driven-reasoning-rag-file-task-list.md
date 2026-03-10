@@ -4,7 +4,7 @@
 >
 > 1. `docs/tool-driven-reasoning-rag-migration-plan.md`
 > 2. `docs/tool-driven-reasoning-rag-implementation-checklist.md`
->    文档状态：截至 `2026-03-10` 已按仓库真实进度更新。
+>    文档状态：截至 `2026-03-11` 已按仓库真实进度更新。
 
 ## 1. 说明
 
@@ -479,6 +479,7 @@
   - `fallback`
   - `external`
 - 在 `agent-executor.ts` 增加预算计数与 `stopReason`。
+- 在 `agent-executor.ts` 实现 5-pass evidence selection（`TaggedCitation` / `normalizeScore` / `isAncestorPath` / `filterSectionRedundancy` / diversity selection）。
 - 在 `types/chat.ts` 的 `AgentStep` / `MessageMetadata` 中记录 `stopReason`。
 - `chat.service.ts` 将 `stopReason` 写入消息 metadata。
 

@@ -5,7 +5,7 @@
 >
 > 1. `docs/tool-driven-reasoning-rag-pdf-sample-set.md`
 > 2. `docs/tool-driven-reasoning-rag-docling-normalization-checklist.md`
->    文档状态：截至 `2026-03-10` 已按仓库实际实现进度校准。
+>    文档状态：截至 `2026-03-11` 已按仓库实际实现进度校准。
 
 ## 0. 执行摘要（新版）
 
@@ -13,11 +13,11 @@
 
 当前方向保持不变：仓库已经实际演进到 `结构化检索主路径 + 向量检索兜底` 的 Hybrid 架构，且 `shared 契约 / 索引版本语义 / 结构化工具链 / 统一聊天编排 / stopReason` 均已进入可运行状态。
 
-截至 `2026-03-10` 的真实阶段判断：
+截至 `2026-03-11` 的真实阶段判断：
 
 1. **P0-A 已完成**：结构化索引 schema、migration、citation 契约、队列 payload、新鲜度与巡检脚本都已落地。
-2. **P0-B 大体完成**：Markdown / DOCX / PDF 首版解析、`outline_search`、`node_read`、`vector_fallback_search`、统一 streaming / non-streaming 编排与灰度控制都已实现。
-3. **P1 部分完成**：`ref_follow`、引用边、检索材料增强已落地，但评测集和证据收口优化仍未完成。
+2. **P0-B 已完成**：Markdown / DOCX / PDF 首版解析、`outline_search`、`node_read`、`vector_fallback_search`、统一 streaming / non-streaming 编排与灰度控制都已实现；evidence selection 深度优化已落地。
+3. **P1 部分完成**：`ref_follow`、引用边、检索材料增强、evidence selection 已落地，但评测集和 caption 清洗补强仍未完成。
 4. **P2 已启动**：backfill service + CLI、结构化日志指标、summary API 与 dashboard v4（时间窗口 / 知识库筛选 / 趋势 / 告警 / 知识库分解 / 长期报表导出）已落地，且已支持邮件外部告警治理；缓存与性能专项已进入第二阶段。
 5. **当前优先级**：接下来不应继续扩更多工具，而应优先补 `backfill 进度与调度 / 更高层 e2e / UI 测试 / 缓存收益验证与深化`。
 
@@ -27,8 +27,8 @@
 | -------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **P-1**  | **大体完成** | citation 契约、active version、MVP、`docling` quick compare、normalize v1 与 runtime 接线已落地；PDF 运行时选型已收口（统一 docling，marker/pdf-parse 结构化运行时已移除） |
 | **P0-A** | **已完成**   | schema、migration、shared 契约、消息 metadata、队列新鲜度、巡检脚本均已落地                                                                                                |
-| **P0-B** | **大体完成** | 主链路与灰度已上线到代码层；专门的 e2e / UI 集成测试与更强 evidence selection 仍缺                                                                                         |
-| **P1**   | **部分完成** | `ref_follow`、引用边、检索材料增强已实现；评测集与收口优化未完成                                                                                                           |
+| **P0-B** | **已完成**   | 主链路、灰度、evidence selection 深度优化已上线；专门的 e2e / UI 集成测试仍缺                                                                                              |
+| **P1**   | **部分完成** | `ref_follow`、引用边、检索材料增强、evidence selection 已实现；评测集与 caption 清洗未完成                                                                                 |
 | **P2**   | **已启动**   | backfill、观测、dashboard、报表、邮件告警已落地；缓存与性能专项已进入第二阶段                                                                                              |
 | **P3**   | **未开始**   | Go / No-Go 指标评估与默认开启决策未启动                                                                                                                                    |
 
@@ -88,9 +88,10 @@
    - 已支持长期报表导出与邮件外部告警
    - 已支持告警去重、冷却抑制、严重度升级重发
    - 仍缺多渠道外发、人工确认/静默、长期历史报表归档
-4. **evidence selection 仍是轻量版**
-   - 当前已支持 citation 去重、`insufficient_evidence`、`tool_timeout`、`provider_error`
-   - 但“最终答案真实使用证据”的强收口仍未完成
+4. **evidence selection 已完成深度优化**
+   - 已实现 5-pass `finalizeCitations()` 算法：去重 → 分数归一化（按工具类型统一 [0,1]）→ section 父子去冗余 → min-score 门控 → 跨文档多样性选择
+   - 6 个可配参数（`citationOutlineScoreCeiling / citationNodeReadBaseScore / citationRefFollowBaseScore / citationMinDocuments / citationMinScore / citationParentScoreAdvantage`）
+   - 14 个专项测试覆盖归一化、多样性、冗余过滤、公平性、边界情况
 5. **缓存与性能已完成第二阶段**
    - `outline_search` 结果、`node_read` 结果、单节点读取、`indexVersionId -> nodes` 已有缓存
    - `outline_search` 已改为 header search + 顶部 preview 批量回填
@@ -441,14 +442,21 @@ Worker 行为要求：
 5. `user_aborted`
 6. `provider_error`
 
-### 7.4 最终证据收口（新增）
+### 7.4 最终证据收口（已完成）
 
-Agent executor 在生成最终答案前，应执行一轮轻量 evidence selection：
+Agent executor 在生成最终答案前，执行 5-pass evidence selection（`finalizeCitations()`）：
 
-1. citation 去重
-2. 相同节点合并
-3. 过弱证据过滤
-4. 若证据不足，显式输出“证据不足”而不是伪造引用
+1. **Dedup** — 按 `documentId:nodeId/chunkIndex` key 去重，保留归一化分数更高的
+2. **Normalize** — 按工具名将原始 score 映射到统一 [0, 1] 区间：
+   - `outline_search`：`min(raw / ceiling, 1.0)`，ceiling 默认 30
+   - `knowledge_base_search` / `vector_fallback_search`：原样
+   - `node_read`：固定 0.70（LLM 主动选择的精确读取）
+   - `ref_follow`：固定 0.60（图遍历跟踪）
+3. **Section redundancy filter** — 同文档内父子 sectionPath 去冗余（父节点须超出子节点 0.15 分才保留）
+4. **Min-score gate** — 过滤低于阈值（默认 0.35）的 citation
+5. **Diversity selection** — 从每个文档取最高分 1 条做保底（最多 3 个文档），再按全局分数填满 8 个槽位
+
+所有参数均可通过 `agentConfig` 环境变量配置，若证据不足则显式输出 `insufficient_evidence` 而不是伪造引用。
 
 ### 7.5 Prompt 与 executor 的职责分离
 
@@ -536,6 +544,12 @@ Prompt 仍然需要提示：
    - `maxFallbackRounds`
    - `perToolTimeoutMs`
    - `maxNodeReadTokens`
+   - `citationOutlineScoreCeiling`
+   - `citationNodeReadBaseScore`
+   - `citationRefFollowBaseScore`
+   - `citationMinDocuments`
+   - `citationMinScore`
+   - `citationParentScoreAdvantage`
 3. `featureFlags.*`
    - `structuredRagEnabled`
    - `structuredRagRolloutMode`
@@ -603,7 +617,6 @@ CI 架构门禁仍建议独立 issue 跟踪，但至少补充以下约束：
 剩余动作：
 
 1. 补 dedicated e2e / UI 测试；当前已新增 `docling` parser fixture 与 `outline_search / node_read / ref_follow` integration 覆盖。
-2. 继续增强 evidence selection，而不是只做 citation 去重。
 
 ### P1（状态：部分完成）：跨引用能力与检索质量增强
 
@@ -616,8 +629,7 @@ CI 架构门禁仍建议独立 issue 跟踪，但至少补充以下约束：
 剩余动作：
 
 1. 补跨章节 / 附录 / 图表评测集。
-2. 继续优化 citation 收口与 evidence selection。
-3. caption 清洗、figure/table locator 稳定性与更完整图表锚点解析仍需补强。
+2. caption 清洗、figure/table locator 稳定性与更完整图表锚点解析仍需补强。
 
 ### P2（状态：已启动）：回填、性能与观测收敛
 
