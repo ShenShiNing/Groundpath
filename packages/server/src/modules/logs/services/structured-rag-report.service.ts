@@ -18,7 +18,9 @@ function formatMs(value: number): string {
 }
 
 export const structuredRagReportService = {
-  async generateReport(params: StructuredRagReportParams = {}): Promise<StructuredRagLongTermReport> {
+  async generateReport(
+    params: StructuredRagReportParams = {}
+  ): Promise<StructuredRagLongTermReport> {
     const windowDays = params.days ?? structuredRagObservabilityConfig.reportDefaultDays;
     const summary = await structuredRagDashboardService.getSummary({
       userId: params.userId,
@@ -32,7 +34,9 @@ export const structuredRagReportService = {
       highlights.push('No active Structured RAG alerts in the selected report window.');
     } else {
       for (const alert of summary.alerts) {
-        highlights.push(`${alert.title}: current ${alert.value.toFixed(1)}, threshold ${alert.threshold.toFixed(1)}.`);
+        highlights.push(
+          `${alert.title}: current ${alert.value.toFixed(1)}, threshold ${alert.threshold.toFixed(1)}.`
+        );
       }
     }
 

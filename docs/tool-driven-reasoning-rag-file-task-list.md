@@ -29,7 +29,7 @@
 
 | Issue | 状态     | 说明                                                                                                                                                                                                                       |
 | ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | 部分完成 | `pdf-parse` 受控 runtime、`docling` 真实 helper/runtime 接线、quick compare、normalize v1 已落地；`marker` 运行时已接入但验证与选型未完成（quick 对比报告：`.cache/structured-rag/pdf-runtime-compare/latest.md`）        |
+| 1     | 部分完成 | `pdf-parse` 受控 runtime、`docling` 真实 helper/runtime 接线、quick compare、normalize v1 已落地；`marker` 运行时已接入但验证与选型未完成（quick 对比报告：`.cache/structured-rag/pdf-runtime-compare/latest.md`）         |
 | 2-10  | 已完成   | citation 契约、索引版本、队列 payload、Worker 路由、巡检脚本均已落地                                                                                                                                                       |
 | 11-17 | 已完成   | parser 首版、结构化工具链、统一聊天编排、灰度控制已落地                                                                                                                                                                    |
 | 18    | 部分完成 | 已有大量 unit / service / error-injection 测试，并新增 `docling` parser fixture、`pdf runtime`、`outline_search / node_read / ref_follow` integration 覆盖，仍缺 dedicated e2e / UI 专项                                   |

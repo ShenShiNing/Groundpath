@@ -224,7 +224,7 @@
 
 | Issue | 状态     | 备注                                                                                                                                                                                    |
 | ----- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | 部分完成 | 已有受控 `pdf-parse` runtime、`docling` 真实 runtime 接线、quick compare 与 normalize/integration 覆盖；`marker` 运行时已接入但验证与最终选型未完成                                 |
+| 1     | 部分完成 | 已有受控 `pdf-parse` runtime、`docling` 真实 runtime 接线、quick compare 与 normalize/integration 覆盖；`marker` 运行时已接入但验证与最终选型未完成                                     |
 | 2     | 已完成   | citation / source 契约已落地                                                                                                                                                            |
 | 3     | 已完成   | active version / freshness / superseded 已落地                                                                                                                                          |
 | 4     | 已完成   | 结构化 MVP 闭环已可运行                                                                                                                                                                 |

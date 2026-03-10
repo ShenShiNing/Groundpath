@@ -41,23 +41,28 @@ const parser = new PDFParse({ data: buffer });
 try {
   const result = await parser.getText();
   const totalPageCount =
-    typeof result.total === 'number' ? result.total : Array.isArray(result.pages) ? result.pages.length : null;
+    typeof result.total === 'number'
+      ? result.total
+      : Array.isArray(result.pages)
+        ? result.pages.length
+        : null;
   const limitedPages =
-    typeof maxPages === 'number' && Number.isFinite(maxPages) && maxPages > 0 && Array.isArray(result.pages)
+    typeof maxPages === 'number' &&
+    Number.isFinite(maxPages) &&
+    maxPages > 0 &&
+    Array.isArray(result.pages)
       ? result.pages.slice(0, maxPages)
       : result.pages;
   const limitedText =
     Array.isArray(limitedPages) && limitedPages.length > 0
       ? limitedPages.map((page) => page.text ?? '').join('\n\n')
-      : result.text ?? '';
+      : (result.text ?? '');
 
   const payload = {
     runtime: 'pdf-parse',
     inputPath: resolvedPath,
     pageCount:
-      Array.isArray(limitedPages) && limitedPages.length > 0
-        ? limitedPages.length
-        : totalPageCount,
+      Array.isArray(limitedPages) && limitedPages.length > 0 ? limitedPages.length : totalPageCount,
     totalPageCount,
     text: limitedText,
     info: result.info ?? null,

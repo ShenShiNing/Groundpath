@@ -99,7 +99,11 @@ function finalizeStopReason(input: {
 }): AgentStopReason {
   if (input.stopReason !== 'answered') return input.stopReason;
 
-  if (hasKnowledgeTool(input.tools) && input.agentTrace.length > 0 && input.finalCitations.length === 0) {
+  if (
+    hasKnowledgeTool(input.tools) &&
+    input.agentTrace.length > 0 &&
+    input.finalCitations.length === 0
+  ) {
     return 'insufficient_evidence';
   }
 

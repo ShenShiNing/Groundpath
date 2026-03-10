@@ -48,7 +48,9 @@ function buildTrendLabels(bucketStart: Date, bucketEnd: Date, bucketHours: numbe
     .padStart(2, '0')}:00`;
 }
 
-function buildAlerts(summary: Pick<StructuredRagDashboardSummary, 'agent' | 'index'>): StructuredRagDashboardAlert[] {
+function buildAlerts(
+  summary: Pick<StructuredRagDashboardSummary, 'agent' | 'index'>
+): StructuredRagDashboardAlert[] {
   const alerts: StructuredRagDashboardAlert[] = [];
   const thresholds = structuredRagObservabilityConfig.thresholds;
 
@@ -136,7 +138,7 @@ export const structuredRagDashboardService = {
 
     const [agentRows, indexRows, graphRows, recentEvents, agentBreakdownRows, indexBreakdownRows] =
       await Promise.all([
-      db.execute(sql`
+        db.execute(sql`
         SELECT
           COUNT(*) AS totalExecutions,
           COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.usedFallback')) = 'true' THEN 1 ELSE 0 END), 0) AS fallbackCount,
@@ -153,7 +155,7 @@ export const structuredRagDashboardService = {
           ${userFilter}
           ${knowledgeBaseFilter}
       `),
-      db.execute(sql`
+        db.execute(sql`
         SELECT
           COUNT(*) AS totalBuilds,
           COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.success')) = 'true' THEN 1 ELSE 0 END), 0) AS successCount,
@@ -167,7 +169,7 @@ export const structuredRagDashboardService = {
           ${userFilter}
           ${knowledgeBaseFilter}
       `),
-      db.execute(sql`
+        db.execute(sql`
         SELECT
           COUNT(*) AS graphBuilds,
           COALESCE(SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.nodeCount')) AS UNSIGNED)), 0) AS totalNodes,
@@ -178,32 +180,32 @@ export const structuredRagDashboardService = {
           ${userFilter}
           ${knowledgeBaseFilter}
       `),
-      db
-        .select({
-          id: systemLogs.id,
-          event: systemLogs.event,
-          message: systemLogs.message,
-          createdAt: systemLogs.createdAt,
-          durationMs: systemLogs.durationMs,
-          metadata: systemLogs.metadata,
-        })
-        .from(systemLogs)
-        .where(
-          and(
-            eq(systemLogs.category, 'performance'),
-            gte(systemLogs.createdAt, since),
-            params.userId
-              ? sql`JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.userId')) = ${params.userId}`
-              : undefined,
-            params.knowledgeBaseId
-              ? sql`JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) = ${params.knowledgeBaseId}`
-              : undefined,
-            sql`${systemLogs.event} IN ('structured_rag.agent_execution', 'structured_rag.chat_completion', 'structured_rag.index_build', 'structured_rag.index_graph')`
+        db
+          .select({
+            id: systemLogs.id,
+            event: systemLogs.event,
+            message: systemLogs.message,
+            createdAt: systemLogs.createdAt,
+            durationMs: systemLogs.durationMs,
+            metadata: systemLogs.metadata,
+          })
+          .from(systemLogs)
+          .where(
+            and(
+              eq(systemLogs.category, 'performance'),
+              gte(systemLogs.createdAt, since),
+              params.userId
+                ? sql`JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.userId')) = ${params.userId}`
+                : undefined,
+              params.knowledgeBaseId
+                ? sql`JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) = ${params.knowledgeBaseId}`
+                : undefined,
+              sql`${systemLogs.event} IN ('structured_rag.agent_execution', 'structured_rag.chat_completion', 'structured_rag.index_build', 'structured_rag.index_graph')`
+            )
           )
-        )
-        .orderBy(desc(systemLogs.createdAt))
-        .limit(params.recentLimit),
-      db.execute(sql`
+          .orderBy(desc(systemLogs.createdAt))
+          .limit(params.recentLimit),
+        db.execute(sql`
         SELECT
           JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) AS knowledgeBaseId,
           COUNT(*) AS totalExecutions,
@@ -217,7 +219,7 @@ export const structuredRagDashboardService = {
           ${knowledgeBaseFilter}
         GROUP BY JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId'))
       `),
-      db.execute(sql`
+        db.execute(sql`
         SELECT
           JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) AS knowledgeBaseId,
           COUNT(*) AS totalBuilds,
@@ -231,7 +233,7 @@ export const structuredRagDashboardService = {
           ${knowledgeBaseFilter}
         GROUP BY JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId'))
       `),
-    ]);
+      ]);
 
     const agent = ((agentRows as unknown as [Array<Record<string, unknown>>])[0] ?? [])[0] ?? {};
     const index = ((indexRows as unknown as [Array<Record<string, unknown>>])[0] ?? [])[0] ?? {};
@@ -336,22 +338,17 @@ export const structuredRagDashboardService = {
         bucketEnd,
         agentExecutions: bucketExecutions,
         fallbackRatio: percentage(numeric(bucketAgent.fallbackCount), bucketExecutions),
-        structuredCoverage: percentage(
-          numeric(bucketIndex.structuredParsedCount),
-          bucketBuilds
-        ),
+        structuredCoverage: percentage(numeric(bucketIndex.structuredParsedCount), bucketBuilds),
         indexBuilds: bucketBuilds,
       });
     }
 
-    const agentBreakdown =
-      ((agentBreakdownRows as unknown as [Array<Record<string, unknown>>])[0] ?? []) as Array<
-        Record<string, unknown>
-      >;
-    const indexBreakdown =
-      ((indexBreakdownRows as unknown as [Array<Record<string, unknown>>])[0] ?? []) as Array<
-        Record<string, unknown>
-      >;
+    const agentBreakdown = ((
+      agentBreakdownRows as unknown as [Array<Record<string, unknown>>]
+    )[0] ?? []) as Array<Record<string, unknown>>;
+    const indexBreakdown = ((
+      indexBreakdownRows as unknown as [Array<Record<string, unknown>>]
+    )[0] ?? []) as Array<Record<string, unknown>>;
     const breakdownByKb = new Map<string, StructuredRagDashboardKnowledgeBaseBreakdown>();
 
     for (const row of agentBreakdown) {
@@ -380,10 +377,7 @@ export const structuredRagDashboardService = {
         avgFreshnessLagMs: 0,
       };
       const totalBuildsForKb = numeric(row.totalBuilds);
-      current.structuredCoverage = percentage(
-        numeric(row.structuredParsedCount),
-        totalBuildsForKb
-      );
+      current.structuredCoverage = percentage(numeric(row.structuredParsedCount), totalBuildsForKb);
       current.avgFreshnessLagMs = round(numeric(row.avgFreshnessLagMs));
       breakdownByKb.set(knowledgeBaseId, current);
     }

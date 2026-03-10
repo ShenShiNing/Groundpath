@@ -14,7 +14,8 @@ module.exports = {
     {
       name: 'no-controller-to-repository',
       severity: 'error',
-      comment: 'Controllers must go through services; direct repository access bypasses business logic.',
+      comment:
+        'Controllers must go through services; direct repository access bypasses business logic.',
       from: { path: 'src/modules/.+/controllers/.+\\.ts$' },
       to: { path: 'src/modules/.+/repositories/.+\\.ts$' },
     },

@@ -26,8 +26,10 @@ export interface AccessibleNodeRow {
   tokenCount: number | null;
 }
 
-export interface AccessibleNodeHeadRow
-  extends Omit<AccessibleNodeRow, 'content' | 'contentPreview' | 'tokenCount'> {
+export interface AccessibleNodeHeadRow extends Omit<
+  AccessibleNodeRow,
+  'content' | 'contentPreview' | 'tokenCount'
+> {
   content: null;
   contentPreview: null;
   tokenCount: null;

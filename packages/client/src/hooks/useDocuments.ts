@@ -238,7 +238,9 @@ export function useUploadNewVersion() {
     onSuccess: (_, variables) => {
       // Invalidate document detail and versions
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.detail(variables.documentId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.documents.content(variables.documentId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.documents.content(variables.documentId),
+      });
       queryClient.invalidateQueries({
         queryKey: queryKeys.documents.versions(variables.documentId),
       });
@@ -258,7 +260,9 @@ export function useRestoreVersion() {
       documentsApi.restoreVersion(documentId, versionId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.documents.detail(variables.documentId) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.documents.content(variables.documentId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.documents.content(variables.documentId),
+      });
       queryClient.invalidateQueries({
         queryKey: queryKeys.documents.versions(variables.documentId),
       });

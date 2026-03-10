@@ -70,7 +70,12 @@ export type ResourceHistoryParams = z.infer<typeof resourceHistorySchema>;
  * Structured RAG dashboard query params
  */
 export const structuredRagDashboardQuerySchema = z.object({
-  hours: z.coerce.number().int().min(1).max(24 * 90).default(24),
+  hours: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 90)
+    .default(24),
   recentLimit: z.coerce.number().int().min(1).max(20).default(8),
   knowledgeBaseId: z.string().uuid().optional(),
 });

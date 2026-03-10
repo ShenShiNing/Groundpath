@@ -35,7 +35,11 @@ export class NodeReadTool implements AgentTool {
 
   async execute(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolExecutionResult> {
     const nodeIds = Array.isArray(args.nodeIds)
-      ? [...new Set(args.nodeIds.map((value) => String(value).trim()).filter((value) => value.length > 0))]
+      ? [
+          ...new Set(
+            args.nodeIds.map((value) => String(value).trim()).filter((value) => value.length > 0)
+          ),
+        ]
       : [];
 
     if (nodeIds.length === 0) {

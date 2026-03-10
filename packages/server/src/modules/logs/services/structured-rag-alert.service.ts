@@ -30,7 +30,10 @@ function severityRank(severity: StructuredRagDashboardAlert['severity']): number
   }
 }
 
-function formatAlertLine(alert: StructuredRagDashboardAlert, reason: AlertNotificationReason): string {
+function formatAlertLine(
+  alert: StructuredRagDashboardAlert,
+  reason: AlertNotificationReason
+): string {
   return `- ${alert.title} (${alert.code}) severity=${alert.severity} value=${alert.value.toFixed(1)} threshold=${alert.threshold.toFixed(1)} reason=${reason}`;
 }
 
@@ -60,8 +63,14 @@ export const structuredRagAlertService = {
       ).map((entry) => [entry.code, entry])
     );
 
-    const notifyAlerts: Array<{ alert: StructuredRagDashboardAlert; reason: AlertNotificationReason }> = [];
-    const suppressedAlerts: Array<{ alert: StructuredRagDashboardAlert; reason: AlertSuppressionReason }> = [];
+    const notifyAlerts: Array<{
+      alert: StructuredRagDashboardAlert;
+      reason: AlertNotificationReason;
+    }> = [];
+    const suppressedAlerts: Array<{
+      alert: StructuredRagDashboardAlert;
+      reason: AlertSuppressionReason;
+    }> = [];
     const now = Date.now();
 
     for (const alert of report.summary.alerts) {
@@ -73,7 +82,9 @@ export const structuredRagAlertService = {
 
       const hoursSinceLastSent = (now - previous.createdAt.getTime()) / (60 * 60 * 1000);
       const previousSeverity =
-        previous.severity === 'error' || previous.severity === 'warn' || previous.severity === 'info'
+        previous.severity === 'error' ||
+        previous.severity === 'warn' ||
+        previous.severity === 'info'
           ? previous.severity
           : 'info';
 
@@ -148,7 +159,9 @@ export const structuredRagAlertService = {
       };
     }
 
-    const alertSection = notifyAlerts.map((entry) => formatAlertLine(entry.alert, entry.reason)).join('\n');
+    const alertSection = notifyAlerts
+      .map((entry) => formatAlertLine(entry.alert, entry.reason))
+      .join('\n');
 
     await emailService.sendEmail({
       to: recipients,

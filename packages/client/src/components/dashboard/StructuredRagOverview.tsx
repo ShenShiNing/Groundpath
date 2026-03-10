@@ -102,7 +102,8 @@ export function StructuredRagOverview() {
   const recentEvents = data.recentEvents.map((event) => {
     const stopReason =
       typeof event.metadata?.stopReason === 'string' ? event.metadata.stopReason : null;
-    const routeMode = typeof event.metadata?.routeMode === 'string' ? event.metadata.routeMode : null;
+    const routeMode =
+      typeof event.metadata?.routeMode === 'string' ? event.metadata.routeMode : null;
     return { ...event, stopReason, routeMode };
   });
 
@@ -151,11 +152,21 @@ export function StructuredRagOverview() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="6">{t('structuredRag.filters.lastHours', { hours: 6 })}</SelectItem>
-              <SelectItem value="24">{t('structuredRag.filters.lastHours', { hours: 24 })}</SelectItem>
-              <SelectItem value="72">{t('structuredRag.filters.lastHours', { hours: 72 })}</SelectItem>
-              <SelectItem value="168">{t('structuredRag.filters.lastHours', { hours: 168 })}</SelectItem>
-              <SelectItem value="720">{t('structuredRag.filters.lastHours', { hours: 720 })}</SelectItem>
+              <SelectItem value="6">
+                {t('structuredRag.filters.lastHours', { hours: 6 })}
+              </SelectItem>
+              <SelectItem value="24">
+                {t('structuredRag.filters.lastHours', { hours: 24 })}
+              </SelectItem>
+              <SelectItem value="72">
+                {t('structuredRag.filters.lastHours', { hours: 72 })}
+              </SelectItem>
+              <SelectItem value="168">
+                {t('structuredRag.filters.lastHours', { hours: 168 })}
+              </SelectItem>
+              <SelectItem value="720">
+                {t('structuredRag.filters.lastHours', { hours: 720 })}
+              </SelectItem>
             </SelectContent>
           </Select>
           <Select
@@ -178,7 +189,9 @@ export function StructuredRagOverview() {
               ))}
             </SelectContent>
           </Select>
-          <Badge variant="secondary">{t('structuredRag.window', { hours: data.windowHours })}</Badge>
+          <Badge variant="secondary">
+            {t('structuredRag.window', { hours: data.windowHours })}
+          </Badge>
           <Button
             type="button"
             size="sm"
@@ -281,9 +294,19 @@ export function StructuredRagOverview() {
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">{point.label}</span>
                   <div className="flex items-center gap-3">
-                    <span>{t('structuredRag.trend.executions', { count: point.agentExecutions })}</span>
-                    <span>{t('structuredRag.trend.fallback', { value: formatPercent(point.fallbackRatio) })}</span>
-                    <span>{t('structuredRag.trend.coverage', { value: formatPercent(point.structuredCoverage) })}</span>
+                    <span>
+                      {t('structuredRag.trend.executions', { count: point.agentExecutions })}
+                    </span>
+                    <span>
+                      {t('structuredRag.trend.fallback', {
+                        value: formatPercent(point.fallbackRatio),
+                      })}
+                    </span>
+                    <span>
+                      {t('structuredRag.trend.coverage', {
+                        value: formatPercent(point.structuredCoverage),
+                      })}
+                    </span>
                   </div>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -322,7 +345,9 @@ export function StructuredRagOverview() {
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{event.event}</Badge>
-                    {event.stopReason ? <Badge variant="secondary">{event.stopReason}</Badge> : null}
+                    {event.stopReason ? (
+                      <Badge variant="secondary">{event.stopReason}</Badge>
+                    ) : null}
                     {event.routeMode ? <Badge variant="secondary">{event.routeMode}</Badge> : null}
                     <span className="text-xs text-muted-foreground">
                       {new Date(event.createdAt).toLocaleString()}
@@ -346,20 +371,30 @@ export function StructuredRagOverview() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('structuredRag.detail.avgFinalCitations')}</span>
+              <span className="text-muted-foreground">
+                {t('structuredRag.detail.avgFinalCitations')}
+              </span>
               <span className="font-medium">{data.agent.avgFinalCitationCount.toFixed(1)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('structuredRag.detail.avgRetrievedCitations')}</span>
+              <span className="text-muted-foreground">
+                {t('structuredRag.detail.avgRetrievedCitations')}
+              </span>
               <span className="font-medium">{data.agent.avgRetrievedCitationCount.toFixed(1)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('structuredRag.detail.providerErrorRate')}</span>
+              <span className="text-muted-foreground">
+                {t('structuredRag.detail.providerErrorRate')}
+              </span>
               <span className="font-medium">{formatPercent(data.agent.providerErrorRate)}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('structuredRag.detail.insufficientEvidenceRate')}</span>
-              <span className="font-medium">{formatPercent(data.agent.insufficientEvidenceRate)}</span>
+              <span className="text-muted-foreground">
+                {t('structuredRag.detail.insufficientEvidenceRate')}
+              </span>
+              <span className="font-medium">
+                {formatPercent(data.agent.insufficientEvidenceRate)}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">{t('structuredRag.detail.graphBuilds')}</span>
@@ -374,7 +409,9 @@ export function StructuredRagOverview() {
               <span className="font-medium">{data.index.totalEdges}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t('structuredRag.detail.avgAgentDuration')}</span>
+              <span className="text-muted-foreground">
+                {t('structuredRag.detail.avgAgentDuration')}
+              </span>
               <span className="font-medium">{formatMs(data.agent.avgDurationMs)}</span>
             </div>
             <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground">

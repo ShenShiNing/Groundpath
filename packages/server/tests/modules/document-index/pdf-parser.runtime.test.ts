@@ -199,11 +199,13 @@ Overview text.`,
     const { pdfStructureParser } =
       await import('@modules/document-index/services/parsers/pdf-structure.parser');
 
-    await expect(pdfStructureParser.parseFromStorage('documents/marker.pdf')).rejects.toMatchObject({
-      name: 'PdfStructureParserRuntimeError',
-      code: 'unsupported_runtime',
-      runtime: 'marker',
-    });
+    await expect(pdfStructureParser.parseFromStorage('documents/marker.pdf')).rejects.toMatchObject(
+      {
+        name: 'PdfStructureParserRuntimeError',
+        code: 'unsupported_runtime',
+        runtime: 'marker',
+      }
+    );
   });
 
   it('classifies missing marker module as unsupported', async () => {
@@ -240,10 +242,12 @@ Overview text.`,
     const { pdfStructureParser } =
       await import('@modules/document-index/services/parsers/pdf-structure.parser');
 
-    await expect(pdfStructureParser.parseFromStorage('documents/marker.pdf')).rejects.toMatchObject({
-      name: 'PdfStructureParserRuntimeError',
-      code: 'unsupported_runtime',
-      runtime: 'marker',
-    });
+    await expect(pdfStructureParser.parseFromStorage('documents/marker.pdf')).rejects.toMatchObject(
+      {
+        name: 'PdfStructureParserRuntimeError',
+        code: 'unsupported_runtime',
+        runtime: 'marker',
+      }
+    );
   });
 });

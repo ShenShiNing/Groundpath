@@ -34,9 +34,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 export const documentIndexBackfillService = {
-  async listCandidates(
-    options: Omit<DocumentIndexBackfillOptions, 'dryRun'> = {}
-  ): Promise<{
+  async listCandidates(options: Omit<DocumentIndexBackfillOptions, 'dryRun'> = {}): Promise<{
     documents: DocumentBackfillCandidate[];
     hasMore: boolean;
     limit: number;
@@ -60,7 +58,9 @@ export const documentIndexBackfillService = {
     };
   },
 
-  async enqueueBackfill(options: DocumentIndexBackfillOptions = {}): Promise<DocumentIndexBackfillResult> {
+  async enqueueBackfill(
+    options: DocumentIndexBackfillOptions = {}
+  ): Promise<DocumentIndexBackfillResult> {
     const plan = await this.listCandidates(options);
     const dryRun = options.dryRun ?? false;
 

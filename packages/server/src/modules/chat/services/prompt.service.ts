@@ -132,7 +132,11 @@ export interface SearchResult {
 function truncateContextSnippet(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
   const sliced = text.slice(0, maxChars);
-  const lastBoundary = Math.max(sliced.lastIndexOf('\n'), sliced.lastIndexOf('. '), sliced.lastIndexOf(' '));
+  const lastBoundary = Math.max(
+    sliced.lastIndexOf('\n'),
+    sliced.lastIndexOf('. '),
+    sliced.lastIndexOf(' ')
+  );
   if (lastBoundary > maxChars * 0.6) {
     return `${sliced.slice(0, lastBoundary).trimEnd()}...`;
   }
