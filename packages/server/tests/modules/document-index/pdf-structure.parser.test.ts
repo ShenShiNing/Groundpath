@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { pdfStructureParser } from '@modules/document-index/services/parsers/pdf-structure.parser';
+import { parseHeuristicStructuredText } from '@modules/document-index/services/parsers/heuristic-structure.parser';
 
 describe('pdfStructureParser', () => {
-  it('parses chapter-like headings into a structured graph', () => {
-    const result = pdfStructureParser.parseTextContent(`CHAPTER 1 Retrieval
+  it('parses chapter-like headings via heuristic parser', () => {
+    const result = parseHeuristicStructuredText(
+      `CHAPTER 1 Retrieval
 
 Overview text.
 
 1.1 Query Planning
 
-Planning text.`);
+Planning text.`,
+      'pdf'
+    );
 
     expect(result.parserRuntime).toBe('pdf');
     expect(result.headingCount).toBeGreaterThanOrEqual(2);
@@ -28,13 +32,16 @@ Planning text.`);
   });
 
   it('extracts citation-like chapter references into graph edges', () => {
-    const result = pdfStructureParser.parseTextContent(`CHAPTER 1 Retrieval
+    const result = parseHeuristicStructuredText(
+      `CHAPTER 1 Retrieval
 
 This section cites Chapter 2 for benchmarks.
 
 CHAPTER 2 Benchmarks
 
-Benchmark text.`);
+Benchmark text.`,
+      'pdf'
+    );
 
     expect(result.edges).toEqual(
       expect.arrayContaining([

@@ -29,7 +29,7 @@
 
 | Issue | 状态     | 说明                                                                                                                                                                                                                       |
 | ----- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | 部分完成 | `pdf-parse` 受控 runtime、`docling` 真实 helper/runtime 接线、quick compare、normalize v1 已落地；`marker` 运行时已接入但验证与选型未完成（quick 对比报告：`.cache/structured-rag/pdf-runtime-compare/latest.md`）         |
+| 1     | 已完成   | 选型结论：统一 docling；marker/pdf-parse 结构化运行时代码已移除                                                                                                                                                            |
 | 2-10  | 已完成   | citation 契约、索引版本、队列 payload、Worker 路由、巡检脚本均已落地                                                                                                                                                       |
 | 11-17 | 已完成   | parser 首版、结构化工具链、统一聊天编排、灰度控制已落地                                                                                                                                                                    |
 | 18    | 部分完成 | 已有大量 unit / service / error-injection 测试，并新增 `docling` parser fixture、`pdf runtime`、`outline_search / node_read / ref_follow` integration 覆盖，仍缺 dedicated e2e / UI 专项                                   |
@@ -103,12 +103,12 @@
 ### Issue 1: 验证 PDF 解析运行时方案
 
 目标：
-验证 `marker / docling` 在当前仓库中的运行方式、资源限制和失败回退策略。
+验证并选定结构化 RAG PDF 运行时（已完成：统一 docling）。
 
 新增文件：
 
 - `packages/server/src/modules/document-index/services/parsers/pdf-structure.parser.ts`
-- 可选：`packages/server/src/modules/document-index/services/parsers/pdf-parser.runtime.ts`
+- `packages/server/src/modules/document-index/services/parsers/pdf-parser.runtime.ts`（仅 docling）
 
 修改文件：
 
@@ -118,14 +118,10 @@
 
 开发动作：
 
-- 在 `pdf-structure.parser.ts` 里先定义统一解析接口，不急着绑定最终实现。
-- 在 `env.ts` 增加 PDF 解析相关配置：
-  - `DOCUMENT_INDEX_PDF_RUNTIME`
-  - `DOCUMENT_INDEX_PDF_TIMEOUT`
-  - `DOCUMENT_INDEX_PDF_CONCURRENCY`
-- 可选：增加 `DOCUMENT_INDEX_MARKER_COMMAND` 以覆盖 marker 运行命令。
-- 在 `.env.example` 同步新增配置模板。
-- 若采用子进程 / sidecar，先把调用边界、错误分类、超时分类写入 parser runtime 适配层。
+- PDF 运行时选型已收口：统一采用 docling。
+- marker/pdf-parse 结构化运行时代码已清理。
+- `DOCUMENT_INDEX_PDF_RUNTIME` 和 `DOCUMENT_INDEX_MARKER_COMMAND` 配置项已移除。
+- 保留 `DOCUMENT_INDEX_PDF_TIMEOUT` 和 `DOCUMENT_INDEX_PDF_CONCURRENCY` 配置。
 
 ### Issue 2: 设计结构化 citation/source 契约
 

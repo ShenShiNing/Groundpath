@@ -140,10 +140,8 @@ const documentSchema = z.object({
 const documentIndexSchema = z.object({
   DOCUMENT_INDEX_ROUTE_TOKEN_THRESHOLD: z.coerce.number().int().min(1).default(5000),
   DOCUMENT_INDEX_CHARS_PER_TOKEN: z.coerce.number().min(1).default(4),
-  DOCUMENT_INDEX_PDF_RUNTIME: z.enum(['pdf-parse', 'marker', 'docling']).default('pdf-parse'),
   DOCUMENT_INDEX_PDF_TIMEOUT: z.coerce.number().int().min(1000).max(600000).default(30000),
   DOCUMENT_INDEX_PDF_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
-  DOCUMENT_INDEX_MARKER_COMMAND: z.string().default(''),
 });
 
 // -------------------- RAG Search Defaults --------------------
@@ -452,10 +450,8 @@ export const documentConfig = {
 export const documentIndexConfig = {
   routeTokenThreshold: validatedEnv.DOCUMENT_INDEX_ROUTE_TOKEN_THRESHOLD,
   charsPerToken: validatedEnv.DOCUMENT_INDEX_CHARS_PER_TOKEN,
-  pdfRuntime: validatedEnv.DOCUMENT_INDEX_PDF_RUNTIME,
   pdfTimeoutMs: validatedEnv.DOCUMENT_INDEX_PDF_TIMEOUT,
   pdfConcurrency: validatedEnv.DOCUMENT_INDEX_PDF_CONCURRENCY,
-  markerCommand: validatedEnv.DOCUMENT_INDEX_MARKER_COMMAND,
 } as const;
 
 /** RAG search defaults */

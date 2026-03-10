@@ -1,16 +1,11 @@
-import { documentIndexConfig, featureFlags } from '@config/env';
+import { featureFlags } from '@config/env';
 import { documentStorageService } from '@modules/document/services/document-storage.service';
 import { markdownStructureParser } from './markdown-structure.parser';
 import { normalizeDoclingMarkdown } from './docling-markdown-normalizer';
-import { parseHeuristicStructuredText } from './heuristic-structure.parser';
 import { extractStructuredPdfText, extractStructuredPdfWithImages } from './pdf-parser.runtime';
 import type { ParsedDocumentStructure } from './types';
 
 export const pdfStructureParser = {
-  parseTextContent(textContent: string, parserRuntime: string = 'pdf') {
-    return parseHeuristicStructuredText(textContent, parserRuntime);
-  },
-
   parseDoclingMarkdown(markdownContent: string) {
     const normalizedMarkdown = normalizeDoclingMarkdown(markdownContent);
     return markdownStructureParser.parse(normalizedMarkdown, 'docling');
@@ -19,19 +14,16 @@ export const pdfStructureParser = {
   async parseFromStorage(storageKey: string) {
     const buffer = await documentStorageService.getDocumentContent(storageKey);
     const textContent = await extractStructuredPdfText(buffer);
-    const parsed =
-      documentIndexConfig.pdfRuntime === 'docling'
-        ? this.parseDoclingMarkdown(textContent)
-        : this.parseTextContent(textContent, documentIndexConfig.pdfRuntime);
+    const parsed = this.parseDoclingMarkdown(textContent);
 
     return {
       ...parsed,
-      parserRuntime: documentIndexConfig.pdfRuntime,
+      parserRuntime: 'docling' as const,
     };
   },
 
   async parseFromStorageWithImages(storageKey: string): Promise<ParsedDocumentStructure> {
-    if (!featureFlags.imageDescriptionEnabled || documentIndexConfig.pdfRuntime !== 'docling') {
+    if (!featureFlags.imageDescriptionEnabled) {
       return this.parseFromStorage(storageKey);
     }
 
@@ -41,7 +33,7 @@ export const pdfStructureParser = {
 
     return {
       ...parsed,
-      parserRuntime: documentIndexConfig.pdfRuntime,
+      parserRuntime: 'docling',
       extractedImages: images,
     };
   },

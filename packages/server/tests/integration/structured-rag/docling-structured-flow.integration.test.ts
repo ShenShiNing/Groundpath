@@ -35,7 +35,6 @@ vi.mock('@config/env', () => ({
   },
   documentIndexConfig: {
     charsPerToken: 4,
-    pdfRuntime: 'pdf-parse',
     pdfTimeoutMs: 30000,
     pdfConcurrency: 1,
   },
