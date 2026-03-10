@@ -230,6 +230,13 @@ const agentSchema = z.object({
   AGENT_REF_FOLLOW_MAX_NODES: z.coerce.number().int().min(1).max(100).default(20),
   TAVILY_MAX_RESULTS: z.coerce.number().int().min(1).max(10).default(5),
   TAVILY_CONTENT_MAX_LENGTH: z.coerce.number().int().min(200).max(10000).default(2000),
+  // Citation evidence selection
+  AGENT_CITATION_OUTLINE_SCORE_CEILING: z.coerce.number().min(1).default(30),
+  AGENT_CITATION_NODE_READ_BASE_SCORE: z.coerce.number().min(0).max(1).default(0.7),
+  AGENT_CITATION_REF_FOLLOW_BASE_SCORE: z.coerce.number().min(0).max(1).default(0.6),
+  AGENT_CITATION_MIN_DOCUMENTS: z.coerce.number().int().min(1).default(3),
+  AGENT_CITATION_MIN_SCORE: z.coerce.number().min(0).max(1).default(0.35),
+  AGENT_CITATION_PARENT_SCORE_ADVANTAGE: z.coerce.number().min(0).max(1).default(0.15),
 });
 
 // -------------------- Logging --------------------
@@ -521,6 +528,12 @@ export const agentConfig = {
   refFollowMaxNodes: validatedEnv.AGENT_REF_FOLLOW_MAX_NODES,
   tavilyMaxResults: validatedEnv.TAVILY_MAX_RESULTS,
   tavilyContentMaxLength: validatedEnv.TAVILY_CONTENT_MAX_LENGTH,
+  citationOutlineScoreCeiling: validatedEnv.AGENT_CITATION_OUTLINE_SCORE_CEILING,
+  citationNodeReadBaseScore: validatedEnv.AGENT_CITATION_NODE_READ_BASE_SCORE,
+  citationRefFollowBaseScore: validatedEnv.AGENT_CITATION_REF_FOLLOW_BASE_SCORE,
+  citationMinDocuments: validatedEnv.AGENT_CITATION_MIN_DOCUMENTS,
+  citationMinScore: validatedEnv.AGENT_CITATION_MIN_SCORE,
+  citationParentScoreAdvantage: validatedEnv.AGENT_CITATION_PARENT_SCORE_ADVANTAGE,
 } as const;
 
 /** VLM (Vision Language Model) configuration */

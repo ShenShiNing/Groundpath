@@ -2,9 +2,21 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentExecutorOptions } from '@modules/agent/agent-executor';
 import type { AgentTool, ToolContext, ToolDefinition } from '@modules/agent/tools/tool.interface';
 import type { LLMProvider, ChatMessage, GenerateOptions } from '@modules/llm';
+import type { Citation } from '@knowledge-agent/shared/types';
 
 vi.mock('@shared/config/env', () => ({
-  agentConfig: { maxIterations: 5, maxStructuredRounds: 3, maxFallbackRounds: 1, toolTimeout: 20 },
+  agentConfig: {
+    maxIterations: 5,
+    maxStructuredRounds: 3,
+    maxFallbackRounds: 1,
+    toolTimeout: 20,
+    citationOutlineScoreCeiling: 30,
+    citationNodeReadBaseScore: 0.7,
+    citationRefFollowBaseScore: 0.6,
+    citationMinDocuments: 3,
+    citationMinScore: 0.35,
+    citationParentScoreAdvantage: 0.15,
+  },
 }));
 
 vi.mock('@shared/logger', () => ({
@@ -54,6 +66,53 @@ function createBaseOptions(overrides: Partial<AgentExecutorOptions> = {}): Agent
     genOptions: {} as GenerateOptions,
     ...overrides,
   };
+}
+
+/** Helper to build a single-tool-call flow that returns citations, then answers */
+function setupCitationFlow(
+  tool: AgentTool,
+  toolCallName: string
+): { provider: LLMProvider; options: AgentExecutorOptions } {
+  const generateWithTools = vi
+    .fn()
+    .mockResolvedValueOnce({
+      finishReason: 'tool_calls',
+      content: '',
+      toolCalls: [{ id: 'tc-1', name: toolCallName, arguments: {} }],
+    })
+    .mockResolvedValueOnce({
+      finishReason: 'text',
+      content: 'Answer',
+      toolCalls: [],
+    });
+
+  const provider = createMockProvider({ generateWithTools });
+  const options = createBaseOptions({ provider, tools: [tool] });
+  return { provider, options };
+}
+
+function makeNodeCitation(overrides: Partial<Citation> = {}): Citation {
+  return {
+    sourceType: 'node',
+    documentId: 'doc-1',
+    documentTitle: 'Doc 1',
+    nodeId: 'node-1',
+    excerpt: 'text',
+    score: 0.8,
+    ...overrides,
+  } as Citation;
+}
+
+function makeChunkCitation(overrides: Partial<Citation> = {}): Citation {
+  return {
+    sourceType: 'chunk',
+    documentId: 'doc-1',
+    documentTitle: 'Doc 1',
+    chunkIndex: 0,
+    content: 'chunk content',
+    score: 0.8,
+    ...overrides,
+  } as Citation;
 }
 
 // ==================== Tests ====================
@@ -321,42 +380,18 @@ describe('executeAgentLoop', () => {
   it('should accumulate citations from tool results', async () => {
     const tool: AgentTool = {
       definition: {
-        name: 'search',
+        name: 'outline_search',
         description: 'search',
         category: 'structured',
         parameters: { type: 'object', properties: {} },
       },
       execute: vi.fn().mockResolvedValue({
         content: 'found it',
-        citations: [
-          {
-            sourceType: 'chunk',
-            documentId: 'doc-1',
-            documentTitle: 'Doc 1',
-            chunkIndex: 0,
-            content: 'chunk',
-            score: 0.9,
-          },
-        ],
+        citations: [makeNodeCitation({ score: 25 })],
       }),
     };
 
-    const generateWithTools = vi
-      .fn()
-      .mockResolvedValueOnce({
-        finishReason: 'tool_calls',
-        content: '',
-        toolCalls: [{ id: 'tc-1', name: 'search', arguments: {} }],
-      })
-      .mockResolvedValueOnce({
-        finishReason: 'text',
-        content: 'Answer with citation',
-        toolCalls: [],
-      });
-
-    const provider = createMockProvider({ generateWithTools });
-    const options = createBaseOptions({ provider, tools: [tool] });
-
+    const { options } = setupCitationFlow(tool, 'outline_search');
     const result = await executeAgentLoop(options);
 
     expect(result.citations).toHaveLength(1);
@@ -367,7 +402,7 @@ describe('executeAgentLoop', () => {
   it('deduplicates final citations while preserving retrieved citations', async () => {
     const tool: AgentTool = {
       definition: {
-        name: 'search',
+        name: 'outline_search',
         description: 'search',
         category: 'structured',
         parameters: { type: 'object', properties: {} },
@@ -376,29 +411,11 @@ describe('executeAgentLoop', () => {
         .fn()
         .mockResolvedValueOnce({
           content: 'first',
-          citations: [
-            {
-              sourceType: 'node',
-              documentId: 'doc-1',
-              documentTitle: 'Doc 1',
-              nodeId: 'node-1',
-              excerpt: 'A',
-              score: 0.4,
-            },
-          ],
+          citations: [makeNodeCitation({ score: 10 })],
         })
         .mockResolvedValueOnce({
           content: 'second',
-          citations: [
-            {
-              sourceType: 'node',
-              documentId: 'doc-1',
-              documentTitle: 'Doc 1',
-              nodeId: 'node-1',
-              excerpt: 'B',
-              score: 0.9,
-            },
-          ],
+          citations: [makeNodeCitation({ score: 25 })],
         }),
     };
 
@@ -407,12 +424,12 @@ describe('executeAgentLoop', () => {
       .mockResolvedValueOnce({
         finishReason: 'tool_calls',
         content: '',
-        toolCalls: [{ id: 'tc-1', name: 'search', arguments: {} }],
+        toolCalls: [{ id: 'tc-1', name: 'outline_search', arguments: {} }],
       })
       .mockResolvedValueOnce({
         finishReason: 'tool_calls',
         content: '',
-        toolCalls: [{ id: 'tc-2', name: 'search', arguments: {} }],
+        toolCalls: [{ id: 'tc-2', name: 'outline_search', arguments: {} }],
       })
       .mockResolvedValueOnce({
         finishReason: 'text',
@@ -425,11 +442,8 @@ describe('executeAgentLoop', () => {
 
     expect(result.retrievedCitations).toHaveLength(2);
     expect(result.citations).toHaveLength(1);
-    expect(result.citations[0]).toMatchObject({
-      nodeId: 'node-1',
-      excerpt: 'B',
-      score: 0.9,
-    });
+    // Higher raw score (25) normalizes to 25/30 ≈ 0.833 > 10/30 ≈ 0.333
+    expect(result.citations[0]!.score).toBe(25);
   });
 
   // ── Multiple concurrent tool calls ──
@@ -593,5 +607,424 @@ describe('executeAgentLoop', () => {
     expect(result.stopReason).toBe('insufficient_evidence');
     expect(result.citations).toEqual([]);
     expect(result.retrievedCitations).toEqual([]);
+  });
+
+  // ============================================================
+  // Evidence Selection (5-pass finalizeCitations) Tests
+  // ============================================================
+
+  describe('score normalization', () => {
+    it('normalizes outline_search scores by ceiling (30)', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'found',
+          citations: [
+            makeNodeCitation({ nodeId: 'n-low', score: 15 }),
+            makeNodeCitation({ nodeId: 'n-high', score: 35 }),
+          ],
+        }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      // 15/30 = 0.5 → above minScore(0.35), 35/30 = 1.167 → capped at 1.0
+      expect(result.citations).toHaveLength(2);
+      // Higher raw score should be first (both pass min-score)
+      expect(result.citations[0]!.score).toBe(35);
+      expect(result.citations[1]!.score).toBe(15);
+    });
+
+    it('passes vector search scores through unchanged', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'knowledge_base_search',
+          description: 'vector search',
+          category: 'fallback',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'found',
+          citations: [makeChunkCitation({ chunkIndex: 0, score: 0.85 })],
+        }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'knowledge_base_search');
+      const result = await executeAgentLoop(options);
+
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations[0]!.score).toBe(0.85);
+    });
+
+    it('assigns fixed score 0.70 to node_read citations', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'node_read',
+          description: 'read node',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'node content',
+          citations: [makeNodeCitation({ nodeId: 'nr-1', score: undefined })],
+        }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'node_read');
+      const result = await executeAgentLoop(options);
+
+      // nodeRead gets normalized to 0.70, which is above minScore(0.35)
+      expect(result.citations).toHaveLength(1);
+    });
+
+    it('assigns fixed score 0.60 to ref_follow citations', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'ref_follow',
+          description: 'follow ref',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'ref content',
+          citations: [makeNodeCitation({ nodeId: 'rf-1', score: undefined })],
+        }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'ref_follow');
+      const result = await executeAgentLoop(options);
+
+      // refFollow gets normalized to 0.60, above minScore(0.35)
+      expect(result.citations).toHaveLength(1);
+    });
+
+    it('filters out citations below min-score threshold', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'found',
+          citations: [
+            makeNodeCitation({ nodeId: 'n-good', score: 20 }),
+            makeNodeCitation({ nodeId: 'n-bad', score: 5 }),
+          ],
+        }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      // 20/30 ≈ 0.67 → passes; 5/30 ≈ 0.17 → filtered
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations[0]!.score).toBe(20);
+    });
+  });
+
+  describe('cross-document diversity', () => {
+    it('guarantees citations from multiple documents when available', async () => {
+      const citations: Citation[] = [];
+      // 5 citations from doc-A (high scores) and 1 each from doc-B, doc-C
+      for (let i = 0; i < 5; i++) {
+        citations.push(
+          makeNodeCitation({
+            documentId: 'doc-A',
+            nodeId: `nA-${i}`,
+            score: 28 - i,
+          })
+        );
+      }
+      citations.push(makeNodeCitation({ documentId: 'doc-B', nodeId: 'nB-0', score: 12 }));
+      citations.push(makeNodeCitation({ documentId: 'doc-C', nodeId: 'nC-0', score: 11 }));
+
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({ content: 'found', citations }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      // doc-B (12/30=0.4) and doc-C (11/30≈0.37) both pass minScore
+      // Diversity should ensure doc-B and doc-C are represented
+      const docIds = new Set(result.citations.map((c) => c.documentId));
+      expect(docIds.has('doc-A')).toBe(true);
+      expect(docIds.has('doc-B')).toBe(true);
+      expect(docIds.has('doc-C')).toBe(true);
+    });
+
+    it('does not force low-scoring documents into results', async () => {
+      const citations: Citation[] = [
+        makeNodeCitation({ documentId: 'doc-A', nodeId: 'nA-0', score: 25 }),
+        makeNodeCitation({ documentId: 'doc-B', nodeId: 'nB-0', score: 3 }),
+      ];
+
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({ content: 'found', citations }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      // doc-B score 3/30=0.1 → below minScore(0.35) → filtered out
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations[0]!.documentId).toBe('doc-A');
+    });
+  });
+
+  describe('section path redundancy', () => {
+    it('removes parent when child has comparable or higher score', async () => {
+      const citations: Citation[] = [
+        makeNodeCitation({
+          nodeId: 'parent',
+          sectionPath: ['Chapter 1'],
+          score: 20,
+        }),
+        makeNodeCitation({
+          nodeId: 'child',
+          sectionPath: ['Chapter 1', 'Section 1.1'],
+          score: 18,
+        }),
+      ];
+
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({ content: 'found', citations }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      // parent: 20/30≈0.667, child: 18/30=0.6 → diff=0.067 < 0.15 → keep child
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations[0]!.nodeId).toBe('child');
+    });
+
+    it('keeps parent when its score significantly exceeds child', async () => {
+      const citations: Citation[] = [
+        makeNodeCitation({
+          nodeId: 'parent',
+          sectionPath: ['Chapter 1'],
+          score: 28,
+        }),
+        makeNodeCitation({
+          nodeId: 'child',
+          sectionPath: ['Chapter 1', 'Section 1.1'],
+          score: 12,
+        }),
+      ];
+
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({ content: 'found', citations }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      // parent: 28/30≈0.933, child: 12/30=0.4 → diff=0.533 > 0.15 → keep parent
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations[0]!.nodeId).toBe('parent');
+    });
+
+    it('does not apply section redundancy to chunk citations', async () => {
+      const citations: Citation[] = [
+        makeChunkCitation({ chunkIndex: 0, score: 0.8 }),
+        makeChunkCitation({ chunkIndex: 1, score: 0.7 }),
+      ];
+
+      const tool: AgentTool = {
+        definition: {
+          name: 'knowledge_base_search',
+          description: 'search',
+          category: 'fallback',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({ content: 'found', citations }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'knowledge_base_search');
+      const result = await executeAgentLoop(options);
+
+      // Both chunks pass minScore and are not subject to section redundancy
+      expect(result.citations).toHaveLength(2);
+    });
+  });
+
+  describe('fair treatment of tool sources', () => {
+    it('includes node_read and ref_follow citations alongside search results', async () => {
+      const searchTool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'search results',
+          citations: [makeNodeCitation({ documentId: 'doc-1', nodeId: 'os-1', score: 20 })],
+        }),
+      };
+
+      const readTool: AgentTool = {
+        definition: {
+          name: 'node_read',
+          description: 'read node',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'node content',
+          citations: [makeNodeCitation({ documentId: 'doc-2', nodeId: 'nr-1', score: undefined })],
+        }),
+      };
+
+      const refTool: AgentTool = {
+        definition: {
+          name: 'ref_follow',
+          description: 'follow ref',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'ref content',
+          citations: [makeNodeCitation({ documentId: 'doc-3', nodeId: 'rf-1', score: undefined })],
+        }),
+      };
+
+      const generateWithTools = vi
+        .fn()
+        .mockResolvedValueOnce({
+          finishReason: 'tool_calls',
+          content: '',
+          toolCalls: [
+            { id: 'tc-1', name: 'outline_search', arguments: {} },
+            { id: 'tc-2', name: 'node_read', arguments: {} },
+            { id: 'tc-3', name: 'ref_follow', arguments: {} },
+          ],
+        })
+        .mockResolvedValueOnce({
+          finishReason: 'text',
+          content: 'Combined answer',
+          toolCalls: [],
+        });
+
+      const provider = createMockProvider({ generateWithTools });
+      const options = createBaseOptions({
+        provider,
+        tools: [searchTool, readTool, refTool],
+      });
+
+      const result = await executeAgentLoop(options);
+
+      // All three should be included: outline(20/30≈0.67), nodeRead(0.70), refFollow(0.60)
+      expect(result.citations).toHaveLength(3);
+      const nodeIds = result.citations.map((c) => (c as { nodeId: string }).nodeId);
+      expect(nodeIds).toContain('os-1');
+      expect(nodeIds).toContain('nr-1');
+      expect(nodeIds).toContain('rf-1');
+    });
+  });
+
+  describe('edge cases', () => {
+    it('handles empty citations array', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({ content: 'nothing', citations: [] }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      expect(result.citations).toEqual([]);
+      expect(result.retrievedCitations).toEqual([]);
+    });
+
+    it('returns all citations when fewer than maxItems', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'outline_search',
+          description: 'search',
+          category: 'structured',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'found',
+          citations: [
+            makeNodeCitation({ nodeId: 'n1', score: 20 }),
+            makeNodeCitation({ nodeId: 'n2', score: 18 }),
+          ],
+        }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'outline_search');
+      const result = await executeAgentLoop(options);
+
+      // 2 citations < maxItems(8), both pass minScore → all returned
+      expect(result.citations).toHaveLength(2);
+    });
+
+    it('handles single-tool source without issues', async () => {
+      const tool: AgentTool = {
+        definition: {
+          name: 'vector_fallback_search',
+          description: 'fallback',
+          category: 'fallback',
+          parameters: { type: 'object', properties: {} },
+        },
+        execute: vi.fn().mockResolvedValue({
+          content: 'found',
+          citations: [
+            makeChunkCitation({ documentId: 'doc-1', chunkIndex: 0, score: 0.9 }),
+            makeChunkCitation({ documentId: 'doc-2', chunkIndex: 0, score: 0.7 }),
+            makeChunkCitation({ documentId: 'doc-3', chunkIndex: 0, score: 0.5 }),
+          ],
+        }),
+      };
+
+      const { options } = setupCitationFlow(tool, 'vector_fallback_search');
+      const result = await executeAgentLoop(options);
+
+      expect(result.citations).toHaveLength(3);
+      // Should be sorted by score descending
+      expect(result.citations[0]!.score).toBe(0.9);
+      expect(result.citations[1]!.score).toBe(0.7);
+      expect(result.citations[2]!.score).toBe(0.5);
+    });
   });
 });

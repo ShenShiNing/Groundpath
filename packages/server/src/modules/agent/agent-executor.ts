@@ -71,18 +71,163 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function finalizeCitations(citations: Citation[], maxItems: number = 8): Citation[] {
-  const deduped = new Map<string, Citation>();
+// ── TaggedCitation wrapper (internal only) ──
 
-  for (const citation of citations) {
-    const key = getCitationKey(citation);
-    const previous = deduped.get(key);
-    if (!previous || (citation.score ?? 0) > (previous.score ?? 0)) {
-      deduped.set(key, citation);
+interface TaggedCitation {
+  citation: Citation;
+  toolName: string;
+  normalizedScore?: number;
+}
+
+function normalizeScore(rawScore: number | undefined, toolName: string): number {
+  switch (toolName) {
+    case 'outline_search':
+      return Math.min((rawScore ?? 0) / agentConfig.citationOutlineScoreCeiling, 1.0);
+    case 'knowledge_base_search':
+    case 'vector_fallback_search':
+      return rawScore ?? 0;
+    case 'node_read':
+      return agentConfig.citationNodeReadBaseScore;
+    case 'ref_follow':
+      return agentConfig.citationRefFollowBaseScore;
+    default:
+      return rawScore ?? 0;
+  }
+}
+
+function isAncestorPath(ancestor: string[], descendant: string[]): boolean {
+  if (ancestor.length === 0 || ancestor.length >= descendant.length) return false;
+  return ancestor.every((seg, i) => seg === descendant[i]);
+}
+
+function filterSectionRedundancy(candidates: TaggedCitation[]): TaggedCitation[] {
+  // Group by documentId — only node citations with sectionPath participate
+  const byDoc = new Map<string, TaggedCitation[]>();
+  const nonParticipating: TaggedCitation[] = [];
+
+  for (const tc of candidates) {
+    const c = tc.citation;
+    if (c.sourceType === 'node' && c.sectionPath && c.sectionPath.length > 0) {
+      const group = byDoc.get(c.documentId) ?? [];
+      group.push(tc);
+      byDoc.set(c.documentId, group);
+    } else {
+      nonParticipating.push(tc);
     }
   }
 
-  return [...deduped.values()].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, maxItems);
+  const result: TaggedCitation[] = [...nonParticipating];
+
+  for (const group of byDoc.values()) {
+    // Sort by sectionPath length descending (deepest first)
+    group.sort(
+      (a, b) => (b.citation.sectionPath?.length ?? 0) - (a.citation.sectionPath?.length ?? 0)
+    );
+
+    const removed = new Set<number>();
+    for (let i = 0; i < group.length; i++) {
+      if (removed.has(i)) continue;
+      for (let j = i + 1; j < group.length; j++) {
+        if (removed.has(j)) continue;
+        const deep = group[i]!;
+        const shallow = group[j]!;
+        const deepPath = deep.citation.sectionPath!;
+        const shallowPath = shallow.citation.sectionPath!;
+
+        if (isAncestorPath(shallowPath, deepPath)) {
+          // shallow is ancestor of deep
+          const diff = (shallow.normalizedScore ?? 0) - (deep.normalizedScore ?? 0);
+          if (diff > agentConfig.citationParentScoreAdvantage) {
+            removed.add(i); // remove deeper, keep parent
+          } else {
+            removed.add(j); // remove parent, keep deeper
+          }
+        }
+      }
+    }
+
+    for (let i = 0; i < group.length; i++) {
+      if (!removed.has(i)) result.push(group[i]!);
+    }
+  }
+
+  return result;
+}
+
+function finalizeCitations(tagged: TaggedCitation[], maxItems: number = 8): Citation[] {
+  // Pass 1: Dedup — keep highest normalized score per key
+  const deduped = new Map<string, TaggedCitation>();
+  for (const tc of tagged) {
+    const key = getCitationKey(tc.citation);
+    const norm = normalizeScore(tc.citation.score, tc.toolName);
+    const entry: TaggedCitation = { ...tc, normalizedScore: norm };
+    const prev = deduped.get(key);
+    if (!prev || norm > (prev.normalizedScore ?? 0)) {
+      deduped.set(key, entry);
+    }
+  }
+  let candidates = [...deduped.values()];
+
+  // Pass 2: Normalize — already computed in Pass 1
+
+  // Pass 3: Section redundancy filter
+  candidates = filterSectionRedundancy(candidates);
+
+  // Pass 4: Min-score gate
+  candidates = candidates.filter((tc) => (tc.normalizedScore ?? 0) >= agentConfig.citationMinScore);
+
+  // Pass 5: Diversity selection
+  if (candidates.length <= maxItems) {
+    return candidates
+      .sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0))
+      .map((tc) => tc.citation);
+  }
+
+  // Group by documentId, pick top-1 from each document for guaranteed diversity
+  const byDoc = new Map<string, TaggedCitation[]>();
+  for (const tc of candidates) {
+    const docId = tc.citation.documentId;
+    const group = byDoc.get(docId) ?? [];
+    group.push(tc);
+    byDoc.set(docId, group);
+  }
+
+  const selected = new Set<string>();
+  const result: TaggedCitation[] = [];
+
+  // Guarantee at least one from each document (up to minDocuments or maxItems)
+  const docBests: TaggedCitation[] = [];
+  for (const group of byDoc.values()) {
+    group.sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0));
+    docBests.push(group[0]!);
+  }
+  docBests.sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0));
+
+  const guaranteeSlots = Math.min(
+    docBests.length,
+    maxItems,
+    Math.max(agentConfig.citationMinDocuments, 1)
+  );
+  for (let i = 0; i < guaranteeSlots; i++) {
+    const tc = docBests[i]!;
+    const key = getCitationKey(tc.citation);
+    selected.add(key);
+    result.push(tc);
+  }
+
+  // Fill remaining slots by global score
+  const remaining = candidates
+    .filter((tc) => !selected.has(getCitationKey(tc.citation)))
+    .sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0));
+
+  for (const tc of remaining) {
+    if (result.length >= maxItems) break;
+    result.push(tc);
+  }
+
+  return result
+    .sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0))
+    .map((tc) => tc.citation);
 }
 
 function hasKnowledgeTool(tools: AgentTool[]): boolean {
@@ -113,7 +258,7 @@ function finalizeStopReason(input: {
 function buildResult(input: {
   content: string;
   stopReason: AgentStopReason;
-  citations: Citation[];
+  citations: TaggedCitation[];
   agentTrace: AgentStep[];
   tools: AgentTool[];
 }): AgentExecutorResult {
@@ -122,7 +267,7 @@ function buildResult(input: {
   return {
     content: input.content,
     citations: finalCitations,
-    retrievedCitations: input.citations,
+    retrievedCitations: input.citations.map((tc) => tc.citation),
     agentTrace: input.agentTrace,
     stopReason: finalizeStopReason({
       stopReason: input.stopReason,
@@ -138,7 +283,7 @@ async function generateWithoutTools(input: {
   agentMessages: AgentMessage[];
   genOptions: GenerateOptions;
   stopReason: AgentStopReason;
-  citations: Citation[];
+  citations: TaggedCitation[];
   agentTrace: AgentStep[];
   tools: AgentTool[];
 }): Promise<AgentExecutorResult> {
@@ -194,7 +339,7 @@ export async function executeAgentLoop(
   const maxIterations = options.maxIterations ?? agentConfig.maxIterations;
   const executionStartedAt = Date.now();
   const agentTrace: AgentStep[] = [];
-  const allCitations: Citation[] = [];
+  const allCitations: TaggedCitation[] = [];
   let structuredRounds = 0;
   let fallbackRounds = 0;
   let externalRounds = 0;
@@ -392,7 +537,9 @@ export async function executeAgentLoop(
             }
           }
           if (execResult.citations?.length) {
-            allCitations.push(...execResult.citations);
+            allCitations.push(
+              ...execResult.citations.map((c) => ({ citation: c, toolName: tc.name }))
+            );
           }
           return {
             toolCallId: tc.id,
