@@ -28,7 +28,13 @@ export const updateKnowledgeBaseSchema = z.object({
     .optional(),
 });
 
+export const knowledgeBaseListParamsSchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).default(20),
+});
+
 // ==================== Inferred Types ====================
 
 export type CreateKnowledgeBaseRequest = z.infer<typeof createKnowledgeBaseSchema>;
 export type UpdateKnowledgeBaseRequest = z.infer<typeof updateKnowledgeBaseSchema>;
+export type KnowledgeBaseListParams = z.infer<typeof knowledgeBaseListParamsSchema>;

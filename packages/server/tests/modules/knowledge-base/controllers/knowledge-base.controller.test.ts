@@ -79,7 +79,10 @@ describe('knowledgeBaseController', () => {
   });
 
   it('should list user knowledge bases', async () => {
-    const mockResult = [{ id: mockKbId, name: 'KB 1' }];
+    const mockResult = {
+      knowledgeBases: [{ id: mockKbId, name: 'KB 1' }],
+      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    };
     vi.mocked(knowledgeBaseService.list).mockResolvedValue(
       mockResult as Awaited<ReturnType<typeof knowledgeBaseService.list>>
     );
@@ -89,7 +92,7 @@ describe('knowledgeBaseController', () => {
     const next = await invokeHandler(knowledgeBaseController.list, req, res);
 
     expect(next).not.toHaveBeenCalled();
-    expect(knowledgeBaseService.list).toHaveBeenCalledWith(mockUserId);
+    expect(knowledgeBaseService.list).toHaveBeenCalledWith(mockUserId, undefined);
     expect(sendSuccessResponseMock).toHaveBeenCalledWith(res, mockResult);
   });
 

@@ -55,14 +55,32 @@ export const knowledgeBaseRepository = {
   },
 
   /**
-   * List all knowledge bases for a user
+   * List all knowledge bases for a user (paginated)
    */
-  async listByUser(userId: string): Promise<KnowledgeBase[]> {
+  async listByUser(
+    userId: string,
+    options?: { page?: number; pageSize?: number }
+  ): Promise<KnowledgeBase[]> {
+    const page = options?.page ?? 1;
+    const pageSize = options?.pageSize ?? 20;
     return db
       .select()
       .from(knowledgeBases)
       .where(and(eq(knowledgeBases.userId, userId), isNull(knowledgeBases.deletedAt)))
-      .orderBy(knowledgeBases.createdAt);
+      .orderBy(knowledgeBases.createdAt)
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+  },
+
+  /**
+   * Count knowledge bases for a user
+   */
+  async countByUser(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(knowledgeBases)
+      .where(and(eq(knowledgeBases.userId, userId), isNull(knowledgeBases.deletedAt)));
+    return result[0]?.count ?? 0;
   },
 
   /**

@@ -3,12 +3,13 @@ import { HTTP_STATUS } from '@knowledge-agent/shared';
 import type {
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
+  KnowledgeBaseListParams,
 } from '@knowledge-agent/shared/types';
 import { knowledgeBaseService } from '../services/knowledge-base.service';
 import { sendSuccessResponse } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
-import { getValidatedBody } from '@shared/middleware';
+import { getValidatedBody, getValidatedQuery } from '@shared/middleware';
 import { requireUserId, getParamId, getClientIp } from '@shared/utils';
 
 /**
@@ -45,8 +46,9 @@ export const knowledgeBaseController = {
    */
   list: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const kbs = await knowledgeBaseService.list(userId);
-    sendSuccessResponse(res, kbs);
+    const params = getValidatedQuery<KnowledgeBaseListParams>(res);
+    const result = await knowledgeBaseService.list(userId, params);
+    sendSuccessResponse(res, result);
   }),
 
   /**

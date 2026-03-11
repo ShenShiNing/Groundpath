@@ -5,6 +5,7 @@ const {
   mockRouter,
   RouterMock,
   authenticateMock,
+  generalRateLimiterMock,
   validateBodyMock,
   validateQueryMock,
   getValidatedQueryMock,
@@ -20,9 +21,11 @@ const {
   createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchemaMock,
   documentListParamsSchemaMock,
+  knowledgeBaseListParamsSchemaMock,
   createKbValidatorMock,
   updateKbValidatorMock,
   documentListValidatorMock,
+  knowledgeBaseListValidatorMock,
   documentServiceMock,
   sendSuccessResponseMock,
   requireUserIdMock,
@@ -61,10 +64,12 @@ const {
   const createKbSchema = { type: 'create-kb-schema' };
   const updateKbSchema = { type: 'update-kb-schema' };
   const listParamsSchema = { type: 'document-list-schema' };
+  const knowledgeBaseListSchema = { type: 'knowledge-base-list-schema' };
 
   const createKbValidator = vi.fn();
   const updateKbValidator = vi.fn();
   const listValidator = vi.fn();
+  const knowledgeBaseListValidator = vi.fn();
   const sanitizeMultipartFields = vi.fn();
   const getValidatedQuery = vi.fn();
   const sendSuccessResponse = vi.fn();
@@ -92,6 +97,7 @@ const {
     mockRouter: hoistedRouter,
     RouterMock: vi.fn(() => hoistedRouter),
     authenticateMock: vi.fn(),
+    generalRateLimiterMock: vi.fn(),
     validateBodyMock: vi.fn((schema: unknown) => {
       if (schema === createKbSchema) {
         return createKbValidator;
@@ -104,6 +110,9 @@ const {
     validateQueryMock: vi.fn((schema: unknown) => {
       if (schema === listParamsSchema) {
         return listValidator;
+      }
+      if (schema === knowledgeBaseListSchema) {
+        return knowledgeBaseListValidator;
       }
       return vi.fn();
     }),
@@ -126,9 +135,11 @@ const {
     createKnowledgeBaseSchemaMock: createKbSchema,
     updateKnowledgeBaseSchemaMock: updateKbSchema,
     documentListParamsSchemaMock: listParamsSchema,
+    knowledgeBaseListParamsSchemaMock: knowledgeBaseListSchema,
     createKbValidatorMock: createKbValidator,
     updateKbValidatorMock: updateKbValidator,
     documentListValidatorMock: listValidator,
+    knowledgeBaseListValidatorMock: knowledgeBaseListValidator,
     documentServiceMock: documentService,
     sendSuccessResponseMock: sendSuccessResponse,
     requireUserIdMock: requireUserId,
@@ -159,6 +170,7 @@ vi.mock('@modules/knowledge-base/controllers/knowledge-base.controller', () => (
 
 vi.mock('@shared/middleware', () => ({
   authenticate: authenticateMock,
+  generalRateLimiter: generalRateLimiterMock,
   validateBody: validateBodyMock,
   validateQuery: validateQueryMock,
   createSanitizeMiddleware: createSanitizeMiddlewareMock,
@@ -169,6 +181,7 @@ vi.mock('@knowledge-agent/shared/schemas', () => ({
   createKnowledgeBaseSchema: createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchema: updateKnowledgeBaseSchemaMock,
   documentListParamsSchema: documentListParamsSchemaMock,
+  knowledgeBaseListParamsSchema: knowledgeBaseListParamsSchemaMock,
 }));
 
 vi.mock('@modules/document', () => ({
@@ -223,7 +236,7 @@ function createMockRequest(partial: Partial<Request> = {}): Request {
 
 function getDocumentUploadHandler() {
   const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-  return uploadRouteCall?.[3] as ((req: Request, res: Response) => Promise<void>) | undefined;
+  return uploadRouteCall?.[4] as ((req: Request, res: Response) => Promise<void>) | undefined;
 }
 
 function getDocumentListHandler() {
@@ -253,13 +266,18 @@ describe('knowledge-base.routes', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(createKnowledgeBaseSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(updateKnowledgeBaseSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(documentListParamsSchemaMock);
+    expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseListParamsSchemaMock);
 
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/',
       createKbValidatorMock,
       knowledgeBaseControllerMock.create
     );
-    expect(mockRouter.get).toHaveBeenCalledWith('/', knowledgeBaseControllerMock.list);
+    expect(mockRouter.get).toHaveBeenCalledWith(
+      '/',
+      knowledgeBaseListValidatorMock,
+      knowledgeBaseControllerMock.list
+    );
     expect(mockRouter.get).toHaveBeenCalledWith('/:id', knowledgeBaseControllerMock.getById);
     expect(mockRouter.patch).toHaveBeenCalledWith(
       '/:id',
@@ -272,6 +290,7 @@ describe('knowledge-base.routes', () => {
   it('should register document routes with async handlers', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/documents',
+      generalRateLimiterMock,
       expect.any(Function),
       sanitizeMultipartFieldsMock,
       expect.any(Function)
@@ -286,7 +305,7 @@ describe('knowledge-base.routes', () => {
 
   it('should return file-size error when multer emits LIMIT_FILE_SIZE', () => {
     const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-    const uploadMiddleware = uploadRouteCall?.[1] as
+    const uploadMiddleware = uploadRouteCall?.[2] as
       | ((req: Request, res: Response, next: NextFunction) => void)
       | undefined;
 
@@ -317,7 +336,7 @@ describe('knowledge-base.routes', () => {
 
   it('should return upload error payload for other multer errors', () => {
     const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-    const uploadMiddleware = uploadRouteCall?.[1] as
+    const uploadMiddleware = uploadRouteCall?.[2] as
       | ((req: Request, res: Response, next: NextFunction) => void)
       | undefined;
 

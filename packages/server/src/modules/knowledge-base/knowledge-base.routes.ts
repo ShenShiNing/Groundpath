@@ -5,6 +5,7 @@ import { documentConfig } from '@config/env';
 import { knowledgeBaseController } from './controllers/knowledge-base.controller';
 import {
   authenticate,
+  generalRateLimiter,
   validateBody,
   validateQuery,
   createSanitizeMiddleware,
@@ -13,6 +14,7 @@ import {
   createKnowledgeBaseSchema,
   updateKnowledgeBaseSchema,
   documentListParamsSchema,
+  knowledgeBaseListParamsSchema,
 } from '@knowledge-agent/shared/schemas';
 import { documentService } from '@modules/document';
 import { sendSuccessResponse } from '@shared/errors';
@@ -115,8 +117,8 @@ router.use(authenticate);
 // Create knowledge base
 router.post('/', validateBody(createKnowledgeBaseSchema), knowledgeBaseController.create);
 
-// List knowledge bases
-router.get('/', knowledgeBaseController.list);
+// List knowledge bases (paginated)
+router.get('/', validateQuery(knowledgeBaseListParamsSchema), knowledgeBaseController.list);
 
 // Get knowledge base details
 router.get('/:id', knowledgeBaseController.getById);
@@ -132,6 +134,7 @@ router.delete('/:id', knowledgeBaseController.delete);
 // Upload document to knowledge base
 router.post(
   '/:id/documents',
+  generalRateLimiter,
   ...uploadWithErrorHandling('file'),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

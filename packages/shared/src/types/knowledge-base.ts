@@ -41,7 +41,21 @@ export interface KnowledgeBaseListItem {
 export type {
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
+  KnowledgeBaseListParams,
 } from '../schemas/knowledge-base';
+
+// ==================== Response Types ====================
+
+/** Paginated knowledge base list response */
+export interface KnowledgeBaseListResponse {
+  knowledgeBases: KnowledgeBaseListItem[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+}
 
 // ==================== Error Types ====================
 

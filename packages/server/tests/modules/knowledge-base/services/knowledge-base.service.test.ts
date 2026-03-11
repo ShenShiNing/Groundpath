@@ -43,6 +43,7 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
     listByUser: vi.fn(),
+    countByUser: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
     findById: vi.fn(),
@@ -91,6 +92,7 @@ describe('knowledgeBaseService', () => {
     vi.mocked(knowledgeBaseRepository.findById).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseRepository.update).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseRepository.listByUser).mockResolvedValue([mockKnowledgeBase]);
+    vi.mocked(knowledgeBaseRepository.countByUser).mockResolvedValue(1);
   });
 
   it('should format collection names consistently', () => {
@@ -194,12 +196,25 @@ describe('knowledgeBaseService', () => {
   it('should list and map user knowledge bases', async () => {
     const result = await knowledgeBaseService.list(mockUserId);
 
-    expect(knowledgeBaseRepository.listByUser).toHaveBeenCalledWith(mockUserId);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      id: mockKbId,
-      name: 'AI Knowledge Base',
-      embeddingProvider: 'openai',
+    expect(knowledgeBaseRepository.listByUser).toHaveBeenCalledWith(mockUserId, {
+      page: 1,
+      pageSize: 20,
+    });
+    expect(knowledgeBaseRepository.countByUser).toHaveBeenCalledWith(mockUserId);
+    expect(result).toMatchObject({
+      knowledgeBases: [
+        {
+          id: mockKbId,
+          name: 'AI Knowledge Base',
+          embeddingProvider: 'openai',
+        },
+      ],
+      pagination: {
+        page: 1,
+        pageSize: 20,
+        total: 1,
+        totalPages: 1,
+      },
     });
   });
 

@@ -1,6 +1,7 @@
 import type {
   KnowledgeBaseInfo,
   KnowledgeBaseListItem,
+  KnowledgeBaseListResponse,
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
   DocumentListResponse,
@@ -28,8 +29,8 @@ export const knowledgeBasesApi = {
    */
   async list(): Promise<KnowledgeBaseListItem[]> {
     const response =
-      await apiClient.get<ApiResponse<KnowledgeBaseListItem[]>>('/api/knowledge-bases');
-    return unwrapResponse(response.data);
+      await apiClient.get<ApiResponse<KnowledgeBaseListResponse>>('/api/knowledge-bases');
+    return unwrapResponse(response.data).knowledgeBases;
   },
 
   /**

@@ -3,8 +3,10 @@ import { KNOWLEDGE_BASE_ERROR_CODES } from '@knowledge-agent/shared';
 import type {
   KnowledgeBaseInfo,
   KnowledgeBaseListItem,
+  KnowledgeBaseListResponse,
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
+  KnowledgeBaseListParams,
   EmbeddingProviderType,
 } from '@knowledge-agent/shared/types';
 import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
@@ -198,11 +200,26 @@ export const knowledgeBaseService = {
   },
 
   /**
-   * List all knowledge bases for a user
+   * List all knowledge bases for a user (paginated)
    */
-  async list(userId: string): Promise<KnowledgeBaseListItem[]> {
-    const kbs = await knowledgeBaseRepository.listByUser(userId);
-    return kbs.map(toKnowledgeBaseListItem);
+  async list(userId: string, params?: KnowledgeBaseListParams): Promise<KnowledgeBaseListResponse> {
+    const page = params?.page ?? 1;
+    const pageSize = params?.pageSize ?? 20;
+
+    const [kbs, total] = await Promise.all([
+      knowledgeBaseRepository.listByUser(userId, { page, pageSize }),
+      knowledgeBaseRepository.countByUser(userId),
+    ]);
+
+    return {
+      knowledgeBases: kbs.map(toKnowledgeBaseListItem),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
   },
 
   /**
