@@ -49,7 +49,8 @@
   4. `processing.service.ts` 已拆为 facade + `processing.executor.ts`、`processing.lock.ts`、`processing.structure.ts`、`processing.stages.ts`、`processing.types.ts`。
   5. `document.repository.ts` 已拆为薄门面 + `document.repository.core.ts`、`document.repository.processing.ts`、`document.repository.queries.ts`、`document.repository.backfill.ts`、`document.repository.types.ts`。
   6. `scripts/db-consistency-check.ts` 已拆为 CLI entry + `db-consistency-check/checks.ts`、`report.ts`、`runner.ts`、`types.ts`。
-  7. 上述拆分完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试与 `db-consistency-check` runner 定向测试均已通过。
+  7. 已补充评估 `processing.executor.ts` / `processing.stages.ts`，当前不建议继续物理拆分，仅移除未使用的 `cleanupOldVectors` helper 作为最小清理。
+  8. 上述拆分与清理完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试与 `db-consistency-check` runner 定向测试均已通过。
 - 本轮文档处理架构升级后，以下事项也已完成：
   1. `document_chunks` 与 vector payload 已绑定 `indexVersionId`，chunk/vector/graph 全部切换到 immutable build 产物模型。
   2. 查询链路已统一改为只消费 `documents.activeIndexVersionId` 指向的 active build。
@@ -131,7 +132,8 @@
 - 原报告点名的 `rag/services/processing.service.ts`、`chat/services/chat.service.ts`、`agent/agent-executor.ts`、`shared/config/env.ts` 已完成第一轮拆分，不应继续作为“当前最突出的 600+ 行后端核心文件”示例。
 - 本轮前述 `document/repositories/document.repository.ts` 也已拆为薄门面 + `core / processing / queries / backfill / types` 子模块，不应继续列为未处理的 400+ 行 repository。
 - 原本剩余的 `scripts/db-consistency-check.ts` 也已进一步拆为 CLI entry + `checks / report / runner / types` 子模块，不应继续作为剩余 400+ 行后端脚本案例。
-- 当前后端可维护性压力更多集中在拆分后的若干编排/阶段模块是否还需要继续细分，而不再是单个超大脚本。
+- 已补充评估 `processing.executor.ts` / `processing.stages.ts`，当前判断是不再继续物理拆分，以避免为了拆分而拆分；仅保留最小清理。
+- 当前后端可维护性压力更多集中在少量仍偏大的前端页面/组件与高风险链路测试覆盖，而不再是单个超大后端脚本。
 
 #### 前端超大文件
 
@@ -415,17 +417,20 @@
 - `processing.service.ts` 已拆分为 facade、主执行器、锁管理、结构解析、阶段处理、类型定义六部分。
 - `document.repository.ts` 已进一步拆分为薄门面、CRUD/listing、processing、query helper、backfill、types 六部分。
 - `scripts/db-consistency-check.ts` 已拆为 CLI 入口与 `checks.ts`、`report.ts`、`runner.ts`、`types.ts` 四个职责子模块。
+- 已补充评估 `processing.executor.ts` / `processing.stages.ts` 的继续细化必要性，当前结论是不再新增文件层级，只移除未使用的 `cleanupOldVectors` helper。
 
 修订结论：
 
 - 原报告中“4 个 600+ 行后端核心文件仍然全部未拆”的说法已经过时。
 - “大文件问题”并未完全消失，但最突出的后端热点已经完成一轮可维护性收敛。
 - `document.repository.ts` 也不应继续作为“剩余 400+ 行后端文件”的代表案例。
-- 当前更合理的下一步是按阶段继续细化 `processing` 拆分后的内部模块，并把治理重心转向前端大组件与高风险链路测试。
+- 当前不建议继续拆分 `processing.executor.ts` / `processing.stages.ts`，因为它们仍保持“单一编排入口 + 阶段 helper 聚合”的清晰边界，继续拆分的收益低于复杂度成本。
+- 当前更合理的下一步是把治理重心转向前端大组件与高风险链路测试，而不是继续细碎化 processing 子模块。
 
 验证：
 
 - `pnpm -F @knowledge-agent/server build` 通过
+- 已删除未使用的 `cleanupOldVectors` helper，作为 processing 子模块的最小清理
 - `pnpm test -- packages/server/tests/scripts/db-consistency-check.runner.test.ts`：`4` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/agent/agent-executor.test.ts`：`32` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/rag/processing.error-injection.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts`：`17` 个测试全部通过
@@ -725,12 +730,12 @@
 - `processing.service.ts`、`chat.service.ts`、`agent-executor.ts`、`env.ts` 已完成第一轮物理拆分
 - `document.repository.ts` 已继续拆为 facade + `core` / `processing` / `queries` / `backfill` / `types`
 - `db-consistency-check.ts` 已进一步拆为 CLI entry + `checks` / `report` / `runner` / `types`
+- 已补充完成 `processing.executor.ts` / `processing.stages.ts` 的继续拆分评估，当前结论是不再物理拆分，仅移除未使用 helper
 - 对外导出与主要调用方式保持兼容
 - `@knowledge-agent/server build` 与相关定向测试均已通过
 
 当前剩余工作：
 
-- 评估是否还要进一步细化 `processing.stages.ts` / `processing.executor.ts`
 - 前端超大页面/组件仍需后续治理
 
 #### 7.8 已完成：调整批处理容错
