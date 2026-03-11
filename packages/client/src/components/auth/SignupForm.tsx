@@ -18,6 +18,18 @@ interface SignupState {
   verificationToken: string;
 }
 
+const SIGNUP_STEP_TITLE_KEYS = {
+  email: 'signup.step.email.title',
+  code: 'signup.step.code.title',
+  details: 'signup.step.details.title',
+} as const;
+
+const SIGNUP_STEP_DESCRIPTION_KEYS = {
+  email: 'signup.step.email.description',
+  code: 'signup.step.code.description',
+  details: 'signup.step.details.description',
+} as const;
+
 function StepIndicator({ currentStep }: { currentStep: SignupStep }) {
   const steps: SignupStep[] = ['email', 'code', 'details'];
   const currentIndex = steps.indexOf(currentStep);
@@ -44,26 +56,12 @@ function StepIndicator({ currentStep }: { currentStep: SignupStep }) {
   );
 }
 
-function getStepTitle(step: SignupStep): string {
-  switch (step) {
-    case 'email':
-      return 'signup.step.email.title';
-    case 'code':
-      return 'signup.step.code.title';
-    case 'details':
-      return 'signup.step.details.title';
-  }
+function getStepTitle(step: SignupStep): (typeof SIGNUP_STEP_TITLE_KEYS)[SignupStep] {
+  return SIGNUP_STEP_TITLE_KEYS[step];
 }
 
-function getStepDescription(step: SignupStep): string {
-  switch (step) {
-    case 'email':
-      return 'signup.step.email.description';
-    case 'code':
-      return 'signup.step.code.description';
-    case 'details':
-      return 'signup.step.details.description';
-  }
+function getStepDescription(step: SignupStep): (typeof SIGNUP_STEP_DESCRIPTION_KEYS)[SignupStep] {
+  return SIGNUP_STEP_DESCRIPTION_KEYS[step];
 }
 
 export function SignupForm() {
