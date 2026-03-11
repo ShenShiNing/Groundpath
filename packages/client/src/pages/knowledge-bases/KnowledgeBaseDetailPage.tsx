@@ -1,54 +1,23 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useNavigate, useParams, Link } from '@tanstack/react-router';
-import {
-  Settings,
-  Layers,
-  FileText,
-  ArrowLeft,
-  Upload,
-  LayoutGrid,
-  List,
-  Search,
-  X,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useKnowledgeBase, useKBDocuments, useDeleteDocument } from '@/hooks';
-import { KnowledgeBaseDialog, ChatPanel } from '@/components/knowledge-bases';
-import { DocumentUpload } from '@/components/documents/DocumentUpload';
-import { queryKeys } from '@/lib/query';
-import { cn, openInNewTab } from '@/lib/utils';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { KnowledgeBaseDialog, ChatPanel } from '@/components/knowledge-bases';
+import { useDeleteDocument, useKBDocuments, useKnowledgeBase } from '@/hooks';
+import { openInNewTab } from '@/lib/utils';
+import { queryKeys } from '@/lib/query';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
-import { DocumentGridCard, DocumentTableRow } from './DocumentItemViews';
-
-// ============================================================================
-// Types
-// ============================================================================
-
-type ViewMode = 'grid' | 'table';
-
-interface DeleteDialogState {
-  open: boolean;
-  documents: DocumentListItem[];
-}
+import { KnowledgeBaseDeleteDialog } from './knowledge-base-detail/KnowledgeBaseDeleteDialog';
+import { KnowledgeBaseDetailErrorState } from './knowledge-base-detail/KnowledgeBaseDetailStates';
+import { KnowledgeBaseDetailHeader } from './knowledge-base-detail/KnowledgeBaseDetailHeader';
+import { KnowledgeBaseDetailLoadingState } from './knowledge-base-detail/KnowledgeBaseDetailStates';
+import { KnowledgeBaseDetailMissingIdState } from './knowledge-base-detail/KnowledgeBaseDetailStates';
+import { KnowledgeBaseDetailNotFoundState } from './knowledge-base-detail/KnowledgeBaseDetailStates';
+import { KnowledgeBaseDocumentsContent } from './knowledge-base-detail/KnowledgeBaseDocumentsContent';
+import { KnowledgeBaseDocumentsToolbar } from './knowledge-base-detail/KnowledgeBaseDocumentsToolbar';
+import { KnowledgeBaseUploadDialog } from './knowledge-base-detail/KnowledgeBaseUploadDialog';
+import type { DeleteDialogState, ViewMode } from './knowledge-base-detail/types';
 
 export default function KnowledgeBaseDetailPage() {
   const { t } = useTranslation(['knowledgeBase', 'common']);
@@ -56,6 +25,7 @@ export default function KnowledgeBaseDetailPage() {
   const knowledgeBaseId = typeof id === 'string' ? id : undefined;
   const safeKnowledgeBaseId = knowledgeBaseId ?? '';
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -65,8 +35,6 @@ export default function KnowledgeBaseDetailPage() {
     open: false,
     documents: [],
   });
-
-  const queryClient = useQueryClient();
 
   const {
     data: knowledgeBase,
@@ -80,7 +48,6 @@ export default function KnowledgeBaseDetailPage() {
   } = useKBDocuments(knowledgeBaseId, {
     pageSize: 100,
   });
-
   const deleteDocumentMutation = useDeleteDocument();
 
   useEffect(() => {
@@ -92,13 +59,15 @@ export default function KnowledgeBaseDetailPage() {
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
 
   const filteredDocuments = useMemo(() => {
-    if (!search) return documents;
-    const searchLower = search.toLowerCase();
-    return documents.filter((doc) => doc.title.toLowerCase().includes(searchLower));
+    if (!search) {
+      return documents;
+    }
+
+    const normalizedSearch = search.toLowerCase();
+    return documents.filter((document) => document.title.toLowerCase().includes(normalizedSearch));
   }, [documents, search]);
 
-  const handleUploadSuccess = useCallback(() => {
-    setUploadOpen(false);
+  const invalidateKnowledgeBaseQueries = useCallback(() => {
     queryClient.invalidateQueries({
       queryKey: queryKeys.knowledgeBases.documents(safeKnowledgeBaseId, {}),
     });
@@ -107,41 +76,54 @@ export default function KnowledgeBaseDetailPage() {
     });
   }, [queryClient, safeKnowledgeBaseId]);
 
+  const handleUploadSuccess = useCallback(() => {
+    setUploadOpen(false);
+    invalidateKnowledgeBaseQueries();
+  }, [invalidateKnowledgeBaseQueries]);
+
   const handleDocumentClick = useCallback(
-    (doc: DocumentListItem) => {
+    (document: DocumentListItem) => {
       void navigate({
         to: '/documents/$id',
-        params: { id: doc.id },
+        params: { id: document.id },
       });
     },
     [navigate]
   );
 
-  const handleDeleteDocument = useCallback((doc: DocumentListItem) => {
-    setDeleteDialog({ open: true, documents: [doc] });
+  const handleDeleteDocument = useCallback((document: DocumentListItem) => {
+    setDeleteDialog({ open: true, documents: [document] });
+  }, []);
+
+  const handleCloseDeleteDialog = useCallback(() => {
+    setDeleteDialog({ open: false, documents: [] });
   }, []);
 
   const confirmDelete = useCallback(async () => {
-    const { documents: docsToDelete } = deleteDialog;
-    if (docsToDelete.length === 0) return;
+    const documentsToDelete = deleteDialog.documents;
+    if (documentsToDelete.length === 0) {
+      return;
+    }
 
     try {
-      await Promise.all(docsToDelete.map((doc) => deleteDocumentMutation.mutateAsync(doc.id)));
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.knowledgeBases.documents(safeKnowledgeBaseId, {}),
-      });
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.knowledgeBases.detail(safeKnowledgeBaseId),
-      });
+      await Promise.all(
+        documentsToDelete.map((document) => deleteDocumentMutation.mutateAsync(document.id))
+      );
+      invalidateKnowledgeBaseQueries();
     } catch {
       // deletion failed — query will refetch
     } finally {
-      setDeleteDialog({ open: false, documents: [] });
+      handleCloseDeleteDialog();
     }
-  }, [deleteDialog, deleteDocumentMutation, queryClient, safeKnowledgeBaseId]);
+  }, [
+    deleteDialog.documents,
+    deleteDocumentMutation,
+    handleCloseDeleteDialog,
+    invalidateKnowledgeBaseQueries,
+  ]);
 
-  const handleDownloadDocument = useCallback((doc: DocumentListItem) => {
-    openInNewTab(`/api/documents/${doc.id}/download`);
+  const handleDownloadDocument = useCallback((document: DocumentListItem) => {
+    openInNewTab(`/api/documents/${document.id}/download`);
   }, []);
 
   const handleOpenDocumentFromChat = useCallback(
@@ -155,346 +137,61 @@ export default function KnowledgeBaseDetailPage() {
   );
 
   if (!knowledgeBaseId) {
-    return (
-      <div className="flex-1 flex items-center justify-center px-6">
-        <div className="w-full max-w-xl p-8 text-center">
-          <h2 className="mb-2 text-xl font-semibold">{t('detail.notFound.title')}</h2>
-          <p className="mb-5 text-sm text-muted-foreground">{t('detail.notFound.description')}</p>
-          <Button className="cursor-pointer" asChild>
-            <Link to="/knowledge-bases">{t('detail.action.backToList')}</Link>
-          </Button>
-        </div>
-      </div>
-    );
+    return <KnowledgeBaseDetailMissingIdState />;
   }
 
   if (kbLoading) {
-    return (
-      <>
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="shrink-0 border-b px-6 py-5">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-8 w-8 rounded-lg" />
-              <Skeleton className="h-6 w-48" />
-            </div>
-          </div>
-          <div className="shrink-0 border-b px-6 py-2.5">
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-36" />
-              <Skeleton className="h-8 w-48 ml-auto" />
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto px-6 py-5">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-              {[...Array(12)].map((_, i) => (
-                <Skeleton key={i} className="h-36 rounded-xl" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </>
-    );
+    return <KnowledgeBaseDetailLoadingState />;
   }
 
   if (kbError) {
-    return (
-      <>
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="w-full max-w-xl p-8 text-center">
-            <h2 className="mb-2 text-xl font-semibold">{t('detail.error.loadFailed')}</h2>
-            <p className="mb-5 text-sm text-muted-foreground">
-              {t('error.generic', { ns: 'common' })}
-            </p>
-            <Button className="cursor-pointer" asChild>
-              <Link to="/knowledge-bases">{t('detail.action.backToList')}</Link>
-            </Button>
-          </div>
-        </div>
-      </>
-    );
+    return <KnowledgeBaseDetailErrorState />;
   }
 
   if (!knowledgeBase) {
-    return (
-      <>
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="w-full max-w-xl p-8 text-center">
-            <h2 className="mb-2 text-xl font-semibold">{t('detail.notFound.title')}</h2>
-            <p className="mb-5 text-sm text-muted-foreground">{t('detail.notFound.description')}</p>
-            <Button className="cursor-pointer" asChild>
-              <Link to="/knowledge-bases">{t('detail.action.backToList')}</Link>
-            </Button>
-          </div>
-        </div>
-      </>
-    );
+    return <KnowledgeBaseDetailNotFoundState />;
   }
 
   return (
     <>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="shrink-0 border-b px-6 py-4">
-          <div className="flex flex-wrap items-start gap-3 md:gap-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8 shrink-0 cursor-pointer"
-                  asChild
-                >
-                  <Link to="/knowledge-bases">
-                    <ArrowLeft className="size-4" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('detail.tooltip.backToList')}</TooltipContent>
-            </Tooltip>
-
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Layers className="size-4" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="font-display truncate text-xl font-semibold leading-tight">
-                  {knowledgeBase.name}
-                </h1>
-                <p className="mt-1 text-xs text-muted-foreground">{t('detail.subtitle')}</p>
-              </div>
-            </div>
-
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 cursor-pointer"
-                    onClick={() => setEditDialogOpen(true)}
-                  >
-                    <Settings className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('detail.tooltip.settings')}</TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <FileText className="size-3.5" />
-              {t('detail.stats.documents', { count: knowledgeBase.documentCount })}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Layers className="size-3.5" />
-              {t('detail.stats.chunks', { count: knowledgeBase.totalChunks })}
-            </span>
-          </div>
-        </header>
-
-        <div className="shrink-0 border-b px-6 py-2.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="ml-auto flex items-center gap-2">
-              <div className="relative w-52 max-w-[60vw]">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                <Input
-                  className="h-8 pl-8 text-sm"
-                  placeholder={t('detail.search.placeholder')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                {search && (
-                  <button
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
-                    onClick={() => setSearch('')}
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center rounded-lg border p-0.5">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'h-7 w-7 rounded-md cursor-pointer',
-                        viewMode === 'grid' && 'bg-muted'
-                      )}
-                      onClick={() => setViewMode('grid')}
-                    >
-                      <LayoutGrid className="size-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('detail.view.grid')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={cn(
-                        'h-7 w-7 rounded-md cursor-pointer',
-                        viewMode === 'table' && 'bg-muted'
-                      )}
-                      onClick={() => setViewMode('table')}
-                    >
-                      <List className="size-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('detail.view.table')}</TooltipContent>
-                </Tooltip>
-              </div>
-
-              <Button size="sm" className="h-8 cursor-pointer" onClick={() => setUploadOpen(true)}>
-                <Upload className="size-3.5 mr-1.5" />
-                {t('detail.action.upload')}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="px-6 py-5">
-              {search && (
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {t('detail.search.current')}
-                  </span>
-                  <Badge variant="secondary" className="gap-1">
-                    "{search}"
-                    <button className="cursor-pointer" onClick={() => setSearch('')}>
-                      <X className="size-3" />
-                    </button>
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {t('detail.search.resultCount', { count: filteredDocuments.length })}
-                  </span>
-                </div>
-              )}
-
-              {docsLoading ? (
-                viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                    {[...Array(12)].map((_, i) => (
-                      <Skeleton key={i} className="h-36 rounded-xl" />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {[...Array(8)].map((_, i) => (
-                      <Skeleton key={i} className="h-14 rounded-lg" />
-                    ))}
-                  </div>
-                )
-              ) : filteredDocuments.length > 0 ? (
-                viewMode === 'grid' ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                    {filteredDocuments.map((doc) => (
-                      <DocumentGridCard
-                        key={doc.id}
-                        document={doc}
-                        onSelect={() => handleDocumentClick(doc)}
-                        onEdit={() => handleDocumentClick(doc)}
-                        onDelete={() => handleDeleteDocument(doc)}
-                        onDownload={() => handleDownloadDocument(doc)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="overflow-hidden rounded-xl border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50 hover:bg-muted/50">
-                          <TableHead className="font-medium">{t('detail.table.name')}</TableHead>
-                          <TableHead className="font-medium w-24">
-                            {t('detail.table.type')}
-                          </TableHead>
-                          <TableHead className="font-medium w-24">
-                            {t('detail.table.size')}
-                          </TableHead>
-                          <TableHead className="font-medium w-32">
-                            {t('detail.table.status')}
-                          </TableHead>
-                          <TableHead className="w-12" />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredDocuments.map((doc) => (
-                          <DocumentTableRow
-                            key={doc.id}
-                            document={doc}
-                            onSelect={() => handleDocumentClick(doc)}
-                            onEdit={() => handleDocumentClick(doc)}
-                            onDelete={() => handleDeleteDocument(doc)}
-                            onDownload={() => handleDownloadDocument(doc)}
-                          />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )
-              ) : (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="mb-5 flex size-14 items-center justify-center rounded-2xl bg-muted">
-                    <Upload className="size-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="mb-1.5 text-base font-semibold">
-                    {search ? t('detail.empty.noMatch') : t('detail.empty.noDocuments')}
-                  </h3>
-                  <p className="mb-5 max-w-sm text-sm text-muted-foreground">
-                    {search
-                      ? t('detail.empty.noMatchDescription', { search })
-                      : t('detail.empty.noDocumentsDescription')}
-                  </p>
-                  {search ? (
-                    <Button
-                      variant="outline"
-                      className="cursor-pointer"
-                      onClick={() => setSearch('')}
-                    >
-                      {t('detail.action.clearSearch')}
-                    </Button>
-                  ) : (
-                    <Button className="cursor-pointer" onClick={() => setUploadOpen(true)}>
-                      <Upload className="size-4 mr-2" />
-                      {t('detail.action.upload')}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <KnowledgeBaseDetailHeader
+          knowledgeBase={knowledgeBase}
+          onOpenSettings={() => setEditDialogOpen(true)}
+        />
+        <KnowledgeBaseDocumentsToolbar
+          search={search}
+          viewMode={viewMode}
+          onSearchChange={setSearch}
+          onClearSearch={() => setSearch('')}
+          onViewModeChange={setViewMode}
+          onOpenUpload={() => setUploadOpen(true)}
+        />
+        <KnowledgeBaseDocumentsContent
+          docsLoading={docsLoading}
+          filteredDocuments={filteredDocuments}
+          search={search}
+          viewMode={viewMode}
+          onDocumentClick={handleDocumentClick}
+          onDeleteDocument={handleDeleteDocument}
+          onDownloadDocument={handleDownloadDocument}
+          onClearSearch={() => setSearch('')}
+          onOpenUpload={() => setUploadOpen(true)}
+        />
       </div>
 
       <ChatPanel
         knowledgeBaseId={knowledgeBaseId}
-        documents={documentsResponse?.documents ?? []}
+        documents={documents}
         onOpenDocument={handleOpenDocumentFromChat}
       />
 
-      {uploadOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border rounded-xl shadow-lg max-w-lg w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{t('detail.upload.title')}</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="cursor-pointer"
-                onClick={() => setUploadOpen(false)}
-              >
-                {t('close', { ns: 'common' })}
-              </Button>
-            </div>
-            <DocumentUpload knowledgeBaseId={knowledgeBaseId} onSuccess={handleUploadSuccess} />
-          </div>
-        </div>
-      )}
+      <KnowledgeBaseUploadDialog
+        open={uploadOpen}
+        knowledgeBaseId={knowledgeBaseId}
+        onOpenChange={setUploadOpen}
+        onSuccess={handleUploadSuccess}
+      />
 
       <KnowledgeBaseDialog
         open={editDialogOpen}
@@ -502,39 +199,15 @@ export default function KnowledgeBaseDetailPage() {
         knowledgeBase={knowledgeBase}
       />
 
-      <AlertDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) => !open && setDeleteDialog({ open: false, documents: [] })}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('detail.delete.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteDialog.documents.length === 1 ? (
-                <>
-                  {t('detail.delete.confirmSingle', {
-                    title: deleteDialog.documents[0]?.title ?? '',
-                  })}
-                </>
-              ) : (
-                <>{t('detail.delete.confirmMultiple', { count: deleteDialog.documents.length })}</>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">
-              {t('cancel', { ns: 'common' })}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              className="cursor-pointer"
-              onClick={confirmDelete}
-            >
-              {t('delete', { ns: 'common' })}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <KnowledgeBaseDeleteDialog
+        deleteDialog={deleteDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseDeleteDialog();
+          }
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </>
   );
 }
