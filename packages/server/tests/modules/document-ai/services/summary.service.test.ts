@@ -235,6 +235,10 @@ describe('summaryService > directSummarize', () => {
 
 // ==================== hierarchicalSummarize ====================
 describe('summaryService > hierarchicalSummarize', () => {
+  const fixedChunkLongContent = ['A'.repeat(13_000), 'B'.repeat(13_000), 'C'.repeat(13_000)].join(
+    '\n\n'
+  );
+
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset mock to default behavior
@@ -263,5 +267,50 @@ describe('summaryService > hierarchicalSummarize', () => {
 
     expect(result).toBeDefined();
     expect(mockLLMProvider.generate).toHaveBeenCalled();
+  });
+
+  it('should continue merging successful chunk summaries when one chunk fails', async () => {
+    vi.mocked(mockLLMProvider.generate)
+      .mockRejectedValueOnce(new Error('Chunk 1 failed'))
+      .mockResolvedValueOnce('Part 2 summary')
+      .mockResolvedValueOnce('Part 3 summary')
+      .mockResolvedValue('Final merged summary');
+
+    const result = await summaryService.hierarchicalSummarize(
+      mockLLMProvider,
+      fixedChunkLongContent,
+      { length: 'detailed' },
+      { temperature: 0.7 }
+    );
+
+    logTestInfo(
+      { chunkCount: 3, failedChunks: [1] },
+      { success: true, mergeIncludesSuccessfulChunksOnly: true },
+      { success: result === 'Final merged summary' }
+    );
+
+    const mergeMessages = vi.mocked(mockLLMProvider.generate).mock.calls.at(-1)?.[0];
+    const mergeUserMessage = mergeMessages?.find((message) => message.role === 'user');
+
+    expect(result).toBe('Final merged summary');
+    expect(mockLLMProvider.generate).toHaveBeenCalledTimes(4);
+    expect(mergeUserMessage?.content).toContain('Part 2 summary');
+    expect(mergeUserMessage?.content).toContain('Part 3 summary');
+    expect(mergeUserMessage?.content).not.toContain('Chunk 1 failed');
+  });
+
+  it('should throw when all chunk summaries fail', async () => {
+    vi.mocked(mockLLMProvider.generate).mockRejectedValue(new Error('All chunks failed'));
+
+    await expect(
+      summaryService.hierarchicalSummarize(
+        mockLLMProvider,
+        fixedChunkLongContent,
+        { length: 'detailed' },
+        { temperature: 0.7 }
+      )
+    ).rejects.toThrow('All chunks failed');
+
+    expect(mockLLMProvider.generate).toHaveBeenCalledTimes(3);
   });
 });

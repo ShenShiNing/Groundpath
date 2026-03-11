@@ -290,6 +290,7 @@ export const summaryService = {
     genOptions: Awaited<ReturnType<typeof llmService.getOptionsForUser>>
   ): Promise<string> {
     const chunks = splitIntoChunks(content, Math.floor(MAX_CONTEXT_TOKENS / 2));
+    let firstChunkFailure: unknown;
 
     logger.info({ chunkCount: chunks.length }, 'Splitting document for hierarchical summarization');
 
@@ -305,8 +306,38 @@ export const summaryService = {
         ];
         return provider.generate(messages, genOptions);
       });
-      const batchResults = await Promise.all(batchPromises);
-      chunkSummaries.push(...batchResults);
+      const batchResults = await Promise.allSettled(batchPromises);
+      const failedChunkIndexes: number[] = [];
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const batchResult = batchResults[j];
+        if (batchResult?.status === 'fulfilled') {
+          chunkSummaries.push(batchResult.value);
+          continue;
+        }
+
+        firstChunkFailure ??= batchResult?.reason;
+        failedChunkIndexes.push(i + j + 1);
+      }
+
+      if (failedChunkIndexes.length > 0) {
+        logger.warn(
+          {
+            failedChunkIndexes,
+            totalChunks: chunks.length,
+            recoveredChunkCount: batchResults.length - failedChunkIndexes.length,
+          },
+          'Hierarchical summarization skipped failed chunk summaries'
+        );
+      }
+    }
+
+    if (chunkSummaries.length === 0) {
+      throw (
+        firstChunkFailure instanceof Error
+          ? firstChunkFailure
+          : Errors.external('Document chunk summarization failed')
+      );
     }
 
     const mergedSummaryText = chunkSummaries.join('\n\n');

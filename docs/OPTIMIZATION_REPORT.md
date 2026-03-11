@@ -365,6 +365,18 @@
 - 新增 client 定向测试 `18` 个全部通过
 - `@knowledge-agent/client build` 通过
 
+### 5.13 摘要批处理容错已完成
+
+本次已完成以下可靠性增强：
+
+- `summary.service.ts` 的分批摘要已从 `Promise.all()` 改为 `Promise.allSettled()`
+- 单个 chunk 摘要失败不再导致整批 long-document summarization 失败
+- 成功 chunk 会继续参与最终 merge，只有“全部 chunk 都失败”时才整体抛错
+
+验证：
+
+- `pnpm test -- packages/server/tests/modules/document-ai/services/summary.service.test.ts`：`12` 个测试全部通过
+
 ---
 
 ## 6. 部分成立且需要继续落地的项
@@ -471,11 +483,13 @@
 3. `agent-executor.ts`
 4. `env.ts`
 
-#### 7.8 调整批处理容错
+#### 7.8 已完成：调整批处理容错
 
-目标：
+已完成结果：
 
-- 将 `summary.service.ts` 中的批处理从 `Promise.all()` 改为更适合长任务批次的失败隔离策略
+- 已将 `summary.service.ts` 中的分批摘要从 `Promise.all()` 调整为失败隔离策略
+- 单个 chunk 失败不再放大为整批失败
+- 已补“部分 chunk 失败继续 merge”与“全部 chunk 失败才抛错”的单元测试
 
 #### 7.9 已完成：为 VLM 补测试
 
