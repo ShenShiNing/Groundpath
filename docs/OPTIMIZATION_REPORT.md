@@ -566,6 +566,22 @@
 - 当前也不建议为 `messages.role` 新增单列索引
 - 若后续聊天会话量继续增长，更值得优先评估的是贴合列表查询排序的 `updated_at` 复合索引，而不是原报告点名的这两项
 
+### 5.22 文档版本切换/backfill/recovery 高阶测试已继续扩展
+
+本次新增了一个更强的真实 worker 组合场景：
+
+- `tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`
+
+覆盖点包括：
+
+- 同一文档连续两次发生 version switch + stale recovery
+- 两个旧 backfill run 在真实 DB/queue worker 下都被标记为 `skipped`
+- 第三个 rerun 只针对最新版本完成处理，最终文档状态保持在最新版本
+
+验证：
+
+- `pnpm test -- packages/server/tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`：`1` 个测试全部通过
+
 ---
 
 ## 6. 部分成立且需要继续落地的项
@@ -595,6 +611,7 @@
   - 连续多次 version switch + repeated recovery + delayed GC 后，仅最新 active build 保留
 - 当前也已覆盖：
   - 真实 DB/queue worker 参与的 `backfill + version switch + recovery` 端到端组合测试
+  - 真实 DB/queue worker 参与的“连续两次 version switch + repeated recovery 后，两个旧 backfill run skipped，第三次 rerun 完成”组合测试
   - 真实 DB/queue 环境下的 backfill enqueue / resume 链路
 - 下一步更合理的是继续增加更多 worker 级组合链路覆盖，而不是只停留在单个回归场景
 
