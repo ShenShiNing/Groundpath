@@ -103,6 +103,8 @@ const { authenticateMock, conversationServiceMock, messageServiceMock, chatServi
 
 vi.mock('@shared/middleware', () => ({
   authenticate: authenticateMock,
+  aiRateLimiter: (_req: express.Request, _res: express.Response, next: express.NextFunction) =>
+    next(),
 }));
 
 vi.mock('@modules/chat/services/conversation.service', () => ({

@@ -7,6 +7,7 @@ const {
   selectWhereMock,
   selectLimitMock,
   selectOrderByMock,
+  selectOffsetMock,
   updateSetMock,
   updateWhereMock,
   eqMock,
@@ -22,6 +23,7 @@ const {
   const selectWhere = vi.fn();
   const selectLimit = vi.fn();
   const selectOrderBy = vi.fn();
+  const selectOffset = vi.fn();
   const updateSet = vi.fn();
   const updateWhere = vi.fn();
 
@@ -44,6 +46,7 @@ const {
     selectWhereMock: selectWhere,
     selectLimitMock: selectLimit,
     selectOrderByMock: selectOrderBy,
+    selectOffsetMock: selectOffset,
     updateSetMock: updateSet,
     updateWhereMock: updateWhere,
     eqMock: vi.fn((left: unknown, right: unknown) => ({ type: 'eq', left, right })),
@@ -112,6 +115,14 @@ const mockKnowledgeBase = {
 describe('knowledgeBaseRepository', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    insertValuesMock.mockReset();
+    selectFromMock.mockReset();
+    selectWhereMock.mockReset();
+    selectLimitMock.mockReset();
+    selectOrderByMock.mockReset();
+    selectOffsetMock.mockReset();
+    updateSetMock.mockReset();
+    updateWhereMock.mockReset();
   });
 
   it('should create knowledge base and return inserted record', async () => {
@@ -182,7 +193,9 @@ describe('knowledgeBaseRepository', () => {
   it('should list knowledge bases by user ordered by creation time', async () => {
     selectFromMock.mockReturnValueOnce({ where: selectWhereMock });
     selectWhereMock.mockReturnValueOnce({ orderBy: selectOrderByMock });
-    selectOrderByMock.mockResolvedValueOnce([mockKnowledgeBase]);
+    selectOrderByMock.mockReturnValueOnce({ limit: selectLimitMock });
+    selectLimitMock.mockReturnValueOnce({ offset: selectOffsetMock });
+    selectOffsetMock.mockResolvedValueOnce([mockKnowledgeBase]);
 
     const result = await knowledgeBaseRepository.listByUser('user-1');
 
@@ -190,6 +203,8 @@ describe('knowledgeBaseRepository', () => {
     expect(isNullMock).toHaveBeenCalledWith(knowledgeBasesMock.deletedAt);
     expect(andMock).toHaveBeenCalledTimes(1);
     expect(selectOrderByMock).toHaveBeenCalledWith(knowledgeBasesMock.createdAt);
+    expect(selectLimitMock).toHaveBeenCalledWith(20);
+    expect(selectOffsetMock).toHaveBeenCalledWith(0);
     expect(result).toEqual([mockKnowledgeBase]);
   });
 

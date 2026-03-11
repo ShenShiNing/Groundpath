@@ -148,6 +148,7 @@ vi.mock('@shared/middleware', () => ({
   validateBody: validateBodyMock,
   validateQuery: validateQueryMock,
   createSanitizeMiddleware: createSanitizeMiddlewareMock,
+  generalRateLimiter: vi.fn(),
 }));
 
 vi.mock('@knowledge-agent/shared/schemas', () => ({
@@ -168,7 +169,7 @@ function createMockResponse(): Response {
 
 function getUploadMiddlewareByPath(path: string) {
   const routeCall = mockRouter.post.mock.calls.find((call) => call[0] === path);
-  const middlewareArray = routeCall?.[1] as
+  const middlewareArray = routeCall?.[2] as
     | [(req: Request, res: Response, next: NextFunction) => void, unknown]
     | undefined;
   return middlewareArray?.[0];
@@ -217,6 +218,7 @@ describe('document.routes', () => {
   it('should register document endpoints', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/',
+      expect.any(Function),
       [expect.any(Function), sanitizeMultipartFieldsMock],
       documentControllerMock.upload
     );
@@ -250,6 +252,7 @@ describe('document.routes', () => {
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/versions',
+      expect.any(Function),
       [expect.any(Function), sanitizeMultipartFieldsMock],
       documentControllerMock.uploadNewVersion
     );

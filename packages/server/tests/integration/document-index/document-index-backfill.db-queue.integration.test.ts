@@ -3,9 +3,6 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-const describeRealIntegration =
-  process.env.RUN_REAL_BACKFILL_INTEGRATION === '1' ? describe : describe.skip;
-
 function readEnvFile(filePath: string): Record<string, string> {
   const env: Record<string, string> = {};
 
@@ -34,6 +31,17 @@ function readEnvFile(filePath: string): Record<string, string> {
 
   return env;
 }
+
+function shouldRunRealIntegration(): boolean {
+  if (process.env.RUN_REAL_BACKFILL_INTEGRATION === '1') {
+    return true;
+  }
+
+  const testEnv = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
+  return testEnv.RUN_REAL_BACKFILL_INTEGRATION === '1';
+}
+
+const describeRealIntegration = shouldRunRealIntegration() ? describe : describe.skip;
 
 describeRealIntegration('document index backfill real db/queue integration', () => {
   const originalEnv = { ...process.env };

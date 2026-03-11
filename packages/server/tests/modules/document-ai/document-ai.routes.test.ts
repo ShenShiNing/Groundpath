@@ -78,6 +78,7 @@ vi.mock('express', () => ({
 vi.mock('@shared/middleware', () => ({
   authenticate: authenticateMock,
   validateBody: validateBodyMock,
+  aiRateLimiter: vi.fn(),
 }));
 
 vi.mock('@knowledge-agent/shared/schemas', () => ({
@@ -115,11 +116,13 @@ describe('document-ai.routes', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(summaryRequestSchemaMock);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/summary',
+      expect.any(Function),
       summaryValidatorMock,
       summaryControllerMock.generate
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/summary/stream',
+      expect.any(Function),
       summaryValidatorMock,
       summaryControllerMock.stream
     );
@@ -129,15 +132,18 @@ describe('document-ai.routes', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(analysisRequestSchemaMock);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze',
+      expect.any(Function),
       analysisValidatorMock,
       analysisControllerMock.analyze
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze/keywords',
+      expect.any(Function),
       analysisControllerMock.extractKeywords
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze/entities',
+      expect.any(Function),
       analysisControllerMock.extractEntities
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
@@ -152,21 +158,25 @@ describe('document-ai.routes', () => {
 
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/generate',
+      expect.any(Function),
       generateValidatorMock,
       generationControllerMock.generate
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/generate/stream',
+      expect.any(Function),
       generateValidatorMock,
       generationControllerMock.streamGenerate
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/expand',
+      expect.any(Function),
       expandValidatorMock,
       generationControllerMock.expand
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/expand/stream',
+      expect.any(Function),
       expandValidatorMock,
       generationControllerMock.streamExpand
     );
