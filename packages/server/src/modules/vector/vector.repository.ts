@@ -109,6 +109,8 @@ export const vectorRepository = {
         content: payload.content,
         score: r.score,
         chunkIndex: payload.chunkIndex,
+        documentVersion: payload.version,
+        indexVersionId: payload.indexVersionId,
       };
     });
   },
@@ -144,6 +146,34 @@ export const vectorRepository = {
         'Physical vector deletion failed, but soft delete may have succeeded'
       );
       // Don't throw - soft delete provides safety net
+    }
+
+    return softDeleteSuccess;
+  },
+
+  async deleteByIndexVersionId(collectionName: string, indexVersionId: string): Promise<boolean> {
+    const qdrant = getQdrantClient();
+
+    const softDeleteSuccess = await this.markAsDeleted(collectionName, { indexVersionId });
+
+    try {
+      await withTimeout(
+        qdrant.delete(collectionName, {
+          wait: true,
+          filter: {
+            must: [{ key: 'indexVersionId', match: { value: indexVersionId } }],
+          },
+        }),
+        QDRANT_TIMEOUT,
+        `Qdrant delete by indexVersionId ${indexVersionId}`
+      );
+
+      logger.debug({ collectionName, indexVersionId }, 'Deleted vectors for index version');
+    } catch (error) {
+      logger.warn(
+        { collectionName, indexVersionId, error, softDeleteSuccess },
+        'Physical vector deletion failed for index version'
+      );
     }
 
     return softDeleteSuccess;
@@ -191,7 +221,7 @@ export const vectorRepository = {
    */
   async markAsDeleted(
     collectionName: string,
-    filter: { documentId?: string; knowledgeBaseId?: string }
+    filter: { documentId?: string; knowledgeBaseId?: string; indexVersionId?: string }
   ): Promise<boolean> {
     const qdrant = getQdrantClient();
 
@@ -201,6 +231,9 @@ export const vectorRepository = {
     }
     if (filter.knowledgeBaseId) {
       mustConditions.push({ key: 'knowledgeBaseId', match: { value: filter.knowledgeBaseId } });
+    }
+    if (filter.indexVersionId) {
+      mustConditions.push({ key: 'indexVersionId', match: { value: filter.indexVersionId } });
     }
 
     if (mustConditions.length === 0) {

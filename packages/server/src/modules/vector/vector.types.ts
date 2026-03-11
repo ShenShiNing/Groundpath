@@ -9,6 +9,7 @@ export interface ChunkPayload {
   userId: string;
   knowledgeBaseId: string;
   version: number;
+  indexVersionId: string;
   chunkIndex: number;
   content: string;
   /** Soft delete marker - vectors marked as deleted will be excluded from search */
@@ -31,4 +32,6 @@ export interface SearchResult {
   content: string;
   score: number;
   chunkIndex: number;
+  documentVersion?: number;
+  indexVersionId?: string;
 }

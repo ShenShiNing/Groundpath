@@ -15,6 +15,7 @@ const PAYLOAD_INDEXES = [
   { field_name: 'userId', field_schema: 'keyword' as const },
   { field_name: 'documentId', field_schema: 'keyword' as const },
   { field_name: 'knowledgeBaseId', field_schema: 'keyword' as const },
+  { field_name: 'indexVersionId', field_schema: 'keyword' as const },
   { field_name: 'isDeleted', field_schema: 'bool' as const },
 ];
 

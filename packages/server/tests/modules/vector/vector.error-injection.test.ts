@@ -117,6 +117,27 @@ describe('Vector Repository Error Injection', () => {
     });
   });
 
+  describe('deleteByIndexVersionId', () => {
+    it('should return true when soft-delete succeeds but hard-delete fails', async () => {
+      mockQdrant.setPayload.mockResolvedValue(undefined);
+      mockQdrant.delete.mockRejectedValue(new Error('Hard delete failed'));
+
+      const result = await vectorRepository.deleteByIndexVersionId('col', 'idx-1');
+
+      expect(result).toBe(true);
+      expect(loggerMock.warn).toHaveBeenCalled();
+    });
+
+    it('should return false when soft-delete fails', async () => {
+      mockQdrant.setPayload.mockRejectedValue(new Error('setPayload failed'));
+      mockQdrant.delete.mockRejectedValue(new Error('delete also failed'));
+
+      const result = await vectorRepository.deleteByIndexVersionId('col', 'idx-1');
+
+      expect(result).toBe(false);
+    });
+  });
+
   // ─── markAsDeleted ───
   describe('markAsDeleted', () => {
     it('should return false when called without filter', async () => {
@@ -141,6 +162,22 @@ describe('Vector Repository Error Injection', () => {
       const result = await vectorRepository.markAsDeleted('col', { documentId: 'doc-1' });
 
       expect(result).toBe(true);
+    });
+
+    it('should support indexVersionId filter', async () => {
+      mockQdrant.setPayload.mockResolvedValue(undefined);
+
+      const result = await vectorRepository.markAsDeleted('col', { indexVersionId: 'idx-1' });
+
+      expect(result).toBe(true);
+      expect(mockQdrant.setPayload).toHaveBeenCalledWith(
+        'col',
+        expect.objectContaining({
+          filter: {
+            must: [{ key: 'indexVersionId', match: { value: 'idx-1' } }],
+          },
+        })
+      );
     });
   });
 
