@@ -44,12 +44,13 @@ import type { TFunction } from 'i18next';
 // ============================================================================
 
 type ViewMode = 'grid' | 'table';
+type KnowledgeBasePageT = TFunction<['knowledgeBase', 'common']>;
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
-function formatTimeAgo(date: Date, t: TFunction<'knowledgeBase'>): string {
+function formatTimeAgo(date: Date, t: KnowledgeBasePageT): string {
   const now = new Date();
   const dateObj = new Date(date);
   const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
@@ -83,7 +84,7 @@ function KnowledgeBaseGridCard({
   knowledgeBase: KnowledgeBaseListItem;
   onEdit: () => void;
   onDelete: () => void;
-  t: TFunction<'knowledgeBase'>;
+  t: KnowledgeBasePageT;
 }) {
   const iconColors = getIconColors(knowledgeBase.id);
 
@@ -172,7 +173,7 @@ function KnowledgeBaseTableRow({
   knowledgeBase: KnowledgeBaseListItem;
   onEdit: () => void;
   onDelete: () => void;
-  t: TFunction<'knowledgeBase'>;
+  t: KnowledgeBasePageT;
 }) {
   const iconColors = getIconColors(knowledgeBase.id);
 
@@ -233,13 +234,7 @@ function KnowledgeBaseTableRow({
   );
 }
 
-function EmptyState({
-  onCreateNew,
-  t,
-}: {
-  onCreateNew: () => void;
-  t: TFunction<'knowledgeBase'>;
-}) {
+function EmptyState({ onCreateNew, t }: { onCreateNew: () => void; t: KnowledgeBasePageT }) {
   return (
     <div className="rounded-2xl border border-dashed px-6 py-16 text-center">
       <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-muted">
@@ -264,7 +259,7 @@ function NoResultsState({
 }: {
   search: string;
   onClear: () => void;
-  t: TFunction<'knowledgeBase'>;
+  t: KnowledgeBasePageT;
 }) {
   return (
     <div className="rounded-2xl border px-6 py-16 text-center">
@@ -280,13 +275,7 @@ function NoResultsState({
   );
 }
 
-function CreateKnowledgeBaseCard({
-  onCreate,
-  t,
-}: {
-  onCreate: () => void;
-  t: TFunction<'knowledgeBase'>;
-}) {
+function CreateKnowledgeBaseCard({ onCreate, t }: { onCreate: () => void; t: KnowledgeBasePageT }) {
   return (
     <button
       onClick={onCreate}
