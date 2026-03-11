@@ -11,6 +11,7 @@ import {
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
+import { documentIndexVersions } from './document-index-versions.schema';
 
 export const documentChunks = mysqlTable(
   'document_chunks',
@@ -20,6 +21,7 @@ export const documentChunks = mysqlTable(
     // Reference
     documentId: varchar('document_id', { length: 36 }).notNull(),
     version: int('version').notNull(),
+    indexVersionId: varchar('index_version_id', { length: 36 }).notNull(),
 
     // Chunk info
     chunkIndex: int('chunk_index').notNull(),
@@ -41,11 +43,17 @@ export const documentChunks = mysqlTable(
   (table) => [
     index('document_id_idx').on(table.documentId),
     index('document_version_idx').on(table.documentId, table.version),
-    uniqueIndex('document_chunk_idx').on(table.documentId, table.version, table.chunkIndex),
+    index('document_chunk_index_version_idx').on(table.documentId, table.indexVersionId),
+    uniqueIndex('document_chunk_idx').on(table.documentId, table.indexVersionId, table.chunkIndex),
     foreignKey({
       columns: [table.documentId],
       foreignColumns: [documents.id],
       name: 'document_chunks_document_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.indexVersionId],
+      foreignColumns: [documentIndexVersions.id],
+      name: 'document_chunks_index_version_id_fk',
     }).onDelete('cascade'),
   ]
 );

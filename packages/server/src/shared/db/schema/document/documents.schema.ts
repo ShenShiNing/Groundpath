@@ -55,6 +55,7 @@ export const documents = mysqlTable(
       .default('pending'),
     processingError: text('processing_error'),
     processingStartedAt: timestamp('processing_started_at'),
+    publishGeneration: int('publish_generation').notNull().default(0),
     chunkCount: int('chunk_count').notNull().default(0),
 
     // Audit fields

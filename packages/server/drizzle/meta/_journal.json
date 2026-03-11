@@ -36,6 +36,20 @@
       "when": 1773227866341,
       "tag": "0004_dry_hercules",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1773238800000,
+      "tag": "0005_steady_hangman",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1773274200000,
+      "tag": "0006_mellow_captain_britain",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,8 @@ export const documentDefaults = {
   vectorBatchSize: 20,
   processingTimeoutMinutes: 30,
   processingRecoveryBatchSize: 100,
+  buildCleanupRetentionDays: 7,
+  buildCleanupBatchSize: 100,
 } as const;
 
 /** Structured-RAG indexing parameters */
