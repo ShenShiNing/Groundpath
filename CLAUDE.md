@@ -307,7 +307,10 @@ Import from `@knowledge-agent/shared`:
    - Classify errors as retryable/non-retryable to prevent runaway retries.
 
 9. Config & Defaults
-   - All tunables (batch size, cron, concurrency, timeouts) live in config with documented defaults; reflect new env vars in both `.env.example` and Zod schema.
+   - Infrastructure connections, secrets/credentials, provider choices, feature flags, and cron expressions live in `env/schema.ts` and `.env.example`.
+   - Business constants (batch sizes, TTLs, thresholds, timeouts, retry policies) live in `shared/config/defaults/*.defaults.ts` as `as const` objects.
+   - `env/configs.ts` merges both sources; exported config objects are the single public API — consumers never import defaults or env directly.
+   - New env vars must be reflected in both `.env.example` and the Zod schema; new business defaults go into the appropriate `*.defaults.ts` file.
 
 10. Observability
 
