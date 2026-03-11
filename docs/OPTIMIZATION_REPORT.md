@@ -59,9 +59,9 @@
   4. `db:migrate`、`db:check`、processing/activation/integration 定向测试均已通过。
 - 当前最需要优先处理的，已经切换为以下 4 项：
   1. 继续扩展到更多高风险页面/组件测试。
-  2. 补齐前端 i18n 漏项。
-  3. 确认 `conversations.created_at`、`messages.role` 是否需要新增数据库索引。
-  4. 继续补更多“文档版本切换 / backfill / recovery”链路的高阶集成测试。
+  2. 继续补齐前端 i18n 的剩余散落漏项。
+  3. 继续补更多“文档版本切换 / backfill / recovery”链路的高阶集成测试。
+  4. 若聊天会话量继续增长，优先复核 `conversations` 列表查询所需的 `updated_at` 复合索引，而不是 `created_at` / `messages.role`。
 
 ---
 
@@ -551,6 +551,21 @@
 
 - `pnpm -F @knowledge-agent/client build` 通过
 
+### 5.21 会话/消息索引缺口已完成确认
+
+本次已完成以下核验：
+
+- 代码侧已确认 `conversationRepository.listByUser()` 实际按 `updatedAt` 排序，而不是 `createdAt`
+- 开发库 `EXPLAIN` 显示会话列表查询当前命中的是现有过滤索引，并伴随 `Using filesort`；补 `conversations.created_at` 不能改善该查询
+- 消息侧查询当前主要依赖 `conversation_id_idx` / `conversation_created_idx`
+- 开发库消息角色分布当前为 `user=10`、`assistant=4`，`role` 基数很低，单列 `messages.role` 索引收益有限
+
+修订结论：
+
+- 当前不建议为 `conversations.created_at` 新增索引
+- 当前也不建议为 `messages.role` 新增单列索引
+- 若后续聊天会话量继续增长，更值得优先评估的是贴合列表查询排序的 `updated_at` 复合索引，而不是原报告点名的这两项
+
 ---
 
 ## 6. 部分成立且需要继续落地的项
@@ -583,14 +598,17 @@
   - 真实 DB/queue 环境下的 backfill enqueue / resume 链路
 - 下一步更合理的是继续增加更多 worker 级组合链路覆盖，而不是只停留在单个回归场景
 
-### 6.2 数据库索引仍有少量未确认缺口
+### 6.2 原报告点名的剩余索引缺口已确认暂不补充
 
-当前仍值得关注的不是原报告列出的那批文档表索引，而是：
+已确认结论：
 
-- `conversations.created_at`
-- `messages.role`
+- `conversations.created_at`：当前仓库内未看到对应热点查询，列表主链路实际按 `updatedAt` 排序，补 `created_at` 索引无直接收益
+- `messages.role`：当前角色值基数低，且现有查询计划主要依赖 `conversation_id` / `created_at` 维度，单列 `role` 索引收益有限
 
-这两项当前未在 schema 中看到对应索引，是否真正需要补，应结合真实查询计划再确认。
+后续建议：
+
+- 若聊天会话列表数据规模显著增长，应优先评估与 `updatedAt` 排序对齐的复合索引
+- 在没有新查询形态或性能证据前，不建议仅凭字段存在就补 `created_at` / `role` 索引
 
 ---
 
@@ -691,13 +709,14 @@
 - 超时、重试、批量部分失败、health check 已有覆盖
 - 当前 `vlm` 不再属于“完全无测试”状态
 
-#### 7.10 确认剩余数据库索引缺口
+#### 7.10 已完成：确认剩余数据库索引缺口
 
-目标：
+已完成结果：
 
-- 基于真实查询与 explain 结果确认是否补：
-  - `conversations.created_at`
-  - `messages.role`
+- 已基于真实查询链路与开发库 `EXPLAIN` 完成确认
+- 当前不建议新增 `conversations.created_at` 索引
+- 当前不建议新增 `messages.role` 单列索引
+- 若后续需要优化聊天会话列表，更值得优先评估的是 `updated_at` 相关复合索引
 
 #### 7.11 已完成：为 publish 阶段增加 fenced publish 保护
 
