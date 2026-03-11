@@ -508,6 +508,26 @@
 - `pnpm test -- packages/server/tests/shared/config/validated-env.test.ts`：`2` 个测试全部通过
 - `pnpm -F @knowledge-agent/server build` 通过
 
+### 5.19 文档上传/预览测试已补第一批
+
+本次新增了 2 组前端组件测试：
+
+- `tests/components/documents/DocumentUpload.test.tsx`
+- `tests/components/documents/DocumentReader.test.tsx`
+
+覆盖点包括：
+
+- `DocumentUpload` 成功批次完成后的 query invalidation、延迟清理与 `onSuccess` 回调
+- `DocumentUpload` 失败批次保留错误项，不提前清空上传队列
+- `DocumentUpload` drop rejection 的 toast 错误提示
+- `DocumentReader` 的 markdown 预览渲染与危险 HTML 转义
+- `DocumentReader` 的 PDF 预览回退下载提示
+
+验证：
+
+- `pnpm test -- packages/client/tests/components/documents/DocumentUpload.test.tsx packages/client/tests/components/documents/DocumentReader.test.tsx`：`5` 个测试全部通过
+- `pnpm -F @knowledge-agent/client build` 通过
+
 ---
 
 ## 6. 部分成立且需要继续落地的项
@@ -709,14 +729,15 @@
 - 聊天会话列表分页与 legacy 兼容测试
 - `KnowledgeBaseDialog` 组件级交互测试
 - `ConversationList` 组件级交互测试
+- `DocumentUpload` 组件测试
+- `DocumentReader` 组件测试
 
 下一步优先顺序：
 
-1. 认证流程
-2. 文档上传/预览
-3. 知识库管理
-4. 聊天消息发送
-5. LLM 配置页
+1. 知识库管理
+2. 聊天消息发送
+3. LLM 配置页
+4. 文档详情页面级交互
 
 ---
 
