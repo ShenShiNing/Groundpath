@@ -1,6 +1,6 @@
 # Knowledge Agent - 项目优化报告（核验版）
 
-> 核验日期：2026-03-11
+> 核验日期：2026-03-12
 > 核验范围：当前仓库 HEAD 代码、`packages/shared` 契约、`packages/server` 路由与 schema、`packages/*/tests`、已提交 Drizzle migration、开发库实际落地状态
 > 说明：本版以客观证据为主，修正原报告中已经过时的结论；数据库相关项以“schema + migration + 实库校验”三层证据为准
 
@@ -45,7 +45,8 @@
   2. `chat.service.ts` 已拆为主编排 + `chat-agent-stream.service.ts`、`chat-legacy-stream.service.ts`、`chat.helpers.ts`、`chat.types.ts`。
   3. `agent-executor.ts` 已拆为主循环 + `agent-executor.citations.ts`、`agent-executor.runtime.ts`、`agent-executor.types.ts`。
   4. `processing.service.ts` 已拆为 facade + `processing.executor.ts`、`processing.lock.ts`、`processing.structure.ts`、`processing.stages.ts`、`processing.types.ts`。
-  5. 上述拆分完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试均已通过。
+  5. `document.repository.ts` 已拆为薄门面 + `document.repository.core.ts`、`document.repository.processing.ts`、`document.repository.queries.ts`、`document.repository.backfill.ts`、`document.repository.types.ts`。
+  6. 上述拆分完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试均已通过。
 - 本轮文档处理架构升级后，以下事项也已完成：
   1. `document_chunks` 与 vector payload 已绑定 `indexVersionId`，chunk/vector/graph 全部切换到 immutable build 产物模型。
   2. 查询链路已统一改为只消费 `documents.activeIndexVersionId` 指向的 active build。
@@ -100,21 +101,21 @@
 
 ## 3. 核验结果总览
 
-| 编号 | 原报告结论                                     | 当前状态                                                                  | 结论   |
-| ---- | ---------------------------------------------- | ------------------------------------------------------------------------- | ------ |
-| K-1  | 大型后端/前端文件过多                          | 后端 4 个最突出的 600+ 行核心文件已完成第一轮拆分，但仍存在若干 400+ 行文件与前端大组件 | 成立   |
-| K-2  | Zustand `getState()` 绕过响应式系统            | 组件/路由层已完成收敛，store 内部保留少量非 React 快照访问                | 已过时 |
-| K-3  | `throw new Error()` 未统一到 `Errors/AppError` | `server/client` 运行时代码已清零，CLI 脚本层仍保留少量原生 Error          | 已过时 |
-| K-4  | 前端 i18n 覆盖不完整                           | 仍存在                                                                    | 成立   |
-| K-5  | 路由级错误边界不足                             | 根路由外，聊天/文档详情/知识库详情/AI 设置已具备功能域级 `errorComponent` | 已过时 |
-| K-6  | `GET /api/knowledge-bases` 无分页              | 已支持分页参数与分页返回                                                  | 已过时 |
-| K-7  | `GET /api/chat/conversations` 无分页           | 已支持 `limit/offset` 且返回 `items + pagination`                         | 已过时 |
-| K-8  | 高开销 API 未限流                              | RAG / Chat / Document AI / Documents / KB 上传均已限流                    | 已过时 |
-| K-9  | 文档相关表缺数据库级 FK                        | migration 已执行，相关 FK 已落库                                          | 已过时 |
-| K-10 | `processing_started_at` 缺失                   | 字段已落库，超时恢复任务也已接入 scheduler                                | 已过时 |
-| K-11 | 无 coverage 配置                               | 已有 `vitest --coverage` 与 V8 coverage                                   | 已过时 |
-| K-12 | 无端到端测试                                   | 已有 server smoke e2e 和 integration tests                                | 已过时 |
-| K-13 | `vlm` 完全无测试                               | factory / service / provider 测试已补齐                                   | 已过时 |
+| 编号 | 原报告结论                                     | 当前状态                                                                                                      | 结论   |
+| ---- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------ |
+| K-1  | 大型后端/前端文件过多                          | 后端 4 个最突出的 600+ 行核心文件与 `document.repository.ts` 已完成拆分，但仍存在少量 400+ 行文件与前端大组件 | 成立   |
+| K-2  | Zustand `getState()` 绕过响应式系统            | 组件/路由层已完成收敛，store 内部保留少量非 React 快照访问                                                    | 已过时 |
+| K-3  | `throw new Error()` 未统一到 `Errors/AppError` | `server/client` 运行时代码已清零，CLI 脚本层仍保留少量原生 Error                                              | 已过时 |
+| K-4  | 前端 i18n 覆盖不完整                           | 仍存在                                                                                                        | 成立   |
+| K-5  | 路由级错误边界不足                             | 根路由外，聊天/文档详情/知识库详情/AI 设置已具备功能域级 `errorComponent`                                     | 已过时 |
+| K-6  | `GET /api/knowledge-bases` 无分页              | 已支持分页参数与分页返回                                                                                      | 已过时 |
+| K-7  | `GET /api/chat/conversations` 无分页           | 已支持 `limit/offset` 且返回 `items + pagination`                                                             | 已过时 |
+| K-8  | 高开销 API 未限流                              | RAG / Chat / Document AI / Documents / KB 上传均已限流                                                        | 已过时 |
+| K-9  | 文档相关表缺数据库级 FK                        | migration 已执行，相关 FK 已落库                                                                              | 已过时 |
+| K-10 | `processing_started_at` 缺失                   | 字段已落库，超时恢复任务也已接入 scheduler                                                                    | 已过时 |
+| K-11 | 无 coverage 配置                               | 已有 `vitest --coverage` 与 V8 coverage                                                                       | 已过时 |
+| K-12 | 无端到端测试                                   | 已有 server smoke e2e 和 integration tests                                                                    | 已过时 |
+| K-13 | `vlm` 完全无测试                               | factory / service / provider 测试已补齐                                                                       | 已过时 |
 
 ---
 
@@ -124,15 +125,15 @@
 
 #### 后端超大文件
 
-| 文件                                           | 行数 | 状态   |
-| ---------------------------------------------- | ---- | ------ |
-| `scripts/db-consistency-check.ts`              | 467  | 仍成立 |
-| `document/repositories/document.repository.ts` | 423  | 仍成立 |
+| 文件                              | 行数 | 状态   |
+| --------------------------------- | ---- | ------ |
+| `scripts/db-consistency-check.ts` | 467  | 仍成立 |
 
 补充：
 
 - 原报告点名的 `rag/services/processing.service.ts`、`chat/services/chat.service.ts`、`agent/agent-executor.ts`、`shared/config/env.ts` 已完成第一轮拆分，不应继续作为“当前最突出的 600+ 行后端核心文件”示例。
-- 当前后端可维护性压力更多集中在剩余的 400+ 行文件，以及拆分后的若干编排/阶段模块是否还需要继续细分。
+- 本轮前述 `document/repositories/document.repository.ts` 也已拆为薄门面 + `core / processing / queries / backfill / types` 子模块，不应继续列为未处理的 400+ 行 repository。
+- 当前后端可维护性压力更多集中在剩余的 `scripts/db-consistency-check.ts`，以及拆分后的若干编排/阶段模块是否还需要继续细分。
 
 #### 前端超大文件
 
@@ -402,18 +403,21 @@
 - `chat.service.ts` 已拆分为主编排、agent streaming、legacy streaming、helper、type 五部分。
 - `agent-executor.ts` 已拆分为主循环、citation 选择、运行时辅助、类型定义四部分。
 - `processing.service.ts` 已拆分为 facade、主执行器、锁管理、结构解析、阶段处理、类型定义六部分。
+- `document.repository.ts` 已进一步拆分为薄门面、CRUD/listing、processing、query helper、backfill、types 六部分。
 
 修订结论：
 
 - 原报告中“4 个 600+ 行后端核心文件仍然全部未拆”的说法已经过时。
 - “大文件问题”并未完全消失，但最突出的后端热点已经完成一轮可维护性收敛。
-- 当前更合理的下一步是继续处理剩余 400+ 行文件，以及按阶段继续细化 `processing` 拆分后的内部模块。
+- `document.repository.ts` 也不应继续作为“剩余 400+ 行后端文件”的代表案例。
+- 当前更合理的下一步是继续处理剩余的 `scripts/db-consistency-check.ts`，以及按阶段继续细化 `processing` 拆分后的内部模块。
 
 验证：
 
 - `pnpm -F @knowledge-agent/server build` 通过
 - `pnpm test -- packages/server/tests/modules/agent/agent-executor.test.ts`：`32` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/rag/processing.error-injection.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts`：`17` 个测试全部通过
+- `pnpm test -- packages/server/tests/modules/document-index/document-index-backfill.service.test.ts packages/server/tests/modules/document-index/document-index-activation.service.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts packages/server/tests/modules/rag/search.service.test.ts packages/server/tests/modules/knowledge-base/services/counter-sync.service.test.ts`：`21` 个测试全部通过
 
 ### 5.14 文档处理已切换为 immutable build + atomic publish
 
@@ -701,12 +705,13 @@
 已完成结果：
 
 - `processing.service.ts`、`chat.service.ts`、`agent-executor.ts`、`env.ts` 已完成第一轮物理拆分
+- `document.repository.ts` 已继续拆为 facade + `core` / `processing` / `queries` / `backfill` / `types`
 - 对外导出与主要调用方式保持兼容
 - `@knowledge-agent/server build` 与相关定向测试均已通过
 
 当前剩余工作：
 
-- 继续拆分剩余 400+ 行的后端文件
+- 继续处理剩余的 `packages/server/src/scripts/db-consistency-check.ts`
 - 评估是否还要进一步细化 `processing.stages.ts` / `processing.executor.ts`
 - 前端超大页面/组件仍需后续治理
 
@@ -839,4 +844,4 @@
 
 ## 当前建议的一句话结论
 
-项目当前真正的短板，已经从“数据库结构未落地”“运行时错误处理不统一”“组件层 `getState()` 直读”“缺少功能域错误边界”“VLM 完全无测试”转向“更多高风险前端页面/组件测试、i18n 完整性，以及文档版本切换/backfill/recovery 组合链路的高阶测试覆盖”。 
+项目当前真正的短板，已经从“数据库结构未落地”“运行时错误处理不统一”“组件层 `getState()` 直读”“缺少功能域错误边界”“VLM 完全无测试”转向“更多高风险前端页面/组件测试、i18n 完整性，以及文档版本切换/backfill/recovery 组合链路的高阶测试覆盖”。
