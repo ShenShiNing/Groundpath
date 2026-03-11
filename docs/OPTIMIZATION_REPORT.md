@@ -591,10 +591,12 @@
 - 同一文档连续两次发生 version switch + stale recovery
 - 两个旧 backfill run 在真实 DB/queue worker 下都被标记为 `skipped`
 - 第三个 rerun 只针对最新版本完成处理，最终文档状态保持在最新版本
+- 已补“旧 backfill job + 旧 recovery job 都因 version switch 变 stale，最新 recovery rerun 完成”的真实 DB/queue worker 场景
+- 上述 real worker combo 测试已改为“每例独立模块实例 + 独立 `REDIS_PREFIX`”隔离夹具，降低队列单例复用带来的时序抖动
 
 验证：
 
-- `pnpm test -- packages/server/tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`：`1` 个测试全部通过
+- `pnpm test -- packages/server/tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`：`2` 个测试全部通过
 
 ---
 
@@ -626,6 +628,7 @@
 - 当前也已覆盖：
   - 真实 DB/queue worker 参与的 `backfill + version switch + recovery` 端到端组合测试
   - 真实 DB/queue worker 参与的“连续两次 version switch + repeated recovery 后，两个旧 backfill run skipped，第三次 rerun 完成”组合测试
+  - 真实 DB/queue worker 参与的“旧 backfill job + 旧 recovery job 均 stale，最新 recovery rerun 完成”组合测试
   - 真实 DB/queue 环境下的 backfill enqueue / resume 链路
 - 下一步更合理的是继续增加更多 worker 级组合链路覆盖，而不是只停留在单个回归场景
 
