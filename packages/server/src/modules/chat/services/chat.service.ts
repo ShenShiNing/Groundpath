@@ -1,203 +1,53 @@
 import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import type {
-  Citation,
-  MessageMetadata,
-  SSEEvent,
-  ToolCallInfo,
-  ToolResultInfo,
-} from '@knowledge-agent/shared/types';
-import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import type { Citation, MessageMetadata } from '@knowledge-agent/shared/types';
+import { resolveTools } from '@modules/agent';
 import { llmService } from '@modules/llm';
 import { searchService } from '@modules/rag';
-import type { SearchResult } from '@modules/vector';
-import { documentRepository } from '@modules/document';
-import { resolveTools, executeAgentLoop } from '@modules/agent';
-import { ragConfig } from '@config/env';
+import { createLogger } from '@shared/logger';
 import { structuredRagMetrics } from '@shared/observability';
+import { conversationRepository } from '../repositories/conversation.repository';
+import { executeAgentConversation, executeAgentMode } from './chat-agent-stream.service';
+import { executeLegacyStreamMode } from './chat-legacy-stream.service';
+import {
+  buildCitationMetadata,
+  enrichSearchResults,
+  PROVIDER_ERROR_FALLBACK_CONTENT,
+  sendSSE,
+} from './chat.helpers';
 import { conversationService } from './conversation.service';
 import { messageService } from './message.service';
 import { promptService } from './prompt.service';
-import { conversationRepository } from '../repositories/conversation.repository';
-import { createLogger } from '@shared/logger';
+import type { EnrichedSearchResult, SendMessageOptions, StreamContext } from './chat.types';
 
 const logger = createLogger('chat.service');
-const PROVIDER_ERROR_FALLBACK_CONTENT =
-  'The model provider failed before the answer could be completed. Please try again.';
 
-interface SendMessageOptions {
-  userId: string;
-  conversationId: string;
-  content: string;
-  documentIds?: string[];
-}
+async function prepareChatRequest(options: SendMessageOptions) {
+  const { userId, conversationId, content, documentIds } = options;
 
-interface EnrichedSearchResult {
-  documentId: string;
-  documentTitle: string;
-  chunkIndex: number;
-  content: string;
-  score: number;
-  metadata?: {
-    pageNumber?: number;
-  };
-}
+  const conversation = await conversationService.validateOwnership(userId, conversationId);
 
-interface AgentExecutionContext {
-  conversationId: string;
-  content: string;
-  userId: string;
-  documentIds?: string[];
-  knowledgeBaseId: string | null;
-  provider: Awaited<ReturnType<typeof llmService.getProviderForUser>>;
-  genOptions: Awaited<ReturnType<typeof llmService.getOptionsForUser>>;
-}
+  await messageService.create({ conversationId, role: 'user', content });
 
-function buildCitationMetadata(
-  finalCitations?: Citation[],
-  extras?: Pick<MessageMetadata, 'agentTrace' | 'stopReason' | 'tokenUsage'> & {
-    retrievedSources?: Citation[];
-  }
-): MessageMetadata | undefined {
-  if (
-    !finalCitations?.length &&
-    !extras?.retrievedSources?.length &&
-    !extras?.agentTrace?.length &&
-    !extras?.stopReason &&
-    !extras?.tokenUsage
-  ) {
-    return undefined;
+  const messageCount = await messageService.count(conversationId);
+  if (messageCount === 1) {
+    const title = conversationService.generateTitle(content);
+    await conversationRepository.update(conversationId, { title, updatedBy: userId });
   }
 
-  return {
-    citations: finalCitations,
-    retrievedSources: extras?.retrievedSources ?? finalCitations,
-    finalCitations,
-    ...extras,
-  };
-}
-
-function sendSSE(res: Response, event: SSEEvent): void {
-  res.write(`data: ${JSON.stringify(event)}\n\n`);
-}
-
-async function enrichSearchResults(results: SearchResult[]): Promise<EnrichedSearchResult[]> {
-  if (results.length === 0) return [];
-
-  const docIds = [...new Set(results.map((r) => r.documentId))];
-  const docTitles = await documentRepository.getTitlesByIds(docIds);
-
-  return results.map((r) => ({
-    documentId: r.documentId,
-    documentTitle: docTitles.get(r.documentId) ?? 'Unknown Document',
-    chunkIndex: r.chunkIndex,
-    content: r.content,
-    score: r.score,
-    metadata: {},
-  }));
-}
-
-async function executeAgentConversation(
-  ctx: AgentExecutionContext,
-  tools: ReturnType<typeof resolveTools>,
-  callbacks?: {
-    onToolStart?: (stepIndex: number, toolCalls: ToolCallInfo[]) => void;
-    onToolEnd?: (stepIndex: number, toolResults: ToolResultInfo[], durationMs: number) => void;
-  }
-) {
-  const { conversationId, content, userId, provider, genOptions, knowledgeBaseId, documentIds } =
-    ctx;
-  const hasKnowledgeBase = !!knowledgeBaseId;
-  const hasWebSearch = tools.some((t) => t.definition.name === 'web_search');
-  const hasStructuredKnowledgeBase = tools.some((t) => t.definition.name === 'outline_search');
-
-  logger.debug(
-    {
-      conversationId,
-      toolCount: tools.length,
-      hasKnowledgeBase,
-      hasStructuredKnowledgeBase,
-      hasWebSearch,
-      provider: provider.name,
-    },
-    'Using agent mode'
-  );
-
-  const history = await messageService.getRecentForContext(conversationId, 10);
-  const truncatedHistory = promptService.truncateHistory(history, 4000);
-  const systemPrompt = promptService.buildAgentSystemPrompt({
-    hasKnowledgeBase,
-    hasWebSearch,
-    hasStructuredKnowledgeBase,
+  const tools = resolveTools({
+    userId,
+    conversationId,
+    knowledgeBaseId: conversation.knowledgeBaseId,
+    documentIds,
   });
-  const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
+  const provider = await llmService.getProviderForUser(userId);
+  const genOptions = await llmService.getOptionsForUser(userId);
 
-  return executeAgentLoop({
-    provider,
-    messages,
-    tools,
-    toolContext: {
-      userId,
-      conversationId,
-      knowledgeBaseId: knowledgeBaseId ?? undefined,
-      documentIds,
-      runtimeState: {},
-    },
-    genOptions,
-    onToolStart: callbacks?.onToolStart,
-    onToolEnd: callbacks?.onToolEnd,
-  });
-}
-
-function sendChunkedSSE(res: Response, content: string, chunkSize: number = 80): void {
-  for (let i = 0; i < content.length; i += chunkSize) {
-    const chunk = content.slice(i, i + chunkSize);
-    sendSSE(res, { type: 'chunk', data: chunk });
-  }
-}
-
-async function persistAssistantMessage(input: {
-  messageId: string;
-  conversationId: string;
-  content: string;
-  citations?: Citation[];
-  retrievedSources?: Citation[];
-  agentTrace?: MessageMetadata['agentTrace'];
-  stopReason?: MessageMetadata['stopReason'];
-}) {
-  await messageService.create({
-    id: input.messageId,
-    conversationId: input.conversationId,
-    role: 'assistant',
-    content: input.content,
-    metadata: buildCitationMetadata(input.citations, {
-      retrievedSources: input.retrievedSources,
-      agentTrace: input.agentTrace,
-      stopReason: input.stopReason,
-    }),
-  });
-}
-
-/** Shared context passed to mode-specific execution functions */
-interface StreamContext {
-  res: Response;
-  userId: string;
-  conversationId: string;
-  content: string;
-  documentIds?: string[];
-  assistantMessageId: string;
-  knowledgeBaseId: string | null;
-  provider: Awaited<ReturnType<typeof llmService.getProviderForUser>>;
-  genOptions: Awaited<ReturnType<typeof llmService.getOptionsForUser>>;
-  abortController: AbortController;
-  isDisconnected: () => boolean;
-  completionStopReason?: MessageMetadata['stopReason'];
+  return { conversation, tools, provider, genOptions };
 }
 
 export const chatService = {
-  /**
-   * Send a message and stream the response via SSE
-   */
   async sendMessageWithSSE(res: Response, options: SendMessageOptions): Promise<void> {
     const { userId, conversationId, content, documentIds } = options;
 
@@ -207,27 +57,7 @@ export const chatService = {
     res.setHeader('X-Accel-Buffering', 'no');
 
     try {
-      const conversation = await conversationService.validateOwnership(userId, conversationId);
-
-      await messageService.create({ conversationId, role: 'user', content });
-
-      const messageCount = await messageService.count(conversationId);
-      if (messageCount === 1) {
-        const title = conversationService.generateTitle(content);
-        await conversationRepository.update(conversationId, { title, updatedBy: userId });
-      }
-
-      const toolContext = {
-        userId,
-        conversationId,
-        knowledgeBaseId: conversation.knowledgeBaseId,
-        documentIds,
-      };
-      const tools = resolveTools(toolContext);
-
-      const provider = await llmService.getProviderForUser(userId);
-      const genOptions = await llmService.getOptionsForUser(userId);
-
+      const { conversation, tools, provider, genOptions } = await prepareChatRequest(options);
       const assistantMessageId = uuidv4();
       const abortController = new AbortController();
       let clientDisconnected = false;
@@ -257,9 +87,9 @@ export const chatService = {
       try {
         const useAgentMode = tools.length > 0 && !!provider.generateWithTools;
         if (useAgentMode) {
-          await this.executeAgentMode(ctx, tools);
+          await executeAgentMode(ctx, tools);
         } else {
-          await this.executeLegacyStreamMode(ctx);
+          await executeLegacyStreamMode(ctx);
         }
       } finally {
         res.off('close', onClose);
@@ -298,235 +128,13 @@ export const chatService = {
     }
   },
 
-  /**
-   * Agentic RAG mode — LLM autonomously orchestrates tool calls
-   */
-  async executeAgentMode(
-    ctx: StreamContext,
-    tools: ReturnType<typeof resolveTools>
-  ): Promise<void> {
-    const { res, conversationId, content, userId, provider, genOptions, abortController } = ctx;
-    const agentResult = await executeAgentConversation(
-      {
-        conversationId,
-        content,
-        userId,
-        documentIds: ctx.documentIds,
-        knowledgeBaseId: ctx.knowledgeBaseId,
-        provider,
-        genOptions: { ...genOptions, signal: abortController.signal },
-      },
-      tools,
-      {
-        onToolStart: (stepIndex, toolCalls) => {
-          if (!ctx.isDisconnected()) {
-            sendSSE(res, { type: 'tool_start', data: { stepIndex, toolCalls } });
-          }
-        },
-        onToolEnd: (stepIndex, toolResults, durationMs) => {
-          if (!ctx.isDisconnected()) {
-            sendSSE(res, { type: 'tool_end', data: { stepIndex, toolResults, durationMs } });
-          }
-        },
-      }
-    );
-
-    if (ctx.isDisconnected()) return;
-    ctx.completionStopReason = agentResult.stopReason;
-
-    if (agentResult.citations.length > 0) {
-      sendSSE(res, { type: 'sources', data: agentResult.citations });
-    }
-    if (agentResult.content) {
-      sendChunkedSSE(res, agentResult.content);
-    }
-
-    if (!agentResult.content.trim()) {
-      logger.warn({ conversationId, userId }, 'Agent returned empty content');
-      sendSSE(res, {
-        type: 'error',
-        data: {
-          code: CHAT_ERROR_CODES.STREAMING_FAILED,
-          message: 'The model returned an empty response. Please try again.',
-        },
-      });
-      res.end();
-      return;
-    }
-
-    await persistAssistantMessage({
-      messageId: ctx.assistantMessageId,
-      conversationId,
-      content: agentResult.content,
-      citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
-      retrievedSources:
-        agentResult.retrievedCitations.length > 0 ? agentResult.retrievedCitations : undefined,
-      agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
-      stopReason: agentResult.stopReason,
-    });
-    structuredRagMetrics.recordChatCompletion({
-      conversationId,
-      userId,
-      knowledgeBaseId: ctx.knowledgeBaseId,
-      provider: provider.name,
-      transport: 'streaming',
-      orchestration: 'agent',
-      stopReason: agentResult.stopReason,
-      hasKnowledgeBase: !!ctx.knowledgeBaseId,
-      structuredToolsAvailable: tools.some((tool) => tool.definition.name === 'outline_search'),
-      retrievedCitationCount: agentResult.retrievedCitations.length,
-      finalCitationCount: agentResult.citations.length,
-    });
-  },
-
-  /**
-   * Legacy streaming mode — hardcoded RAG search + LLM streaming
-   */
-  async executeLegacyStreamMode(ctx: StreamContext): Promise<void> {
-    const { res, conversationId, content, userId, provider, genOptions, abortController } = ctx;
-
-    let searchResults: EnrichedSearchResult[] = [];
-    if (ctx.knowledgeBaseId) {
-      try {
-        const rawResults = await searchService.searchInKnowledgeBase({
-          userId,
-          knowledgeBaseId: ctx.knowledgeBaseId,
-          query: content,
-          limit: ragConfig.searchDefaultLimit,
-          scoreThreshold: ragConfig.searchDefaultScoreThreshold,
-          documentIds: ctx.documentIds,
-        });
-        searchResults = await enrichSearchResults(rawResults);
-      } catch (error) {
-        logger.warn({ error, conversationId }, 'RAG search failed, continuing without context');
-      }
-    }
-
-    if (searchResults.length > 0) {
-      const citations = promptService.toCitations(searchResults);
-      sendSSE(res, { type: 'sources', data: citations });
-    }
-
-    const history = await messageService.getRecentForContext(conversationId, 10);
-    const truncatedHistory = promptService.truncateHistory(history, 4000);
-    const systemPrompt = promptService.buildSystemPrompt(searchResults);
-    const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
-
-    let fullContent = '';
-    try {
-      for await (const chunk of provider.streamGenerate(messages, {
-        ...genOptions,
-        signal: abortController.signal,
-      })) {
-        if (ctx.isDisconnected()) break;
-        fullContent += chunk;
-        sendSSE(res, { type: 'chunk', data: chunk });
-      }
-    } catch (error) {
-      if (ctx.isDisconnected() || (error instanceof Error && error.name === 'AbortError')) {
-        logger.info({ conversationId }, 'LLM stream aborted due to client disconnect');
-        return;
-      }
-      logger.error({ err: error, conversationId }, 'LLM streaming error');
-      const fallbackContent = fullContent.trim() ? fullContent : PROVIDER_ERROR_FALLBACK_CONTENT;
-      if (!fullContent.trim()) {
-        sendChunkedSSE(res, fallbackContent);
-      }
-      const citations =
-        searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
-      await persistAssistantMessage({
-        messageId: ctx.assistantMessageId,
-        conversationId,
-        content: fallbackContent,
-        citations,
-        stopReason: 'provider_error',
-      });
-      ctx.completionStopReason = 'provider_error';
-      structuredRagMetrics.recordChatCompletion({
-        conversationId,
-        userId,
-        knowledgeBaseId: ctx.knowledgeBaseId,
-        provider: provider.name,
-        transport: 'streaming',
-        orchestration: 'legacy',
-        stopReason: 'provider_error',
-        hasKnowledgeBase: !!ctx.knowledgeBaseId,
-        structuredToolsAvailable: false,
-        retrievedCitationCount: citations?.length ?? 0,
-        finalCitationCount: citations?.length ?? 0,
-      });
-      return;
-    }
-
-    if (ctx.isDisconnected()) return;
-
-    if (!fullContent.trim()) {
-      logger.warn({ conversationId, userId }, 'LLM stream completed with empty content');
-      sendSSE(res, {
-        type: 'error',
-        data: {
-          code: CHAT_ERROR_CODES.STREAMING_FAILED,
-          message: 'The model returned an empty response. Please try again.',
-        },
-      });
-      res.end();
-      return;
-    }
-
-    const citations =
-      searchResults.length > 0 ? promptService.toCitations(searchResults) : undefined;
-    await persistAssistantMessage({
-      messageId: ctx.assistantMessageId,
-      conversationId,
-      content: fullContent,
-      citations,
-      stopReason: 'answered',
-    });
-    ctx.completionStopReason = 'answered';
-    structuredRagMetrics.recordChatCompletion({
-      conversationId,
-      userId,
-      knowledgeBaseId: ctx.knowledgeBaseId,
-      provider: provider.name,
-      transport: 'streaming',
-      orchestration: 'legacy',
-      stopReason: 'answered',
-      hasKnowledgeBase: !!ctx.knowledgeBaseId,
-      structuredToolsAvailable: false,
-      retrievedCitationCount: citations?.length ?? 0,
-      finalCitationCount: citations?.length ?? 0,
-    });
-  },
-
-  /**
-   * Send a message and return complete response (non-streaming)
-   */
   async sendMessage(options: SendMessageOptions): Promise<{
     messageId: string;
     content: string;
     citations?: Citation[];
   }> {
     const { userId, conversationId, content, documentIds } = options;
-
-    const conversation = await conversationService.validateOwnership(userId, conversationId);
-
-    await messageService.create({ conversationId, role: 'user', content });
-
-    const messageCount = await messageService.count(conversationId);
-    if (messageCount === 1) {
-      const title = conversationService.generateTitle(content);
-      await conversationRepository.update(conversationId, { title, updatedBy: userId });
-    }
-
-    const toolContext = {
-      userId,
-      conversationId,
-      knowledgeBaseId: conversation.knowledgeBaseId,
-      documentIds,
-    };
-    const tools = resolveTools(toolContext);
-    const provider = await llmService.getProviderForUser(userId);
-    const genOptions = await llmService.getOptionsForUser(userId);
+    const { conversation, tools, provider, genOptions } = await prepareChatRequest(options);
 
     const useAgentMode = tools.length > 0 && !!provider.generateWithTools;
     if (useAgentMode) {
@@ -603,6 +211,7 @@ export const chatService = {
     const truncatedHistory = promptService.truncateHistory(history, 4000);
     const systemPrompt = promptService.buildSystemPrompt(searchResults);
     const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
+
     let responseContent: string;
     let stopReason: MessageMetadata['stopReason'] = 'answered';
     try {
