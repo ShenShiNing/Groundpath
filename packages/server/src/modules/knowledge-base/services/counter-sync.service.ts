@@ -1,3 +1,4 @@
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
 import { documentRepository } from '@modules/document';
@@ -21,7 +22,7 @@ export const counterSyncService = {
   async syncKnowledgeBase(kbId: string): Promise<SyncResult> {
     const kb = await knowledgeBaseRepository.findById(kbId);
     if (!kb) {
-      throw new Error(`Knowledge base not found: ${kbId}`);
+      throw Errors.notFound('Knowledge base');
     }
 
     // Get actual counts from documents

@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { redisConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('redis.client');
@@ -59,7 +60,7 @@ export async function connectRedis(): Promise<void> {
     logger.info({ url: safeUrl }, 'Redis connected');
   } catch (error) {
     if (error instanceof Error && error.message.includes('NOAUTH')) {
-      throw new Error(
+      throw Errors.validation(
         'Redis authentication failed. Please set REDIS_URL with credentials, e.g. redis://:password@localhost:6379'
       );
     }

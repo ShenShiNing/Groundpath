@@ -24,7 +24,7 @@ import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
 import { useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '@/stores';
+import { getAccessTokenSnapshot } from '@/stores';
 import { useChatPanelStore, type Citation } from '@/stores';
 import { toast } from 'sonner';
 
@@ -51,9 +51,10 @@ export function ChatPage() {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const skipNextAutoScrollRef = useRef(false);
+  const knowledgeBaseId = useChatPanelStore((s) => s.knowledgeBaseId);
 
   const [selectedKnowledgeBaseId, setSelectedKnowledgeBaseId] = useState<string | undefined>(
-    useChatPanelStore.getState().knowledgeBaseId ?? undefined
+    knowledgeBaseId ?? undefined
   );
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [previewCitation, setPreviewCitation] = useState<Citation | null>(null);
@@ -70,7 +71,6 @@ export function ChatPage() {
     pageSize: 100,
   });
 
-  const knowledgeBaseId = useChatPanelStore((s) => s.knowledgeBaseId);
   const conversationId = useChatPanelStore((s) => s.conversationId);
   const messages = useChatPanelStore((s) => s.messages);
   const focusMessageId = useChatPanelStore((s) => s.focusMessageId);
@@ -218,24 +218,22 @@ export function ChatPage() {
     }
   }, [docsError, t]);
 
-  const getAccessToken = useCallback(() => useAuthStore.getState().accessToken, []);
-
   const handleSendMessage = useCallback(
     (content: string) => {
       const targetKnowledgeBaseId = selectedKnowledgeBaseId ?? null;
       if (knowledgeBaseId !== targetKnowledgeBaseId) {
         open(targetKnowledgeBaseId);
       }
-      void sendMessage(content, getAccessToken);
+      void sendMessage(content, getAccessTokenSnapshot);
     },
-    [getAccessToken, knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage]
+    [knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage]
   );
 
   const handleRetry = useCallback(
     (messageId: string) => {
-      void retryMessage(messageId, getAccessToken);
+      void retryMessage(messageId, getAccessTokenSnapshot);
     },
-    [getAccessToken, retryMessage]
+    [retryMessage]
   );
 
   const handleCitationClick = useCallback((citation: Citation) => {

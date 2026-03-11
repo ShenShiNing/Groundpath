@@ -111,7 +111,7 @@ describe('counterSyncService', () => {
     vi.mocked(knowledgeBaseRepository.findById).mockResolvedValue(undefined);
 
     await expect(counterSyncService.syncKnowledgeBase('missing-kb')).rejects.toThrow(
-      'Knowledge base not found: missing-kb'
+      'Knowledge base not found'
     );
   });
 

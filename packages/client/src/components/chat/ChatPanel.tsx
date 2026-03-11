@@ -8,8 +8,7 @@ import { ChatInput } from './ChatInput';
 import { CitationPreview } from './CitationPreview';
 import { DocumentScopeSelector } from './DocumentScopeSelector';
 import { ConversationList } from './ConversationList';
-import { useChatPanelStore, type Citation } from '@/stores';
-import { useAuthStore } from '@/stores';
+import { getAccessTokenSnapshot, useChatPanelStore, type Citation } from '@/stores';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { useTranslation } from 'react-i18next';
@@ -51,22 +50,19 @@ export function ChatPanel({ knowledgeBaseId, documents, onOpenDocument }: ChatPa
   const [previewCitation, setPreviewCitation] = useState<Citation | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Get access token getter
-  const getAccessToken = useCallback(() => useAuthStore.getState().accessToken, []);
-
   // Handler for sending messages
   const handleSendMessage = useCallback(
     (content: string) => {
-      sendMessage(content, getAccessToken);
+      sendMessage(content, getAccessTokenSnapshot);
     },
-    [sendMessage, getAccessToken]
+    [sendMessage]
   );
 
   const handleRetry = useCallback(
     (messageId: string) => {
-      void retryMessage(messageId, getAccessToken);
+      void retryMessage(messageId, getAccessTokenSnapshot);
     },
-    [getAccessToken, retryMessage]
+    [retryMessage]
   );
 
   // Auto-scroll to bottom on new messages

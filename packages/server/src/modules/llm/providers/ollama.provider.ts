@@ -1,5 +1,6 @@
 import type { LLMProvider, ChatMessage, GenerateOptions } from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import { Errors } from '@shared/errors';
 import { logger } from '@shared/logger';
 
 interface OllamaChatResponse {
@@ -35,7 +36,7 @@ export class OllamaProvider implements LLMProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      throw Errors.external(`Ollama API error: ${response.status} ${response.statusText}`);
     }
 
     const data = (await response.json()) as OllamaChatResponse;
@@ -63,11 +64,11 @@ export class OllamaProvider implements LLMProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      throw Errors.external(`Ollama API error: ${response.status} ${response.statusText}`);
     }
 
     const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
+    if (!reader) throw Errors.external('No response body');
 
     const decoder = new TextDecoder();
     let buffer = '';
@@ -108,13 +109,13 @@ export class OllamaProvider implements LLMProvider {
     try {
       const response = await fetch(`${this.baseUrl}/api/tags`);
       if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+        throw Errors.external(`Ollama API error: ${response.status} ${response.statusText}`);
       }
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn({ errorMessage, provider: 'ollama' }, 'Health check failed');
-      throw new Error(errorMessage);
+      throw Errors.external(errorMessage);
     }
   }
 }

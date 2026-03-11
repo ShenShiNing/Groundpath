@@ -1,4 +1,10 @@
-export { useAuthStore } from './authStore';
+export {
+  useAuthStore,
+  getAccessTokenSnapshot,
+  isAuthenticatedSnapshot,
+  clearAuthState,
+  getAuthSnapshot,
+} from './authStore';
 export { useUserStore } from './userStore';
 export {
   useChatPanelStore,

@@ -37,6 +37,15 @@ export const Errors = {
   validation: (msg: string, details?: Record<string, unknown>) =>
     new AppError('VALIDATION_ERROR', msg, 400, details),
   conflict: (msg: string) => new AppError('CONFLICT', msg, 409),
+  external: (
+    msg = 'External service failed',
+    details?: Record<string, unknown>,
+    statusCode = 502
+  ) => new AppError('EXTERNAL_SERVICE_ERROR', msg, statusCode, details),
+  timeout: (msg = 'Operation timed out', details?: Record<string, unknown>) =>
+    new AppError('TIMEOUT', msg, 504, details),
+  aborted: (msg = 'Operation aborted', details?: Record<string, unknown>) =>
+    new AppError('REQUEST_ABORTED', msg, 499, details),
   internal: (msg = 'An unexpected error occurred') =>
     new AppError('INTERNAL_ERROR', msg, 500, undefined, false),
 

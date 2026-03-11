@@ -1,5 +1,6 @@
 import type { EmbeddingProvider } from '../embedding.types';
 import { embeddingConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 import pLimit from 'p-limit';
 
@@ -19,7 +20,7 @@ export class ZhipuProvider implements EmbeddingProvider {
 
   constructor() {
     if (!embeddingConfig.zhipu.apiKey) {
-      throw new Error('ZHIPU_API_KEY is required when using zhipu embedding provider');
+      throw Errors.validation('ZHIPU_API_KEY is required when using zhipu embedding provider');
     }
     this.apiKey = embeddingConfig.zhipu.apiKey;
     this.model = embeddingConfig.zhipu.model;
@@ -74,19 +75,19 @@ export class ZhipuProvider implements EmbeddingProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Zhipu API error (${response.status}): ${errorText}`);
+        throw Errors.external(`Zhipu API error (${response.status}): ${errorText}`);
       }
 
       const data = (await response.json()) as ZhipuEmbeddingResponse;
       if (!data.data?.[0]?.embedding) {
-        throw new Error(
+        throw Errors.external(
           `Zhipu API returned unexpected response: ${JSON.stringify(data).slice(0, 200)}`
         );
       }
       return data.data[0].embedding;
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        throw new Error(
+        throw Errors.timeout(
           `Zhipu API request timed out after 30s (input length: ${text.length} chars)`
         );
       }

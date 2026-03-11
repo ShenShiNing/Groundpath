@@ -3,6 +3,7 @@ import { ZhipuProvider } from './providers/zhipu.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { OllamaProvider } from './providers/ollama.provider';
 import { embeddingConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('embedding.factory');
@@ -19,7 +20,7 @@ function createProvider(type: EmbeddingProviderType): EmbeddingProvider {
     case 'ollama':
       return new OllamaProvider();
     default:
-      throw new Error(`Unknown embedding provider: ${type}`);
+      throw Errors.validation(`Unknown embedding provider: ${type}`);
   }
 }
 

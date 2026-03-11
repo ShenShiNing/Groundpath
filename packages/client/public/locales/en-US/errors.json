@@ -15,7 +15,23 @@
     "title": "Page Error",
     "defaultMessage": "An unexpected error occurred while loading this page.",
     "retry": "Retry",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "chat": {
+      "title": "Chat Error",
+      "defaultMessage": "An unexpected error occurred while loading the chat workspace."
+    },
+    "documentDetail": {
+      "title": "Document Error",
+      "defaultMessage": "An unexpected error occurred while loading the document detail view."
+    },
+    "knowledgeBaseDetail": {
+      "title": "Knowledge Base Error",
+      "defaultMessage": "An unexpected error occurred while loading the knowledge base detail view."
+    },
+    "aiSettings": {
+      "title": "AI Settings Error",
+      "defaultMessage": "An unexpected error occurred while loading AI settings."
+    }
   },
   "oauth": {
     "processing": {

@@ -1,5 +1,6 @@
 import type { LLMProvider, ChatMessage, GenerateOptions } from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import { Errors } from '@shared/errors';
 import { logger } from '@shared/logger';
 
 /**
@@ -20,7 +21,7 @@ export class CustomProvider implements LLMProvider {
   private readonly baseUrl: string;
 
   constructor(apiKey: string, model: string, baseUrl: string) {
-    if (!baseUrl) throw new Error('Base URL is required for custom provider');
+    if (!baseUrl) throw Errors.validation('Base URL is required for custom provider');
     this.apiKey = apiKey;
     this.model = model;
     this.baseUrl = normalizeCustomBaseUrl(baseUrl);
@@ -45,7 +46,7 @@ export class CustomProvider implements LLMProvider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Custom API error: ${response.status} - ${errorText}`);
+      throw Errors.external(`Custom API error: ${response.status} - ${errorText}`);
     }
 
     const data = (await response.json()) as CustomResponse;
@@ -76,11 +77,11 @@ export class CustomProvider implements LLMProvider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Custom API error: ${response.status} - ${errorText}`);
+      throw Errors.external(`Custom API error: ${response.status} - ${errorText}`);
     }
 
     const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
+    if (!reader) throw Errors.external('No response body');
 
     const decoder = new TextDecoder();
     let buffer = '';
@@ -137,7 +138,7 @@ export class CustomProvider implements LLMProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
+        throw Errors.external(
           `Custom API error: ${response.status}${errorText ? ` - ${errorText.slice(0, 300)}` : ''}`
         );
       }
@@ -150,7 +151,7 @@ export class CustomProvider implements LLMProvider {
         { errorMessage, cause, baseUrl: this.baseUrl, provider: 'custom' },
         'Health check failed'
       );
-      throw new Error(errorMessage);
+      throw Errors.external(errorMessage);
     }
   }
 }

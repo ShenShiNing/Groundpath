@@ -7,6 +7,7 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import { Errors } from '@shared/errors';
 import { openaiCompatGenerateWithTools } from './openai-compat';
 import { logger } from '@shared/logger';
 
@@ -48,7 +49,7 @@ export class DeepSeekProvider implements LLMProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
+      throw Errors.external(`DeepSeek API error: ${response.status} ${response.statusText}`);
     }
 
     const data = (await response.json()) as DeepSeekResponse;
@@ -78,11 +79,11 @@ export class DeepSeekProvider implements LLMProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
+      throw Errors.external(`DeepSeek API error: ${response.status} ${response.statusText}`);
     }
 
     const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
+    if (!reader) throw Errors.external('No response body');
 
     const decoder = new TextDecoder();
     let buffer = '';
@@ -153,7 +154,7 @@ export class DeepSeekProvider implements LLMProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
+        throw Errors.external(
           `DeepSeek API error: ${response.status}${errorText ? ` - ${errorText.slice(0, 300)}` : ''}`
         );
       }
@@ -166,7 +167,7 @@ export class DeepSeekProvider implements LLMProvider {
         { errorMessage, cause, baseUrl: this.baseUrl, provider: 'deepseek' },
         'Health check failed'
       );
-      throw new Error(errorMessage);
+      throw Errors.external(errorMessage);
     }
   }
 }

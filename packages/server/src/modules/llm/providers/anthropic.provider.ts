@@ -8,6 +8,7 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType, ToolCallInfo } from '@knowledge-agent/shared/types';
+import { Errors } from '@shared/errors';
 import { logger } from '@shared/logger';
 
 export class AnthropicProvider implements LLMProvider {
@@ -143,7 +144,7 @@ export class AnthropicProvider implements LLMProvider {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn({ errorMessage, provider: 'anthropic' }, 'Health check failed');
-      throw new Error(errorMessage);
+      throw Errors.external(errorMessage);
     }
   }
 }

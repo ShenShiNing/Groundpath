@@ -1,4 +1,5 @@
 import { vlmConfig, llmConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 import type { VLMProvider } from './vlm-provider.interface';
 import { OpenAIVLMProvider } from './providers/openai-vlm.provider';
@@ -24,7 +25,7 @@ export function getVLMProvider(): VLMProvider {
 
   const apiKey = resolveApiKey();
   if (!apiKey) {
-    throw new Error(
+    throw Errors.validation(
       `VLM API key not configured. Set VLM_API_KEY or the corresponding LLM provider key for "${vlmConfig.provider}".`
     );
   }

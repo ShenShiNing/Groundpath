@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { authConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
@@ -37,7 +38,7 @@ export function encrypt(plaintext: string): string {
 export function decrypt(encryptedStr: string): string {
   const parts = encryptedStr.split(':');
   if (parts.length !== 3) {
-    throw new Error('Invalid encrypted format');
+    throw Errors.internal('Invalid encrypted format');
   }
 
   const [ivB64, authTagB64, ciphertextB64] = parts;

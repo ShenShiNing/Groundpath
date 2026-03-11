@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 import type { ModelInfo, FetchModelsOptions } from '../providers/llm-provider.interface';
 import { llmConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { logger } from '@shared/logger';
 
 interface OllamaTagsResponse {
@@ -123,7 +124,7 @@ export const modelFetcherService = {
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status}`);
+      throw Errors.external(`Ollama API error: ${response.status}`);
     }
 
     const data = (await response.json()) as OllamaTagsResponse;
@@ -158,7 +159,7 @@ export const modelFetcherService = {
     });
 
     if (!response.ok) {
-      throw new Error(`DeepSeek API error: ${response.status}`);
+      throw Errors.external(`DeepSeek API error: ${response.status}`);
     }
 
     const data = (await response.json()) as OpenAIModelsResponse;
@@ -195,7 +196,7 @@ export const modelFetcherService = {
     });
 
     if (!response.ok) {
-      throw new Error(`Zhipu API error: ${response.status}`);
+      throw Errors.external(`Zhipu API error: ${response.status}`);
     }
 
     const data = (await response.json()) as OpenAIModelsResponse;
@@ -265,7 +266,7 @@ export const modelFetcherService = {
     });
 
     if (!response.ok) {
-      throw new Error(`Custom proxy API error: ${response.status}`);
+      throw Errors.external(`Custom proxy API error: ${response.status}`);
     }
 
     const data = (await response.json()) as OpenAIModelsResponse;

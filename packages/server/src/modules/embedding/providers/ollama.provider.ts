@@ -1,5 +1,6 @@
 import type { EmbeddingProvider } from '../embedding.types';
 import { embeddingConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 import pLimit from 'p-limit';
 
@@ -49,14 +50,14 @@ export class OllamaProvider implements EmbeddingProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Ollama API error (${response.status}): ${errorText}`);
+        throw Errors.external(`Ollama API error (${response.status}): ${errorText}`);
       }
 
       const data = (await response.json()) as OllamaEmbeddingResponse;
       return data.embedding;
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        throw new Error(`Ollama API request timed out after ${this.timeout / 1000}s`);
+        throw Errors.timeout(`Ollama API request timed out after ${this.timeout / 1000}s`);
       }
       throw error;
     } finally {
@@ -83,7 +84,7 @@ export class OllamaProvider implements EmbeddingProvider {
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        throw new Error(`Ollama API batch request timed out after ${this.timeout / 1000}s`);
+        throw Errors.timeout(`Ollama API batch request timed out after ${this.timeout / 1000}s`);
       }
       // Fall back to sequential embedding for other errors
     } finally {

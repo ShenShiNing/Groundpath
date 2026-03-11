@@ -6,6 +6,7 @@
 import pLimit from 'p-limit';
 import { llmService } from '@modules/llm';
 import type { ChatMessage, GenerateOptions } from '@modules/llm';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('document-ai-llm');
@@ -76,7 +77,7 @@ export const documentAiLlmService = {
 
       // Check if aborted before starting
       if (signal?.aborted) {
-        throw new Error('Operation aborted');
+        throw Errors.aborted('Operation aborted');
       }
 
       try {
@@ -142,7 +143,7 @@ export const documentAiLlmService = {
     try {
       // Check if aborted before starting
       if (signal?.aborted) {
-        throw new Error('Operation aborted');
+        throw Errors.aborted('Operation aborted');
       }
 
       const provider = await llmService.getProviderForUser(userId);

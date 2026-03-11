@@ -56,6 +56,7 @@ vi.mock('@shared/utils', () => ({
 vi.mock('@shared/errors', () => ({
   Errors: {
     validation: (msg: string) => new Error(msg),
+    external: (msg: string) => new Error(msg),
   },
 }));
 

@@ -7,6 +7,7 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import { Errors } from '@shared/errors';
 import { openaiCompatGenerateWithTools } from './openai-compat';
 import { logger } from '@shared/logger';
 
@@ -57,7 +58,7 @@ export class ZhipuProvider implements LLMProvider {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Zhipu API error: ${response.status} - ${errorText}`);
+      throw Errors.external(`Zhipu API error: ${response.status} - ${errorText}`);
     }
 
     const data = (await response.json()) as ZhipuResponse;
@@ -87,11 +88,11 @@ export class ZhipuProvider implements LLMProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`Zhipu API error: ${response.status} ${response.statusText}`);
+      throw Errors.external(`Zhipu API error: ${response.status} ${response.statusText}`);
     }
 
     const reader = response.body?.getReader();
-    if (!reader) throw new Error('No response body');
+    if (!reader) throw Errors.external('No response body');
 
     const decoder = new TextDecoder();
     let buffer = '';
@@ -155,7 +156,7 @@ export class ZhipuProvider implements LLMProvider {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
+        throw Errors.external(
           `Zhipu API error: ${response.status}${errorText ? ` - ${errorText.slice(0, 300)}` : ''}`
         );
       }
@@ -164,7 +165,7 @@ export class ZhipuProvider implements LLMProvider {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.warn({ errorMessage, provider: 'zhipu' }, 'Health check failed');
-      throw new Error(errorMessage);
+      throw Errors.external(errorMessage);
     }
   }
 }

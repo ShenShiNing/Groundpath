@@ -4,6 +4,7 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { ToolCallInfo } from '@knowledge-agent/shared/types';
+import { Errors } from '@shared/errors';
 
 // --- OpenAI-compatible tool calling types ---
 
@@ -87,7 +88,7 @@ export async function openaiCompatGenerateWithTools(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`API error: ${response.status} - ${errorText}`);
+    throw Errors.external(`API error: ${response.status} - ${errorText}`);
   }
 
   const data = (await response.json()) as OpenAICompatResponse;

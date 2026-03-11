@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { authenticate } from '@shared/middleware';
+import { authenticate, aiRateLimiter } from '@shared/middleware';
 import { validateBody } from '@shared/middleware';
 import {
   summaryRequestSchema,
@@ -26,23 +26,38 @@ router.use(authenticate);
 // ============================================================================
 
 // POST /api/document-ai/:id/summary - Generate document summary
-router.post('/:id/summary', validateBody(summaryRequestSchema), summaryController.generate);
+router.post(
+  '/:id/summary',
+  aiRateLimiter,
+  validateBody(summaryRequestSchema),
+  summaryController.generate
+);
 
 // POST /api/document-ai/:id/summary/stream - Stream document summary (SSE)
-router.post('/:id/summary/stream', validateBody(summaryRequestSchema), summaryController.stream);
+router.post(
+  '/:id/summary/stream',
+  aiRateLimiter,
+  validateBody(summaryRequestSchema),
+  summaryController.stream
+);
 
 // ============================================================================
 // Analysis Routes
 // ============================================================================
 
 // POST /api/document-ai/:id/analyze - Comprehensive analysis
-router.post('/:id/analyze', validateBody(analysisRequestSchema), analysisController.analyze);
+router.post(
+  '/:id/analyze',
+  aiRateLimiter,
+  validateBody(analysisRequestSchema),
+  analysisController.analyze
+);
 
 // POST /api/document-ai/:id/analyze/keywords - Extract keywords only
-router.post('/:id/analyze/keywords', analysisController.extractKeywords);
+router.post('/:id/analyze/keywords', aiRateLimiter, analysisController.extractKeywords);
 
 // POST /api/document-ai/:id/analyze/entities - Extract entities only
-router.post('/:id/analyze/entities', analysisController.extractEntities);
+router.post('/:id/analyze/entities', aiRateLimiter, analysisController.extractEntities);
 
 // GET /api/document-ai/:id/analyze/structure - Get document structure (no LLM)
 router.get('/:id/analyze/structure', analysisController.getStructure);
@@ -52,21 +67,33 @@ router.get('/:id/analyze/structure', analysisController.getStructure);
 // ============================================================================
 
 // POST /api/document-ai/generate - Generate new content
-router.post('/generate', validateBody(generateRequestSchema), generationController.generate);
+router.post(
+  '/generate',
+  aiRateLimiter,
+  validateBody(generateRequestSchema),
+  generationController.generate
+);
 
 // POST /api/document-ai/generate/stream - Stream content generation (SSE)
 router.post(
   '/generate/stream',
+  aiRateLimiter,
   validateBody(generateRequestSchema),
   generationController.streamGenerate
 );
 
 // POST /api/document-ai/:id/expand - Expand existing document
-router.post('/:id/expand', validateBody(expandRequestSchema), generationController.expand);
+router.post(
+  '/:id/expand',
+  aiRateLimiter,
+  validateBody(expandRequestSchema),
+  generationController.expand
+);
 
 // POST /api/document-ai/:id/expand/stream - Stream document expansion (SSE)
 router.post(
   '/:id/expand/stream',
+  aiRateLimiter,
   validateBody(expandRequestSchema),
   generationController.streamExpand
 );

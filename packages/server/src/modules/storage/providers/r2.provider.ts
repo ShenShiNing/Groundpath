@@ -6,6 +6,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { SignedUrlOptions, StorageProvider } from '../storage.types';
 import { storageConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 
 export class R2StorageProvider implements StorageProvider {
   private client: S3Client;
@@ -54,7 +55,7 @@ export class R2StorageProvider implements StorageProvider {
     );
 
     if (!response.Body) {
-      throw new Error('No content returned from storage');
+      throw Errors.external('No content returned from storage');
     }
 
     return {
@@ -74,7 +75,7 @@ export class R2StorageProvider implements StorageProvider {
 
     const stream = response.Body;
     if (!stream) {
-      throw new Error('No content returned from storage');
+      throw Errors.external('No content returned from storage');
     }
 
     const chunks: Uint8Array[] = [];

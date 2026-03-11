@@ -169,18 +169,33 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
+export function getAccessTokenSnapshot(): string | null {
+  return useAuthStore.getState().accessToken;
+}
+
+export function isAuthenticatedSnapshot(): boolean {
+  return useAuthStore.getState().isAuthenticated;
+}
+
+export function clearAuthState(): void {
+  useAuthStore.getState().clearAuth();
+}
+
+export function getAuthSnapshot(): Pick<AuthState, 'accessToken' | 'isAuthenticated'> {
+  const { accessToken, isAuthenticated } = useAuthStore.getState();
+  return { accessToken, isAuthenticated };
+}
+
 // ============================================================================
 // 初始化 Token 访问器
 // 在 store 创建后立即设置，确保在任何 API 请求发出之前访问器已就绪
 // ============================================================================
 
 setTokenAccessors({
-  getAccessToken: () => useAuthStore.getState().accessToken,
-  isAuthenticated: () => useAuthStore.getState().isAuthenticated,
+  getAccessToken: getAccessTokenSnapshot,
+  isAuthenticated: isAuthenticatedSnapshot,
   onTokenRefreshed: (accessToken) => {
     useAuthStore.setState({ accessToken });
   },
-  onAuthError: () => {
-    useAuthStore.getState().clearAuth();
-  },
+  onAuthError: clearAuthState,
 });

@@ -1,5 +1,6 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { vectorConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
 
@@ -102,7 +103,7 @@ export async function ensureCollection(collectionName: string, dimensions: numbe
     const existingSize = vectorsConfig?.size;
 
     if (typeof existingSize === 'number' && existingSize !== dimensions) {
-      throw new Error(
+      throw Errors.conflict(
         `Qdrant collection ${collectionName} has dimensions ${existingSize}, expected ${dimensions}. ` +
           'Please recreate the collection or align the knowledge base embedding config.'
       );

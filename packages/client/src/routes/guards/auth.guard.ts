@@ -1,5 +1,5 @@
 import { redirect } from '@tanstack/react-router';
-import { useAuthStore } from '@/stores';
+import { clearAuthState, getAuthSnapshot } from '@/stores';
 import { ensureAccessToken } from '@/lib/http';
 
 /**
@@ -7,7 +7,7 @@ import { ensureAccessToken } from '@/lib/http';
  * 用于保护需要登录才能访问的路由
  */
 export async function requireAuth() {
-  const { accessToken, isAuthenticated, clearAuth } = useAuthStore.getState();
+  const { accessToken, isAuthenticated } = getAuthSnapshot();
 
   if (accessToken) {
     return;
@@ -22,7 +22,7 @@ export async function requireAuth() {
     } catch {
       // Ignore and fall through to redirect.
     }
-    clearAuth();
+    clearAuthState();
   }
 
   throw redirect({
@@ -38,7 +38,7 @@ export async function requireAuth() {
  * 用于已登录用户不应访问的页面（如登录页）
  */
 export async function requireGuest() {
-  const { accessToken, isAuthenticated, clearAuth } = useAuthStore.getState();
+  const { accessToken, isAuthenticated } = getAuthSnapshot();
 
   if (accessToken) {
     throw redirect({
@@ -55,7 +55,7 @@ export async function requireGuest() {
         });
       }
     } catch {
-      clearAuth();
+      clearAuthState();
     }
   }
 }

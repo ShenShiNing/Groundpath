@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { EmbeddingProvider } from '../embedding.types';
 import { embeddingConfig } from '@config/env';
+import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 
 const logger = createLogger('embedding.openai');
@@ -18,7 +19,7 @@ export class OpenAIProvider implements EmbeddingProvider {
 
   constructor() {
     if (!embeddingConfig.openai.apiKey) {
-      throw new Error('OPENAI_API_KEY is required when using openai embedding provider');
+      throw Errors.validation('OPENAI_API_KEY is required when using openai embedding provider');
     }
     this.client = new OpenAI({ apiKey: embeddingConfig.openai.apiKey });
     this.model = embeddingConfig.openai.model;

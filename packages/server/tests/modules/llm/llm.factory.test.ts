@@ -24,6 +24,12 @@ vi.mock('@config/env', () => ({
     ollamaBaseUrl: 'http://localhost:11434',
     deepseek: { apiKey: 'env-deepseek-key' },
   },
+  serverConfig: {
+    nodeEnv: 'test',
+  },
+  loggingConfig: {
+    level: 'silent',
+  },
 }));
 
 vi.mock('@modules/llm/providers/openai.provider', () => ({
