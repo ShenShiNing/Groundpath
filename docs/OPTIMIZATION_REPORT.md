@@ -697,7 +697,8 @@
 
 当前剩余工作：
 
-- 继续补 recovery / backfill / version switch 组合链路测试
+- Phase 1 范围内的恢复主链与高阶组合链路测试已完成当前阶段目标
+- 后续若继续扩大更多 worker 级 permutation，归入持续硬化项，而不再视为 Phase 1 blocker
 
 ---
 
