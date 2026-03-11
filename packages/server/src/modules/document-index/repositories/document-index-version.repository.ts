@@ -1,10 +1,20 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, ne, or } from 'drizzle-orm';
 import { getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
   documentIndexVersions,
   type DocumentIndexVersion,
   type NewDocumentIndexVersion,
 } from '@shared/db/schema/document/document-index-versions.schema';
+import { documents } from '@shared/db/schema/document/documents.schema';
+
+export interface DocumentIndexCleanupCandidate {
+  indexVersionId: string;
+  documentId: string;
+  documentVersion: number;
+  knowledgeBaseId: string;
+  status: DocumentIndexVersion['status'];
+  builtAt: Date;
+}
 
 export const documentIndexVersionRepository = {
   async create(data: NewDocumentIndexVersion, tx?: Transaction): Promise<DocumentIndexVersion> {
@@ -76,6 +86,37 @@ export const documentIndexVersionRepository = {
       .orderBy(desc(documentIndexVersions.documentVersion), desc(documentIndexVersions.builtAt));
   },
 
+  async listCleanupCandidates(
+    builtBefore: Date,
+    limit: number,
+    tx?: Transaction
+  ): Promise<DocumentIndexCleanupCandidate[]> {
+    const ctx = getDbContext(tx);
+    return ctx
+      .select({
+        indexVersionId: documentIndexVersions.id,
+        documentId: documentIndexVersions.documentId,
+        documentVersion: documentIndexVersions.documentVersion,
+        knowledgeBaseId: documents.knowledgeBaseId,
+        status: documentIndexVersions.status,
+        builtAt: documentIndexVersions.builtAt,
+      })
+      .from(documentIndexVersions)
+      .innerJoin(documents, eq(documents.id, documentIndexVersions.documentId))
+      .where(
+        and(
+          inArray(documentIndexVersions.status, ['superseded', 'failed']),
+          lt(documentIndexVersions.builtAt, builtBefore),
+          or(
+            isNull(documents.activeIndexVersionId),
+            ne(documents.activeIndexVersionId, documentIndexVersions.id)
+          )
+        )
+      )
+      .orderBy(asc(documentIndexVersions.builtAt), asc(documentIndexVersions.id))
+      .limit(limit);
+  },
+
   async update(
     id: string,
     data: Partial<
@@ -100,6 +141,11 @@ export const documentIndexVersionRepository = {
     const ctx = getDbContext(tx);
     await ctx.update(documentIndexVersions).set(data).where(eq(documentIndexVersions.id, id));
     return this.findById(id, tx);
+  },
+
+  async deleteById(id: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx.delete(documentIndexVersions).where(eq(documentIndexVersions.id, id));
   },
 
   async supersedeActiveByDocumentId(

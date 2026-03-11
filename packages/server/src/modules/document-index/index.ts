@@ -10,6 +10,7 @@ export * from './services/document-index-activation.service';
 export * from './services/document-index-backfill.service';
 export * from './services/document-index-backfill-progress.service';
 export * from './services/document-index-cache.service';
+export * from './services/document-index-artifact-cleanup.service';
 export * from './services/document-parse-router.service';
 export * from './services/structured-rag-rollout.service';
 export * from './services/parsers/docx-structure.parser';

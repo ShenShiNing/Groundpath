@@ -9,7 +9,10 @@ import {
 import { createLogger } from '@shared/logger';
 import { systemLogger } from '@shared/logger/system-logger';
 import { logCleanupService, structuredRagAlertService } from '@modules/logs';
-import { documentIndexBackfillService } from '@modules/document-index';
+import {
+  documentIndexArtifactCleanupService,
+  documentIndexBackfillService,
+} from '@modules/document-index';
 import { tokenCleanupService } from '@modules/auth';
 import { counterSyncService } from '@modules/knowledge-base';
 import { vectorCleanupService } from '@modules/vector';
@@ -172,6 +175,35 @@ export function initializeScheduler(): void {
     );
   }
 
+  if (documentConfig.buildCleanupEnabled) {
+    cron.schedule(
+      documentConfig.buildCleanupCron,
+      async () => {
+        logger.info('Running immutable document build cleanup...');
+
+        try {
+          const result = await documentIndexArtifactCleanupService.cleanup();
+          systemLogger.schedulerRun(
+            'document-index.artifact-cleanup',
+            'Immutable document build cleanup completed',
+            undefined,
+            result
+          );
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          logger.error({ error }, 'Immutable document build cleanup failed');
+          systemLogger.schedulerError('document-index.artifact-cleanup.failed', error);
+        }
+      },
+      {
+        timezone: 'UTC',
+      }
+    );
+    scheduledTasks.push(
+      `document-index-artifact-cleanup (${documentConfig.buildCleanupCron} UTC, retention ${documentConfig.buildCleanupRetentionDays} days)`
+    );
+  }
+
   isInitialized = true;
 
   if (scheduledTasks.length > 0) {
@@ -211,4 +243,12 @@ export async function triggerVectorCleanup() {
 export async function triggerDocumentProcessingRecovery() {
   logger.info('Manually triggering stale document processing recovery...');
   return processingRecoveryService.recoverStaleProcessing();
+}
+
+/**
+ * Manually trigger immutable document build cleanup (for testing/admin purposes)
+ */
+export async function triggerDocumentIndexArtifactCleanup() {
+  logger.info('Manually triggering immutable document build cleanup...');
+  return documentIndexArtifactCleanupService.cleanup();
 }

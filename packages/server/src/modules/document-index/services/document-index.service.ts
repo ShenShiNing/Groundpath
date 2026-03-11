@@ -23,6 +23,10 @@ export interface CompleteIndexBuildInput {
   headingCount?: number;
   parseDurationMs?: number;
   error?: string | null;
+  expectedPublishGeneration?: number;
+  chunkCount?: number;
+  knowledgeBaseId?: string;
+  chunkDelta?: number;
 }
 
 export interface ReplaceGraphInput {
@@ -55,7 +59,12 @@ export const documentIndexService = {
       error: input.error ?? null,
     });
 
-    return documentIndexActivationService.activateVersion(input.indexVersionId);
+    return documentIndexActivationService.activateVersion(input.indexVersionId, {
+      expectedPublishGeneration: input.expectedPublishGeneration,
+      chunkCount: input.chunkCount,
+      knowledgeBaseId: input.knowledgeBaseId,
+      chunkDelta: input.chunkDelta,
+    });
   },
 
   async failBuild(indexVersionId: string, error: string) {

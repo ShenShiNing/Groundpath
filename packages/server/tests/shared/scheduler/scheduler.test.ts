@@ -12,6 +12,7 @@ const vectorCleanupRunMock = vi.fn();
 const counterSyncAllMock = vi.fn();
 const structuredRagAlertCheckMock = vi.fn();
 const processingRecoveryRecoverMock = vi.fn();
+const documentIndexArtifactCleanupMock = vi.fn();
 
 interface SchedulerImportOptions {
   cleanupEnabled?: boolean;
@@ -19,6 +20,7 @@ interface SchedulerImportOptions {
   structuredRagAlertsEnabled?: boolean;
   backfillScheduleEnabled?: boolean;
   processingRecoveryEnabled?: boolean;
+  buildCleanupEnabled?: boolean;
 }
 
 async function importScheduler(options: SchedulerImportOptions = {}) {
@@ -28,6 +30,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     structuredRagAlertsEnabled = false,
     backfillScheduleEnabled = false,
     processingRecoveryEnabled = true,
+    buildCleanupEnabled = true,
   } = options;
 
   vi.resetModules();
@@ -49,6 +52,9 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
       processingRecoveryEnabled,
       processingRecoveryCron: '*/10 * * * *',
       processingTimeoutMinutes: 30,
+      buildCleanupEnabled,
+      buildCleanupCron: '30 3 * * *',
+      buildCleanupRetentionDays: 7,
     },
     featureFlags: {
       counterSyncEnabled,
@@ -115,6 +121,9 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     documentIndexBackfillService: {
       runScheduledBackfill: vi.fn(),
     },
+    documentIndexArtifactCleanupService: {
+      cleanup: documentIndexArtifactCleanupMock,
+    },
   }));
 
   return import('@shared/scheduler');
@@ -133,6 +142,7 @@ describe('shared/scheduler', () => {
     counterSyncAllMock.mockReset();
     structuredRagAlertCheckMock.mockReset();
     processingRecoveryRecoverMock.mockReset();
+    documentIndexArtifactCleanupMock.mockReset();
   });
 
   it('should schedule cleanup and counter-sync tasks with UTC timezone and avoid double init', async () => {
@@ -140,7 +150,7 @@ describe('shared/scheduler', () => {
 
     scheduler.initializeScheduler();
 
-    expect(scheduleMock).toHaveBeenCalledTimes(3);
+    expect(scheduleMock).toHaveBeenCalledTimes(4);
     expect(scheduleMock).toHaveBeenCalledWith('0 3 * * *', expect.any(Function), {
       timezone: 'UTC',
     });
@@ -150,10 +160,13 @@ describe('shared/scheduler', () => {
     expect(scheduleMock).toHaveBeenCalledWith('*/10 * * * *', expect.any(Function), {
       timezone: 'UTC',
     });
+    expect(scheduleMock).toHaveBeenCalledWith('30 3 * * *', expect.any(Function), {
+      timezone: 'UTC',
+    });
 
     scheduler.initializeScheduler();
     expect(loggerWarnMock).toHaveBeenCalledWith('Scheduler already initialized');
-    expect(scheduleMock).toHaveBeenCalledTimes(3);
+    expect(scheduleMock).toHaveBeenCalledTimes(4);
   });
 
   it('should continue cleanup pipeline when one scheduled cleanup task fails', async () => {
@@ -165,6 +178,12 @@ describe('shared/scheduler', () => {
       collectionsProcessed: 1,
       totalPurged: 0,
       errors: 0,
+    });
+    documentIndexArtifactCleanupMock.mockResolvedValueOnce({
+      scannedCount: 1,
+      cleanedCount: 1,
+      skippedCount: 0,
+      failedCount: 0,
     });
 
     scheduler.initializeScheduler();
@@ -178,7 +197,29 @@ describe('shared/scheduler', () => {
     expect(logCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(tokenCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(vectorCleanupRunMock).toHaveBeenCalledTimes(1);
+    expect(documentIndexArtifactCleanupMock).not.toHaveBeenCalled();
     expect(schedulerErrorMock).toHaveBeenCalledWith('cleanup.failed', expect.any(Error));
+  });
+
+  it('should run immutable build cleanup on its dedicated schedule', async () => {
+    const scheduler = await importScheduler();
+
+    documentIndexArtifactCleanupMock.mockResolvedValueOnce({
+      scannedCount: 2,
+      cleanedCount: 1,
+      skippedCount: 1,
+      failedCount: 0,
+    });
+
+    scheduler.initializeScheduler();
+
+    const cleanupTaskCall = scheduleMock.mock.calls.find((call) => call[0] === '30 3 * * *');
+    const cleanupTask = cleanupTaskCall?.[1] as (() => Promise<void>) | undefined;
+    expect(cleanupTask).toBeTypeOf('function');
+
+    await cleanupTask!();
+
+    expect(documentIndexArtifactCleanupMock).toHaveBeenCalledTimes(1);
   });
 
   it('should report scheduler error when weekly counter-sync throws', async () => {
@@ -204,6 +245,7 @@ describe('shared/scheduler', () => {
       counterSyncEnabled: false,
       structuredRagAlertsEnabled: false,
       processingRecoveryEnabled: true,
+      buildCleanupEnabled: false,
     });
 
     processingRecoveryRecoverMock.mockRejectedValueOnce(new Error('recovery failed'));
@@ -233,16 +275,24 @@ describe('shared/scheduler', () => {
       totalPurged: 3,
       errors: 0,
     });
+    documentIndexArtifactCleanupMock.mockResolvedValueOnce({
+      scannedCount: 1,
+      cleanedCount: 1,
+      skippedCount: 0,
+      failedCount: 0,
+    });
 
     await scheduler.triggerLogCleanup();
     await scheduler.triggerTokenCleanup();
     await scheduler.triggerVectorCleanup();
     await scheduler.triggerDocumentProcessingRecovery();
+    await scheduler.triggerDocumentIndexArtifactCleanup();
 
     expect(logCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(tokenCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(vectorCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(processingRecoveryRecoverMock).toHaveBeenCalledTimes(1);
+    expect(documentIndexArtifactCleanupMock).toHaveBeenCalledTimes(1);
   });
 
   it('should initialize without tasks when all scheduler flags are disabled', async () => {
@@ -251,6 +301,7 @@ describe('shared/scheduler', () => {
       counterSyncEnabled: false,
       structuredRagAlertsEnabled: false,
       processingRecoveryEnabled: false,
+      buildCleanupEnabled: false,
     });
 
     scheduler.initializeScheduler();
@@ -265,6 +316,7 @@ describe('shared/scheduler', () => {
       counterSyncEnabled: false,
       structuredRagAlertsEnabled: true,
       processingRecoveryEnabled: false,
+      buildCleanupEnabled: false,
     });
 
     structuredRagAlertCheckMock.mockResolvedValueOnce({

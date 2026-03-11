@@ -104,7 +104,12 @@ describe('documentIndexService', () => {
       parseDurationMs: 1234,
       error: null,
     });
-    expect(mocks.documentIndexActivationService.activateVersion).toHaveBeenCalledWith('idx-row-1');
+    expect(mocks.documentIndexActivationService.activateVersion).toHaveBeenCalledWith('idx-row-1', {
+      expectedPublishGeneration: undefined,
+      chunkCount: undefined,
+      knowledgeBaseId: undefined,
+      chunkDelta: undefined,
+    });
     expect(result).toEqual({ id: 'idx-row-1' });
   });
 

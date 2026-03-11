@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
   documentRepository: {
     findById: vi.fn(),
     update: vi.fn(),
+    publishBuild: vi.fn(),
+  },
+  knowledgeBaseService: {
+    incrementTotalChunks: vi.fn(),
   },
   cacheService: {
     invalidateDocumentCaches: vi.fn(),
@@ -38,6 +42,10 @@ vi.mock('@modules/document', () => ({
   documentRepository: mocks.documentRepository,
 }));
 
+vi.mock('@modules/knowledge-base', () => ({
+  knowledgeBaseService: mocks.knowledgeBaseService,
+}));
+
 vi.mock('@modules/document-index/services/document-index-cache.service', () => ({
   documentIndexCacheService: mocks.cacheService,
 }));
@@ -62,12 +70,13 @@ describe('documentIndexActivationService', () => {
       id: 'idx-row-1',
       status: 'active',
     });
-    mocks.documentRepository.update.mockResolvedValue(undefined);
+    mocks.documentRepository.publishBuild.mockResolvedValue(true);
     mocks.documentRepository.findById.mockResolvedValue({
       id: 'doc-1',
       userId: 'user-1',
       knowledgeBaseId: 'kb-1',
       activeIndexVersionId: 'idx-row-1',
+      publishGeneration: 1,
     });
 
     const result = await documentIndexActivationService.activateVersion('idx-row-1');
@@ -115,6 +124,7 @@ describe('documentIndexActivationService', () => {
       userId: 'user-1',
       knowledgeBaseId: 'kb-1',
       activeIndexVersionId: 'idx-row-2',
+      publishGeneration: 1,
     });
 
     const result = await documentIndexActivationService.markFailed('idx-row-2', 'parse failed');
@@ -157,6 +167,7 @@ describe('documentIndexActivationService', () => {
       userId: 'user-1',
       knowledgeBaseId: 'kb-1',
       activeIndexVersionId: 'idx-row-1',
+      publishGeneration: 1,
     });
 
     const result = await documentIndexActivationService.markSuperseded('idx-row-3');
@@ -175,6 +186,76 @@ describe('documentIndexActivationService', () => {
       knowledgeBaseId: 'kb-1',
     });
     expect(result).toEqual({ id: 'idx-row-3', status: 'superseded' });
+  });
+
+  it('rejects stale publish attempts without switching the active pointer', async () => {
+    mocks.documentIndexVersionRepository.findById.mockResolvedValue({
+      id: 'idx-row-4',
+      documentId: 'doc-1',
+      documentVersion: 6,
+      indexVersion: 'idx-v6',
+      status: 'building',
+    });
+    mocks.documentIndexVersionRepository.update.mockResolvedValue({
+      id: 'idx-row-4',
+      status: 'superseded',
+    });
+    mocks.documentRepository.publishBuild.mockResolvedValue(false);
+
+    const result = await documentIndexActivationService.activateVersion('idx-row-4', {
+      expectedPublishGeneration: 2,
+      chunkCount: 5,
+      knowledgeBaseId: 'kb-1',
+      chunkDelta: 5,
+    });
+
+    expect(mocks.documentIndexVersionRepository.supersedeActiveByDocumentId).not.toHaveBeenCalled();
+    expect(mocks.knowledgeBaseService.incrementTotalChunks).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+  });
+
+  it('publishes with fencing and chunk delta when generation matches', async () => {
+    mocks.documentIndexVersionRepository.findById.mockResolvedValue({
+      id: 'idx-row-5',
+      documentId: 'doc-1',
+      documentVersion: 6,
+      indexVersion: 'idx-v6',
+      status: 'building',
+    });
+    mocks.documentIndexVersionRepository.update.mockResolvedValue({
+      id: 'idx-row-5',
+      status: 'active',
+    });
+    mocks.documentRepository.publishBuild.mockResolvedValue(true);
+    mocks.documentRepository.findById.mockResolvedValue({
+      id: 'doc-1',
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      activeIndexVersionId: 'idx-row-5',
+      publishGeneration: 2,
+    });
+
+    const result = await documentIndexActivationService.activateVersion('idx-row-5', {
+      expectedPublishGeneration: 2,
+      chunkCount: 7,
+      knowledgeBaseId: 'kb-1',
+      chunkDelta: 3,
+    });
+
+    expect(mocks.documentRepository.publishBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: 'doc-1',
+        activeIndexVersionId: 'idx-row-5',
+        expectedPublishGeneration: 2,
+        chunkCount: 7,
+      })
+    );
+    expect(mocks.knowledgeBaseService.incrementTotalChunks).toHaveBeenCalledWith(
+      'kb-1',
+      3,
+      expect.anything()
+    );
+    expect(result).toEqual({ id: 'idx-row-5', status: 'active' });
   });
 
   it('throws not found when index version is missing', async () => {
