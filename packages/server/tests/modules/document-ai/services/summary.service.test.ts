@@ -290,7 +290,7 @@ describe('summaryService > hierarchicalSummarize', () => {
     );
 
     const mergeMessages = vi.mocked(mockLLMProvider.generate).mock.calls.at(-1)?.[0];
-    const mergeUserMessage = mergeMessages?.find((message) => message.role === 'user');
+    const mergeUserMessage = mergeMessages?.find((message: { role: string }) => message.role === 'user');
 
     expect(result).toBe('Final merged summary');
     expect(mockLLMProvider.generate).toHaveBeenCalledTimes(4);

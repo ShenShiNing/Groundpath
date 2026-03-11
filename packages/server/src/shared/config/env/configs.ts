@@ -110,6 +110,10 @@ export const documentConfig = {
   ...documentDefaults,
   processingRecoveryEnabled: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_ENABLED,
   processingRecoveryCron: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_CRON,
+  buildCleanupEnabled: validatedEnv.DOCUMENT_BUILD_CLEANUP_ENABLED,
+  buildCleanupCron: validatedEnv.DOCUMENT_BUILD_CLEANUP_CRON,
+  buildCleanupRetentionDays: validatedEnv.DOCUMENT_BUILD_CLEANUP_RETENTION_DAYS,
+  buildCleanupBatchSize: validatedEnv.DOCUMENT_BUILD_CLEANUP_BATCH_SIZE,
 } as const;
 
 export const documentIndexConfig = { ...documentIndexDefaults } as const;

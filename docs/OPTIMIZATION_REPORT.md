@@ -40,11 +40,28 @@
   1. 已补认证守卫与 token 刷新逻辑测试。
   2. 已补知识库列表/上传与聊天会话列表分页契约测试。
   3. 已补 `KnowledgeBaseDialog` 与 `ConversationList` 组件级交互测试。
+- 本轮可维护性拆分后，以下事项也已完成：
+  1. `shared/config/env.ts` 已拆为薄门面 + `env/loader.ts`、`schema.ts`、`validated-env.ts`、`configs.ts`。
+  2. `chat.service.ts` 已拆为主编排 + `chat-agent-stream.service.ts`、`chat-legacy-stream.service.ts`、`chat.helpers.ts`、`chat.types.ts`。
+  3. `agent-executor.ts` 已拆为主循环 + `agent-executor.citations.ts`、`agent-executor.runtime.ts`、`agent-executor.types.ts`。
+  4. `processing.service.ts` 已拆为 facade + `processing.executor.ts`、`processing.lock.ts`、`processing.structure.ts`、`processing.stages.ts`、`processing.types.ts`。
+  5. 上述拆分完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试均已通过。
+- 本轮文档处理架构升级后，以下事项也已完成：
+  1. `document_chunks` 与 vector payload 已绑定 `indexVersionId`，chunk/vector/graph 全部切换到 immutable build 产物模型。
+  2. 查询链路已统一改为只消费 `documents.activeIndexVersionId` 指向的 active build。
+  3. `processing` 成功路径不再删除旧 build 产物，发布语义已切换为 atomic publish。
+  4. 已新增 superseded/failed immutable build 的后台 GC，并接入 scheduler。
+  5. 已新增集成测试验证“发布后旧 build 被 GC，但 active build 不受影响”。
+- 本轮 publish fencing 落地后，以下事项也已完成：
+  1. `documents.publish_generation` 已落库，并在处理开始与 stale recovery 时递增。
+  2. build publish 已改为带 compare-and-set 约束的 fenced publish。
+  3. 慢 worker 即使跑到最后，也不能再激活旧 build 或覆盖新的 `processing` 完成态。
+  4. `db:migrate`、`db:check`、processing/activation/integration 定向测试均已通过。
 - 当前最需要优先处理的，已经切换为以下 4 项：
   1. 继续扩展到更多高风险页面/组件测试。
   2. 补齐前端 i18n 漏项。
   3. 确认 `conversations.created_at`、`messages.role` 是否需要新增数据库索引。
-  4. 评估是否要为文档处理增加 lease/token 化保护，避免超时恢复后慢 worker 反向覆盖状态。
+  4. 继续补更多“文档版本切换 / backfill / recovery”链路的高阶集成测试。
 
 ---
 
@@ -62,6 +79,8 @@
 | 支持 LLM      | 6 种（OpenAI / Anthropic / Zhipu / DeepSeek / Ollama / Custom） |
 | 支持嵌入      | 3 种（OpenAI / Zhipu / Ollama）                                 |
 | VLM Provider  | 2 种（OpenAI / Anthropic）                                      |
+
+> 补充：本轮回写聚焦结构拆分与状态修订，上表数量级指标未随本轮改动重新全量重算。
 
 ### 技术栈
 
@@ -83,7 +102,7 @@
 
 | 编号 | 原报告结论                                     | 当前状态                                                                  | 结论   |
 | ---- | ---------------------------------------------- | ------------------------------------------------------------------------- | ------ |
-| K-1  | 大型后端/前端文件过多                          | 仍存在                                                                    | 成立   |
+| K-1  | 大型后端/前端文件过多                          | 后端 4 个最突出的 600+ 行核心文件已完成第一轮拆分，但仍存在若干 400+ 行文件与前端大组件 | 成立   |
 | K-2  | Zustand `getState()` 绕过响应式系统            | 组件/路由层已完成收敛，store 内部保留少量非 React 快照访问                | 已过时 |
 | K-3  | `throw new Error()` 未统一到 `Errors/AppError` | `server/client` 运行时代码已清零，CLI 脚本层仍保留少量原生 Error          | 已过时 |
 | K-4  | 前端 i18n 覆盖不完整                           | 仍存在                                                                    | 成立   |
@@ -107,14 +126,13 @@
 
 | 文件                                           | 行数 | 状态   |
 | ---------------------------------------------- | ---- | ------ |
-| `rag/services/processing.service.ts`           | 685  | 仍成立 |
-| `chat/services/chat.service.ts`                | 648  | 仍成立 |
-| `agent/agent-executor.ts`                      | 630  | 仍成立 |
-| `shared/config/env.ts`                         | 623  | 仍成立 |
-| `scripts/db-consistency-check.ts`              | 499  | 仍成立 |
-| `document/repositories/document.repository.ts` | 412  | 仍成立 |
-| `auth/services/auth.service.ts`                | 407  | 仍成立 |
-| `document-ai/services/analysis.service.ts`     | 404  | 仍成立 |
+| `scripts/db-consistency-check.ts`              | 467  | 仍成立 |
+| `document/repositories/document.repository.ts` | 423  | 仍成立 |
+
+补充：
+
+- 原报告点名的 `rag/services/processing.service.ts`、`chat/services/chat.service.ts`、`agent/agent-executor.ts`、`shared/config/env.ts` 已完成第一轮拆分，不应继续作为“当前最突出的 600+ 行后端核心文件”示例。
+- 当前后端可维护性压力更多集中在剩余的 400+ 行文件，以及拆分后的若干编排/阶段模块是否还需要继续细分。
 
 #### 前端超大文件
 
@@ -140,10 +158,10 @@
 - `lib/utils.ts`：`Bytes / KB / MB / GB / TB`
 - `lib/http/stream-client.ts`：`No response body`
 
-### 4.3 仍然存在的具体缺陷
+### 4.3 本轮点名的运行时级具体缺陷已收敛
 
-- `document-ai/services/summary.service.ts` 分批汇总仍使用 `Promise.all()`，单项失败会导致整批失败。
-- `shared/config/env.ts` 仍在配置校验失败时直接 `console.error`。
+- `summary.service.ts` 的批处理容错已完成，单项失败不再放大为整批失败。
+- `shared/config/env/validated-env.ts` 已改为抛出带环境元数据与 field errors 的结构化校验错误。
 
 ---
 
@@ -216,9 +234,11 @@
 本次已完成数据库侧落地验证：
 
 - 已执行 `pnpm -F @knowledge-agent/server db:migrate`
-- 新 migration：`packages/server/drizzle/0004_dry_hercules.sql`
+- 最新 migration：`packages/server/drizzle/0006_mellow_captain_britain.sql`
 - 已确认 `documents.processing_started_at` 在库中存在
 - 已确认本次 migration 引入的 16 个 FK 在库中存在
+- 已确认 `document_chunks.index_version_id` 已落库
+- 已确认 `documents.publish_generation` 已落库
 - 已执行 `pnpm -F @knowledge-agent/server db:check`
 - 当前结果：`12/12 checks passed`
 
@@ -226,6 +246,8 @@
 
 - `db:check` 在执行过程中暴露出一个历史问题：脚本里使用了 MySQL 保留字别名 `stored`
 - 该问题已修复，现有校验脚本可正常作为数据库一致性验证手段
+- 本轮新增 migration 首次执行时还暴露出一个 MySQL 保留字别名问题（`div`）
+- 该问题已修复，当前 migration 已支持在“部分迁移已落库”的场景下安全重跑
 
 ### 5.7 文档处理超时恢复任务已完成
 
@@ -365,7 +387,103 @@
 - 新增 client 定向测试 `18` 个全部通过
 - `@knowledge-agent/client build` 通过
 
-### 5.13 摘要批处理容错已完成
+### 5.13 后端四个超大核心文件已完成第一轮拆分
+
+本次已完成以下结构治理：
+
+- `shared/config/env.ts` 已收口为薄门面，环境加载 / schema / 校验 / 配置映射分别拆到 `env/*` 子模块。
+- `chat.service.ts` 已拆分为主编排、agent streaming、legacy streaming、helper、type 五部分。
+- `agent-executor.ts` 已拆分为主循环、citation 选择、运行时辅助、类型定义四部分。
+- `processing.service.ts` 已拆分为 facade、主执行器、锁管理、结构解析、阶段处理、类型定义六部分。
+
+修订结论：
+
+- 原报告中“4 个 600+ 行后端核心文件仍然全部未拆”的说法已经过时。
+- “大文件问题”并未完全消失，但最突出的后端热点已经完成一轮可维护性收敛。
+- 当前更合理的下一步是继续处理剩余 400+ 行文件，以及按阶段继续细化 `processing` 拆分后的内部模块。
+
+验证：
+
+- `pnpm -F @knowledge-agent/server build` 通过
+- `pnpm test -- packages/server/tests/modules/agent/agent-executor.test.ts`：`32` 个测试全部通过
+- `pnpm test -- packages/server/tests/modules/rag/processing.error-injection.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts`：`17` 个测试全部通过
+
+### 5.14 文档处理已切换为 immutable build + atomic publish
+
+本次已完成以下结构升级：
+
+- `document_index_versions.id` 现在作为统一 build 标识。
+- `document_chunks` 已新增 `indexVersionId`，同一 `documentVersion` 允许多个 build 并存。
+- vector payload 已新增 `indexVersionId`，查询结果会在搜索侧按 active build 过滤。
+- graph 原本就按 `indexVersionId` 存储，现在 chunk / vector / graph 的 build 作用域已统一。
+- `documents.activeIndexVersionId` 现作为统一 publish pointer，搜索链路只消费 active build。
+- `processing` 成功路径不再删除旧 build 的 chunk/vector，而是保留为历史产物。
+
+修订结论：
+
+- 原先“同一文档重建时原地替换 chunk/vector”的语义已经过时。
+- 当前文档索引链路已经具备 immutable build + atomic publish 的基础模型。
+- 这显著降低了“构建中间态污染线上查询结果”的风险。
+
+验证：
+
+- `pnpm -F @knowledge-agent/server build` 通过
+- `pnpm -F @knowledge-agent/server db:migrate` 通过
+- `pnpm -F @knowledge-agent/server db:check` 通过，结果为 `12/12 checks passed`
+- 已新增 `tests/modules/rag/search.service.test.ts`，验证只返回 active build 的向量候选
+
+### 5.15 superseded/failed immutable build 的后台 GC 已接入
+
+本次已完成以下清理能力：
+
+- 已新增 `document-index-artifact-cleanup.service.ts`
+- scheduler 已新增 immutable build cleanup 定时任务
+- cleanup 会在保留期后清理 `superseded/failed` build 的：
+  - `document_index_versions`
+  - 关联 `document_chunks`
+  - 关联 graph 产物（通过 FK cascade）
+  - 对应 `indexVersionId` 的 vector
+- 新增配置项：
+  - `DOCUMENT_BUILD_CLEANUP_ENABLED`
+  - `DOCUMENT_BUILD_CLEANUP_CRON`
+  - `DOCUMENT_BUILD_CLEANUP_RETENTION_DAYS`
+  - `DOCUMENT_BUILD_CLEANUP_BATCH_SIZE`
+
+验证：
+
+- `pnpm test -- packages/server/tests/modules/document-index/document-index-artifact-cleanup.service.test.ts packages/server/tests/modules/vector/vector.error-injection.test.ts packages/server/tests/shared/scheduler/scheduler.test.ts`：`31` 个测试全部通过
+- 已新增 `tests/integration/document-index/immutable-build-gc.integration.test.ts`，验证“发布后旧 build 被 GC，但 active build 不受影响”
+
+### 5.16 publish fencing 已落地
+
+本次已完成以下并发安全增强：
+
+- `documents` 已新增 `publish_generation`
+- `acquireProcessingLock()` 在把文档切到 `processing` 时会递增 `publish_generation`
+- stale recovery 在把文档重置为 `pending` 时也会递增 `publish_generation`
+- build publish 现在必须满足 `publish_generation` compare-and-set 条件
+- `documentIndexActivationService.activateVersion()` 已切换到 fenced publish 模式
+- `processing` 失败写回也已改为 generation-aware，避免旧 worker 晚到覆盖新状态
+
+修订结论：
+
+- 原报告里“publish fencing 仍待评估/落地”的说法已经过时。
+- 当前文档处理链路已经从“immutable build + atomic publish”进一步推进到“immutable build + fenced publish + build GC”。
+- 剩余风险主要不在核心发布正确性，而在更高层的复杂链路覆盖是否充分。
+
+验证：
+
+- `pnpm -F @knowledge-agent/server build` 通过
+- `pnpm -F @knowledge-agent/server db:migrate` 通过
+- `pnpm -F @knowledge-agent/server db:check` 通过，结果为 `12/12 checks passed`
+- `pnpm test -- packages/server/tests/modules/document-index/document-index-activation.service.test.ts packages/server/tests/modules/rag/processing.error-injection.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts packages/server/tests/modules/rag/search.service.test.ts packages/server/tests/integration/document-index/immutable-build-gc.integration.test.ts`：`26` 个测试全部通过
+- 已在 `tests/integration/document-index/immutable-build-gc.integration.test.ts` 新增“stale recovery 递增 generation 后，旧 worker publish 被 fencing 拦截”的组合场景验证
+- 已在 `tests/integration/document-index/immutable-build-gc.integration.test.ts` 新增“backfill 先排到旧版本，随后发生 version switch + recovery，旧 backfill build publish 被 fencing 拦截”的组合场景验证
+- 已在 `tests/integration/document-index/immutable-build-gc.integration.test.ts` 新增“连续多次 version switch + repeated recovery + delayed GC 后，仅最新 active build 保留”的组合场景验证
+- 已在 `tests/integration/document-index/immutable-build-gc.integration.test.ts` 新增“backfill 目标落后、连续多次 version switch、repeated recovery、delayed GC 串联后，仅最新 active build 保留”的组合场景验证
+- 已新增 `tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`，用于真实 DB/queue worker 参与的端到端组合验证
+
+### 5.17 摘要批处理容错已完成
 
 本次已完成以下可靠性增强：
 
@@ -377,11 +495,24 @@
 
 - `pnpm test -- packages/server/tests/modules/document-ai/services/summary.service.test.ts`：`12` 个测试全部通过
 
+### 5.18 环境变量校验失败输出已统一
+
+本次已完成以下治理：
+
+- `validated-env.ts` 在 schema 校验失败时不再直接 `console.error + process.exit(1)`
+- 现改为抛出 `Errors.validation(...)`，并附带 `environment`、`configDir`、`fieldErrors`
+- 已新增模块级测试，覆盖“校验成功导出 env”与“校验失败抛结构化错误”两条路径
+
+验证：
+
+- `pnpm test -- packages/server/tests/shared/config/validated-env.test.ts`：`2` 个测试全部通过
+- `pnpm -F @knowledge-agent/server build` 通过
+
 ---
 
 ## 6. 部分成立且需要继续落地的项
 
-### 6.1 文档处理超时保护：恢复任务已完成，但仍可继续增强并发安全
+### 6.1 文档处理并发安全主链已完成，但仍需继续扩大复杂链路覆盖
 
 当前状态：
 
@@ -389,12 +520,25 @@
 - 新 migration 已将该字段落库
 - scheduler 已接入“重置卡死 processing 文档”的定时任务
 - `db:check` 已按超时阈值检查 stale processing backlog
+- chunk / vector / graph 已切换到 immutable build 产物模型
+- `documents.activeIndexVersionId` 已成为统一 publish pointer
+- superseded / failed build 的后台 GC 已接入
+- `documents.publish_generation` 已落库并接入 fenced publish
 
 修订结论：
 
-- 该项已经从“字段缺失”推进到“已具备基础恢复能力”
-- 当前剩余风险不在“有没有恢复任务”，而在“慢 worker 是否可能在恢复后反向覆盖状态”
-- 如果要进一步提高鲁棒性，建议为处理状态增加 lease/token 化保护或条件更新约束
+- 该项已经从“字段缺失”推进到“已具备 immutable build + fenced publish + build GC”
+- 当前剩余风险不再是核心发布正确性，而是复杂链路下是否存在未覆盖到的边缘场景
+- 当前已覆盖：
+  - active build 搜索过滤
+  - publish 后旧 build GC
+  - stale recovery 后旧 build publish 被 fencing 拦截
+  - backfill 目标落后于当前版本时，version switch + recovery 后旧 backfill build publish 被 fencing 拦截
+  - 连续多次 version switch + repeated recovery + delayed GC 后，仅最新 active build 保留
+- 当前也已覆盖：
+  - 真实 DB/queue worker 参与的 `backfill + version switch + recovery` 端到端组合测试
+  - 真实 DB/queue 环境下的 backfill enqueue / resume 链路
+- 下一步更合理的是继续增加更多 worker 级组合链路覆盖，而不是只停留在单个回归场景
 
 ### 6.2 数据库索引仍有少量未确认缺口
 
@@ -455,8 +599,8 @@
 
 当前剩余工作：
 
-- 评估是否要增加 lease/token 化状态保护
 - 评估是否需要在恢复后自动重新入队，而不仅仅是重置为 `pending`
+- 继续补 recovery / backfill / version switch 组合链路测试
 
 ---
 
@@ -474,14 +618,19 @@
 
 - 如需进一步收敛，可再单独评估 CLI 脚本层是否也要统一到 `AppError`
 
-#### 7.7 拆分超大文件
+#### 7.7 已完成第一轮：拆分后端四个超大核心文件
 
-优先级顺序建议：
+已完成结果：
 
-1. `processing.service.ts`
-2. `chat.service.ts`
-3. `agent-executor.ts`
-4. `env.ts`
+- `processing.service.ts`、`chat.service.ts`、`agent-executor.ts`、`env.ts` 已完成第一轮物理拆分
+- 对外导出与主要调用方式保持兼容
+- `@knowledge-agent/server build` 与相关定向测试均已通过
+
+当前剩余工作：
+
+- 继续拆分剩余 400+ 行的后端文件
+- 评估是否还要进一步细化 `processing.stages.ts` / `processing.executor.ts`
+- 前端超大页面/组件仍需后续治理
 
 #### 7.8 已完成：调整批处理容错
 
@@ -507,12 +656,18 @@
   - `conversations.created_at`
   - `messages.role`
 
-#### 7.11 评估处理状态的 lease/token 化保护
+#### 7.11 已完成：为 publish 阶段增加 fenced publish 保护
 
-目标：
+已完成结果：
 
-- 避免 stale recovery 把状态重置后，旧 worker 再次写回 `completed/failed`
-- 将“超时恢复”从基础可用提升到并发安全更强的实现
+- `documents.publish_generation` 已接入 schema / migration / recovery / processing lock
+- `activeIndexVersionId` 切换已带 compare-and-set 约束
+- 慢 worker 晚到时会留下 unpublished build，但不会重新激活旧 build 或覆盖完成态
+
+当前剩余工作：
+
+- 扩大 backfill / recovery / 多版本切换的组合场景测试覆盖
+- 评估是否还需要 heartbeat 或更细粒度的 worker lease 观测指标
 
 ---
 
@@ -574,7 +729,7 @@
 - 不建议继续写“`processing_started_at` 缺失”，更准确的说法是：
   - 字段已落库
   - 基础恢复任务已实现
-  - 如需更强保障，可继续做 lease/token 化保护
+  - publish 阶段的 fenced publish 也已落地
 - 不建议继续写“运行时代码里仍广泛存在 `throw new Error()`”，更准确的说法是：
   - `server/client` 运行时代码已统一完成
   - 剩余少量原生 Error 主要在 CLI 脚本层
@@ -582,9 +737,21 @@
   - 组件层和路由层已完成收敛
   - 剩余 `.getState()` 已集中封装在 store 内部的非 React 快照 helper 中
 - 不建议继续写“`vlm` 完全无测试”，因为当前已补齐 `factory / service / provider` 基础测试覆盖
+- 不建议继续写“`processing.service.ts`、`chat.service.ts`、`agent-executor.ts`、`env.ts` 仍是当前最突出的 600+ 行后端核心文件”，更准确的说法是：
+  - 这 4 个文件已完成第一轮拆分
+  - 主流程已下沉到更细的子模块
+  - 剩余可维护性压力主要转移到少数 400+ 行文件与前端大组件
+- 不建议继续写“文档处理仍采用原地替换 chunk/vector 的发布模型”，更准确的说法是：
+  - chunk / vector / graph 已切换到 immutable build 产物模型
+  - 查询链路只消费 active build
+  - superseded / failed build 已具备后台 GC
+- 不建议继续写“publish fencing 仍待评估”，更准确的说法是：
+  - `publish_generation` 已落库
+  - `activeIndexVersionId` 切换已带 compare-and-set 约束
+  - 剩余重点已转向复杂链路测试覆盖，而不是核心发布机制本身
 
 ---
 
 ## 当前建议的一句话结论
 
-项目当前真正的短板，已经从“数据库结构未落地”“运行时错误处理不统一”“组件层 `getState()` 直读”“缺少功能域错误边界”“VLM 完全无测试”转向“更多高风险前端页面/组件测试、i18n 完整性和处理状态并发安全”。
+项目当前真正的短板，已经从“数据库结构未落地”“运行时错误处理不统一”“组件层 `getState()` 直读”“缺少功能域错误边界”“VLM 完全无测试”转向“更多高风险前端页面/组件测试、i18n 完整性，以及文档版本切换/backfill/recovery 组合链路的高阶测试覆盖”。 

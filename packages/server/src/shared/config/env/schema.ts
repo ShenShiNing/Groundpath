@@ -66,6 +66,9 @@ const storageSchema = z.object({
 
 const documentScheduleSchema = z.object({
   DOCUMENT_PROCESSING_RECOVERY_CRON: z.string().default('*/10 * * * *'),
+  DOCUMENT_BUILD_CLEANUP_CRON: z.string().default('30 3 * * *'),
+  DOCUMENT_BUILD_CLEANUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(7),
+  DOCUMENT_BUILD_CLEANUP_BATCH_SIZE: z.coerce.number().int().min(1).max(1000).default(100),
 });
 
 const embeddingSchema = z.object({
@@ -133,6 +136,7 @@ const featureFlagsSchema = z.object({
   STRUCTURED_RAG_INTERNAL_KB_IDS: csvStringArray(),
   IMAGE_DESCRIPTION_ENABLED: booleanString(false),
   DOCUMENT_PROCESSING_RECOVERY_ENABLED: booleanString(true),
+  DOCUMENT_BUILD_CLEANUP_ENABLED: booleanString(true),
   LOG_CLEANUP_ENABLED: booleanString(true),
   BACKFILL_SCHEDULE_ENABLED: booleanString(false),
 });
