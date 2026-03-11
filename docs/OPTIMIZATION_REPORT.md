@@ -53,7 +53,8 @@
   8. `StructuredRagOverview.tsx` 已拆为主容器 + `structured-rag/*` 子组件，主文件降至 `110` 行。
   9. `ForgotPasswordForm.tsx` 已拆为父级 step state + `forgot-password/*` 子组件，主文件降至 `71` 行。
   10. `KnowledgeBaseDetailPage.tsx` 已拆为页面壳 + `knowledge-base-detail/*` 子组件，主文件降至 `188` 行。
-  11. 上述拆分与清理完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试、`db-consistency-check` runner 定向测试、`@knowledge-agent/client build`、`ForgotPasswordForm` 定向测试与 `KnowledgeBaseDetailPage` 定向测试均已通过。
+  11. `AISettingsForm.tsx` 已拆为主表单 + `sections/*` 子组件，主文件降至 `259` 行。
+  12. 上述拆分与清理完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试、`db-consistency-check` runner 定向测试、`@knowledge-agent/client build`、`ForgotPasswordForm` 定向测试、`KnowledgeBaseDetailPage` 定向测试与 `AISettingsForm` 定向测试均已通过。
 - 本轮文档处理架构升级后，以下事项也已完成：
   1. `document_chunks` 与 vector payload 已绑定 `indexVersionId`，chunk/vector/graph 全部切换到 immutable build 产物模型。
   2. 查询链路已统一改为只消费 `documents.activeIndexVersionId` 指向的 active build。
@@ -140,16 +141,16 @@
 
 #### 前端超大文件
 
-| 文件                                        | 行数 | 状态   |
-| ------------------------------------------- | ---- | ------ |
-| `components/settings/ai/AISettingsForm.tsx` | 482  | 仍成立 |
-| `pages/ChatPage.tsx`                        | 452  | 仍成立 |
+| 文件                 | 行数 | 状态   |
+| -------------------- | ---- | ------ |
+| `pages/ChatPage.tsx` | 452  | 仍成立 |
 
 补充：
 
 - `components/dashboard/StructuredRagOverview.tsx` 已拆分完成，当前主文件为 `110` 行，不应继续列为超大组件。
 - `components/auth/ForgotPasswordForm.tsx` 已拆分完成，当前主文件为 `70` 行，不应继续列为超大组件。
 - `pages/knowledge-bases/KnowledgeBaseDetailPage.tsx` 已拆分完成，当前主文件为 `188` 行，不应继续列为超大组件。
+- `components/settings/ai/AISettingsForm.tsx` 已拆分完成，当前主文件为 `259` 行，不应继续列为超大组件。
 - `pages/documents/DocumentDetailPage.tsx` 当前为 `379` 行，已不再属于首批 `400+` 行治理名单。
 - 原报告中部分前端文件路径已变化，但“仍有少量前端大组件需要继续治理”的结论没有变化。
 
@@ -628,7 +629,7 @@
 修订结论：
 
 - `components/dashboard/StructuredRagOverview.tsx` 不应继续列为剩余 400+ 行前端大组件。
-- 当前更值得继续处理的是 `AISettingsForm.tsx` 与 `ChatPage.tsx`。
+- 当前更值得继续处理的是 `ChatPage.tsx`。
 
 验证：
 
@@ -651,7 +652,7 @@
 修订结论：
 
 - `components/auth/ForgotPasswordForm.tsx` 不应继续列为剩余 400+ 行前端大组件。
-- 当前更值得继续处理的是 `AISettingsForm.tsx` 与 `ChatPage.tsx`。
+- 当前更值得继续处理的是 `ChatPage.tsx`。
 
 验证：
 
@@ -677,12 +678,35 @@
 修订结论：
 
 - `pages/knowledge-bases/KnowledgeBaseDetailPage.tsx` 不应继续列为剩余 400+ 行前端大组件。
-- 当前更值得继续处理的是 `AISettingsForm.tsx` 与 `ChatPage.tsx`。
+- 当前更值得继续处理的是 `ChatPage.tsx`。
 
 验证：
 
 - `pnpm -F @knowledge-agent/client build` 通过
 - `pnpm test -- packages/client/tests/pages/knowledge-bases/KnowledgeBaseDetailPage.test.tsx`：`2` 个测试全部通过
+
+### 5.26 `AISettingsForm` 已完成 section 级拆分
+
+本次已完成以下前端结构治理：
+
+- `AISettingsForm.tsx` 已收敛为主表单容器，负责 query、form store、provider capability 派生与 mutation handlers。
+- 已新增 `components/settings/ai/sections/` 子目录，拆出：
+  - `AISettingsCredentialsSection.tsx`
+  - `AISettingsModelSection.tsx`
+  - `AISettingsActions.tsx`
+- 同时补充了 `types.ts` 与 `utils.ts`，将 provider capability 计算收敛为纯函数。
+- 主文件当前降至 `259` 行，UI 已按“凭据 / 模型 / 操作”边界分离。
+- 本次拆分未改变 AI 设置页交互语义，仅降低表单级组件复杂度。
+
+修订结论：
+
+- `components/settings/ai/AISettingsForm.tsx` 不应继续列为剩余 400+ 行前端大组件。
+- 当前更值得继续处理的是 `ChatPage.tsx`。
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
+- `pnpm test -- packages/client/tests/components/settings/AISettingsForm.test.tsx`：`5` 个测试全部通过
 
 ---
 

@@ -1,40 +1,23 @@
 import React, { useEffect, useMemo } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useForm, useStore } from '@tanstack/react-form';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Eye, EyeOff, RefreshCw, Zap, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  useLLMConfig,
-  useLLMProviders,
-  useLLMModels,
-  useUpdateLLMConfig,
   useDeleteLLMConfig,
+  useLLMConfig,
+  useLLMModels,
+  useLLMProviders,
   useTestLLMConnection,
+  useUpdateLLMConfig,
 } from '@/hooks';
-import { useAISettingsStore, canFetchModels } from '@/stores';
+import { canFetchModels, useAISettingsStore } from '@/stores';
+import { AISettingsActions } from '@/components/settings/ai/sections/AISettingsActions';
+import { AISettingsCredentialsSection } from '@/components/settings/ai/sections/AISettingsCredentialsSection';
+import { AISettingsModelSection } from '@/components/settings/ai/sections/AISettingsModelSection';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
-import { ModelSelector } from './ModelSelector';
+import type { AISettingsFormValues } from './types';
+import { getProviderCapabilities } from './utils';
 
 export function AISettingsForm() {
   const { t } = useTranslation('settings');
@@ -45,15 +28,14 @@ export function AISettingsForm() {
   const deleteMutation = useDeleteLLMConfig();
   const testMutation = useTestLLMConnection();
 
-  // Zustand — fine-grained selectors
-  const showApiKey = useAISettingsStore((s) => s.showApiKey);
-  const pendingApiKey = useAISettingsStore((s) => s.pendingApiKey);
-  const pendingBaseUrl = useAISettingsStore((s) => s.pendingBaseUrl);
-  const toggleShowApiKey = useAISettingsStore((s) => s.toggleShowApiKey);
-  const setPendingApiKey = useAISettingsStore((s) => s.setPendingApiKey);
-  const setPendingBaseUrl = useAISettingsStore((s) => s.setPendingBaseUrl);
-  const resetPendingCredentials = useAISettingsStore((s) => s.resetPendingCredentials);
-  const reset = useAISettingsStore((s) => s.reset);
+  const showApiKey = useAISettingsStore((state) => state.showApiKey);
+  const pendingApiKey = useAISettingsStore((state) => state.pendingApiKey);
+  const pendingBaseUrl = useAISettingsStore((state) => state.pendingBaseUrl);
+  const toggleShowApiKey = useAISettingsStore((state) => state.toggleShowApiKey);
+  const setPendingApiKey = useAISettingsStore((state) => state.setPendingApiKey);
+  const setPendingBaseUrl = useAISettingsStore((state) => state.setPendingBaseUrl);
+  const resetPendingCredentials = useAISettingsStore((state) => state.resetPendingCredentials);
+  const reset = useAISettingsStore((state) => state.reset);
 
   useEffect(() => {
     reset();
@@ -65,7 +47,7 @@ export function AISettingsForm() {
       model: config?.model ?? '',
       apiKey: '',
       baseUrl: config?.baseUrl ?? '',
-    },
+    } satisfies AISettingsFormValues,
   });
 
   useEffect(() => {
@@ -73,51 +55,19 @@ export function AISettingsForm() {
     form.setFieldValue('model', config?.model ?? '');
     form.setFieldValue('apiKey', '');
     form.setFieldValue('baseUrl', config?.baseUrl ?? '');
-  }, [config?.id, config?.provider, config?.model, config?.baseUrl, form]);
+  }, [config?.baseUrl, config?.id, config?.model, config?.provider, form]);
 
   const values = useStore(form.store, (state) => state.values);
 
   const currentProvider = useMemo(
-    () => providers.find((p) => p.provider === values.provider),
+    () => providers.find((provider) => provider.provider === values.provider),
     [providers, values.provider]
   );
 
-  const providerCapabilities = useMemo(() => {
-    if (currentProvider) {
-      return {
-        requiresApiKey: !!currentProvider.requiresApiKey,
-        requiresBaseUrl: !!currentProvider.requiresBaseUrl,
-        optionalBaseUrl: !!currentProvider.optionalBaseUrl,
-        defaultBaseUrl: currentProvider.defaultBaseUrl,
-      };
-    }
-
-    // Fallback to deterministic local rules when provider metadata has not loaded yet.
-    if (values.provider === 'custom') {
-      return {
-        requiresApiKey: true,
-        requiresBaseUrl: true,
-        optionalBaseUrl: false,
-        defaultBaseUrl: undefined as string | undefined,
-      };
-    }
-
-    if (values.provider === 'ollama') {
-      return {
-        requiresApiKey: false,
-        requiresBaseUrl: false,
-        optionalBaseUrl: true,
-        defaultBaseUrl: 'http://localhost:11434',
-      };
-    }
-
-    return {
-      requiresApiKey: true,
-      requiresBaseUrl: false,
-      optionalBaseUrl: false,
-      defaultBaseUrl: undefined as string | undefined,
-    };
-  }, [currentProvider, values.provider]);
+  const providerCapabilities = useMemo(
+    () => getProviderCapabilities(values.provider, currentProvider),
+    [currentProvider, values.provider]
+  );
 
   const isCustomProvider = values.provider === 'custom';
   const isOllamaProvider = values.provider === 'ollama';
@@ -137,6 +87,7 @@ export function AISettingsForm() {
     pendingBaseUrl
   );
 
+  const showApiKeyField = requiresApiKey;
   const showBaseUrlField = requiresBaseUrl || optionalBaseUrl;
 
   const {
@@ -171,9 +122,14 @@ export function AISettingsForm() {
   const isSaving = updateMutation.isPending;
   const isClearing = deleteMutation.isPending;
   const isBusy = isSaving || isClearing;
-  const showApiKeyField = requiresApiKey;
   const hasSavedKey = !!(config?.hasApiKey && config.provider === values.provider);
   const hasModel = !!values.model;
+  const canTestConnection =
+    !isBusy &&
+    !testMutation.isPending &&
+    !(showApiKeyField && !hasSavedKey && !values.apiKey) &&
+    !(requiresBaseUrl && !values.baseUrl);
+  const canSave = !isBusy && hasModel;
 
   function resetFormAfterClear() {
     form.setFieldValue('provider', 'openai');
@@ -191,6 +147,16 @@ export function AISettingsForm() {
       form.setFieldValue('baseUrl', '');
     }
     resetPendingCredentials();
+  }
+
+  function handleApiKeyChange(nextValue: string) {
+    form.setFieldValue('apiKey', nextValue);
+    setPendingApiKey(nextValue.trim() || null);
+  }
+
+  function handleBaseUrlChange(nextValue: string) {
+    form.setFieldValue('baseUrl', nextValue);
+    setPendingBaseUrl(nextValue.trim() || null);
   }
 
   function handleTest() {
@@ -216,9 +182,8 @@ export function AISettingsForm() {
           }
         },
         onError: (error) => {
-          const detail = error instanceof Error ? error.message : undefined;
           toast.error(t('form.testError'), {
-            description: detail,
+            description: error instanceof Error ? error.message : undefined,
           });
         },
       }
@@ -250,15 +215,23 @@ export function AISettingsForm() {
   function handleRefreshModels() {
     if (canFetch) {
       refetchModels();
-    } else if (requiresApiKey && requiresBaseUrl) {
+      return;
+    }
+
+    if (requiresApiKey && requiresBaseUrl) {
       toast.error(t('form.apiKeyAndBaseUrlRequired'));
-    } else if (requiresApiKey) {
+      return;
+    }
+
+    if (requiresApiKey) {
       toast.error(t('form.apiKeyRequired'));
     }
   }
 
   function handleClearConfig() {
-    if (!config) return;
+    if (!config) {
+      return;
+    }
 
     deleteMutation.mutate(undefined, {
       onSuccess: () => {
@@ -270,251 +243,54 @@ export function AISettingsForm() {
 
   return (
     <div className="space-y-8">
-      {/* Section: Provider & Credentials */}
-      <section>
-        <div className="mb-4">
-          <h3 className="text-base font-medium">{t('section.credentials')}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('section.credentialsDescription')}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Provider */}
-          <form.Field name="provider">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor="provider">{t('form.provider')}</Label>
-                <Select
-                  value={field.state.value}
-                  onValueChange={(v) => handleProviderChange(v as LLMProviderType)}
-                  disabled={isBusy}
-                >
-                  <SelectTrigger id="provider">
-                    <SelectValue placeholder={t('form.providerPlaceholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {providers.map((p) => (
-                      <SelectItem key={p.provider} value={p.provider}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">{t('form.providerHelper')}</p>
-              </div>
-            )}
-          </form.Field>
-
-          {/* API Key */}
-          {showApiKeyField && (
-            <form.Field name="apiKey">
-              {(field) => (
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">
-                    API Key
-                    {hasSavedKey && config?.apiKeyMasked && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {t('form.currentApiKey', { masked: config.apiKeyMasked })}
-                      </span>
-                    )}
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="apiKey"
-                      type={showApiKey ? 'text' : 'password'}
-                      value={field.state.value}
-                      onChange={(e) => {
-                        const nextValue = e.target.value;
-                        field.handleChange(nextValue);
-                        setPendingApiKey(nextValue.trim() || null);
-                      }}
-                      onBlur={() => {
-                        field.handleBlur();
-                      }}
-                      placeholder={
-                        hasSavedKey
-                          ? t('form.apiKeyPlaceholderUpdate')
-                          : t('form.apiKeyPlaceholder')
-                      }
-                      disabled={isBusy}
-                      className="pr-10"
-                      autoComplete="off"
-                    />
-                    <button
-                      type="button"
-                      onClick={toggleShowApiKey}
-                      disabled={isBusy}
-                      aria-label={showApiKey ? t('form.hideApiKey') : t('form.showApiKey')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {values.provider === 'custom'
-                      ? t('form.apiKeyHelperCustom')
-                      : t('form.apiKeyHelper')}
-                  </p>
-                </div>
-              )}
-            </form.Field>
-          )}
-
-          {/* Base URL — full width */}
-          {showBaseUrlField && (
-            <form.Field name="baseUrl">
-              {(field) => (
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="baseUrl">
-                    Base URL
-                    {optionalBaseUrl && (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {t('form.optional')}
-                      </span>
-                    )}
-                  </Label>
-                  <Input
-                    id="baseUrl"
-                    type="url"
-                    value={field.state.value}
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      field.handleChange(nextValue);
-                      setPendingBaseUrl(nextValue.trim() || null);
-                    }}
-                    onBlur={() => {
-                      field.handleBlur();
-                    }}
-                    placeholder={defaultBaseUrl ?? 'https://api.example.com'}
-                    disabled={isBusy}
-                    autoComplete="off"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {optionalBaseUrl
-                      ? t('form.baseUrlHelperOptional', {
-                          defaultUrl: defaultBaseUrl ?? '',
-                        })
-                      : t('form.baseUrlHelper')}
-                  </p>
-                </div>
-              )}
-            </form.Field>
-          )}
-        </div>
-      </section>
+      <AISettingsCredentialsSection
+        config={config}
+        providers={providers}
+        values={values}
+        isBusy={isBusy}
+        showApiKeyField={showApiKeyField}
+        showApiKey={showApiKey}
+        hasSavedKey={hasSavedKey}
+        showBaseUrlField={showBaseUrlField}
+        optionalBaseUrl={optionalBaseUrl}
+        defaultBaseUrl={defaultBaseUrl}
+        onProviderChange={handleProviderChange}
+        onApiKeyChange={handleApiKeyChange}
+        onBaseUrlChange={handleBaseUrlChange}
+        onToggleShowApiKey={toggleShowApiKey}
+      />
 
       <div className="border-t" />
 
-      {/* Section: Model Selection */}
-      <section>
-        <div className="mb-4">
-          <h3 className="text-base font-medium">{t('section.model')}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{t('section.modelDescription')}</p>
-        </div>
-
-        <form.Field name="model">
-          {(field) => (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="model">{t('form.model')}</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRefreshModels}
-                  disabled={modelsLoading}
-                  className="h-6 px-2 text-xs"
-                >
-                  {modelsLoading ? (
-                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-1 h-3 w-3" />
-                  )}
-                  {t('form.refresh')}
-                </Button>
-              </div>
-              <div className="max-w-md">
-                <ModelSelector
-                  value={field.state.value}
-                  models={models}
-                  isLoading={modelsLoading}
-                  isError={modelsError}
-                  canFetch={canFetch}
-                  requiresApiKey={requiresApiKey}
-                  requiresBaseUrl={requiresBaseUrl}
-                  disabled={isBusy}
-                  onValueChange={(v) => field.handleChange(v)}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">{t('form.modelHelper')}</p>
-            </div>
-          )}
-        </form.Field>
-      </section>
+      <AISettingsModelSection
+        model={values.model}
+        models={models}
+        modelsLoading={modelsLoading}
+        modelsError={modelsError}
+        canFetch={canFetch}
+        requiresApiKey={requiresApiKey}
+        requiresBaseUrl={requiresBaseUrl}
+        isBusy={isBusy}
+        onModelChange={(value) => form.setFieldValue('model', value)}
+        onRefresh={handleRefreshModels}
+      />
 
       <div className="border-t" />
 
-      {/* Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
-          <AlertDialogTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" disabled={!config || isBusy}>
-              <Trash2 className="mr-1.5 h-4 w-4" />
-              {t('form.clearConfig')}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent size="sm">
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t('form.clearConfirmTitle')}</AlertDialogTitle>
-              <AlertDialogDescription>{t('form.clearConfirmDescription')}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isClearing}>
-                {t('cancel', { ns: 'common' })}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                disabled={isClearing}
-                onClick={handleClearConfig}
-              >
-                {isClearing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {t('form.clearConfirm')}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleTest}
-            disabled={
-              isBusy ||
-              testMutation.isPending ||
-              (showApiKeyField && !hasSavedKey && !values.apiKey) ||
-              (requiresBaseUrl && !values.baseUrl)
-            }
-          >
-            {testMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Zap className="mr-2 h-4 w-4" />
-            )}
-            {t('form.testConnection')}
-          </Button>
-
-          <Button type="button" onClick={handleSave} disabled={isBusy || !hasModel}>
-            {isSaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {t('form.save')}
-          </Button>
-        </div>
-      </div>
+      <AISettingsActions
+        clearDialogOpen={clearDialogOpen}
+        hasConfig={!!config}
+        isBusy={isBusy}
+        isSaving={isSaving}
+        isClearing={isClearing}
+        isTesting={testMutation.isPending}
+        canSave={canSave}
+        canTest={canTestConnection}
+        onClearDialogOpenChange={setClearDialogOpen}
+        onClearConfig={handleClearConfig}
+        onTest={handleTest}
+        onSave={handleSave}
+      />
     </div>
   );
 }
