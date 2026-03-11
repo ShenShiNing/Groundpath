@@ -18,6 +18,8 @@ export interface StaleProcessingDocument {
   userId: string;
   knowledgeBaseId: string;
   title: string;
+  currentVersion: number;
+  publishGeneration: number;
   processingStartedAt: Date;
 }
 

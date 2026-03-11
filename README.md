@@ -160,6 +160,13 @@ pnpm -F @knowledge-agent/server db:push
 pnpm -F @knowledge-agent/server db:migrate
 ```
 
+提交或发布前可先做结构校验：
+
+```bash
+pnpm -F @knowledge-agent/server db:drift-check
+pnpm -F @knowledge-agent/server db:verify
+```
+
 ### 2.5 启动开发环境
 
 ```bash
@@ -290,21 +297,23 @@ server {
 
 ## 4. 常用命令
 
-| 命令                                               | 说明                    |
-| -------------------------------------------------- | ----------------------- |
-| `pnpm dev`                                         | 同时启动前后端开发服务  |
-| `pnpm dev:client`                                  | 仅启动前端              |
-| `pnpm dev:server`                                  | 仅启动后端              |
-| `pnpm build`                                       | 构建全部包              |
-| `pnpm lint`                                        | ESLint 检查             |
-| `pnpm lint:fix`                                    | ESLint 自动修复         |
-| `pnpm format`                                      | Prettier 格式化         |
-| `pnpm test`                                        | 运行测试                |
-| `pnpm test:coverage`                               | 测试覆盖率              |
-| `pnpm -F @knowledge-agent/server db:push`          | 开发环境同步数据库结构  |
-| `pnpm -F @knowledge-agent/server db:migrate`       | 执行迁移                |
-| `pnpm -F @knowledge-agent/server db:studio`        | 打开 Drizzle Studio GUI |
-| `pnpm -F @knowledge-agent/server db:sync-counters` | 手动同步知识库计数器    |
+| 命令                                               | 说明                             |
+| -------------------------------------------------- | -------------------------------- |
+| `pnpm dev`                                         | 同时启动前后端开发服务           |
+| `pnpm dev:client`                                  | 仅启动前端                       |
+| `pnpm dev:server`                                  | 仅启动后端                       |
+| `pnpm build`                                       | 构建全部包                       |
+| `pnpm lint`                                        | ESLint 检查                      |
+| `pnpm lint:fix`                                    | ESLint 自动修复                  |
+| `pnpm format`                                      | Prettier 格式化                  |
+| `pnpm test`                                        | 运行测试                         |
+| `pnpm test:coverage`                               | 测试覆盖率                       |
+| `pnpm -F @knowledge-agent/server db:push`          | 开发环境同步数据库结构           |
+| `pnpm -F @knowledge-agent/server db:drift-check`   | 检查 schema/migration 漂移       |
+| `pnpm -F @knowledge-agent/server db:migrate`       | 执行迁移                         |
+| `pnpm -F @knowledge-agent/server db:verify`        | 依次执行漂移检查与 DB 一致性校验 |
+| `pnpm -F @knowledge-agent/server db:studio`        | 打开 Drizzle Studio GUI          |
+| `pnpm -F @knowledge-agent/server db:sync-counters` | 手动同步知识库计数器             |
 
 ## 5. 开源协议
 

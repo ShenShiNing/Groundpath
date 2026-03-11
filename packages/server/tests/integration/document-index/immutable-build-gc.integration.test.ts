@@ -10,6 +10,20 @@ const state = vi.hoisted(() => ({
   queuedJobs: [] as Array<Record<string, unknown>>,
 }));
 
+const configState = vi.hoisted(() => ({
+  documentConfig: {
+    buildCleanupRetentionDays: 7,
+    buildCleanupBatchSize: 100,
+    processingTimeoutMinutes: 30,
+    processingRecoveryBatchSize: 100,
+    processingRecoveryRequeueEnabled: false,
+  },
+  backfillConfig: {
+    batchSize: 100,
+    enqueueDelayMs: 0,
+  },
+}));
+
 function addBuildArtifacts(input: {
   indexVersionId: string;
   documentVersion: number;
@@ -129,16 +143,8 @@ vi.mock('@shared/db/db.utils', () => ({
 }));
 
 vi.mock('@config/env', () => ({
-  documentConfig: {
-    buildCleanupRetentionDays: 7,
-    buildCleanupBatchSize: 100,
-    processingTimeoutMinutes: 30,
-    processingRecoveryBatchSize: 100,
-  },
-  backfillConfig: {
-    batchSize: 100,
-    enqueueDelayMs: 0,
-  },
+  documentConfig: configState.documentConfig,
+  backfillConfig: configState.backfillConfig,
 }));
 
 vi.mock('@shared/logger', () => ({
@@ -250,6 +256,8 @@ vi.mock('@modules/document', () => ({
           userId: doc.userId as string,
           knowledgeBaseId: doc.knowledgeBaseId as string,
           title: 'Fixture Document',
+          currentVersion: doc.currentVersion as number,
+          publishGeneration: doc.publishGeneration as number,
           processingStartedAt: doc.processingStartedAt as Date,
         }))
     ),
@@ -523,6 +531,7 @@ describe('immutable build publish and GC integration', () => {
   beforeEach(() => {
     vi.resetModules();
     resetState();
+    configState.documentConfig.processingRecoveryRequeueEnabled = false;
   });
 
   it('publishes a newer build, cleans the superseded build, and keeps active search results intact', async () => {
@@ -881,6 +890,200 @@ describe('immutable build publish and GC integration', () => {
       documentId: 'doc-1',
       indexVersionId: 'idx-v3-active',
       content: 'version 3 active chunk',
+    });
+  });
+
+  it('keeps stale backfill and stale recovery reruns from publishing after repeated version switches, then activates the latest recovery rerun', async () => {
+    configState.documentConfig.processingRecoveryRequeueEnabled = true;
+
+    const { documentIndexBackfillService } =
+      await import('@modules/document-index/services/document-index-backfill.service');
+    const { processingRecoveryService } =
+      await import('@modules/rag/services/processing-recovery.service');
+    const { documentIndexActivationService } =
+      await import('@modules/document-index/services/document-index-activation.service');
+    const { documentIndexArtifactCleanupService } =
+      await import('@modules/document-index/services/document-index-artifact-cleanup.service');
+    const { searchService } = await import('@modules/rag/services/search.service');
+
+    const backfillResult = await documentIndexBackfillService.enqueueBackfill({
+      knowledgeBaseId: 'kb-1',
+      includeIndexed: true,
+      trigger: 'manual',
+      createdBy: 'user-1',
+    });
+
+    expect(backfillResult.runId).toBe('run-1');
+    expect(state.queuedJobs[0]).toMatchObject({
+      documentId: 'doc-1',
+      userId: 'user-1',
+      targetDocumentVersion: 1,
+      reason: 'backfill',
+      backfillRunId: 'run-1',
+    });
+
+    state.indexVersions.set('idx-backfill-v1', {
+      id: 'idx-backfill-v1',
+      documentId: 'doc-1',
+      documentVersion: 1,
+      indexVersion: 'idx-backfill-v1',
+      status: 'building',
+      builtAt: new Date('2026-03-10T01:00:00.000Z'),
+      activatedAt: null,
+    });
+    addBuildArtifacts({
+      indexVersionId: 'idx-backfill-v1',
+      documentVersion: 1,
+      content: 'backfill v1 chunk',
+      score: 0.9,
+    });
+
+    state.documents.set('doc-1', {
+      ...state.documents.get('doc-1'),
+      currentVersion: 2,
+      processingStatus: 'processing',
+      processingStartedAt: new Date('2026-03-10T02:00:00.000Z'),
+      publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+    });
+
+    const firstRecovery = await processingRecoveryService.recoverStaleProcessing(
+      new Date('2026-03-12T00:00:00.000Z')
+    );
+    expect(firstRecovery).toMatchObject({
+      recoveredDocumentIds: ['doc-1'],
+      requeuedDocumentIds: ['doc-1'],
+      requeuedCount: 1,
+    });
+    expect(state.queuedJobs[1]).toMatchObject({
+      documentId: 'doc-1',
+      userId: 'user-1',
+      targetDocumentVersion: 2,
+      reason: 'recovery',
+      jobIdSuffix: 'recovery-g2',
+    });
+
+    state.indexVersions.set('idx-recovery-v2', {
+      id: 'idx-recovery-v2',
+      documentId: 'doc-1',
+      documentVersion: 2,
+      indexVersion: 'idx-recovery-v2',
+      status: 'building',
+      builtAt: new Date('2026-03-11T01:00:00.000Z'),
+      activatedAt: null,
+    });
+    addBuildArtifacts({
+      indexVersionId: 'idx-recovery-v2',
+      documentVersion: 2,
+      content: 'recovery v2 chunk',
+      score: 0.93,
+    });
+
+    state.documents.set('doc-1', {
+      ...state.documents.get('doc-1'),
+      currentVersion: 3,
+      processingStatus: 'processing',
+      processingStartedAt: new Date('2026-03-12T02:00:00.000Z'),
+      publishGeneration: 3,
+      updatedAt: new Date('2026-03-12T03:00:00.000Z'),
+    });
+
+    const secondRecovery = await processingRecoveryService.recoverStaleProcessing(
+      new Date('2026-03-13T00:00:00.000Z')
+    );
+    expect(secondRecovery).toMatchObject({
+      recoveredDocumentIds: ['doc-1'],
+      requeuedDocumentIds: ['doc-1'],
+      requeuedCount: 1,
+    });
+    expect(state.queuedJobs[2]).toMatchObject({
+      documentId: 'doc-1',
+      userId: 'user-1',
+      targetDocumentVersion: 3,
+      reason: 'recovery',
+      jobIdSuffix: 'recovery-g4',
+    });
+
+    state.indexVersions.set('idx-recovery-v3', {
+      id: 'idx-recovery-v3',
+      documentId: 'doc-1',
+      documentVersion: 3,
+      indexVersion: 'idx-recovery-v3',
+      status: 'building',
+      builtAt: new Date('2026-03-13T01:00:00.000Z'),
+      activatedAt: null,
+    });
+    addBuildArtifacts({
+      indexVersionId: 'idx-recovery-v3',
+      documentVersion: 3,
+      content: 'recovery v3 chunk',
+      score: 0.97,
+    });
+
+    const staleBackfillPublish = await documentIndexActivationService.activateVersion(
+      'idx-backfill-v1',
+      {
+        expectedPublishGeneration: 1,
+        chunkCount: 1,
+        knowledgeBaseId: 'kb-1',
+        chunkDelta: 0,
+      }
+    );
+    expect(staleBackfillPublish).toBeUndefined();
+    expect(state.indexVersions.get('idx-backfill-v1')?.status).toBe('superseded');
+
+    const staleRecoveryPublish = await documentIndexActivationService.activateVersion(
+      'idx-recovery-v2',
+      {
+        expectedPublishGeneration: 2,
+        chunkCount: 1,
+        knowledgeBaseId: 'kb-1',
+        chunkDelta: 0,
+      }
+    );
+    expect(staleRecoveryPublish).toBeUndefined();
+    expect(state.indexVersions.get('idx-recovery-v2')?.status).toBe('superseded');
+    expect(state.documents.get('doc-1')?.activeIndexVersionId).toBe('idx-old');
+
+    const latestRecoveryPublish = await documentIndexActivationService.activateVersion(
+      'idx-recovery-v3',
+      {
+        expectedPublishGeneration: 4,
+        chunkCount: 1,
+        knowledgeBaseId: 'kb-1',
+        chunkDelta: 0,
+      }
+    );
+    expect(latestRecoveryPublish).toEqual(
+      expect.objectContaining({ id: 'idx-recovery-v3', status: 'active' })
+    );
+    expect(state.documents.get('doc-1')).toMatchObject({
+      currentVersion: 3,
+      activeIndexVersionId: 'idx-recovery-v3',
+      processingStatus: 'completed',
+    });
+
+    const cleanupResult = await documentIndexArtifactCleanupService.cleanup(
+      new Date('2026-03-25T00:00:00.000Z')
+    );
+    expect(cleanupResult.cleanedIndexVersionIds.sort()).toEqual(
+      ['idx-backfill-v1', 'idx-old', 'idx-recovery-v2'].sort()
+    );
+    expect(state.indexVersions.has('idx-recovery-v3')).toBe(true);
+    expect(state.documents.get('doc-1')?.activeIndexVersionId).toBe('idx-recovery-v3');
+
+    const results = await searchService.searchInKnowledgeBase({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      query: 'latest recovery',
+      limit: 5,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      documentId: 'doc-1',
+      indexVersionId: 'idx-recovery-v3',
+      content: 'recovery v3 chunk',
     });
   });
 });

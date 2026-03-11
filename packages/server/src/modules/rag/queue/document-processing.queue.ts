@@ -47,7 +47,7 @@ export async function enqueueDocumentProcessing(
   userId: string,
   options: DocumentProcessingEnqueueOptions
 ): Promise<string> {
-  const { targetDocumentVersion, targetIndexVersion, reason, backfillRunId } = options;
+  const { targetDocumentVersion, targetIndexVersion, reason, backfillRunId, jobIdSuffix } = options;
   const jobData: DocumentProcessingJobData = {
     documentId,
     userId,
@@ -55,15 +55,30 @@ export async function enqueueDocumentProcessing(
     targetIndexVersion,
     reason,
     backfillRunId,
+    jobIdSuffix,
   };
   const baseJobId = targetIndexVersion
     ? `doc-${documentId}-v${targetDocumentVersion}-idx-${targetIndexVersion}`
     : `doc-${documentId}-v${targetDocumentVersion}`;
-  const jobId = backfillRunId ? `${baseJobId}-bf-${backfillRunId}` : baseJobId;
+  const jobIdSegments = [
+    baseJobId,
+    backfillRunId ? `bf-${backfillRunId}` : undefined,
+    jobIdSuffix,
+  ].filter((segment): segment is string => Boolean(segment));
+  const jobId = jobIdSegments.join('-');
 
   await documentProcessingQueue.add('process', jobData, { jobId });
   logger.info(
-    { documentId, userId, targetDocumentVersion, targetIndexVersion, reason, jobId },
+    {
+      documentId,
+      userId,
+      targetDocumentVersion,
+      targetIndexVersion,
+      reason,
+      backfillRunId,
+      jobIdSuffix,
+      jobId,
+    },
     'Document processing job enqueued'
   );
   return jobId;

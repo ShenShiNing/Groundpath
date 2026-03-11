@@ -160,6 +160,13 @@ For production (recommended):
 pnpm -F @knowledge-agent/server db:migrate
 ```
 
+Before pushing or releasing, run the structure checks:
+
+```bash
+pnpm -F @knowledge-agent/server db:drift-check
+pnpm -F @knowledge-agent/server db:verify
+```
+
 ### 2.5 Start Development Environment
 
 ```bash
@@ -290,21 +297,23 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 
 ## 4. Common Commands
 
-| Command                                            | Description                            |
-| -------------------------------------------------- | -------------------------------------- |
-| `pnpm dev`                                         | Start frontend and backend in parallel |
-| `pnpm dev:client`                                  | Start frontend only                    |
-| `pnpm dev:server`                                  | Start backend only                     |
-| `pnpm build`                                       | Build all packages                     |
-| `pnpm lint`                                        | Run ESLint                             |
-| `pnpm lint:fix`                                    | Auto-fix ESLint issues                 |
-| `pnpm format`                                      | Format code with Prettier              |
-| `pnpm test`                                        | Run tests                              |
-| `pnpm test:coverage`                               | Run tests with coverage                |
-| `pnpm -F @knowledge-agent/server db:push`          | Sync schema in development             |
-| `pnpm -F @knowledge-agent/server db:migrate`       | Run database migrations                |
-| `pnpm -F @knowledge-agent/server db:studio`        | Open Drizzle Studio GUI                |
-| `pnpm -F @knowledge-agent/server db:sync-counters` | Manually sync knowledge base counters  |
+| Command                                            | Description                                   |
+| -------------------------------------------------- | --------------------------------------------- |
+| `pnpm dev`                                         | Start frontend and backend in parallel        |
+| `pnpm dev:client`                                  | Start frontend only                           |
+| `pnpm dev:server`                                  | Start backend only                            |
+| `pnpm build`                                       | Build all packages                            |
+| `pnpm lint`                                        | Run ESLint                                    |
+| `pnpm lint:fix`                                    | Auto-fix ESLint issues                        |
+| `pnpm format`                                      | Format code with Prettier                     |
+| `pnpm test`                                        | Run tests                                     |
+| `pnpm test:coverage`                               | Run tests with coverage                       |
+| `pnpm -F @knowledge-agent/server db:push`          | Sync schema in development                    |
+| `pnpm -F @knowledge-agent/server db:drift-check`   | Check schema/migration drift                  |
+| `pnpm -F @knowledge-agent/server db:migrate`       | Run database migrations                       |
+| `pnpm -F @knowledge-agent/server db:verify`        | Run drift check and DB consistency validation |
+| `pnpm -F @knowledge-agent/server db:studio`        | Open Drizzle Studio GUI                       |
+| `pnpm -F @knowledge-agent/server db:sync-counters` | Manually sync knowledge base counters         |
 
 ## 5. Open Source License
 

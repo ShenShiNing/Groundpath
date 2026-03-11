@@ -30,11 +30,13 @@
 - 本轮数据库执行后，以下事项已完成：
   1. 新 migration 已执行，文档相关 FK 和 `documents.processing_started_at` 已落库。
   2. `db:check` 已通过，当前开发库一致性检查结果为 `12/12 checks passed`。
-  3. `GET /api/chat/conversations` 已返回 `items + pagination`。
-  4. `POST /api/knowledge-bases/:id/documents` 已补 `generalRateLimiter`。
-  5. `rag.controller.ts` 已修正错误语义。
+  3. 已补 `drizzle/meta/0005_snapshot.json` 与 `0006_snapshot.json`，修复手工 migration 后的 snapshot 基线缺口。
+  4. 已新增 `db:drift-check` / `db:verify`，并在 `pre-push` 接入 schema/migration guard。
+  5. `GET /api/chat/conversations` 已返回 `items + pagination`。
+  6. `POST /api/knowledge-bases/:id/documents` 已补 `generalRateLimiter`。
+  7. `rag.controller.ts` 已修正错误语义。
 - 本轮处理可靠性增强后，以下事项也已完成：
-  1. 超时 `processing` 文档会按 scheduler 定时重置为 `pending`。
+  1. 超时 `processing` 文档会按 scheduler 定时重置为 `pending`，并可按开关立即重新入队。
   2. `db:check` 第 7 项已改为基于超时阈值统计 stale processing backlog。
 - 本轮前端测试推进后，以下事项也已完成：
   1. 已补认证守卫与 token 刷新逻辑测试。
@@ -249,6 +251,10 @@
 - 已确认 `documents.publish_generation` 已落库
 - 已执行 `pnpm -F @knowledge-agent/server db:check`
 - 当前结果：`12/12 checks passed`
+- 已补 `packages/server/drizzle/meta/0005_snapshot.json` 与 `0006_snapshot.json`
+- 已新增 `pnpm -F @knowledge-agent/server db:drift-check`
+- 已新增 `pnpm -F @knowledge-agent/server db:verify`
+- `.husky/pre-push` 已接入 `db:drift-check`
 
 补充：
 
@@ -256,6 +262,11 @@
 - 该问题已修复，现有校验脚本可正常作为数据库一致性验证手段
 - 本轮新增 migration 首次执行时还暴露出一个 MySQL 保留字别名问题（`div`）
 - 该问题已修复，当前 migration 已支持在“部分迁移已落库”的场景下安全重跑
+- `db:drift-check` 当前会同时校验：
+  - journal entry 是否缺 snapshot
+  - drizzle snapshot 结构是否合法
+  - 基于临时 out 目录重新 generate 时是否还会生成未提交 migration
+- 当前本地已验证 `db:verify` 可跑通，包含 `db:drift-check + db:check`
 
 ### 5.7 文档处理超时恢复任务已完成
 
@@ -264,15 +275,18 @@
 - `documentConfig` 已新增恢复相关配置：
   - `DOCUMENT_PROCESSING_TIMEOUT_MINUTES`
   - `DOCUMENT_PROCESSING_RECOVERY_ENABLED`
+  - `DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED`
   - `DOCUMENT_PROCESSING_RECOVERY_CRON`
   - `DOCUMENT_PROCESSING_RECOVERY_BATCH_SIZE`
 - `processingStartedAt` 现在会在进入 `processing` 时写入，并在切回非 `processing` 状态时清空
 - scheduler 已接入 stale processing recovery 任务
+- stale recovery 在成功重置后可按开关自动重新入队，并使用 recovery generation 后缀避免与旧 jobId 冲突
 - `db:check` 第 7 项已改为基于超时阈值统计 stale processing，而非把所有 `processing` 文档都视为问题
 
 当前已验证：
 
 - 相关 scheduler / service 测试通过
+- `document-processing.queue` 定向测试通过
 - `@knowledge-agent/server build` 通过
 - `db:check` 仍为 `12/12 checks passed`
 
@@ -581,10 +595,12 @@
 - 同一文档连续两次发生 version switch + stale recovery
 - 两个旧 backfill run 在真实 DB/queue worker 下都被标记为 `skipped`
 - 第三个 rerun 只针对最新版本完成处理，最终文档状态保持在最新版本
+- 已补“旧 backfill job + 旧 recovery job 都因 version switch 变 stale，最新 recovery rerun 完成”的真实 DB/queue worker 场景
+- 上述 real worker combo 测试已改为“每例独立模块实例 + 独立 `REDIS_PREFIX`”隔离夹具，降低队列单例复用带来的时序抖动
 
 验证：
 
-- `pnpm test -- packages/server/tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`：`1` 个测试全部通过
+- `pnpm test -- packages/server/tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`：`2` 个测试全部通过
 
 ---
 
@@ -616,6 +632,7 @@
 - 当前也已覆盖：
   - 真实 DB/queue worker 参与的 `backfill + version switch + recovery` 端到端组合测试
   - 真实 DB/queue worker 参与的“连续两次 version switch + repeated recovery 后，两个旧 backfill run skipped，第三次 rerun 完成”组合测试
+  - 真实 DB/queue worker 参与的“旧 backfill job + 旧 recovery job 均 stale，最新 recovery rerun 完成”组合测试
   - 真实 DB/queue 环境下的 backfill enqueue / resume 链路
 - 下一步更合理的是继续增加更多 worker 级组合链路覆盖，而不是只停留在单个回归场景
 
@@ -645,11 +662,13 @@
 - 文档相关 FK 已落库
 - `documents.processing_started_at` 已落库
 - `db:check` 已通过，当前开发库 12/12 项一致性检查通过
+- 已补 `drizzle/meta/0005_snapshot.json` 与 `0006_snapshot.json`
+- 已新增 `db:drift-check` / `db:verify`
+- 已在 `pre-push` 接入 `db:drift-check` 作为结构校验约束
 
 当前剩余工作：
 
-- 防止未来再次出现 schema 与 migration 漂移
-- 在 CI 或发布流程里加入结构校验约束
+- 若后续补 CI workflow，可直接复用 `pnpm -F @knowledge-agent/server db:verify`
 
 #### 7.2 已完成：为知识库上传入口补限流
 
@@ -677,12 +696,13 @@
 
 - 基于 `processing_started_at` 检测 stale processing
 - scheduler 已定时重置超时文档为 `pending`
+- stale recovery 成功后可按 `DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED` 自动重新入队
 - `db:check` 已与超时语义保持一致
 
 当前剩余工作：
 
-- 评估是否需要在恢复后自动重新入队，而不仅仅是重置为 `pending`
-- 继续补 recovery / backfill / version switch 组合链路测试
+- Phase 1 范围内的恢复主链与高阶组合链路测试已完成当前阶段目标
+- 后续若继续扩大更多 worker 级 permutation，归入持续硬化项，而不再视为 Phase 1 blocker
 
 ---
 

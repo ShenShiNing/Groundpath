@@ -109,6 +109,7 @@ export const storageConfig = {
 export const documentConfig = {
   ...documentDefaults,
   processingRecoveryEnabled: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_ENABLED,
+  processingRecoveryRequeueEnabled: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED,
   processingRecoveryCron: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_CRON,
   buildCleanupEnabled: validatedEnv.DOCUMENT_BUILD_CLEANUP_ENABLED,
   buildCleanupCron: validatedEnv.DOCUMENT_BUILD_CLEANUP_CRON,

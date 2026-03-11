@@ -103,6 +103,8 @@ export const documentRepositoryProcessing = {
         userId: documents.userId,
         knowledgeBaseId: documents.knowledgeBaseId,
         title: documents.title,
+        currentVersion: documents.currentVersion,
+        publishGeneration: documents.publishGeneration,
         processingStartedAt: documents.processingStartedAt,
       })
       .from(documents)
