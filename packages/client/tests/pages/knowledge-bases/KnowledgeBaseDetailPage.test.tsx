@@ -1,7 +1,7 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DocumentListItem, KnowledgeBaseInfo } from '@knowledge-agent/shared/types';
-import { fireClick, fireInput, flushPromises, render } from '@tests/utils/render';
+import { fireClick, fireInput, flushPromises, render } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({
   useKnowledgeBase: vi.fn(),

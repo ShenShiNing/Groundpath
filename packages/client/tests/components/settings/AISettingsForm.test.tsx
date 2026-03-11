@@ -1,7 +1,6 @@
-import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireClick, fireInput, flushPromises, render } from '@tests/utils/render';
-import type { AISettingsConfig } from '@/components/settings/ai/types';
+import { fireClick, fireInput, flushPromises, render } from '../../utils/render';
+import type { AISettingsConfig } from '../../../src/components/settings/ai/types';
 import type { LLMProviderInfo } from '@knowledge-agent/shared/types';
 
 const mocks = vi.hoisted(() => ({
@@ -215,7 +214,7 @@ vi.mock('@/components/settings/ai/sections/AISettingsActions', () => ({
   ),
 }));
 
-import { AISettingsForm } from '@/components/settings/ai/AISettingsForm';
+import { AISettingsForm } from '../../../src/components/settings/ai/AISettingsForm';
 
 function setConfig(config: AISettingsConfig) {
   queryState.config = {

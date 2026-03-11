@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, fireClick, fireInput, flushPromises } from '@tests/utils/render';
+import { render, fireClick, fireInput, flushPromises } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({
   createMutateAsync: vi.fn(),
@@ -137,7 +137,7 @@ vi.mock('@/components/ui/select', () => {
   };
 });
 
-import { KnowledgeBaseDialog } from '@/components/knowledge-bases/KnowledgeBaseDialog';
+import { KnowledgeBaseDialog } from '../../../src/components/knowledge-bases/KnowledgeBaseDialog';
 
 describe('KnowledgeBaseDialog', () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireClick, fireInput, flushPromises, render } from '@tests/utils/render';
+import { fireClick, fireInput, flushPromises, render } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({
   sendCode: vi.fn(),
