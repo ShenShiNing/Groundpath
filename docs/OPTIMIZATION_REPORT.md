@@ -48,7 +48,8 @@
   3. `agent-executor.ts` 已拆为主循环 + `agent-executor.citations.ts`、`agent-executor.runtime.ts`、`agent-executor.types.ts`。
   4. `processing.service.ts` 已拆为 facade + `processing.executor.ts`、`processing.lock.ts`、`processing.structure.ts`、`processing.stages.ts`、`processing.types.ts`。
   5. `document.repository.ts` 已拆为薄门面 + `document.repository.core.ts`、`document.repository.processing.ts`、`document.repository.queries.ts`、`document.repository.backfill.ts`、`document.repository.types.ts`。
-  6. 上述拆分完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试均已通过。
+  6. `scripts/db-consistency-check.ts` 已拆为 CLI entry + `db-consistency-check/checks.ts`、`report.ts`、`runner.ts`、`types.ts`。
+  7. 上述拆分完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试与 `db-consistency-check` runner 定向测试均已通过。
 - 本轮文档处理架构升级后，以下事项也已完成：
   1. `document_chunks` 与 vector payload 已绑定 `indexVersionId`，chunk/vector/graph 全部切换到 immutable build 产物模型。
   2. 查询链路已统一改为只消费 `documents.activeIndexVersionId` 指向的 active build。
@@ -127,15 +128,10 @@
 
 #### 后端超大文件
 
-| 文件                              | 行数 | 状态   |
-| --------------------------------- | ---- | ------ |
-| `scripts/db-consistency-check.ts` | 467  | 仍成立 |
-
-补充：
-
 - 原报告点名的 `rag/services/processing.service.ts`、`chat/services/chat.service.ts`、`agent/agent-executor.ts`、`shared/config/env.ts` 已完成第一轮拆分，不应继续作为“当前最突出的 600+ 行后端核心文件”示例。
 - 本轮前述 `document/repositories/document.repository.ts` 也已拆为薄门面 + `core / processing / queries / backfill / types` 子模块，不应继续列为未处理的 400+ 行 repository。
-- 当前后端可维护性压力更多集中在剩余的 `scripts/db-consistency-check.ts`，以及拆分后的若干编排/阶段模块是否还需要继续细分。
+- 原本剩余的 `scripts/db-consistency-check.ts` 也已进一步拆为 CLI entry + `checks / report / runner / types` 子模块，不应继续作为剩余 400+ 行后端脚本案例。
+- 当前后端可维护性压力更多集中在拆分后的若干编排/阶段模块是否还需要继续细分，而不再是单个超大脚本。
 
 #### 前端超大文件
 
@@ -409,7 +405,7 @@
 - 新增 client 定向测试 `18` 个全部通过
 - `@knowledge-agent/client build` 通过
 
-### 5.13 后端四个超大核心文件已完成第一轮拆分
+### 5.13 后端核心大文件与 `db-consistency-check` 已完成结构拆分
 
 本次已完成以下结构治理：
 
@@ -418,17 +414,19 @@
 - `agent-executor.ts` 已拆分为主循环、citation 选择、运行时辅助、类型定义四部分。
 - `processing.service.ts` 已拆分为 facade、主执行器、锁管理、结构解析、阶段处理、类型定义六部分。
 - `document.repository.ts` 已进一步拆分为薄门面、CRUD/listing、processing、query helper、backfill、types 六部分。
+- `scripts/db-consistency-check.ts` 已拆为 CLI 入口与 `checks.ts`、`report.ts`、`runner.ts`、`types.ts` 四个职责子模块。
 
 修订结论：
 
 - 原报告中“4 个 600+ 行后端核心文件仍然全部未拆”的说法已经过时。
 - “大文件问题”并未完全消失，但最突出的后端热点已经完成一轮可维护性收敛。
 - `document.repository.ts` 也不应继续作为“剩余 400+ 行后端文件”的代表案例。
-- 当前更合理的下一步是继续处理剩余的 `scripts/db-consistency-check.ts`，以及按阶段继续细化 `processing` 拆分后的内部模块。
+- 当前更合理的下一步是按阶段继续细化 `processing` 拆分后的内部模块，并把治理重心转向前端大组件与高风险链路测试。
 
 验证：
 
 - `pnpm -F @knowledge-agent/server build` 通过
+- `pnpm test -- packages/server/tests/scripts/db-consistency-check.runner.test.ts`：`4` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/agent/agent-executor.test.ts`：`32` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/rag/processing.error-injection.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts`：`17` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/document-index/document-index-backfill.service.test.ts packages/server/tests/modules/document-index/document-index-activation.service.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts packages/server/tests/modules/rag/search.service.test.ts packages/server/tests/modules/knowledge-base/services/counter-sync.service.test.ts`：`21` 个测试全部通过
@@ -720,18 +718,18 @@
 
 - 如需进一步收敛，可再单独评估 CLI 脚本层是否也要统一到 `AppError`
 
-#### 7.7 已完成第一轮：拆分后端四个超大核心文件
+#### 7.7 已完成第二轮：拆分后端四个超大核心文件与 `db-consistency-check`
 
 已完成结果：
 
 - `processing.service.ts`、`chat.service.ts`、`agent-executor.ts`、`env.ts` 已完成第一轮物理拆分
 - `document.repository.ts` 已继续拆为 facade + `core` / `processing` / `queries` / `backfill` / `types`
+- `db-consistency-check.ts` 已进一步拆为 CLI entry + `checks` / `report` / `runner` / `types`
 - 对外导出与主要调用方式保持兼容
 - `@knowledge-agent/server build` 与相关定向测试均已通过
 
 当前剩余工作：
 
-- 继续处理剩余的 `packages/server/src/scripts/db-consistency-check.ts`
 - 评估是否还要进一步细化 `processing.stages.ts` / `processing.executor.ts`
 - 前端超大页面/组件仍需后续治理
 
