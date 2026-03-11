@@ -30,9 +30,11 @@
 - 本轮数据库执行后，以下事项已完成：
   1. 新 migration 已执行，文档相关 FK 和 `documents.processing_started_at` 已落库。
   2. `db:check` 已通过，当前开发库一致性检查结果为 `12/12 checks passed`。
-  3. `GET /api/chat/conversations` 已返回 `items + pagination`。
-  4. `POST /api/knowledge-bases/:id/documents` 已补 `generalRateLimiter`。
-  5. `rag.controller.ts` 已修正错误语义。
+  3. 已补 `drizzle/meta/0005_snapshot.json` 与 `0006_snapshot.json`，修复手工 migration 后的 snapshot 基线缺口。
+  4. 已新增 `db:drift-check` / `db:verify`，并在 `pre-push` 接入 schema/migration guard。
+  5. `GET /api/chat/conversations` 已返回 `items + pagination`。
+  6. `POST /api/knowledge-bases/:id/documents` 已补 `generalRateLimiter`。
+  7. `rag.controller.ts` 已修正错误语义。
 - 本轮处理可靠性增强后，以下事项也已完成：
   1. 超时 `processing` 文档会按 scheduler 定时重置为 `pending`，并可按开关立即重新入队。
   2. `db:check` 第 7 项已改为基于超时阈值统计 stale processing backlog。
@@ -248,6 +250,10 @@
 - 已确认 `documents.publish_generation` 已落库
 - 已执行 `pnpm -F @knowledge-agent/server db:check`
 - 当前结果：`12/12 checks passed`
+- 已补 `packages/server/drizzle/meta/0005_snapshot.json` 与 `0006_snapshot.json`
+- 已新增 `pnpm -F @knowledge-agent/server db:drift-check`
+- 已新增 `pnpm -F @knowledge-agent/server db:verify`
+- `.husky/pre-push` 已接入 `db:drift-check`
 
 补充：
 
@@ -255,6 +261,11 @@
 - 该问题已修复，现有校验脚本可正常作为数据库一致性验证手段
 - 本轮新增 migration 首次执行时还暴露出一个 MySQL 保留字别名问题（`div`）
 - 该问题已修复，当前 migration 已支持在“部分迁移已落库”的场景下安全重跑
+- `db:drift-check` 当前会同时校验：
+  - journal entry 是否缺 snapshot
+  - drizzle snapshot 结构是否合法
+  - 基于临时 out 目录重新 generate 时是否还会生成未提交 migration
+- 当前本地已验证 `db:verify` 可跑通，包含 `db:drift-check + db:check`
 
 ### 5.7 文档处理超时恢复任务已完成
 
@@ -644,11 +655,13 @@
 - 文档相关 FK 已落库
 - `documents.processing_started_at` 已落库
 - `db:check` 已通过，当前开发库 12/12 项一致性检查通过
+- 已补 `drizzle/meta/0005_snapshot.json` 与 `0006_snapshot.json`
+- 已新增 `db:drift-check` / `db:verify`
+- 已在 `pre-push` 接入 `db:drift-check` 作为结构校验约束
 
 当前剩余工作：
 
-- 防止未来再次出现 schema 与 migration 漂移
-- 在 CI 或发布流程里加入结构校验约束
+- 若后续补 CI workflow，可直接复用 `pnpm -F @knowledge-agent/server db:verify`
 
 #### 7.2 已完成：为知识库上传入口补限流
 
