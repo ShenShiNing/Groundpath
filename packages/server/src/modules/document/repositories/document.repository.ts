@@ -29,6 +29,8 @@ export interface StaleProcessingDocument {
   userId: string;
   knowledgeBaseId: string;
   title: string;
+  currentVersion: number;
+  publishGeneration: number;
   processingStartedAt: Date;
 }
 
@@ -357,6 +359,8 @@ export const documentRepository = {
         userId: documents.userId,
         knowledgeBaseId: documents.knowledgeBaseId,
         title: documents.title,
+        currentVersion: documents.currentVersion,
+        publishGeneration: documents.publishGeneration,
         processingStartedAt: documents.processingStartedAt,
       })
       .from(documents)

@@ -1,6 +1,7 @@
 import { documentConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import { documentRepository } from '@modules/document';
+import { enqueueDocumentProcessing } from '../queue/document-processing.queue';
 import { processingService } from './processing.service';
 
 const logger = createLogger('processing-recovery.service');
@@ -8,11 +9,16 @@ const logger = createLogger('processing-recovery.service');
 export interface ProcessingRecoveryResult {
   timeoutMinutes: number;
   staleBefore: string;
+  requeueEnabled: boolean;
   scannedCount: number;
   recoveredCount: number;
   skippedCount: number;
+  requeuedCount: number;
+  requeueFailedCount: number;
   recoveredDocumentIds: string[];
   skippedDocumentIds: string[];
+  requeuedDocumentIds: string[];
+  requeueFailedDocumentIds: string[];
 }
 
 export const processingRecoveryService = {
@@ -29,6 +35,8 @@ export const processingRecoveryService = {
 
     const recoveredDocumentIds: string[] = [];
     const skippedDocumentIds: string[] = [];
+    const requeuedDocumentIds: string[] = [];
+    const requeueFailedDocumentIds: string[] = [];
 
     for (const document of staleDocuments) {
       try {
@@ -53,6 +61,42 @@ export const processingRecoveryService = {
 
         processingService.releaseProcessingLock(document.id);
         recoveredDocumentIds.push(document.id);
+
+        if (documentConfig.processingRecoveryRequeueEnabled) {
+          try {
+            const jobId = await enqueueDocumentProcessing(document.id, document.userId, {
+              targetDocumentVersion: document.currentVersion,
+              reason: 'recovery',
+              jobIdSuffix: `recovery-g${document.publishGeneration + 1}`,
+            });
+
+            requeuedDocumentIds.push(document.id);
+            logger.info(
+              {
+                documentId: document.id,
+                userId: document.userId,
+                knowledgeBaseId: document.knowledgeBaseId,
+                targetDocumentVersion: document.currentVersion,
+                recoveryPublishGeneration: document.publishGeneration + 1,
+                jobId,
+              },
+              'Re-enqueued recovered document for processing'
+            );
+          } catch (error) {
+            requeueFailedDocumentIds.push(document.id);
+            logger.error(
+              {
+                documentId: document.id,
+                userId: document.userId,
+                knowledgeBaseId: document.knowledgeBaseId,
+                targetDocumentVersion: document.currentVersion,
+                recoveryPublishGeneration: document.publishGeneration + 1,
+                error,
+              },
+              'Failed to re-enqueue recovered document for processing'
+            );
+          }
+        }
 
         logger.warn(
           {
@@ -83,11 +127,16 @@ export const processingRecoveryService = {
     return {
       timeoutMinutes: documentConfig.processingTimeoutMinutes,
       staleBefore: staleBefore.toISOString(),
+      requeueEnabled: documentConfig.processingRecoveryRequeueEnabled,
       scannedCount: staleDocuments.length,
       recoveredCount: recoveredDocumentIds.length,
       skippedCount: skippedDocumentIds.length,
+      requeuedCount: requeuedDocumentIds.length,
+      requeueFailedCount: requeueFailedDocumentIds.length,
       recoveredDocumentIds,
       skippedDocumentIds,
+      requeuedDocumentIds,
+      requeueFailedDocumentIds,
     };
   },
 };

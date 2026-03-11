@@ -88,6 +88,7 @@ describe('document-processing.queue', () => {
           targetIndexVersion: undefined,
           reason: 'edit',
           backfillRunId: undefined,
+          jobIdSuffix: undefined,
         },
         { jobId: 'doc-doc-1-v3' }
       );
@@ -116,6 +117,34 @@ describe('document-processing.queue', () => {
       const callArgs = queueAddMock.mock.calls.at(0);
       const jobOptions = (callArgs as unknown[] | undefined)?.[2] as { jobId: string } | undefined;
       expect(jobOptions).toEqual({ jobId: 'doc-doc-xyz-v1-bf-run-123' });
+    });
+
+    it('should append jobIdSuffix for recovery jobs', async () => {
+      await enqueueDocumentProcessing('doc-recovery', 'user-4', {
+        targetDocumentVersion: 9,
+        reason: 'recovery',
+        jobIdSuffix: 'recovery-g12',
+      });
+
+      const callArgs = queueAddMock.mock.calls.at(0);
+      const jobData = (callArgs as unknown[] | undefined)?.[1] as
+        | {
+            documentId: string;
+            userId: string;
+            targetDocumentVersion: number;
+            reason: string;
+            jobIdSuffix?: string;
+          }
+        | undefined;
+      expect(jobData).toMatchObject({
+        documentId: 'doc-recovery',
+        userId: 'user-4',
+        targetDocumentVersion: 9,
+        reason: 'recovery',
+        jobIdSuffix: 'recovery-g12',
+      });
+      const jobOptions = (callArgs as unknown[] | undefined)?.[2] as { jobId: string } | undefined;
+      expect(jobOptions).toEqual({ jobId: 'doc-doc-recovery-v9-recovery-g12' });
     });
   });
 

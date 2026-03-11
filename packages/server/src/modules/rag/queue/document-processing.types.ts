@@ -4,6 +4,7 @@ export const DOCUMENT_PROCESSING_REASONS = [
   'restore',
   'retry',
   'backfill',
+  'recovery',
 ] as const;
 
 export type DocumentProcessingReason = (typeof DOCUMENT_PROCESSING_REASONS)[number];
@@ -13,6 +14,7 @@ export interface DocumentProcessingEnqueueOptions {
   targetIndexVersion?: string;
   reason: DocumentProcessingReason;
   backfillRunId?: string;
+  jobIdSuffix?: string;
 }
 
 export interface DocumentProcessingJobData extends DocumentProcessingEnqueueOptions {

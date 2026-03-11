@@ -136,6 +136,7 @@ const featureFlagsSchema = z.object({
   STRUCTURED_RAG_INTERNAL_KB_IDS: csvStringArray(),
   IMAGE_DESCRIPTION_ENABLED: booleanString(false),
   DOCUMENT_PROCESSING_RECOVERY_ENABLED: booleanString(true),
+  DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED: booleanString(true),
   DOCUMENT_BUILD_CLEANUP_ENABLED: booleanString(true),
   LOG_CLEANUP_ENABLED: booleanString(true),
   BACKFILL_SCHEDULE_ENABLED: booleanString(false),

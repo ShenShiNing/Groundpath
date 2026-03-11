@@ -1,6 +1,6 @@
 # Knowledge Agent - 项目优化报告（核验版）
 
-> 核验日期：2026-03-11
+> 核验日期：2026-03-12
 > 核验范围：当前仓库 HEAD 代码、`packages/shared` 契约、`packages/server` 路由与 schema、`packages/*/tests`、已提交 Drizzle migration、开发库实际落地状态
 > 说明：本版以客观证据为主，修正原报告中已经过时的结论；数据库相关项以“schema + migration + 实库校验”三层证据为准
 
@@ -34,7 +34,7 @@
   4. `POST /api/knowledge-bases/:id/documents` 已补 `generalRateLimiter`。
   5. `rag.controller.ts` 已修正错误语义。
 - 本轮处理可靠性增强后，以下事项也已完成：
-  1. 超时 `processing` 文档会按 scheduler 定时重置为 `pending`。
+  1. 超时 `processing` 文档会按 scheduler 定时重置为 `pending`，并可按开关立即重新入队。
   2. `db:check` 第 7 项已改为基于超时阈值统计 stale processing backlog。
 - 本轮前端测试推进后，以下事项也已完成：
   1. 已补认证守卫与 token 刷新逻辑测试。
@@ -100,21 +100,21 @@
 
 ## 3. 核验结果总览
 
-| 编号 | 原报告结论                                     | 当前状态                                                                  | 结论   |
-| ---- | ---------------------------------------------- | ------------------------------------------------------------------------- | ------ |
+| 编号 | 原报告结论                                     | 当前状态                                                                                | 结论   |
+| ---- | ---------------------------------------------- | --------------------------------------------------------------------------------------- | ------ |
 | K-1  | 大型后端/前端文件过多                          | 后端 4 个最突出的 600+ 行核心文件已完成第一轮拆分，但仍存在若干 400+ 行文件与前端大组件 | 成立   |
-| K-2  | Zustand `getState()` 绕过响应式系统            | 组件/路由层已完成收敛，store 内部保留少量非 React 快照访问                | 已过时 |
-| K-3  | `throw new Error()` 未统一到 `Errors/AppError` | `server/client` 运行时代码已清零，CLI 脚本层仍保留少量原生 Error          | 已过时 |
-| K-4  | 前端 i18n 覆盖不完整                           | 仍存在                                                                    | 成立   |
-| K-5  | 路由级错误边界不足                             | 根路由外，聊天/文档详情/知识库详情/AI 设置已具备功能域级 `errorComponent` | 已过时 |
-| K-6  | `GET /api/knowledge-bases` 无分页              | 已支持分页参数与分页返回                                                  | 已过时 |
-| K-7  | `GET /api/chat/conversations` 无分页           | 已支持 `limit/offset` 且返回 `items + pagination`                         | 已过时 |
-| K-8  | 高开销 API 未限流                              | RAG / Chat / Document AI / Documents / KB 上传均已限流                    | 已过时 |
-| K-9  | 文档相关表缺数据库级 FK                        | migration 已执行，相关 FK 已落库                                          | 已过时 |
-| K-10 | `processing_started_at` 缺失                   | 字段已落库，超时恢复任务也已接入 scheduler                                | 已过时 |
-| K-11 | 无 coverage 配置                               | 已有 `vitest --coverage` 与 V8 coverage                                   | 已过时 |
-| K-12 | 无端到端测试                                   | 已有 server smoke e2e 和 integration tests                                | 已过时 |
-| K-13 | `vlm` 完全无测试                               | factory / service / provider 测试已补齐                                   | 已过时 |
+| K-2  | Zustand `getState()` 绕过响应式系统            | 组件/路由层已完成收敛，store 内部保留少量非 React 快照访问                              | 已过时 |
+| K-3  | `throw new Error()` 未统一到 `Errors/AppError` | `server/client` 运行时代码已清零，CLI 脚本层仍保留少量原生 Error                        | 已过时 |
+| K-4  | 前端 i18n 覆盖不完整                           | 仍存在                                                                                  | 成立   |
+| K-5  | 路由级错误边界不足                             | 根路由外，聊天/文档详情/知识库详情/AI 设置已具备功能域级 `errorComponent`               | 已过时 |
+| K-6  | `GET /api/knowledge-bases` 无分页              | 已支持分页参数与分页返回                                                                | 已过时 |
+| K-7  | `GET /api/chat/conversations` 无分页           | 已支持 `limit/offset` 且返回 `items + pagination`                                       | 已过时 |
+| K-8  | 高开销 API 未限流                              | RAG / Chat / Document AI / Documents / KB 上传均已限流                                  | 已过时 |
+| K-9  | 文档相关表缺数据库级 FK                        | migration 已执行，相关 FK 已落库                                                        | 已过时 |
+| K-10 | `processing_started_at` 缺失                   | 字段已落库，超时恢复任务也已接入 scheduler                                              | 已过时 |
+| K-11 | 无 coverage 配置                               | 已有 `vitest --coverage` 与 V8 coverage                                                 | 已过时 |
+| K-12 | 无端到端测试                                   | 已有 server smoke e2e 和 integration tests                                              | 已过时 |
+| K-13 | `vlm` 完全无测试                               | factory / service / provider 测试已补齐                                                 | 已过时 |
 
 ---
 
@@ -263,15 +263,18 @@
 - `documentConfig` 已新增恢复相关配置：
   - `DOCUMENT_PROCESSING_TIMEOUT_MINUTES`
   - `DOCUMENT_PROCESSING_RECOVERY_ENABLED`
+  - `DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED`
   - `DOCUMENT_PROCESSING_RECOVERY_CRON`
   - `DOCUMENT_PROCESSING_RECOVERY_BATCH_SIZE`
 - `processingStartedAt` 现在会在进入 `processing` 时写入，并在切回非 `processing` 状态时清空
 - scheduler 已接入 stale processing recovery 任务
+- stale recovery 在成功重置后可按开关自动重新入队，并使用 recovery generation 后缀避免与旧 jobId 冲突
 - `db:check` 第 7 项已改为基于超时阈值统计 stale processing，而非把所有 `processing` 文档都视为问题
 
 当前已验证：
 
 - 相关 scheduler / service 测试通过
+- `document-processing.queue` 定向测试通过
 - `@knowledge-agent/server build` 通过
 - `db:check` 仍为 `12/12 checks passed`
 
@@ -673,11 +676,11 @@
 
 - 基于 `processing_started_at` 检测 stale processing
 - scheduler 已定时重置超时文档为 `pending`
+- stale recovery 成功后可按 `DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED` 自动重新入队
 - `db:check` 已与超时语义保持一致
 
 当前剩余工作：
 
-- 评估是否需要在恢复后自动重新入队，而不仅仅是重置为 `pending`
 - 继续补 recovery / backfill / version switch 组合链路测试
 
 ---
@@ -839,4 +842,4 @@
 
 ## 当前建议的一句话结论
 
-项目当前真正的短板，已经从“数据库结构未落地”“运行时错误处理不统一”“组件层 `getState()` 直读”“缺少功能域错误边界”“VLM 完全无测试”转向“更多高风险前端页面/组件测试、i18n 完整性，以及文档版本切换/backfill/recovery 组合链路的高阶测试覆盖”。 
+项目当前真正的短板，已经从“数据库结构未落地”“运行时错误处理不统一”“组件层 `getState()` 直读”“缺少功能域错误边界”“VLM 完全无测试”转向“更多高风险前端页面/组件测试、i18n 完整性，以及文档版本切换/backfill/recovery 组合链路的高阶测试覆盖”。
