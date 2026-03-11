@@ -19,6 +19,8 @@ export * from './document/documents.schema';
 export * from './document/document-versions.schema';
 export * from './document/document-chunks.schema';
 export * from './document/document-index-versions.schema';
+export * from './document/document-index-backfill-runs.schema';
+export * from './document/document-index-backfill-items.schema';
 export * from './document/document-nodes.schema';
 export * from './document/document-node-contents.schema';
 export * from './document/document-edges.schema';

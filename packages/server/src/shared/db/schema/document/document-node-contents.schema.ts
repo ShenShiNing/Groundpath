@@ -1,4 +1,13 @@
-import { index, int, longtext, mysqlTable, text, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import {
+  index,
+  int,
+  longtext,
+  mysqlTable,
+  text,
+  timestamp,
+  varchar,
+  foreignKey,
+} from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
 import { documentIndexVersions } from './document-index-versions.schema';
@@ -27,6 +36,21 @@ export const documentNodeContents = mysqlTable(
   (table) => [
     index('document_node_content_version_idx').on(table.documentId, table.indexVersionId),
     index('document_node_content_node_idx').on(table.indexVersionId, table.nodeId),
+    foreignKey({
+      columns: [table.documentId],
+      foreignColumns: [documents.id],
+      name: 'document_node_contents_document_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.indexVersionId],
+      foreignColumns: [documentIndexVersions.id],
+      name: 'document_node_contents_index_version_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.nodeId],
+      foreignColumns: [documentNodes.id],
+      name: 'document_node_contents_node_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

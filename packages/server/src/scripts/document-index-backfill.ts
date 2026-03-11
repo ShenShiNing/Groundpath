@@ -12,6 +12,8 @@
  *   --offset <n>             Offset for this run
  *   --include-indexed        Include documents that already have activeIndexVersionId
  *   --include-processing     Include documents currently marked as processing
+ *   --run-id <id>            Resume an existing backfill run
+ *   --status                 Show status for the latest (or specified) run and exit
  *   --dry-run                Show candidates without enqueueing jobs
  */
 
@@ -55,12 +57,14 @@ function parseDocumentType(value?: string): DocumentType | undefined {
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
+  const statusOnly = args.includes('--status');
   const includeIndexed = args.includes('--include-indexed');
   const includeProcessing = args.includes('--include-processing');
   const knowledgeBaseId = getArg(args, '--kb');
   const documentType = parseDocumentType(getArg(args, '--document-type') ?? getArg(args, '--type'));
   const limitArg = getArg(args, '--limit');
   const offsetArg = getArg(args, '--offset');
+  const runIdArg = getArg(args, '--run-id');
   const limit = limitArg ? Number(limitArg) : undefined;
   const offset = offsetArg ? Number(offsetArg) : undefined;
 
@@ -75,6 +79,36 @@ async function main() {
   console.log('Document Index Backfill Tool');
   console.log('============================\n');
 
+  if (statusOnly) {
+    const latest = runIdArg ? undefined : (await documentIndexBackfillService.listRuns(1))[0];
+    const run = runIdArg ?? latest?.id;
+
+    if (!run) {
+      console.log('No backfill runs found.');
+      return;
+    }
+
+    const runInfo = await documentIndexBackfillService.getRun(run);
+    if (!runInfo) {
+      console.log(`Backfill run not found: ${run}`);
+      return;
+    }
+
+    console.log(`Run ID: ${runInfo.id}`);
+    console.log(`Status: ${runInfo.status}`);
+    console.log(`Trigger: ${runInfo.trigger}`);
+    console.log(`Candidates: ${runInfo.candidateCount}`);
+    console.log(
+      `Enqueued: ${runInfo.enqueuedCount} | Completed: ${runInfo.completedCount} | Failed: ${runInfo.failedCount} | Skipped: ${runInfo.skippedCount}`
+    );
+    console.log(`Cursor offset: ${runInfo.cursorOffset}`);
+    console.log(`Has more: ${runInfo.hasMore ? 'yes' : 'no'}`);
+    if (runInfo.lastError) {
+      console.log(`Last error: ${runInfo.lastError}`);
+    }
+    return;
+  }
+
   if (dryRun) {
     console.log('DRY RUN MODE - No jobs will be enqueued\n');
   }
@@ -87,8 +121,13 @@ async function main() {
     limit,
     offset,
     dryRun,
+    runId: runIdArg,
+    trigger: 'manual',
   });
 
+  if (result.runId) {
+    console.log(`Run ID: ${result.runId}`);
+  }
   console.log(`Selected: ${result.documents.length}`);
   console.log(`Enqueued: ${result.enqueuedCount}`);
   console.log(`Has more: ${result.hasMore ? 'yes' : 'no'}`);

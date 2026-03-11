@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express';
 import { ragSearchRequestSchema } from '@knowledge-agent/shared/schemas';
-import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
 import { sendSuccessResponse, handleError, Errors } from '@shared/errors';
 import { getParamId } from '@shared/utils';
 import { searchService } from '../services/search.service';
@@ -42,20 +41,12 @@ export const ragController = {
       const documentId = getParamId(req, 'documentId');
 
       if (!documentId) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-          'Document ID required',
-          400
-        );
+        throw Errors.validation('Document ID required');
       }
 
       const document = await documentRepository.findByIdAndUser(documentId, userId);
       if (!document) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-          'Document not found',
-          404
-        );
+        throw Errors.notFound('Document');
       }
 
       // Enqueue processing job (non-blocking, deduped by documentId)
@@ -80,20 +71,12 @@ export const ragController = {
       const documentId = getParamId(req, 'documentId');
 
       if (!documentId) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-          'Document ID required',
-          400
-        );
+        throw Errors.validation('Document ID required');
       }
 
       const document = await documentRepository.findByIdAndUser(documentId, userId);
       if (!document) {
-        throw Errors.auth(
-          DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-          'Document not found',
-          404
-        );
+        throw Errors.notFound('Document');
       }
 
       sendSuccessResponse(res, {

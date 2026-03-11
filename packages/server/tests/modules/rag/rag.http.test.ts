@@ -61,7 +61,7 @@ const {
     processingServiceMock: {
       processDocument: vi.fn(async () => undefined),
     },
-    enqueueDocumentProcessingMock: vi.fn(async () => undefined),
+    enqueueDocumentProcessingMock: vi.fn(async () => 'job-1'),
     documentRepositoryMock: {
       findByIdAndUser: vi.fn<(documentId: string, userId: string) => Promise<DocumentLookupResult>>(
         async () => ({
@@ -252,7 +252,7 @@ describe('rag.routes http behavior', () => {
     });
   });
 
-  it('should return DOCUMENT_NOT_FOUND when processing missing document', async () => {
+  it('should return NOT_FOUND when processing missing document', async () => {
     documentRepositoryMock.findByIdAndUser.mockResolvedValueOnce(null);
 
     const response = await fetch(`${baseUrl}/rag/process/missing-doc`, {
@@ -262,7 +262,7 @@ describe('rag.routes http behavior', () => {
     const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(404);
-    expect(body.error.code).toBe('DOCUMENT_NOT_FOUND');
+    expect(body.error.code).toBe('NOT_FOUND');
     expect(enqueueDocumentProcessingMock).not.toHaveBeenCalled();
   });
 
@@ -279,7 +279,7 @@ describe('rag.routes http behavior', () => {
     expect(documentRepositoryMock.findByIdAndUser).toHaveBeenCalledWith('doc-1', 'user-1');
   });
 
-  it('should return DOCUMENT_NOT_FOUND for missing document status', async () => {
+  it('should return NOT_FOUND for missing document status', async () => {
     documentRepositoryMock.findByIdAndUser.mockResolvedValueOnce(null);
 
     const response = await fetch(`${baseUrl}/rag/status/missing-doc`, {
@@ -288,6 +288,6 @@ describe('rag.routes http behavior', () => {
     const body = (await response.json()) as HttpTestBody;
 
     expect(response.status).toBe(404);
-    expect(body.error.code).toBe('DOCUMENT_NOT_FOUND');
+    expect(body.error.code).toBe('NOT_FOUND');
   });
 });

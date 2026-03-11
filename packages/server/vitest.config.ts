@@ -1,5 +1,8 @@
 import path from 'path';
 import { defineProject } from 'vitest/config';
+import { loadEnv } from 'vite';
+
+const env = loadEnv('test', __dirname, '');
 
 export default defineProject({
   resolve: {
@@ -17,8 +20,10 @@ export default defineProject({
     exclude: ['node_modules', 'dist'],
     env: {
       NODE_ENV: 'test',
-      DATABASE_URL: 'mysql://test:test@localhost:3306/test_db',
-      REDIS_URL: 'redis://localhost:6379',
+      DATABASE_URL:
+        env.TEST_DATABASE_URL ?? env.DATABASE_URL ?? 'mysql://test:test@localhost:3306/test_db',
+      REDIS_URL: env.TEST_REDIS_URL ?? env.REDIS_URL ?? 'redis://localhost:6379',
+      REDIS_PREFIX: env.TEST_REDIS_PREFIX ?? env.REDIS_PREFIX ?? 'knowledge-agent-test',
       JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
       ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars',
       EMAIL_VERIFICATION_SECRET: 'test-email-verification-secret',

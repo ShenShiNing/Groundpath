@@ -134,6 +134,10 @@ const documentSchema = z.object({
   CHUNK_SIZE: z.coerce.number().default(512),
   CHUNK_OVERLAP: z.coerce.number().default(50),
   VECTOR_BATCH_SIZE: z.coerce.number().int().min(1).default(20),
+  DOCUMENT_PROCESSING_TIMEOUT_MINUTES: z.coerce.number().int().min(1).default(30),
+  DOCUMENT_PROCESSING_RECOVERY_ENABLED: booleanString(true),
+  DOCUMENT_PROCESSING_RECOVERY_CRON: z.string().default('*/10 * * * *'),
+  DOCUMENT_PROCESSING_RECOVERY_BATCH_SIZE: z.coerce.number().int().min(1).max(1000).default(100),
 });
 
 // -------------------- Document Index / Structured RAG --------------------
@@ -203,6 +207,8 @@ const queueSchema = z.object({
 const backfillSchema = z.object({
   BACKFILL_BATCH_SIZE: z.coerce.number().int().min(1).max(1000).default(100),
   BACKFILL_ENQUEUE_DELAY_MS: z.coerce.number().int().min(0).max(60000).default(0),
+  BACKFILL_SCHEDULE_ENABLED: booleanString(false),
+  BACKFILL_SCHEDULE_CRON: z.string().default('0 2 * * *'),
 });
 
 // -------------------- VLM (Vision Language Model) --------------------
@@ -451,6 +457,10 @@ export const documentConfig = {
   chunkSize: validatedEnv.CHUNK_SIZE,
   chunkOverlap: validatedEnv.CHUNK_OVERLAP,
   vectorBatchSize: validatedEnv.VECTOR_BATCH_SIZE,
+  processingTimeoutMinutes: validatedEnv.DOCUMENT_PROCESSING_TIMEOUT_MINUTES,
+  processingRecoveryEnabled: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_ENABLED,
+  processingRecoveryCron: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_CRON,
+  processingRecoveryBatchSize: validatedEnv.DOCUMENT_PROCESSING_RECOVERY_BATCH_SIZE,
 } as const;
 
 /** Document index / structured RAG configuration */
@@ -561,6 +571,11 @@ export const queueConfig = {
 export const backfillConfig = {
   batchSize: validatedEnv.BACKFILL_BATCH_SIZE,
   enqueueDelayMs: validatedEnv.BACKFILL_ENQUEUE_DELAY_MS,
+} as const;
+
+export const backfillScheduleConfig = {
+  enabled: validatedEnv.BACKFILL_SCHEDULE_ENABLED,
+  cron: validatedEnv.BACKFILL_SCHEDULE_CRON,
 } as const;
 
 /** Logging configuration */

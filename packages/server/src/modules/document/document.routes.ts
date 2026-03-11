@@ -8,6 +8,7 @@ import {
   validateBody,
   validateQuery,
   createSanitizeMiddleware,
+  generalRateLimiter,
 } from '@shared/middleware';
 import {
   updateDocumentRequestSchema,
@@ -136,7 +137,7 @@ router.delete('/:id/permanent', documentController.permanentDelete);
 // ==================== Document Routes ====================
 
 // Upload document
-router.post('/', uploadWithErrorHandling('file'), documentController.upload);
+router.post('/', generalRateLimiter, uploadWithErrorHandling('file'), documentController.upload);
 
 // List documents
 router.get('/', validateQuery(documentListParamsSchema), documentController.list);
@@ -171,7 +172,12 @@ router.get('/:id/preview', documentController.preview);
 router.get('/:id/versions', documentController.getVersionHistory);
 
 // Upload new version
-router.post('/:id/versions', uploadWithErrorHandling('file'), documentController.uploadNewVersion);
+router.post(
+  '/:id/versions',
+  generalRateLimiter,
+  uploadWithErrorHandling('file'),
+  documentController.uploadNewVersion
+);
 
 // Restore to specific version
 router.post('/:id/versions/:versionId/restore', documentController.restoreVersion);

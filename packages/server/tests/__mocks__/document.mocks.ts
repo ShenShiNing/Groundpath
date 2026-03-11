@@ -42,6 +42,7 @@ export const mockDocument: Document = {
   activeIndexVersionId: null,
   processingStatus: 'completed',
   processingError: null,
+  processingStartedAt: null,
   chunkCount: 0,
   createdBy: mockUserId,
   createdAt: new Date('2024-01-01'),

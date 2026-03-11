@@ -37,6 +37,7 @@ const {
   },
   documentChunkRepositoryMock: {
     getChunkIdsByDocumentId: vi.fn(),
+    countByDocumentAndVersion: vi.fn(),
     createMany: vi.fn(),
     deleteByIds: vi.fn(),
     deleteByDocumentId: vi.fn(),
@@ -190,6 +191,7 @@ describe('RAG Processing Error Injection', () => {
 
     ensureCollectionMock.mockResolvedValue(undefined);
     documentChunkRepositoryMock.getChunkIdsByDocumentId.mockResolvedValue([]);
+    documentChunkRepositoryMock.countByDocumentAndVersion.mockResolvedValue(0);
     getEmbeddingProviderByTypeMock.mockReturnValue(embeddingProviderMock);
     documentParseRouterServiceMock.decideRoute.mockReturnValue({
       routeMode: 'chunked',
@@ -346,6 +348,42 @@ describe('RAG Processing Error Injection', () => {
     expect(documentVersionRepositoryMock.findByDocumentAndVersion).not.toHaveBeenCalled();
     expect(chunkingServiceMock.chunkText).not.toHaveBeenCalled();
     expect(documentIndexServiceMock.startBuild).not.toHaveBeenCalled();
+  });
+
+  it('should replace current-version chunks before retrying the same document version', async () => {
+    documentRepositoryMock.findById.mockResolvedValue({
+      id: docId,
+      knowledgeBaseId: kbId,
+      chunkCount: 1,
+      currentVersion: 1,
+      documentType: 'markdown',
+    });
+    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+      textContent: 'Some text',
+    });
+    documentChunkRepositoryMock.getChunkIdsByDocumentId.mockResolvedValue(['old-1']);
+    documentChunkRepositoryMock.countByDocumentAndVersion.mockResolvedValue(1);
+    chunkingServiceMock.chunkText.mockReturnValue([
+      { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
+    ]);
+    embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
+    vectorRepositoryMock.upsert.mockResolvedValue(undefined);
+    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
+    documentChunkRepositoryMock.deleteByDocumentId.mockResolvedValue(undefined);
+    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
+    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+
+    await processingService.processDocument(docId, userId, {
+      targetDocumentVersion: 1,
+      reason: 'retry',
+    });
+
+    expect(documentChunkRepositoryMock.deleteByDocumentId).toHaveBeenCalledWith(docId, {});
+    expect(documentChunkRepositoryMock.createMany).toHaveBeenCalled();
+    expect(
+      documentChunkRepositoryMock.deleteByDocumentId.mock.invocationCallOrder[0]!
+    ).toBeLessThan(documentChunkRepositoryMock.createMany.mock.invocationCallOrder[0]!);
+    expect(documentChunkRepositoryMock.deleteByIds).not.toHaveBeenCalled();
   });
 
   it('should continue with chunk fallback when markdown structured parsing fails', async () => {

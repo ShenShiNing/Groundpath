@@ -12,6 +12,7 @@ export interface DocumentProcessingEnqueueOptions {
   targetDocumentVersion: number;
   targetIndexVersion?: string;
   reason: DocumentProcessingReason;
+  backfillRunId?: string;
 }
 
 export interface DocumentProcessingJobData extends DocumentProcessingEnqueueOptions {

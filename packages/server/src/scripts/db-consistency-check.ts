@@ -27,7 +27,7 @@
  */
 
 // Ensure environment is loaded before any imports that depend on it
-import { databaseConfig, isEnvLoaded } from '@shared/config/env';
+import { databaseConfig, documentConfig, isEnvLoaded } from '@shared/config/env';
 
 // Verify environment loaded successfully
 if (!isEnvLoaded()) {
@@ -42,7 +42,7 @@ if (!databaseConfig.url) {
 }
 
 import { db } from '@shared/db';
-import { sql, eq, and, isNull, count, or } from 'drizzle-orm';
+import { sql, eq, and, isNull, isNotNull, count, or, lt } from 'drizzle-orm';
 import { documents } from '@shared/db/schema/document/documents.schema';
 import { documentVersions } from '@shared/db/schema/document/document-versions.schema';
 import { documentChunks } from '@shared/db/schema/document/document-chunks.schema';
@@ -189,31 +189,33 @@ async function checkKbDocumentCountMismatch(): Promise<CheckResult> {
     SELECT
       kb.id,
       kb.name,
-      kb.document_count AS stored,
-      COALESCE(actual.cnt, 0) AS actual
+      kb.document_count AS stored_count,
+      COALESCE(agg.cnt, 0) AS actual_count
     FROM knowledge_bases kb
     LEFT JOIN (
       SELECT knowledge_base_id, COUNT(*) AS cnt
       FROM documents
       WHERE deleted_at IS NULL
       GROUP BY knowledge_base_id
-    ) actual ON kb.id = actual.knowledge_base_id
+    ) agg ON kb.id = agg.knowledge_base_id
     WHERE kb.deleted_at IS NULL
-      AND kb.document_count != COALESCE(actual.cnt, 0)
+      AND kb.document_count != COALESCE(agg.cnt, 0)
   `);
 
   const results = rows[0] as unknown as Array<{
     id: string;
     name: string;
-    stored: number;
-    actual: number;
+    stored_count: number;
+    actual_count: number;
   }>;
 
   return {
     name,
     passed: results.length === 0,
     count: results.length,
-    details: results.map((r) => `kb=${r.id} "${r.name}" stored=${r.stored} actual=${r.actual}`),
+    details: results.map(
+      (r) => `kb=${r.id} "${r.name}" stored=${r.stored_count} actual=${r.actual_count}`
+    ),
   };
 }
 
@@ -224,31 +226,33 @@ async function checkKbTotalChunksMismatch(): Promise<CheckResult> {
     SELECT
       kb.id,
       kb.name,
-      kb.total_chunks AS stored,
-      COALESCE(actual.total, 0) AS actual
+      kb.total_chunks AS stored_count,
+      COALESCE(agg.total, 0) AS actual_count
     FROM knowledge_bases kb
     LEFT JOIN (
       SELECT knowledge_base_id, SUM(chunk_count) AS total
       FROM documents
       WHERE deleted_at IS NULL
       GROUP BY knowledge_base_id
-    ) actual ON kb.id = actual.knowledge_base_id
+    ) agg ON kb.id = agg.knowledge_base_id
     WHERE kb.deleted_at IS NULL
-      AND kb.total_chunks != COALESCE(actual.total, 0)
+      AND kb.total_chunks != COALESCE(agg.total, 0)
   `);
 
   const results = rows[0] as unknown as Array<{
     id: string;
     name: string;
-    stored: number;
-    actual: number;
+    stored_count: number;
+    actual_count: number;
   }>;
 
   return {
     name,
     passed: results.length === 0,
     count: results.length,
-    details: results.map((r) => `kb=${r.id} "${r.name}" stored=${r.stored} actual=${r.actual}`),
+    details: results.map(
+      (r) => `kb=${r.id} "${r.name}" stored=${r.stored_count} actual=${r.actual_count}`
+    ),
   };
 }
 
@@ -259,41 +263,51 @@ async function checkDocumentChunkCountMismatch(): Promise<CheckResult> {
     SELECT
       d.id,
       d.title,
-      d.chunk_count AS stored,
-      COALESCE(actual.cnt, 0) AS actual
+      d.chunk_count AS stored_count,
+      COALESCE(agg.cnt, 0) AS actual_count
     FROM documents d
     LEFT JOIN (
       SELECT document_id, COUNT(*) AS cnt
       FROM document_chunks
       GROUP BY document_id
-    ) actual ON d.id = actual.document_id
+    ) agg ON d.id = agg.document_id
     WHERE d.deleted_at IS NULL
-      AND d.chunk_count != COALESCE(actual.cnt, 0)
+      AND d.chunk_count != COALESCE(agg.cnt, 0)
   `);
 
   const results = rows[0] as unknown as Array<{
     id: string;
     title: string;
-    stored: number;
-    actual: number;
+    stored_count: number;
+    actual_count: number;
   }>;
 
   return {
     name,
     passed: results.length === 0,
     count: results.length,
-    details: results.map((r) => `doc=${r.id} "${r.title}" stored=${r.stored} actual=${r.actual}`),
+    details: results.map(
+      (r) => `doc=${r.id} "${r.title}" stored=${r.stored_count} actual=${r.actual_count}`
+    ),
   };
 }
 
 // Check 7: Stale processing/failed status backlog
 async function checkStaleProcessingStatus(): Promise<CheckResult> {
   const name = '7. Stale processing/failed status backlog';
+  const staleBefore = new Date(Date.now() - documentConfig.processingTimeoutMinutes * 60_000);
 
   const processingRows = await db
     .select({ cnt: count() })
     .from(documents)
-    .where(and(eq(documents.processingStatus, 'processing'), isNull(documents.deletedAt)));
+    .where(
+      and(
+        eq(documents.processingStatus, 'processing'),
+        isNull(documents.deletedAt),
+        isNotNull(documents.processingStartedAt),
+        lt(documents.processingStartedAt, staleBefore)
+      )
+    );
 
   const failedRows = await db
     .select({ cnt: count() })
@@ -305,7 +319,11 @@ async function checkStaleProcessingStatus(): Promise<CheckResult> {
   const totalStale = processingCount + failedCount;
 
   const details: string[] = [];
-  if (processingCount > 0) details.push(`processing: ${processingCount} document(s)`);
+  if (processingCount > 0) {
+    details.push(
+      `processing timeout: ${processingCount} document(s) older than ${documentConfig.processingTimeoutMinutes} minute(s)`
+    );
+  }
   if (failedCount > 0) details.push(`failed: ${failedCount} document(s)`);
 
   return {

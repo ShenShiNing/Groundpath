@@ -1,4 +1,12 @@
-import { mysqlTable, varchar, timestamp, index, text, int } from 'drizzle-orm/mysql-core';
+import {
+  mysqlTable,
+  varchar,
+  timestamp,
+  index,
+  text,
+  int,
+  foreignKey,
+} from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
 import { documents } from './documents.schema';
@@ -32,7 +40,15 @@ export const knowledgeBases = mysqlTable(
     deletedBy: varchar('deleted_by', { length: 36 }),
     deletedAt: timestamp('deleted_at'),
   },
-  (table) => [index('user_id_idx').on(table.userId), index('deleted_at_idx').on(table.deletedAt)]
+  (table) => [
+    index('user_id_idx').on(table.userId),
+    index('deleted_at_idx').on(table.deletedAt),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: 'knowledge_bases_user_id_fk',
+    }).onDelete('restrict'),
+  ]
 );
 
 // ==================== Relations ====================

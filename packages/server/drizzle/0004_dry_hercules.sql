@@ -1,0 +1,17 @@
+ALTER TABLE `documents` ADD `processing_started_at` timestamp;--> statement-breakpoint
+ALTER TABLE `knowledge_bases` ADD CONSTRAINT `knowledge_bases_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `documents` ADD CONSTRAINT `documents_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `documents` ADD CONSTRAINT `documents_knowledge_base_id_fk` FOREIGN KEY (`knowledge_base_id`) REFERENCES `knowledge_bases`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_versions` ADD CONSTRAINT `document_versions_document_id_fk` FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_chunks` ADD CONSTRAINT `document_chunks_document_id_fk` FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_index_versions` ADD CONSTRAINT `document_index_versions_document_id_fk` FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_nodes` ADD CONSTRAINT `document_nodes_document_id_fk` FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_nodes` ADD CONSTRAINT `document_nodes_index_version_id_fk` FOREIGN KEY (`index_version_id`) REFERENCES `document_index_versions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_node_contents` ADD CONSTRAINT `document_node_contents_document_id_fk` FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_node_contents` ADD CONSTRAINT `document_node_contents_index_version_id_fk` FOREIGN KEY (`index_version_id`) REFERENCES `document_index_versions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_node_contents` ADD CONSTRAINT `document_node_contents_node_id_fk` FOREIGN KEY (`node_id`) REFERENCES `document_nodes`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_edges` ADD CONSTRAINT `document_edges_document_id_fk` FOREIGN KEY (`document_id`) REFERENCES `documents`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_edges` ADD CONSTRAINT `document_edges_index_version_id_fk` FOREIGN KEY (`index_version_id`) REFERENCES `document_index_versions`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_edges` ADD CONSTRAINT `document_edges_from_node_id_fk` FOREIGN KEY (`from_node_id`) REFERENCES `document_nodes`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `document_edges` ADD CONSTRAINT `document_edges_to_node_id_fk` FOREIGN KEY (`to_node_id`) REFERENCES `document_nodes`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `conversations` ADD CONSTRAINT `conversations_user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE restrict ON UPDATE no action;

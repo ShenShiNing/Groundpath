@@ -11,11 +11,14 @@ const tokenCleanupRunMock = vi.fn();
 const vectorCleanupRunMock = vi.fn();
 const counterSyncAllMock = vi.fn();
 const structuredRagAlertCheckMock = vi.fn();
+const processingRecoveryRecoverMock = vi.fn();
 
 interface SchedulerImportOptions {
   cleanupEnabled?: boolean;
   counterSyncEnabled?: boolean;
   structuredRagAlertsEnabled?: boolean;
+  backfillScheduleEnabled?: boolean;
+  processingRecoveryEnabled?: boolean;
 }
 
 async function importScheduler(options: SchedulerImportOptions = {}) {
@@ -23,6 +26,8 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     cleanupEnabled = true,
     counterSyncEnabled = true,
     structuredRagAlertsEnabled = false,
+    backfillScheduleEnabled = false,
+    processingRecoveryEnabled = true,
   } = options;
 
   vi.resetModules();
@@ -40,8 +45,17 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
         enabled: cleanupEnabled,
       },
     },
+    documentConfig: {
+      processingRecoveryEnabled,
+      processingRecoveryCron: '*/10 * * * *',
+      processingTimeoutMinutes: 30,
+    },
     featureFlags: {
       counterSyncEnabled,
+    },
+    backfillScheduleConfig: {
+      enabled: backfillScheduleEnabled,
+      cron: '0 2 * * *',
     },
     structuredRagObservabilityConfig: {
       alertsEnabled: structuredRagAlertsEnabled,
@@ -60,6 +74,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
   vi.doMock('@shared/logger/system-logger', () => ({
     systemLogger: {
       schedulerError: schedulerErrorMock,
+      schedulerRun: vi.fn(),
     },
   }));
 
@@ -90,6 +105,18 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
+  vi.doMock('@modules/rag', () => ({
+    processingRecoveryService: {
+      recoverStaleProcessing: processingRecoveryRecoverMock,
+    },
+  }));
+
+  vi.doMock('@modules/document-index', () => ({
+    documentIndexBackfillService: {
+      runScheduledBackfill: vi.fn(),
+    },
+  }));
+
   return import('@shared/scheduler');
 }
 
@@ -105,6 +132,7 @@ describe('shared/scheduler', () => {
     vectorCleanupRunMock.mockReset();
     counterSyncAllMock.mockReset();
     structuredRagAlertCheckMock.mockReset();
+    processingRecoveryRecoverMock.mockReset();
   });
 
   it('should schedule cleanup and counter-sync tasks with UTC timezone and avoid double init', async () => {
@@ -112,17 +140,20 @@ describe('shared/scheduler', () => {
 
     scheduler.initializeScheduler();
 
-    expect(scheduleMock).toHaveBeenCalledTimes(2);
+    expect(scheduleMock).toHaveBeenCalledTimes(3);
     expect(scheduleMock).toHaveBeenCalledWith('0 3 * * *', expect.any(Function), {
       timezone: 'UTC',
     });
     expect(scheduleMock).toHaveBeenCalledWith('0 4 * * 0', expect.any(Function), {
       timezone: 'UTC',
     });
+    expect(scheduleMock).toHaveBeenCalledWith('*/10 * * * *', expect.any(Function), {
+      timezone: 'UTC',
+    });
 
     scheduler.initializeScheduler();
     expect(loggerWarnMock).toHaveBeenCalledWith('Scheduler already initialized');
-    expect(scheduleMock).toHaveBeenCalledTimes(2);
+    expect(scheduleMock).toHaveBeenCalledTimes(3);
   });
 
   it('should continue cleanup pipeline when one scheduled cleanup task fails', async () => {
@@ -167,6 +198,31 @@ describe('shared/scheduler', () => {
     expect(schedulerErrorMock).toHaveBeenCalledWith('counter-sync.failed', expect.any(Error));
   });
 
+  it('should report scheduler error when stale processing recovery throws', async () => {
+    const scheduler = await importScheduler({
+      cleanupEnabled: false,
+      counterSyncEnabled: false,
+      structuredRagAlertsEnabled: false,
+      processingRecoveryEnabled: true,
+    });
+
+    processingRecoveryRecoverMock.mockRejectedValueOnce(new Error('recovery failed'));
+
+    scheduler.initializeScheduler();
+
+    const recoveryTaskCall = scheduleMock.mock.calls.find((call) => call[0] === '*/10 * * * *');
+    const recoveryTask = recoveryTaskCall?.[1] as (() => Promise<void>) | undefined;
+    expect(recoveryTask).toBeTypeOf('function');
+
+    await recoveryTask!();
+
+    expect(processingRecoveryRecoverMock).toHaveBeenCalledTimes(1);
+    expect(schedulerErrorMock).toHaveBeenCalledWith(
+      'document-processing.recovery.failed',
+      expect.any(Error)
+    );
+  });
+
   it('should expose manual cleanup triggers', async () => {
     const scheduler = await importScheduler();
 
@@ -181,10 +237,12 @@ describe('shared/scheduler', () => {
     await scheduler.triggerLogCleanup();
     await scheduler.triggerTokenCleanup();
     await scheduler.triggerVectorCleanup();
+    await scheduler.triggerDocumentProcessingRecovery();
 
     expect(logCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(tokenCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(vectorCleanupRunMock).toHaveBeenCalledTimes(1);
+    expect(processingRecoveryRecoverMock).toHaveBeenCalledTimes(1);
   });
 
   it('should initialize without tasks when all scheduler flags are disabled', async () => {
@@ -192,6 +250,7 @@ describe('shared/scheduler', () => {
       cleanupEnabled: false,
       counterSyncEnabled: false,
       structuredRagAlertsEnabled: false,
+      processingRecoveryEnabled: false,
     });
 
     scheduler.initializeScheduler();
@@ -205,6 +264,7 @@ describe('shared/scheduler', () => {
       cleanupEnabled: false,
       counterSyncEnabled: false,
       structuredRagAlertsEnabled: true,
+      processingRecoveryEnabled: false,
     });
 
     structuredRagAlertCheckMock.mockResolvedValueOnce({

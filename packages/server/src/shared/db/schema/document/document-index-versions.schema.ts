@@ -8,6 +8,7 @@ import {
   timestamp,
   uniqueIndex,
   varchar,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
@@ -52,6 +53,11 @@ export const documentIndexVersions = mysqlTable(
     index('document_index_status_idx').on(table.documentId, table.status),
     index('document_index_built_at_idx').on(table.builtAt),
     index('document_index_activated_at_idx').on(table.activatedAt),
+    foreignKey({
+      columns: [table.documentId],
+      foreignColumns: [documents.id],
+      name: 'document_index_versions_document_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

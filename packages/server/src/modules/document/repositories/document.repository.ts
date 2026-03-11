@@ -1,4 +1,4 @@
-import { eq, and, isNull, isNotNull, desc, asc, like, sql, count } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, desc, asc, like, sql, count, lt } from 'drizzle-orm';
 import { db } from '@shared/db';
 import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
 import {
@@ -22,6 +22,14 @@ export interface DocumentBackfillCandidate {
   activeIndexVersionId: string | null;
   processingStatus: Document['processingStatus'];
   updatedAt: Date;
+}
+
+export interface StaleProcessingDocument {
+  id: string;
+  userId: string;
+  knowledgeBaseId: string;
+  title: string;
+  processingStartedAt: Date;
 }
 
 /**
@@ -135,6 +143,7 @@ export const documentRepository = {
         | 'activeIndexVersionId'
         | 'processingStatus'
         | 'processingError'
+        | 'processingStartedAt'
         | 'chunkCount'
         | 'updatedBy'
       >
@@ -142,7 +151,11 @@ export const documentRepository = {
     tx?: Transaction
   ): Promise<Document | undefined> {
     const ctx = getDbContext(tx);
-    await ctx.update(documents).set(data).where(eq(documents.id, id));
+    const updateData: Partial<Document> = { ...data };
+    if (data.processingStatus !== undefined && data.processingStartedAt === undefined) {
+      updateData.processingStartedAt = data.processingStatus === 'processing' ? new Date() : null;
+    }
+    await ctx.update(documents).set(updateData).where(eq(documents.id, id));
     return this.findById(id, tx);
   },
 
@@ -262,7 +275,7 @@ export const documentRepository = {
     error?: string | null,
     chunkCount?: number,
     tx?: Transaction
-  ): Promise<void> {
+  ): Promise<boolean> {
     const ctx = getDbContext(tx);
     const updateData: Partial<Document> = { processingStatus: status };
     if (error !== undefined) {
@@ -271,7 +284,59 @@ export const documentRepository = {
     if (chunkCount !== undefined) {
       updateData.chunkCount = chunkCount;
     }
-    await ctx.update(documents).set(updateData).where(eq(documents.id, id));
+    updateData.processingStartedAt = status === 'processing' ? new Date() : null;
+    const result = await ctx.update(documents).set(updateData).where(eq(documents.id, id));
+    return result[0].affectedRows > 0;
+  },
+
+  async listStaleProcessingDocuments(
+    staleBefore: Date,
+    limit: number
+  ): Promise<StaleProcessingDocument[]> {
+    const result = await db
+      .select({
+        id: documents.id,
+        userId: documents.userId,
+        knowledgeBaseId: documents.knowledgeBaseId,
+        title: documents.title,
+        processingStartedAt: documents.processingStartedAt,
+      })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.processingStatus, 'processing'),
+          isNull(documents.deletedAt),
+          isNotNull(documents.processingStartedAt),
+          lt(documents.processingStartedAt, staleBefore)
+        )
+      )
+      .orderBy(asc(documents.processingStartedAt), asc(documents.id))
+      .limit(limit);
+
+    return result.filter(
+      (row): row is StaleProcessingDocument => row.processingStartedAt instanceof Date
+    );
+  },
+
+  async resetStaleProcessingDocument(id: string, staleBefore: Date): Promise<boolean> {
+    const result = await db
+      .update(documents)
+      .set({
+        processingStatus: 'pending',
+        processingError: null,
+        processingStartedAt: null,
+      })
+      .where(
+        and(
+          eq(documents.id, id),
+          eq(documents.processingStatus, 'processing'),
+          isNull(documents.deletedAt),
+          isNotNull(documents.processingStartedAt),
+          lt(documents.processingStartedAt, staleBefore)
+        )
+      );
+
+    return result[0].affectedRows > 0;
   },
 
   /**
@@ -322,6 +387,7 @@ export const documentRepository = {
     documentType?: DocumentType;
     includeIndexed?: boolean;
     includeProcessing?: boolean;
+    excludeRunId?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ documents: DocumentBackfillCandidate[]; hasMore: boolean }> {
@@ -343,6 +409,15 @@ export const documentRepository = {
 
     if (!options?.includeProcessing) {
       conditions.push(sql`${documents.processingStatus} != 'processing'`);
+    }
+
+    if (options?.excludeRunId) {
+      conditions.push(sql`NOT EXISTS (
+        SELECT 1
+        FROM document_index_backfill_items items
+        WHERE items.run_id = ${options.excludeRunId}
+          AND items.document_id = ${documents.id}
+      )`);
     }
 
     const result = await db
@@ -367,5 +442,36 @@ export const documentRepository = {
       documents: result.slice(0, limit),
       hasMore: result.length > limit,
     };
+  },
+
+  async countBackfillCandidates(options?: {
+    knowledgeBaseId?: string;
+    documentType?: DocumentType;
+    includeIndexed?: boolean;
+    includeProcessing?: boolean;
+  }): Promise<number> {
+    const conditions = [isNull(documents.deletedAt)];
+
+    if (options?.knowledgeBaseId) {
+      conditions.push(eq(documents.knowledgeBaseId, options.knowledgeBaseId));
+    }
+
+    if (options?.documentType) {
+      conditions.push(eq(documents.documentType, options.documentType));
+    }
+
+    if (!options?.includeIndexed) {
+      conditions.push(isNull(documents.activeIndexVersionId));
+    }
+
+    if (!options?.includeProcessing) {
+      conditions.push(sql`${documents.processingStatus} != 'processing'`);
+    }
+
+    const result = await db
+      .select({ count: count() })
+      .from(documents)
+      .where(and(...conditions));
+    return result[0]?.count ?? 0;
   },
 };

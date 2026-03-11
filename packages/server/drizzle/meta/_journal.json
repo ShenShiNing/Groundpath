@@ -22,6 +22,20 @@
       "when": 1773147033312,
       "tag": "0002_nasty_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1773213499598,
+      "tag": "0003_massive_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1773227866341,
+      "tag": "0004_dry_hercules",
+      "breakpoints": true
     }
   ]
 }

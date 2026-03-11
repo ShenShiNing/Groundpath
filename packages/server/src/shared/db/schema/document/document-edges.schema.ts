@@ -5,10 +5,12 @@ import {
   timestamp,
   uniqueIndex,
   varchar,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
 import { documentIndexVersions } from './document-index-versions.schema';
+import { documentNodes } from './document-nodes.schema';
 
 export const documentEdges = mysqlTable(
   'document_edges',
@@ -38,6 +40,26 @@ export const documentEdges = mysqlTable(
     index('document_edge_from_idx').on(table.indexVersionId, table.fromNodeId),
     index('document_edge_to_idx').on(table.indexVersionId, table.toNodeId),
     index('document_edge_document_idx').on(table.documentId, table.indexVersionId),
+    foreignKey({
+      columns: [table.documentId],
+      foreignColumns: [documents.id],
+      name: 'document_edges_document_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.indexVersionId],
+      foreignColumns: [documentIndexVersions.id],
+      name: 'document_edges_index_version_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.fromNodeId],
+      foreignColumns: [documentNodes.id],
+      name: 'document_edges_from_node_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.toNodeId],
+      foreignColumns: [documentNodes.id],
+      name: 'document_edges_to_node_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

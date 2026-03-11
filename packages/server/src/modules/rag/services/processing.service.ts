@@ -3,7 +3,9 @@ import { createLogger } from '@shared/logger';
 import { structuredRagMetrics } from '@shared/observability';
 import { withTransaction } from '@shared/db/db.utils';
 import { db } from '@shared/db';
+import { Errors } from '@shared/errors';
 import { documents } from '@shared/db/schema/document/documents.schema';
+import type { NewDocumentChunk } from '@shared/db/schema/document/document-chunks.schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { documentConfig, featureFlags, vlmConfig } from '@config/env';
 import {
@@ -32,6 +34,11 @@ const logger = createLogger('processing.service');
 // In-memory lock to prevent concurrent processing of the same document
 const processingLocks = new Map<string, boolean>();
 
+export interface DocumentProcessingResult {
+  outcome: 'completed' | 'skipped' | 'failed';
+  reason?: string;
+}
+
 export const processingService = {
   /**
    * Attempt to acquire processing lock for a document
@@ -51,11 +58,16 @@ export const processingService = {
     processingLocks.set(documentId, true);
 
     try {
+      const processingStartedAt = new Date();
       // Atomic database lock: only update status if not already processing
       // This handles distributed/multi-process scenarios
       const result = await db
         .update(documents)
-        .set({ processingStatus: 'processing', processingError: null })
+        .set({
+          processingStatus: 'processing',
+          processingError: null,
+          processingStartedAt,
+        })
         .where(
           and(
             eq(documents.id, documentId),
@@ -113,7 +125,7 @@ export const processingService = {
     documentId: string,
     userId: string,
     request?: DocumentProcessingEnqueueOptions
-  ): Promise<void> {
+  ): Promise<DocumentProcessingResult> {
     const processStartedAt = Date.now();
     logger.info(
       {
@@ -130,7 +142,7 @@ export const processingService = {
     const lockAcquired = await this.acquireProcessingLock(documentId);
     if (!lockAcquired) {
       logger.info({ documentId }, 'Skipping - document already being processed');
-      return;
+      return { outcome: 'skipped', reason: 'lock_not_acquired' };
     }
 
     // Track old chunk IDs for cleanup
@@ -151,7 +163,7 @@ export const processingService = {
       // Get the document
       const document = await documentRepository.findById(documentId);
       if (!document) {
-        throw new Error(`Document not found: ${documentId}`);
+        throw Errors.notFound('Document');
       }
 
       if (
@@ -168,7 +180,7 @@ export const processingService = {
           'Skipping stale document processing job before processing'
         );
         await this.resetToPending(documentId);
-        return;
+        return { outcome: 'skipped', reason: 'stale_target_version' };
       }
 
       // Save old chunk count for delta calculation
@@ -189,6 +201,11 @@ export const processingService = {
 
       // Get old chunk IDs before processing (for cleanup later)
       oldChunkIds = await documentChunkRepository.getChunkIdsByDocumentId(documentId);
+      const existingCurrentVersionChunkCount =
+        await documentChunkRepository.countByDocumentAndVersion(
+          documentId,
+          document.currentVersion
+        );
 
       // Get the current version's text content
       const version = await documentVersionRepository.findByDocumentAndVersion(
@@ -218,7 +235,7 @@ export const processingService = {
         });
         // Clean up any existing vectors (idempotent)
         await this.safeDeleteVectors(collectionName, documentId);
-        return;
+        return { outcome: 'completed', reason: 'no_text_content' };
       }
 
       const routeDecision = documentParseRouterService.decideRoute({
@@ -411,22 +428,14 @@ export const processingService = {
           success: true,
           reason: routeReason,
         });
-        return;
+        return { outcome: 'completed', reason: 'no_chunks' };
       }
 
       // Generate embeddings using the KB's provider
       // This is done BEFORE any database modifications
       const embeddingProvider = getEmbeddingProviderByType(provider as EmbeddingProviderType);
       const batchSize = documentConfig.vectorBatchSize;
-      const allChunkRecords: Array<{
-        id: string;
-        documentId: string;
-        version: number;
-        chunkIndex: number;
-        content: string;
-        metadata: { startOffset: number; endOffset: number };
-        createdBy: string;
-      }> = [];
+      const allChunkRecords: NewDocumentChunk[] = [];
       const allVectorPoints: VectorPoint[] = [];
 
       for (let i = 0; i < chunks.length; i += batchSize) {
@@ -446,8 +455,10 @@ export const processingService = {
             version: document.currentVersion,
             chunkIndex: chunk.chunkIndex,
             content: chunk.content,
+            tokenCount: null,
             metadata: chunk.metadata,
             createdBy: userId,
+            createdAt: new Date(),
           });
 
           allVectorPoints.push({
@@ -512,18 +523,28 @@ export const processingService = {
         if (indexBuildId) {
           await documentIndexService.supersedeBuild(indexBuildId);
         }
-        return;
+        return { outcome: 'skipped', reason: 'stale_target_version' };
       }
 
       // Phase 2: MySQL transaction (atomic)
       // Insert new chunks FIRST, then delete old chunks
       const chunkDelta = chunks.length - oldChunkCount;
       await withTransaction(async (tx) => {
-        // Insert new chunks first
+        const shouldReplaceCurrentVersionChunks =
+          existingCurrentVersionChunkCount > 0 &&
+          request?.targetDocumentVersion === document.currentVersion &&
+          oldChunkIds.length > 0;
+
+        if (shouldReplaceCurrentVersionChunks) {
+          // Same-version rebuilds cannot insert-before-delete due to unique(doc,version,chunkIndex).
+          await documentChunkRepository.deleteByDocumentId(documentId, tx);
+        }
+
+        // Insert new chunks
         await documentChunkRepository.createMany(allChunkRecords, tx);
 
         // Delete old chunks (by their IDs, not by documentId, to avoid deleting new ones)
-        if (oldChunkIds.length > 0) {
+        if (!shouldReplaceCurrentVersionChunks && oldChunkIds.length > 0) {
           await documentChunkRepository.deleteByIds(oldChunkIds, tx);
         }
 
@@ -615,6 +636,7 @@ export const processingService = {
         },
         'Document processing completed'
       );
+      return { outcome: 'completed' };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       logger.error({ documentId, error: message }, 'Document processing failed');
@@ -650,6 +672,7 @@ export const processingService = {
           error: message,
         });
       }
+      return { outcome: 'failed', reason: message };
     } finally {
       // Always release the lock
       this.releaseProcessingLock(documentId);

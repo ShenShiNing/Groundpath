@@ -7,6 +7,7 @@ import {
   text,
   bigint,
   int,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
@@ -53,6 +54,7 @@ export const documents = mysqlTable(
       .notNull()
       .default('pending'),
     processingError: text('processing_error'),
+    processingStartedAt: timestamp('processing_started_at'),
     chunkCount: int('chunk_count').notNull().default(0),
 
     // Audit fields
@@ -70,6 +72,16 @@ export const documents = mysqlTable(
     index('active_index_version_id_idx').on(table.activeIndexVersionId),
     index('deleted_at_idx').on(table.deletedAt),
     index('created_at_idx').on(table.createdAt),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: 'documents_user_id_fk',
+    }).onDelete('restrict'),
+    foreignKey({
+      columns: [table.knowledgeBaseId],
+      foreignColumns: [knowledgeBases.id],
+      name: 'documents_knowledge_base_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

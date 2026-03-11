@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { queueAddMock, processingServiceMock } = vi.hoisted(() => ({
   queueAddMock: vi.fn(async () => ({ id: 'job-1' })),
   processingServiceMock: {
-    processDocument: vi.fn(async () => undefined),
+    processDocument: vi.fn(async () => ({ outcome: 'completed' })),
   },
 }));
 
@@ -19,6 +19,11 @@ vi.mock('@shared/config/env', () => ({
   redisConfig: {
     url: 'redis://localhost:6379',
     prefix: 'test',
+  },
+  databaseConfig: {
+    url: 'mysql://user:pass@localhost:3306/test',
+    connectionLimit: 1,
+    queueLimit: 0,
   },
 }));
 
@@ -82,6 +87,7 @@ describe('document-processing.queue', () => {
           targetDocumentVersion: 3,
           targetIndexVersion: undefined,
           reason: 'edit',
+          backfillRunId: undefined,
         },
         { jobId: 'doc-doc-1-v3' }
       );
@@ -98,6 +104,18 @@ describe('document-processing.queue', () => {
       expect(callArgs).toBeDefined();
       const jobOptions = (callArgs as unknown[] | undefined)?.[2] as { jobId: string } | undefined;
       expect(jobOptions).toEqual({ jobId: 'doc-doc-abc-v7-idx-idx-2' });
+    });
+
+    it('should include backfillRunId in jobId when provided', async () => {
+      await enqueueDocumentProcessing('doc-xyz', 'user-3', {
+        targetDocumentVersion: 1,
+        reason: 'backfill',
+        backfillRunId: 'run-123',
+      });
+
+      const callArgs = queueAddMock.mock.calls.at(0);
+      const jobOptions = (callArgs as unknown[] | undefined)?.[2] as { jobId: string } | undefined;
+      expect(jobOptions).toEqual({ jobId: 'doc-doc-xyz-v1-bf-run-123' });
     });
   });
 

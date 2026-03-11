@@ -1,11 +1,19 @@
 import cron from 'node-cron';
-import { loggingConfig, featureFlags, structuredRagObservabilityConfig } from '@shared/config/env';
+import {
+  backfillScheduleConfig,
+  documentConfig,
+  loggingConfig,
+  featureFlags,
+  structuredRagObservabilityConfig,
+} from '@shared/config/env';
 import { createLogger } from '@shared/logger';
 import { systemLogger } from '@shared/logger/system-logger';
 import { logCleanupService, structuredRagAlertService } from '@modules/logs';
+import { documentIndexBackfillService } from '@modules/document-index';
 import { tokenCleanupService } from '@modules/auth';
 import { counterSyncService } from '@modules/knowledge-base';
 import { vectorCleanupService } from '@modules/vector';
+import { processingRecoveryService } from '@modules/rag';
 
 const logger = createLogger('scheduler');
 
@@ -108,6 +116,62 @@ export function initializeScheduler(): void {
     );
   }
 
+  if (backfillScheduleConfig.enabled) {
+    cron.schedule(
+      backfillScheduleConfig.cron,
+      async () => {
+        logger.info('Running document index backfill schedule...');
+
+        try {
+          const result = await documentIndexBackfillService.runScheduledBackfill();
+          systemLogger.schedulerRun(
+            'document-index.backfill',
+            'Document index backfill schedule completed',
+            undefined,
+            result
+          );
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          logger.error({ error }, 'Document index backfill schedule failed');
+          systemLogger.schedulerError('document-index.backfill.failed', error);
+        }
+      },
+      {
+        timezone: 'UTC',
+      }
+    );
+    scheduledTasks.push(`document-index-backfill (${backfillScheduleConfig.cron} UTC)`);
+  }
+
+  if (documentConfig.processingRecoveryEnabled) {
+    cron.schedule(
+      documentConfig.processingRecoveryCron,
+      async () => {
+        logger.info('Running stale document processing recovery...');
+
+        try {
+          const result = await processingRecoveryService.recoverStaleProcessing();
+          systemLogger.schedulerRun(
+            'document-processing.recovery',
+            'Stale document processing recovery completed',
+            undefined,
+            result
+          );
+        } catch (err) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          logger.error({ error }, 'Stale document processing recovery failed');
+          systemLogger.schedulerError('document-processing.recovery.failed', error);
+        }
+      },
+      {
+        timezone: 'UTC',
+      }
+    );
+    scheduledTasks.push(
+      `document-processing-recovery (${documentConfig.processingRecoveryCron} UTC, timeout ${documentConfig.processingTimeoutMinutes} min)`
+    );
+  }
+
   isInitialized = true;
 
   if (scheduledTasks.length > 0) {
@@ -139,4 +203,12 @@ export async function triggerTokenCleanup() {
 export async function triggerVectorCleanup() {
   logger.info('Manually triggering vector cleanup...');
   return vectorCleanupService.runCleanup();
+}
+
+/**
+ * Manually trigger stale document processing recovery (for testing/admin purposes)
+ */
+export async function triggerDocumentProcessingRecovery() {
+  logger.info('Manually triggering stale document processing recovery...');
+  return processingRecoveryService.recoverStaleProcessing();
 }

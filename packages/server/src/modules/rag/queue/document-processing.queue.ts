@@ -7,6 +7,7 @@ import type {
   DocumentProcessingEnqueueOptions,
   DocumentProcessingJobData,
 } from './document-processing.types';
+import { documentIndexBackfillProgressService } from '@modules/document-index/services/document-index-backfill-progress.service';
 
 const logger = createLogger('document-processing.queue');
 
@@ -36,32 +37,36 @@ export const documentProcessingQueue = new Queue<DocumentProcessingJobData>(QUEU
 /**
  * Enqueue a document for processing.
  *
- * Uses documentId + targetDocumentVersion (and optional targetIndexVersion)
+ * Uses documentId + targetDocumentVersion (and optional targetIndexVersion/backfillRunId)
  * as the job ID so different document versions can queue independently while
- * duplicate retries for the same target are still deduplicated.
+ * duplicate retries for the same target are still deduplicated. Backfill runs
+ * include runId to avoid being deduped by prior upload/edit jobs.
  */
 export async function enqueueDocumentProcessing(
   documentId: string,
   userId: string,
   options: DocumentProcessingEnqueueOptions
-): Promise<void> {
-  const { targetDocumentVersion, targetIndexVersion, reason } = options;
+): Promise<string> {
+  const { targetDocumentVersion, targetIndexVersion, reason, backfillRunId } = options;
   const jobData: DocumentProcessingJobData = {
     documentId,
     userId,
     targetDocumentVersion,
     targetIndexVersion,
     reason,
+    backfillRunId,
   };
-  const jobId = targetIndexVersion
+  const baseJobId = targetIndexVersion
     ? `doc-${documentId}-v${targetDocumentVersion}-idx-${targetIndexVersion}`
     : `doc-${documentId}-v${targetDocumentVersion}`;
+  const jobId = backfillRunId ? `${baseJobId}-bf-${backfillRunId}` : baseJobId;
 
   await documentProcessingQueue.add('process', jobData, { jobId });
   logger.info(
     { documentId, userId, targetDocumentVersion, targetIndexVersion, reason, jobId },
     'Document processing job enqueued'
   );
+  return jobId;
 }
 
 // ==================== Worker ====================
@@ -81,7 +86,14 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
   worker = new Worker<DocumentProcessingJobData>(
     QUEUE_NAME,
     async (job: Job<DocumentProcessingJobData>) => {
-      const { documentId, userId, targetDocumentVersion, targetIndexVersion, reason } = job.data;
+      const {
+        documentId,
+        userId,
+        targetDocumentVersion,
+        targetIndexVersion,
+        reason,
+        backfillRunId,
+      } = job.data;
       const attempt = job.attemptsMade + 1;
 
       logger.info(
@@ -91,20 +103,62 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
           targetDocumentVersion,
           targetIndexVersion,
           reason,
+          backfillRunId,
           jobId: job.id,
           attempt,
         },
         'Processing document job'
       );
 
-      await processingService.processDocument(documentId, userId, {
+      if (backfillRunId) {
+        try {
+          await documentIndexBackfillProgressService.markProcessing({
+            runId: backfillRunId,
+            documentId,
+            jobId: job.id?.toString(),
+          });
+        } catch (error) {
+          logger.warn(
+            { documentId, backfillRunId, jobId: job.id, error },
+            'Failed to mark backfill item as processing'
+          );
+        }
+      }
+
+      const result = await processingService.processDocument(documentId, userId, {
         targetDocumentVersion,
         targetIndexVersion,
         reason,
+        backfillRunId,
       });
 
+      if (backfillRunId) {
+        try {
+          await documentIndexBackfillProgressService.recordOutcome({
+            runId: backfillRunId,
+            documentId,
+            outcome: result.outcome === 'failed' ? 'failed' : result.outcome,
+            error: result.reason,
+          });
+        } catch (error) {
+          logger.warn(
+            { documentId, backfillRunId, jobId: job.id, error },
+            'Failed to record backfill item outcome'
+          );
+        }
+      }
+
       logger.info(
-        { documentId, userId, targetDocumentVersion, targetIndexVersion, reason, jobId: job.id },
+        {
+          documentId,
+          userId,
+          targetDocumentVersion,
+          targetIndexVersion,
+          reason,
+          backfillRunId,
+          jobId: job.id,
+          outcome: result.outcome,
+        },
         'Document processing job completed'
       );
     },

@@ -7,6 +7,7 @@ import {
   timestamp,
   uniqueIndex,
   varchar,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
@@ -55,6 +56,16 @@ export const documentNodes = mysqlTable(
     index('document_node_document_idx').on(table.documentId, table.indexVersionId),
     index('document_node_parent_idx').on(table.indexVersionId, table.parentId),
     index('document_node_type_idx').on(table.indexVersionId, table.nodeType),
+    foreignKey({
+      columns: [table.documentId],
+      foreignColumns: [documents.id],
+      name: 'document_nodes_document_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.indexVersionId],
+      foreignColumns: [documentIndexVersions.id],
+      name: 'document_nodes_index_version_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

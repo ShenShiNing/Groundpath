@@ -8,6 +8,7 @@ import {
   longtext,
   bigint,
   int,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
@@ -52,6 +53,11 @@ export const documentVersions = mysqlTable(
     uniqueIndex('document_version_idx').on(table.documentId, table.version),
     index('document_id_idx').on(table.documentId),
     index('created_at_idx').on(table.createdAt),
+    foreignKey({
+      columns: [table.documentId],
+      foreignColumns: [documents.id],
+      name: 'document_versions_document_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

@@ -7,6 +7,7 @@ import {
   text,
   int,
   json,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
@@ -41,6 +42,11 @@ export const documentChunks = mysqlTable(
     index('document_id_idx').on(table.documentId),
     index('document_version_idx').on(table.documentId, table.version),
     uniqueIndex('document_chunk_idx').on(table.documentId, table.version, table.chunkIndex),
+    foreignKey({
+      columns: [table.documentId],
+      foreignColumns: [documents.id],
+      name: 'document_chunks_document_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 
