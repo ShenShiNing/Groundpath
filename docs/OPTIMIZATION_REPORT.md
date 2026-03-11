@@ -50,7 +50,8 @@
   5. `document.repository.ts` 已拆为薄门面 + `document.repository.core.ts`、`document.repository.processing.ts`、`document.repository.queries.ts`、`document.repository.backfill.ts`、`document.repository.types.ts`。
   6. `scripts/db-consistency-check.ts` 已拆为 CLI entry + `db-consistency-check/checks.ts`、`report.ts`、`runner.ts`、`types.ts`。
   7. 已补充评估 `processing.executor.ts` / `processing.stages.ts`，当前不建议继续物理拆分，仅移除未使用的 `cleanupOldVectors` helper 作为最小清理。
-  8. 上述拆分与清理完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试与 `db-consistency-check` runner 定向测试均已通过。
+  8. `StructuredRagOverview.tsx` 已拆为主容器 + `structured-rag/*` 子组件，主文件降至 `110` 行。
+  9. 上述拆分与清理完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试、`db-consistency-check` runner 定向测试与 `@knowledge-agent/client build` 均已通过。
 - 本轮文档处理架构升级后，以下事项也已完成：
   1. `document_chunks` 与 vector payload 已绑定 `indexVersionId`，chunk/vector/graph 全部切换到 immutable build 产物模型。
   2. 查询链路已统一改为只消费 `documents.activeIndexVersionId` 指向的 active build。
@@ -139,14 +140,16 @@
 
 | 文件                                                | 行数 | 状态   |
 | --------------------------------------------------- | ---- | ------ |
-| `pages/knowledge-bases/KnowledgeBaseDetailPage.tsx` | 540  | 仍成立 |
-| `components/settings/ai/AISettingsForm.tsx`         | 520  | 仍成立 |
-| `pages/ChatPage.tsx`                                | 496  | 仍成立 |
-| `components/auth/ForgotPasswordForm.tsx`            | 489  | 仍成立 |
-| `components/dashboard/StructuredRagOverview.tsx`    | 469  | 仍成立 |
-| `pages/documents/DocumentDetailPage.tsx`            | 419  | 仍成立 |
+| `pages/knowledge-bases/KnowledgeBaseDetailPage.tsx` | 505  | 仍成立 |
+| `components/settings/ai/AISettingsForm.tsx`         | 482  | 仍成立 |
+| `pages/ChatPage.tsx`                                | 452  | 仍成立 |
+| `components/auth/ForgotPasswordForm.tsx`            | 451  | 仍成立 |
 
-> 注：原报告中部分前端文件路径已变化，但“大组件需要拆分”的结论没有变化。
+补充：
+
+- `components/dashboard/StructuredRagOverview.tsx` 已拆分完成，当前主文件为 `110` 行，不应继续列为超大组件。
+- `pages/documents/DocumentDetailPage.tsx` 当前为 `379` 行，已不再属于首批 `400+` 行治理名单。
+- 原报告中部分前端文件路径已变化，但“仍有少量前端大组件需要继续治理”的结论没有变化。
 
 ### 4.2 前端国际化仍未补齐
 
@@ -604,6 +607,30 @@
 验证：
 
 - `pnpm test -- packages/server/tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`：`2` 个测试全部通过
+
+### 5.23 `StructuredRagOverview` 已完成组件级拆分
+
+本次已完成以下前端结构治理：
+
+- `StructuredRagOverview.tsx` 已收敛为主容器，负责数据获取、筛选状态和导出动作编排。
+- 已新增 `components/dashboard/structured-rag/` 子目录，拆出：
+  - `StructuredRagHeader.tsx`
+  - `StructuredRagAlerts.tsx`
+  - `StructuredRagStats.tsx`
+  - `StructuredRagInsightsGrid.tsx`
+  - `StructuredRagBreakdownTable.tsx`
+  - `utils.ts`
+- 主文件当前降至 `110` 行，局部展示逻辑按“头部 / 告警 / 指标 / 详情 / 表格”边界分离。
+- 本次拆分未改动交互语义，仅降低页面级组件复杂度。
+
+修订结论：
+
+- `components/dashboard/StructuredRagOverview.tsx` 不应继续列为剩余 400+ 行前端大组件。
+- 当前更值得继续处理的是 `KnowledgeBaseDetailPage.tsx`、`AISettingsForm.tsx`、`ChatPage.tsx` 与 `ForgotPasswordForm.tsx`。
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
 
 ---
 
