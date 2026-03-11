@@ -7,6 +7,7 @@ export {
   registerRateLimiter,
   refreshRateLimiter,
   generalRateLimiter,
+  aiRateLimiter,
   emailSendRateLimiter,
   emailVerifyRateLimiter,
   passwordResetRateLimiter,

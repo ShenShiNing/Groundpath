@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { conversationApi } from '@/api';
 import { queryKeys } from '@/lib/query';
 import type {
-  ConversationListItem,
+  ConversationListResponse,
   ConversationSearchResponse,
 } from '@knowledge-agent/shared/types';
 import type { UpdateConversationInput } from '@knowledge-agent/shared/schemas';
@@ -16,7 +16,7 @@ import type { UpdateConversationInput } from '@knowledge-agent/shared/schemas';
  */
 export function useConversations(knowledgeBaseId: string | undefined) {
   const scopeKey = knowledgeBaseId ?? '__global__';
-  return useQuery<ConversationListItem[]>({
+  return useQuery<ConversationListResponse>({
     queryKey: queryKeys.knowledgeBases.conversations(scopeKey),
     queryFn: () =>
       conversationApi.list(scopeKey === '__global__' ? undefined : { knowledgeBaseId: scopeKey }),

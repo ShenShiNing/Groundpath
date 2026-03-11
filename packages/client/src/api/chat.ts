@@ -2,6 +2,7 @@ import type {
   ApiResponse,
   ConversationInfo,
   ConversationListItem,
+  ConversationListResponse,
   ConversationWithMessages,
   ConversationSearchResponse,
   MessageInfo,
@@ -25,7 +26,14 @@ import {
 } from '@/lib/http';
 
 // Re-export types for convenience
-export type { ConversationInfo, ConversationListItem, MessageInfo, Citation, SSEEvent };
+export type {
+  ConversationInfo,
+  ConversationListItem,
+  ConversationListResponse,
+  MessageInfo,
+  Citation,
+  SSEEvent,
+};
 
 // ============================================================================
 // Conversation API
@@ -50,8 +58,8 @@ export const conversationApi = {
     knowledgeBaseId?: string;
     limit?: number;
     offset?: number;
-  }): Promise<ConversationListItem[]> {
-    const response = await apiClient.get<ApiResponse<ConversationListItem[]>>(
+  }): Promise<ConversationListResponse> {
+    const response = await apiClient.get<ApiResponse<ConversationListResponse>>(
       '/api/chat/conversations',
       { params }
     );
@@ -216,7 +224,7 @@ export function sendMessageWithSSE(
 /** @deprecated Use conversationApi and messageApi instead */
 export const chatApi = {
   sendMessage() {
-    throw new Error('Use sendMessageWithSSE for streaming responses');
+    throw new TypeError('Use sendMessageWithSSE for streaming responses');
   },
 
   async getConversation(conversationId: string) {
@@ -224,7 +232,7 @@ export const chatApi = {
   },
 
   async listConversations(kbId: string) {
-    return conversationApi.list({ knowledgeBaseId: kbId });
+    return (await conversationApi.list({ knowledgeBaseId: kbId })).items;
   },
 
   async deleteConversation(_kbId: string, conversationId: string) {

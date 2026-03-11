@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '@shared/middleware';
+import { authenticate, aiRateLimiter } from '@shared/middleware';
 import { conversationController } from './controllers/conversation.controller';
 import { messageController } from './controllers/message.controller';
 
@@ -17,7 +17,7 @@ router.patch('/conversations/:id', conversationController.update);
 router.delete('/conversations/:id', conversationController.delete);
 
 // Message endpoints
-router.post('/conversations/:id/messages', messageController.sendMessage);
+router.post('/conversations/:id/messages', aiRateLimiter, messageController.sendMessage);
 router.get('/conversations/:id/messages', messageController.listMessages);
 
 export default router;

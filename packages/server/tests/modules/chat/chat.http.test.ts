@@ -4,79 +4,86 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
 
-const { authenticateMock, conversationServiceMock, messageServiceMock, chatServiceMock } =
-  vi.hoisted(() => {
-    const authenticate: RequestHandler = (req, res, next) => {
-      const authHeader = req.headers.authorization;
-      const isAuthorized =
-        (typeof authHeader === 'string' &&
-          authHeader.replace(/^Bearer\s+/i, '') === 'valid-access') ||
-        (Array.isArray(authHeader) &&
-          authHeader.some((value) => value.replace(/^Bearer\s+/i, '') === 'valid-access'));
+const {
+  authenticateMock,
+  aiRateLimiterMock,
+  conversationServiceMock,
+  messageServiceMock,
+  chatServiceMock,
+} = vi.hoisted(() => {
+  const authenticate: RequestHandler = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const isAuthorized =
+      (typeof authHeader === 'string' &&
+        authHeader.replace(/^Bearer\s+/i, '') === 'valid-access') ||
+      (Array.isArray(authHeader) &&
+        authHeader.some((value) => value.replace(/^Bearer\s+/i, '') === 'valid-access'));
 
-      if (isAuthorized) {
-        req.user = {
-          sub: 'user-1',
-          sid: 'sid-1',
-          email: 'user-1@example.com',
-          username: 'user1',
-          status: 'active',
-          emailVerified: true,
-        };
-        next();
-        return;
-      }
+    if (isAuthorized) {
+      req.user = {
+        sub: 'user-1',
+        sid: 'sid-1',
+        email: 'user-1@example.com',
+        username: 'user1',
+        status: 'active',
+        emailVerified: true,
+      };
+      next();
+      return;
+    }
 
-      res.status(401).json({
-        success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Missing or invalid access token' },
-      });
-    };
+    res.status(401).json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Missing or invalid access token' },
+    });
+  };
 
-    return {
-      authenticateMock: vi.fn(authenticate),
-      conversationServiceMock: {
-        create: vi.fn(async (_userId: string, payload: Record<string, unknown>) => ({
-          id: 'conv-1',
-          title: payload.title ?? 'new chat',
-          knowledgeBaseId: payload.knowledgeBaseId ?? null,
-        })),
-        list: vi.fn(async () => ({
-          items: [{ id: 'conv-1', title: 'new chat' }],
-          pagination: { limit: 20, offset: 0, total: 1 },
-        })),
-        search: vi.fn(async () => ({
-          items: [{ id: 'conv-1', title: 'match' }],
-          pagination: { limit: 20, offset: 0, total: 1 },
-        })),
-        getById: vi.fn(async () => ({
-          id: 'conv-1',
-          title: 'chat title',
-          knowledgeBaseId: null,
-        })),
-        updateTitle: vi.fn(async (_userId: string, id: string, title: string) => ({ id, title })),
-        delete: vi.fn(async () => undefined),
-        validateOwnership: vi.fn(async () => undefined),
-      },
-      messageServiceMock: {
-        getByConversation: vi.fn(async () => ({
-          items: [{ id: 'msg-1', role: 'user', content: 'hello' }],
-          pagination: { limit: 50, offset: 0, total: 1 },
-        })),
-      },
-      chatServiceMock: {
-        sendMessageWithSSE: vi.fn(async (res: express.Response) => {
-          res.status(200).json({
-            success: true,
-            data: { done: true, route: 'send-message' },
-          });
-        }),
-      },
-    };
-  });
+  return {
+    authenticateMock: vi.fn(authenticate),
+    aiRateLimiterMock: vi.fn((_req, _res, next) => next()),
+    conversationServiceMock: {
+      create: vi.fn(async (_userId: string, payload: Record<string, unknown>) => ({
+        id: 'conv-1',
+        title: payload.title ?? 'new chat',
+        knowledgeBaseId: payload.knowledgeBaseId ?? null,
+      })),
+      list: vi.fn(async () => ({
+        items: [{ id: 'conv-1', title: 'new chat' }],
+        pagination: { limit: 20, offset: 0, total: 1, hasMore: false },
+      })),
+      search: vi.fn(async () => ({
+        items: [{ id: 'conv-1', title: 'match' }],
+        pagination: { limit: 20, offset: 0, total: 1, hasMore: false },
+      })),
+      getById: vi.fn(async () => ({
+        id: 'conv-1',
+        title: 'chat title',
+        knowledgeBaseId: null,
+      })),
+      updateTitle: vi.fn(async (_userId: string, id: string, title: string) => ({ id, title })),
+      delete: vi.fn(async () => undefined),
+      validateOwnership: vi.fn(async () => undefined),
+    },
+    messageServiceMock: {
+      getByConversation: vi.fn(async () => ({
+        items: [{ id: 'msg-1', role: 'user', content: 'hello' }],
+        pagination: { limit: 50, offset: 0, total: 1 },
+      })),
+    },
+    chatServiceMock: {
+      sendMessageWithSSE: vi.fn(async (res: express.Response) => {
+        res.status(200).json({
+          success: true,
+          data: { done: true, route: 'send-message' },
+        });
+      }),
+    },
+  };
+});
 
 vi.mock('@shared/middleware', () => ({
   authenticate: authenticateMock,
+  aiRateLimiter: aiRateLimiterMock,
 }));
 
 vi.mock('@modules/chat/services/conversation.service', () => ({

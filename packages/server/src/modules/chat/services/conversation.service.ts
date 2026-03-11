@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type {
   ConversationInfo,
   ConversationListItem,
+  ConversationListResponse,
   ConversationSearchResponse,
 } from '@knowledge-agent/shared/types';
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
@@ -58,16 +59,36 @@ export const conversationService = {
   async list(
     userId: string,
     options?: { knowledgeBaseId?: string; limit?: number; offset?: number }
-  ): Promise<ConversationListItem[]> {
-    const conversations = await conversationRepository.listByUser(userId, options);
+  ): Promise<ConversationListResponse> {
+    const limit = options?.limit ?? 20;
+    const offset = options?.offset ?? 0;
 
-    if (conversations.length === 0) return [];
+    const [conversations, total] = await Promise.all([
+      conversationRepository.listByUser(userId, {
+        knowledgeBaseId: options?.knowledgeBaseId,
+        limit,
+        offset,
+      }),
+      conversationRepository.countByUser(userId, options?.knowledgeBaseId),
+    ]);
+
+    if (conversations.length === 0) {
+      return {
+        items: [],
+        pagination: {
+          limit,
+          offset,
+          total,
+          hasMore: false,
+        },
+      };
+    }
 
     // Batch fetch message stats to avoid N+1 queries
     const conversationIds = conversations.map((c) => c.id);
     const statsMap = await messageRepository.getStatsForConversations(conversationIds);
 
-    return conversations.map((conv) => {
+    const items: ConversationListItem[] = conversations.map((conv) => {
       const stats = statsMap.get(conv.id) ?? { count: 0, lastMessageAt: null };
       return {
         id: conv.id,
@@ -78,6 +99,16 @@ export const conversationService = {
         createdAt: conv.createdAt,
       };
     });
+
+    return {
+      items,
+      pagination: {
+        limit,
+        offset,
+        total,
+        hasMore: offset + items.length < total,
+      },
+    };
   },
 
   /**

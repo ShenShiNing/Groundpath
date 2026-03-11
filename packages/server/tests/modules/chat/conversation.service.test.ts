@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
     listByUser: vi.fn(),
+    countByUser: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
   },
@@ -119,6 +120,7 @@ describe('conversationService', () => {
         updatedAt,
       },
     ]);
+    mocks.conversationRepository.countByUser.mockResolvedValue(2);
     mocks.messageRepository.getStatsForConversations.mockResolvedValue(
       new Map([
         ['conv-1', { count: 5, lastMessageAt }],
@@ -132,36 +134,55 @@ describe('conversationService', () => {
       limit: 20,
       offset: 0,
     });
+    expect(mocks.conversationRepository.countByUser).toHaveBeenCalledWith('user-1', undefined);
     expect(mocks.messageRepository.getStatsForConversations).toHaveBeenCalledWith([
       'conv-1',
       'conv-2',
     ]);
-    expect(result).toEqual([
-      {
-        id: 'conv-1',
-        title: 'First',
-        knowledgeBaseId: null,
-        messageCount: 5,
-        lastMessageAt,
-        createdAt,
+    expect(result).toEqual({
+      items: [
+        {
+          id: 'conv-1',
+          title: 'First',
+          knowledgeBaseId: null,
+          messageCount: 5,
+          lastMessageAt,
+          createdAt,
+        },
+        {
+          id: 'conv-2',
+          title: 'Second',
+          knowledgeBaseId: 'kb-1',
+          messageCount: 0,
+          lastMessageAt: null,
+          createdAt,
+        },
+      ],
+      pagination: {
+        limit: 20,
+        offset: 0,
+        total: 2,
+        hasMore: false,
       },
-      {
-        id: 'conv-2',
-        title: 'Second',
-        knowledgeBaseId: 'kb-1',
-        messageCount: 0,
-        lastMessageAt: null,
-        createdAt,
-      },
-    ]);
+    });
   });
 
   it('should return empty list without querying stats when no conversation', async () => {
     mocks.conversationRepository.listByUser.mockResolvedValue([]);
+    mocks.conversationRepository.countByUser.mockResolvedValue(0);
 
     const result = await conversationService.list('user-1');
 
-    expect(result).toEqual([]);
+    expect(result).toEqual({
+      items: [],
+      pagination: {
+        limit: 20,
+        offset: 0,
+        total: 0,
+        hasMore: false,
+      },
+    });
+    expect(mocks.conversationRepository.countByUser).toHaveBeenCalledWith('user-1', undefined);
     expect(mocks.messageRepository.getStatsForConversations).not.toHaveBeenCalled();
   });
 

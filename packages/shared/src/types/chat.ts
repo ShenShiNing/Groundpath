@@ -112,14 +112,21 @@ export interface ConversationSearchItem {
   score: number | null;
 }
 
+export interface OffsetPaginationMeta {
+  limit: number;
+  offset: number;
+  total: number;
+  hasMore: boolean;
+}
+
+export interface ConversationListResponse {
+  items: ConversationListItem[];
+  pagination: OffsetPaginationMeta;
+}
+
 export interface ConversationSearchResponse {
   items: ConversationSearchItem[];
-  pagination: {
-    limit: number;
-    offset: number;
-    total: number;
-    hasMore: boolean;
-  };
+  pagination: OffsetPaginationMeta;
 }
 
 // Create conversation request

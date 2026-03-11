@@ -4,6 +4,7 @@ const {
   mockRouter,
   RouterMock,
   authenticateMock,
+  aiRateLimiterMock,
   conversationControllerMock,
   messageControllerMock,
 } = vi.hoisted(() => {
@@ -19,6 +20,7 @@ const {
     mockRouter: hoistedRouter,
     RouterMock: vi.fn(() => hoistedRouter),
     authenticateMock: vi.fn(),
+    aiRateLimiterMock: vi.fn(),
     conversationControllerMock: {
       create: vi.fn(),
       list: vi.fn(),
@@ -40,6 +42,7 @@ vi.mock('express', () => ({
 
 vi.mock('@shared/middleware', () => ({
   authenticate: authenticateMock,
+  aiRateLimiter: aiRateLimiterMock,
 }));
 
 vi.mock('@modules/chat/controllers/conversation.controller', () => ({
@@ -97,6 +100,7 @@ describe('chat.routes', () => {
   it('should register message endpoints', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/conversations/:id/messages',
+      aiRateLimiterMock,
       messageControllerMock.sendMessage
     );
     expect(mockRouter.get).toHaveBeenCalledWith(

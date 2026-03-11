@@ -85,7 +85,10 @@ describe('conversationController', () => {
   it('list should parse query and return success response', async () => {
     const req = createReq({ query: { limit: '10', offset: '5' } });
     const res = createRes();
-    const list = [{ id: 'conv-1' }];
+    const list = {
+      items: [{ id: 'conv-1' }],
+      pagination: { limit: 10, offset: 5, total: 1, hasMore: false },
+    };
     mocks.conversationService.list.mockResolvedValue(list);
 
     await conversationController.list(req, res);

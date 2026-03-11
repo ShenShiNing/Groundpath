@@ -44,17 +44,17 @@ export function ConversationList({
 }: ConversationListProps) {
   const { t } = useTranslation('chat');
   const queryClient = useQueryClient();
-  const { data: conversations, isLoading } = useConversations(knowledgeBaseId);
+  const { data: conversationList, isLoading } = useConversations(knowledgeBaseId);
   const deleteConversation = useDeleteConversation();
 
   const sortedConversations = useMemo(
     () =>
-      [...(conversations ?? [])].sort(
+      [...(conversationList?.items ?? [])].sort(
         (a, b) =>
           new Date(b.lastMessageAt ?? b.createdAt).getTime() -
           new Date(a.lastMessageAt ?? a.createdAt).getTime()
       ),
-    [conversations]
+    [conversationList?.items]
   );
 
   const handleDelete = async (conversationId: string) => {

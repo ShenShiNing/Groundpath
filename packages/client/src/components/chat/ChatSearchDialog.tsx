@@ -72,8 +72,7 @@ export function ChatSearchDialog({
   const debouncedKeyword = useDebouncedValue(normalizedKeyword, 300);
   const isContentSearch = debouncedKeyword.length >= 2;
 
-  const { data: conversations = [], isLoading: isConversationLoading } =
-    useConversations(undefined);
+  const { data: conversationList, isLoading: isConversationLoading } = useConversations(undefined);
   const {
     data: searchResult,
     isLoading: isSearchLoading,
@@ -86,12 +85,12 @@ export function ChatSearchDialog({
 
   const sortedConversations = useMemo(
     () =>
-      [...conversations].sort(
+      [...(conversationList?.items ?? [])].sort(
         (a, b) =>
           new Date(b.lastMessageAt ?? b.createdAt).getTime() -
           new Date(a.lastMessageAt ?? a.createdAt).getTime()
       ),
-    [conversations]
+    [conversationList?.items]
   );
   const searchItems = searchResult?.items ?? [];
   const isLoading = isContentSearch ? isSearchLoading || isSearchFetching : isConversationLoading;

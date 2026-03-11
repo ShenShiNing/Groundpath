@@ -44,7 +44,7 @@ async function incrementCounter(
   const result = await redis.eval(INCREMENT_WINDOW_SCRIPT, 1, fullKey, windowMs.toString());
 
   if (!Array.isArray(result) || result.length < 2) {
-    throw new Error('Invalid Redis rate limiter response');
+    throw Errors.internal('Invalid Redis rate limiter response');
   }
 
   const count = Number(result[0]);
@@ -141,6 +141,12 @@ export const generalRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 100,
   message: 'Too many requests, please try again later',
+});
+
+export const aiRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 15,
+  message: 'Too many AI requests, please try again later',
 });
 
 export const emailSendRateLimiter = createRateLimiter({
