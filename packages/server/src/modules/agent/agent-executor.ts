@@ -1,336 +1,25 @@
-import type { LLMProvider, ChatMessage, GenerateOptions, AgentMessage } from '@modules/llm';
-import type { AgentTool, ToolContext, ToolExecutionResult } from './tools';
-import type {
-  ToolCallInfo,
-  ToolResultInfo,
-  AgentStep,
-  AgentStopReason,
-  Citation,
-} from '@knowledge-agent/shared/types';
+import type { AgentMessage } from '@modules/llm';
 import { AGENT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { agentConfig } from '@shared/config/env';
 import { createLogger } from '@shared/logger';
 import { structuredRagMetrics } from '@shared/observability';
+import { buildAgentExecutorResult } from './agent-executor.citations';
+import {
+  appendToolResultsToMessages,
+  executeToolCalls,
+  generateWithoutTools,
+  getToolCategoryCounts,
+  PROVIDER_ERROR_FALLBACK_CONTENT,
+} from './agent-executor.runtime';
+import type {
+  AgentExecutorOptions,
+  AgentExecutorResult,
+  TaggedCitation,
+} from './agent-executor.types';
 
 const logger = createLogger('agent-executor');
 
-export interface AgentExecutorOptions {
-  provider: LLMProvider;
-  messages: ChatMessage[];
-  tools: AgentTool[];
-  toolContext: ToolContext;
-  genOptions: GenerateOptions;
-  maxIterations?: number;
-  onToolStart?: (stepIndex: number, toolCalls: ToolCallInfo[]) => void;
-  onToolEnd?: (stepIndex: number, results: ToolResultInfo[], durationMs: number) => void;
-}
-
-export interface AgentExecutorResult {
-  content: string;
-  citations: Citation[];
-  retrievedCitations: Citation[];
-  agentTrace: AgentStep[];
-  stopReason?: AgentStopReason;
-}
-
-const PROVIDER_ERROR_FALLBACK_CONTENT =
-  'The model provider failed before the answer could be completed. Please try again.';
-
-class AgentToolTimeoutError extends Error {
-  readonly toolName: string;
-  readonly timeoutMs: number;
-
-  constructor(toolName: string, timeoutMs: number) {
-    super(`Tool "${toolName}" timed out after ${timeoutMs}ms`);
-    this.name = 'AgentToolTimeoutError';
-    this.toolName = toolName;
-    this.timeoutMs = timeoutMs;
-  }
-}
-
-function getCitationKey(citation: Citation): string {
-  if (citation.sourceType === 'node') {
-    return `node:${citation.documentId}:${citation.indexVersion ?? ''}:${citation.nodeId}`;
-  }
-
-  return `chunk:${citation.documentId}:${citation.documentVersion ?? ''}:${citation.chunkIndex}`;
-}
-
-function stableStringify(value: unknown): string {
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => stableStringify(item)).join(',')}]`;
-  }
-
-  if (value && typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-      a.localeCompare(b)
-    );
-    return `{${entries.map(([key, nested]) => `${key}:${stableStringify(nested)}`).join(',')}}`;
-  }
-
-  return JSON.stringify(value);
-}
-
-// ── TaggedCitation wrapper (internal only) ──
-
-interface TaggedCitation {
-  citation: Citation;
-  toolName: string;
-  normalizedScore?: number;
-}
-
-function normalizeScore(rawScore: number | undefined, toolName: string): number {
-  switch (toolName) {
-    case 'outline_search':
-      return Math.min((rawScore ?? 0) / agentConfig.citationOutlineScoreCeiling, 1.0);
-    case 'knowledge_base_search':
-    case 'vector_fallback_search':
-      return rawScore ?? 0;
-    case 'node_read':
-      return agentConfig.citationNodeReadBaseScore;
-    case 'ref_follow':
-      return agentConfig.citationRefFollowBaseScore;
-    default:
-      return rawScore ?? 0;
-  }
-}
-
-function isAncestorPath(ancestor: string[], descendant: string[]): boolean {
-  if (ancestor.length === 0 || ancestor.length >= descendant.length) return false;
-  return ancestor.every((seg, i) => seg === descendant[i]);
-}
-
-function filterSectionRedundancy(candidates: TaggedCitation[]): TaggedCitation[] {
-  // Group by documentId — only node citations with sectionPath participate
-  const byDoc = new Map<string, TaggedCitation[]>();
-  const nonParticipating: TaggedCitation[] = [];
-
-  for (const tc of candidates) {
-    const c = tc.citation;
-    if (c.sourceType === 'node' && c.sectionPath && c.sectionPath.length > 0) {
-      const group = byDoc.get(c.documentId) ?? [];
-      group.push(tc);
-      byDoc.set(c.documentId, group);
-    } else {
-      nonParticipating.push(tc);
-    }
-  }
-
-  const result: TaggedCitation[] = [...nonParticipating];
-
-  for (const group of byDoc.values()) {
-    // Sort by sectionPath length descending (deepest first)
-    group.sort(
-      (a, b) => (b.citation.sectionPath?.length ?? 0) - (a.citation.sectionPath?.length ?? 0)
-    );
-
-    const removed = new Set<number>();
-    for (let i = 0; i < group.length; i++) {
-      if (removed.has(i)) continue;
-      for (let j = i + 1; j < group.length; j++) {
-        if (removed.has(j)) continue;
-        const deep = group[i]!;
-        const shallow = group[j]!;
-        const deepPath = deep.citation.sectionPath!;
-        const shallowPath = shallow.citation.sectionPath!;
-
-        if (isAncestorPath(shallowPath, deepPath)) {
-          // shallow is ancestor of deep
-          const diff = (shallow.normalizedScore ?? 0) - (deep.normalizedScore ?? 0);
-          if (diff > agentConfig.citationParentScoreAdvantage) {
-            removed.add(i); // remove deeper, keep parent
-          } else {
-            removed.add(j); // remove parent, keep deeper
-          }
-        }
-      }
-    }
-
-    for (let i = 0; i < group.length; i++) {
-      if (!removed.has(i)) result.push(group[i]!);
-    }
-  }
-
-  return result;
-}
-
-function finalizeCitations(tagged: TaggedCitation[], maxItems: number = 8): Citation[] {
-  // Pass 1: Dedup — keep highest normalized score per key
-  const deduped = new Map<string, TaggedCitation>();
-  for (const tc of tagged) {
-    const key = getCitationKey(tc.citation);
-    const norm = normalizeScore(tc.citation.score, tc.toolName);
-    const entry: TaggedCitation = { ...tc, normalizedScore: norm };
-    const prev = deduped.get(key);
-    if (!prev || norm > (prev.normalizedScore ?? 0)) {
-      deduped.set(key, entry);
-    }
-  }
-  let candidates = [...deduped.values()];
-
-  // Pass 2: Normalize — already computed in Pass 1
-
-  // Pass 3: Section redundancy filter
-  candidates = filterSectionRedundancy(candidates);
-
-  // Pass 4: Min-score gate
-  candidates = candidates.filter((tc) => (tc.normalizedScore ?? 0) >= agentConfig.citationMinScore);
-
-  // Pass 5: Diversity selection
-  if (candidates.length <= maxItems) {
-    return candidates
-      .sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0))
-      .map((tc) => tc.citation);
-  }
-
-  // Group by documentId, pick top-1 from each document for guaranteed diversity
-  const byDoc = new Map<string, TaggedCitation[]>();
-  for (const tc of candidates) {
-    const docId = tc.citation.documentId;
-    const group = byDoc.get(docId) ?? [];
-    group.push(tc);
-    byDoc.set(docId, group);
-  }
-
-  const selected = new Set<string>();
-  const result: TaggedCitation[] = [];
-
-  // Guarantee at least one from each document (up to minDocuments or maxItems)
-  const docBests: TaggedCitation[] = [];
-  for (const group of byDoc.values()) {
-    group.sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0));
-    docBests.push(group[0]!);
-  }
-  docBests.sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0));
-
-  const guaranteeSlots = Math.min(
-    docBests.length,
-    maxItems,
-    Math.max(agentConfig.citationMinDocuments, 1)
-  );
-  for (let i = 0; i < guaranteeSlots; i++) {
-    const tc = docBests[i]!;
-    const key = getCitationKey(tc.citation);
-    selected.add(key);
-    result.push(tc);
-  }
-
-  // Fill remaining slots by global score
-  const remaining = candidates
-    .filter((tc) => !selected.has(getCitationKey(tc.citation)))
-    .sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0));
-
-  for (const tc of remaining) {
-    if (result.length >= maxItems) break;
-    result.push(tc);
-  }
-
-  return result
-    .sort((a, b) => (b.normalizedScore ?? 0) - (a.normalizedScore ?? 0))
-    .map((tc) => tc.citation);
-}
-
-function hasKnowledgeTool(tools: AgentTool[]): boolean {
-  return tools.some(
-    (tool) => tool.definition.category === 'structured' || tool.definition.category === 'fallback'
-  );
-}
-
-function finalizeStopReason(input: {
-  stopReason: AgentStopReason;
-  tools: AgentTool[];
-  finalCitations: Citation[];
-  agentTrace: AgentStep[];
-}): AgentStopReason {
-  if (input.stopReason !== 'answered') return input.stopReason;
-
-  if (
-    hasKnowledgeTool(input.tools) &&
-    input.agentTrace.length > 0 &&
-    input.finalCitations.length === 0
-  ) {
-    return 'insufficient_evidence';
-  }
-
-  return input.stopReason;
-}
-
-function buildResult(input: {
-  content: string;
-  stopReason: AgentStopReason;
-  citations: TaggedCitation[];
-  agentTrace: AgentStep[];
-  tools: AgentTool[];
-}): AgentExecutorResult {
-  const finalCitations = finalizeCitations(input.citations);
-
-  return {
-    content: input.content,
-    citations: finalCitations,
-    retrievedCitations: input.citations.map((tc) => tc.citation),
-    agentTrace: input.agentTrace,
-    stopReason: finalizeStopReason({
-      stopReason: input.stopReason,
-      tools: input.tools,
-      finalCitations,
-      agentTrace: input.agentTrace,
-    }),
-  };
-}
-
-async function generateWithoutTools(input: {
-  provider: LLMProvider;
-  agentMessages: AgentMessage[];
-  genOptions: GenerateOptions;
-  stopReason: AgentStopReason;
-  citations: TaggedCitation[];
-  agentTrace: AgentStep[];
-  tools: AgentTool[];
-}): Promise<AgentExecutorResult> {
-  const plainMessages: ChatMessage[] = input.agentMessages.map((m) => ({
-    role: m.role === 'tool' ? 'user' : m.role,
-    content: m.content,
-  }));
-
-  try {
-    const finalContent = await input.provider.generate(plainMessages, input.genOptions);
-    return buildResult({
-      content: finalContent,
-      stopReason: input.stopReason,
-      citations: input.citations,
-      agentTrace: input.agentTrace,
-      tools: input.tools,
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') throw error;
-
-    logger.error({ err: error, stopReason: input.stopReason }, 'Plain generate fallback failed');
-    return buildResult({
-      content: PROVIDER_ERROR_FALLBACK_CONTENT,
-      stopReason: 'provider_error',
-      citations: input.citations,
-      agentTrace: input.agentTrace,
-      tools: input.tools,
-    });
-  }
-}
-
-async function withToolTimeout<T>(promise: Promise<T>, toolName: string): Promise<T> {
-  let timeoutHandle: NodeJS.Timeout | undefined;
-
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        timeoutHandle = setTimeout(() => {
-          reject(new AgentToolTimeoutError(toolName, agentConfig.toolTimeout));
-        }, agentConfig.toolTimeout);
-      }),
-    ]);
-  } finally {
-    if (timeoutHandle) clearTimeout(timeoutHandle);
-  }
-}
+export type { AgentExecutorOptions, AgentExecutorResult } from './agent-executor.types';
 
 export async function executeAgentLoop(
   options: AgentExecutorOptions
@@ -338,7 +27,7 @@ export async function executeAgentLoop(
   const { provider, messages, tools, toolContext, genOptions, onToolStart, onToolEnd } = options;
   const maxIterations = options.maxIterations ?? agentConfig.maxIterations;
   const executionStartedAt = Date.now();
-  const agentTrace: AgentStep[] = [];
+  const agentTrace: AgentExecutorResult['agentTrace'] = [];
   const allCitations: TaggedCitation[] = [];
   let structuredRounds = 0;
   let fallbackRounds = 0;
@@ -365,7 +54,6 @@ export async function executeAgentLoop(
     return result;
   }
 
-  // If provider doesn't support tool calls, fallback to plain generate
   if (!provider.generateWithTools) {
     logger.debug(
       { provider: provider.name },
@@ -374,7 +62,7 @@ export async function executeAgentLoop(
     try {
       const content = await provider.generate(messages, genOptions);
       return finalizeExecutionResult(
-        buildResult({
+        buildAgentExecutorResult({
           content,
           stopReason: 'answered',
           citations: [],
@@ -387,7 +75,7 @@ export async function executeAgentLoop(
 
       logger.error({ err: error, provider: provider.name }, 'Provider generate call failed');
       return finalizeExecutionResult(
-        buildResult({
+        buildAgentExecutorResult({
           content: PROVIDER_ERROR_FALLBACK_CONTENT,
           stopReason: 'provider_error',
           citations: [],
@@ -398,9 +86,12 @@ export async function executeAgentLoop(
     }
   }
 
-  const toolMap = new Map(tools.map((t) => [t.definition.name, t]));
-  const toolDefinitions = tools.map((t) => t.definition);
-  const agentMessages: AgentMessage[] = messages.map((m) => ({ role: m.role, content: m.content }));
+  const toolMap = new Map(tools.map((tool) => [tool.definition.name, tool]));
+  const toolDefinitions = tools.map((tool) => tool.definition);
+  const agentMessages: AgentMessage[] = messages.map((message) => ({
+    role: message.role,
+    content: message.content,
+  }));
 
   for (let step = 0; step < maxIterations; step++) {
     if (toolContext.signal?.aborted) {
@@ -415,7 +106,6 @@ export async function executeAgentLoop(
         tools: toolDefinitions,
       });
     } catch (error) {
-      // Re-throw AbortErrors as-is so callers can distinguish client disconnects
       if (error instanceof Error && error.name === 'AbortError') throw error;
 
       logger.error(
@@ -423,7 +113,7 @@ export async function executeAgentLoop(
         'LLM generateWithTools call failed'
       );
       return finalizeExecutionResult(
-        buildResult({
+        buildAgentExecutorResult({
           content: PROVIDER_ERROR_FALLBACK_CONTENT,
           stopReason: 'provider_error',
           citations: allCitations,
@@ -433,9 +123,9 @@ export async function executeAgentLoop(
       );
     }
 
-    if (result.finishReason === 'text') {
+    if (result.finishReason === 'text' || (result.toolCalls ?? []).length === 0) {
       return finalizeExecutionResult(
-        buildResult({
+        buildAgentExecutorResult({
           content: result.content ?? '',
           citations: allCitations,
           agentTrace,
@@ -445,40 +135,20 @@ export async function executeAgentLoop(
       );
     }
 
-    // Handle tool calls
     const toolCalls = result.toolCalls ?? [];
-    if (toolCalls.length === 0) {
-      return finalizeExecutionResult(
-        buildResult({
-          content: result.content ?? '',
-          citations: allCitations,
-          agentTrace,
-          stopReason: 'answered',
-          tools,
-        })
-      );
-    }
-
-    const toolCategories = toolCalls.map(
-      (toolCall) => toolMap.get(toolCall.name)?.definition.category
-    );
-    const structuredToolCalls = toolCategories.filter(
-      (category) => category === 'structured'
-    ).length;
-    const fallbackToolCalls = toolCategories.filter((category) => category === 'fallback').length;
-    const externalToolCalls = toolCategories.filter((category) => category === 'external').length;
+    const toolCategoryCounts = getToolCategoryCounts(toolCalls, toolMap);
 
     if (
-      structuredRounds + structuredToolCalls > agentConfig.maxStructuredRounds ||
-      fallbackRounds + fallbackToolCalls > agentConfig.maxFallbackRounds
+      structuredRounds + toolCategoryCounts.structured > agentConfig.maxStructuredRounds ||
+      fallbackRounds + toolCategoryCounts.fallback > agentConfig.maxFallbackRounds
     ) {
       logger.warn(
         {
           step,
           structuredRounds,
           fallbackRounds,
-          nextStructuredToolCalls: structuredToolCalls,
-          nextFallbackToolCalls: fallbackToolCalls,
+          nextStructuredToolCalls: toolCategoryCounts.structured,
+          nextFallbackToolCalls: toolCategoryCounts.fallback,
         },
         'Agent tool budget exhausted before executing tool calls'
       );
@@ -496,104 +166,37 @@ export async function executeAgentLoop(
     }
 
     onToolStart?.(step, toolCalls);
-    const startTime = Date.now();
-    let sawToolTimeout = false;
 
-    // Add assistant message with tool calls to conversation
     agentMessages.push({
       role: 'assistant',
       content: result.content ?? '',
       toolCalls,
     });
 
-    // Execute tools concurrently
-    const toolResults: ToolResultInfo[] = await Promise.all(
-      toolCalls.map(async (tc) => {
-        const tool = toolMap.get(tc.name);
-        if (!tool) {
-          logger.warn({ toolName: tc.name }, 'Tool not found');
-          return {
-            toolCallId: tc.id,
-            name: tc.name,
-            content: `Error: tool "${tc.name}" not found.`,
-            isError: true,
-          };
-        }
+    const toolExecution = await executeToolCalls({
+      toolCalls,
+      toolMap,
+      toolContext,
+    });
+    allCitations.push(...toolExecution.citations);
+    appendToolResultsToMessages(agentMessages, toolExecution.toolResults);
 
-        try {
-          if (toolContext.runtimeState && !toolContext.runtimeState.toolResultCache) {
-            toolContext.runtimeState.toolResultCache = {};
-          }
-          const runtimeCache = toolContext.runtimeState?.toolResultCache;
-          const cacheKey = `${tc.name}:${stableStringify(tc.arguments)}`;
-          let execResult: ToolExecutionResult;
-
-          if (runtimeCache?.[cacheKey]) {
-            execResult = runtimeCache[cacheKey]!;
-          } else {
-            execResult = await withToolTimeout(tool.execute(tc.arguments, toolContext), tc.name);
-            if (runtimeCache) {
-              runtimeCache[cacheKey] = execResult;
-            }
-          }
-          if (execResult.citations?.length) {
-            allCitations.push(
-              ...execResult.citations.map((c) => ({ citation: c, toolName: tc.name }))
-            );
-          }
-          return {
-            toolCallId: tc.id,
-            name: tc.name,
-            content: execResult.content,
-          };
-        } catch (error) {
-          if (error instanceof AgentToolTimeoutError) {
-            sawToolTimeout = true;
-            logger.warn(
-              { toolName: tc.name, timeoutMs: error.timeoutMs },
-              'Tool execution timed out'
-            );
-            return {
-              toolCallId: tc.id,
-              name: tc.name,
-              content: error.message,
-              isError: true,
-              isTimeout: true,
-            };
-          }
-
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          logger.warn({ toolName: tc.name, error: errorMsg }, 'Tool execution failed');
-          return {
-            toolCallId: tc.id,
-            name: tc.name,
-            content: `Error executing tool: ${errorMsg}`,
-            isError: true,
-          };
-        }
-      })
-    );
-
-    const durationMs = Date.now() - startTime;
-
-    // Add tool results to conversation
-    for (const tr of toolResults) {
-      agentMessages.push({
-        role: 'tool',
-        content: tr.content,
-        toolCallId: tr.toolCallId,
-      });
-    }
-
-    agentTrace.push({ toolCalls, toolResults, durationMs });
-    onToolEnd?.(step, toolResults, durationMs);
-    structuredRounds += structuredToolCalls;
-    fallbackRounds += fallbackToolCalls;
-    externalRounds += externalToolCalls;
+    agentTrace.push({
+      toolCalls,
+      toolResults: toolExecution.toolResults,
+      durationMs: toolExecution.durationMs,
+    });
+    onToolEnd?.(step, toolExecution.toolResults, toolExecution.durationMs);
+    structuredRounds += toolCategoryCounts.structured;
+    fallbackRounds += toolCategoryCounts.fallback;
+    externalRounds += toolCategoryCounts.external;
     totalToolCalls += toolCalls.length;
 
-    if (sawToolTimeout) {
-      logger.warn({ step, durationMs }, 'Agent stopping after tool timeout');
+    if (toolExecution.sawToolTimeout) {
+      logger.warn(
+        { step, durationMs: toolExecution.durationMs },
+        'Agent stopping after tool timeout'
+      );
       return finalizeExecutionResult(
         await generateWithoutTools({
           provider,
@@ -607,10 +210,12 @@ export async function executeAgentLoop(
       );
     }
 
-    logger.debug({ step, toolCount: toolCalls.length, durationMs }, 'Agent step completed');
+    logger.debug(
+      { step, toolCount: toolCalls.length, durationMs: toolExecution.durationMs },
+      'Agent step completed'
+    );
   }
 
-  // Exceeded max iterations — do a final call without tools
   logger.warn(
     { maxIterations, code: AGENT_ERROR_CODES.MAX_ITERATIONS_EXCEEDED },
     'Agent loop exceeded max iterations, generating final answer without tools'
