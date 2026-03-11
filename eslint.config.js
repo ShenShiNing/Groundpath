@@ -13,6 +13,14 @@ export default [
   ...tseslint.configs.recommended,
   ...reactQuery.configs['flat/recommended'],
   {
+    files: ['**/*.{js,cjs,mjs}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
     files: ['packages/**/*.{ts,tsx,js,jsx}'],
     plugins: {
       'react-hooks': reactHooks,
