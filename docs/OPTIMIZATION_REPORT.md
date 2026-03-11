@@ -149,7 +149,9 @@
 
 ### 4.2 前端国际化仍未补齐
 
-以下硬编码仍在：
+本轮已完成第一批 i18n 收口，但仍需继续扫描其余散落硬编码。
+
+已完成收口的项包括：
 
 - `ProcessingStatusBadge.tsx`：`Pending / Processing / Completed / Failed`
 - `DocumentList.tsx`：`Grid view / List view`
@@ -157,6 +159,11 @@
 - `useLLMConfig.ts`：`AI settings saved successfully` 等 toast 文案
 - `lib/utils.ts`：`Bytes / KB / MB / GB / TB`
 - `lib/http/stream-client.ts`：`No response body`
+
+当前剩余工作：
+
+- 继续排查其他页面级组件中的零散 `aria-label` / fallback 文案
+- 继续排查 client 工具层与 HTTP 层未进入本轮名单的散落错误文案
 
 ### 4.3 本轮点名的运行时级具体缺陷已收敛
 
@@ -528,6 +535,22 @@
 - `pnpm test -- packages/client/tests/components/documents/DocumentUpload.test.tsx packages/client/tests/components/documents/DocumentReader.test.tsx`：`5` 个测试全部通过
 - `pnpm -F @knowledge-agent/client build` 通过
 
+### 5.20 前端 i18n 第一批已完成
+
+本次已完成以下 i18n 收口：
+
+- `ProcessingStatusBadge.tsx` 已接入 `document.status.*`
+- `DocumentList.tsx` 与 `KnowledgeBasesPage.tsx` 的视图按钮 `aria-label` 已接入 i18n
+- `SessionCard.tsx` 的设备信息、当前会话标签、时间字段与撤销按钮已接入 `session.card.*`
+- `useLLMConfig.ts` 的保存/清空 toast 已接入 `settings.toast.*`
+- `lib/utils.ts` 的文件大小单位已接入 `common.fileSize.units.*`
+- `lib/http/stream-client.ts` 与 `lib/http/auth.ts` 的默认错误文案已接入 `common.stream.*` / `common.auth.*`
+- `DocumentViewer.tsx` 已改为消费已有 `document.viewer.*` 文案
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
+
 ---
 
 ## 6. 部分成立且需要继续落地的项
@@ -701,9 +724,9 @@
 - 组件层和路由层不再直接访问 `.getState()`
 - 剩余 `.getState()` 已集中封装在 `authStore.ts` 的非 React 快照 helper 中
 
-#### 7.13 补齐 i18n 漏项
+#### 7.13 已完成第一批：补齐 i18n 漏项
 
-优先处理：
+已完成结果：
 
 - 处理状态标签
 - 视图按钮 `aria-label`
@@ -711,6 +734,11 @@
 - LLM 设置 toast
 - 文件大小单位
 - SSE/stream 错误文案
+
+当前剩余工作：
+
+- 继续扫描其他页面级组件中的散落硬编码
+- 继续扫描 client 工具层/HTTP 层未纳入首批名单的 fallback 文案
 
 #### 7.14 已完成：增加功能域级错误边界
 

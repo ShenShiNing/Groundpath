@@ -25,6 +25,27 @@
   "update": "更新",
   "backToDashboard": "返回工作台",
   "backToKnowledgeBases": "返回知识库列表",
+  "fileSize": {
+    "units": {
+      "byte": "字节",
+      "bytes": "字节",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB",
+      "tb": "TB"
+    }
+  },
+  "stream": {
+    "sessionExpired": "会话已过期，请重新登录。",
+    "noBody": "响应体为空",
+    "aborted": "请求已取消",
+    "networkFailed": "网络请求失败"
+  },
+  "auth": {
+    "noActiveSession": "当前没有可用会话",
+    "refreshFailed": "刷新会话失败：HTTP {{status}}",
+    "sessionExpired": "会话已过期，请重新登录。"
+  },
   "error": {
     "generic": "发生了错误，请稍后重试。",
     "retry": "重试"

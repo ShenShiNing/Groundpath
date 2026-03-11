@@ -146,7 +146,11 @@
     "clear": "清空"
   },
   "list": {
-    "empty": "未找到文档"
+    "empty": "未找到文档",
+    "view": {
+      "grid": "卡片视图",
+      "list": "列表视图"
+    }
   },
   "cardAction": {
     "download": "下载",

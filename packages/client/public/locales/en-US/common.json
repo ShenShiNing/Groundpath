@@ -25,6 +25,27 @@
   "update": "Update",
   "backToDashboard": "Back to Dashboard",
   "backToKnowledgeBases": "Back to Knowledge Bases",
+  "fileSize": {
+    "units": {
+      "byte": "Byte",
+      "bytes": "Bytes",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB",
+      "tb": "TB"
+    }
+  },
+  "stream": {
+    "sessionExpired": "Session expired. Please login again.",
+    "noBody": "No response body",
+    "aborted": "Request was aborted",
+    "networkFailed": "Network request failed"
+  },
+  "auth": {
+    "noActiveSession": "No active session",
+    "refreshFailed": "Refresh failed: HTTP {{status}}",
+    "sessionExpired": "Session expired. Please login again."
+  },
   "error": {
     "generic": "Something went wrong. Please try again later.",
     "retry": "Retry"

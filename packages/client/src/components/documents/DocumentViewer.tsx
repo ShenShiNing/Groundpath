@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface DocumentViewerProps {
   documentType: DocumentType;
@@ -19,6 +20,8 @@ export function DocumentViewer({
   isLoading,
   className,
 }: DocumentViewerProps) {
+  const { t } = useTranslation('document');
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -54,12 +57,8 @@ export function DocumentViewer({
   if (documentType === 'docx') {
     return (
       <div className={cn('text-center py-12 border rounded-lg bg-muted/30', className)}>
-        <p className="text-muted-foreground mb-2">
-          Word documents cannot be previewed in the browser.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Please download the file to view its contents.
-        </p>
+        <p className="text-muted-foreground mb-2">{t('viewer.docxNotSupported')}</p>
+        <p className="text-sm text-muted-foreground">{t('viewer.downloadPrompt')}</p>
       </div>
     );
   }
@@ -67,7 +66,7 @@ export function DocumentViewer({
   // Fallback for unsupported types
   return (
     <div className={cn('text-center py-12 border rounded-lg bg-muted/30', className)}>
-      <p className="text-muted-foreground">Preview not available for this document type.</p>
+      <p className="text-muted-foreground">{t('viewer.previewNotAvailable')}</p>
     </div>
   );
 }

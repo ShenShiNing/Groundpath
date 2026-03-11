@@ -4,6 +4,7 @@
  * Token 管理 / header / 错误提取均使用 lib/http 公共模块。
  */
 
+import i18n from '@/i18n/i18n';
 import { getOrRefreshToken, hasRefreshToken, ensureAccessToken } from './auth';
 import { buildHeaders } from './headers';
 import { extractResponseError } from './error';
@@ -32,6 +33,7 @@ export async function fetchStreamWithAuth(
   config: StreamFetchConfig
 ): Promise<StreamFetchResult> {
   const { getAccessToken, signal } = config;
+  const t = (key: string) => i18n.t(key, { ns: 'common' });
 
   const attempt = async (isRetry: boolean): Promise<StreamFetchResult> => {
     // 首次请求前主动刷新
@@ -56,13 +58,13 @@ export async function fetchStreamWithAuth(
         } catch {
           return {
             ok: false,
-            error: { code: 'AUTH_ERROR', message: 'Session expired. Please login again.' },
+            error: { code: 'AUTH_ERROR', message: t('stream.sessionExpired') },
           };
         }
       }
       return {
         ok: false,
-        error: { code: 'AUTH_ERROR', message: 'Session expired. Please login again.' },
+        error: { code: 'AUTH_ERROR', message: t('stream.sessionExpired') },
       };
     }
 
@@ -74,7 +76,7 @@ export async function fetchStreamWithAuth(
     // 获取 reader
     const reader = response.body?.getReader();
     if (!reader) {
-      return { ok: false, error: { code: 'NO_BODY', message: 'No response body' } };
+      return { ok: false, error: { code: 'NO_BODY', message: t('stream.noBody') } };
     }
 
     return { ok: true, reader };
@@ -86,14 +88,14 @@ export async function fetchStreamWithAuth(
     if (error instanceof Error && error.name === 'AbortError') {
       return {
         ok: false,
-        error: { code: 'ABORTED', message: 'Request was aborted' },
+        error: { code: 'ABORTED', message: t('stream.aborted') },
       };
     }
     return {
       ok: false,
       error: {
         code: 'NETWORK_ERROR',
-        message: error instanceof Error ? error.message : 'Network request failed',
+        message: error instanceof Error ? error.message : t('stream.networkFailed'),
       },
     };
   }

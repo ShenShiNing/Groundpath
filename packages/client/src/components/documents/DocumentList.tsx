@@ -53,7 +53,7 @@ export function DocumentList({
             size="icon"
             className="h-8 w-8"
             onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
+            aria-label={t('list.view.grid')}
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -62,7 +62,7 @@ export function DocumentList({
             size="icon"
             className="h-8 w-8"
             onClick={() => setViewMode('list')}
-            aria-label="List view"
+            aria-label={t('list.view.list')}
           >
             <List className="h-4 w-4" />
           </Button>

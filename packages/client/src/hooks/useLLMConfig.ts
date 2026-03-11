@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { llmConfigApi } from '@/api';
 import { queryKeys } from '@/lib/query';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Hook to fetch user's current LLM configuration
@@ -55,6 +56,7 @@ export function useLLMModels(provider: LLMProviderType, options: UseLLMModelsOpt
  */
 export function useUpdateLLMConfig() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation('settings');
 
   return useMutation({
     mutationFn: llmConfigApi.updateConfig,
@@ -62,10 +64,10 @@ export function useUpdateLLMConfig() {
       queryClient.invalidateQueries({ queryKey: queryKeys.llm.config });
       // Invalidate all model queries since credentials may have changed
       queryClient.invalidateQueries({ queryKey: ['llm', 'models'] });
-      toast.success('AI settings saved successfully');
+      toast.success(t('toast.saved'));
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to save settings');
+      toast.error(error instanceof Error ? error.message : t('toast.saveFailed'));
     },
   });
 }
@@ -75,16 +77,17 @@ export function useUpdateLLMConfig() {
  */
 export function useDeleteLLMConfig() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation('settings');
 
   return useMutation({
     mutationFn: llmConfigApi.deleteConfig,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.llm.config });
       queryClient.invalidateQueries({ queryKey: ['llm', 'models'] });
-      toast.success('AI configuration cleared');
+      toast.success(t('toast.cleared'));
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : 'Failed to clear configuration');
+      toast.error(error instanceof Error ? error.message : t('toast.clearFailed'));
     },
   });
 }

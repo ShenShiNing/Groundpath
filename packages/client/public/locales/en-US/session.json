@@ -16,6 +16,7 @@
     "title": "Active Sessions",
     "description": "You can terminate your account's login on other devices.",
     "unknownDevice": "Unknown device",
+    "deviceWithOs": "{{browser}} on {{os}}",
     "current": "Current",
     "ip": "IP:",
     "lastActive": "Last active:",

@@ -74,5 +74,11 @@
     "step4": "点击「测试连接」验证后保存",
     "securityTitle": "安全说明",
     "securityDescription": "API 密钥使用加密存储，仅用于服务端与 AI 服务商通信，不会暴露至前端或日志中。"
+  },
+  "toast": {
+    "saved": "AI 设置已保存",
+    "saveFailed": "保存 AI 设置失败",
+    "cleared": "AI 配置已清空",
+    "clearFailed": "清空 AI 配置失败"
   }
 }

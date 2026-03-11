@@ -407,7 +407,7 @@ export default function KnowledgeBasesPage() {
                     viewMode === 'grid' && 'bg-muted'
                   )}
                   onClick={() => setViewMode('grid')}
-                  aria-label="Grid view"
+                  aria-label={t('view.grid')}
                 >
                   <LayoutGrid className="size-4" />
                 </Button>
@@ -419,7 +419,7 @@ export default function KnowledgeBasesPage() {
                     viewMode === 'table' && 'bg-muted'
                   )}
                   onClick={() => setViewMode('table')}
-                  aria-label="Table view"
+                  aria-label={t('view.table')}
                 >
                   <List className="size-4" />
                 </Button>

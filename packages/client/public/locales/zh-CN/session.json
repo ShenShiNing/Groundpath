@@ -16,6 +16,7 @@
     "title": "活跃会话列表",
     "description": "你可以主动终止当前账号在其他设备上的登录状态。",
     "unknownDevice": "未知设备",
+    "deviceWithOs": "{{browser}} · {{os}}",
     "current": "当前",
     "ip": "IP:",
     "lastActive": "最后活跃:",

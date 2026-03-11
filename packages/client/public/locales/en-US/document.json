@@ -146,7 +146,11 @@
     "clear": "Clear"
   },
   "list": {
-    "empty": "No documents found"
+    "empty": "No documents found",
+    "view": {
+      "grid": "Grid view",
+      "list": "List view"
+    }
   },
   "cardAction": {
     "download": "Download",

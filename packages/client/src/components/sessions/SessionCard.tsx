@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { DeviceIcon } from './DeviceIcon';
+import { useTranslation } from 'react-i18next';
 
 interface SessionCardProps {
   session: SessionInfo;
@@ -16,6 +17,7 @@ function formatDate(date: Date | string): string {
 }
 
 export function SessionCard({ session, onRevoke }: SessionCardProps) {
+  const { t } = useTranslation('session');
   const [isRevoking, setIsRevoking] = useState(false);
 
   const handleRevoke = async () => {
@@ -28,7 +30,10 @@ export function SessionCard({ session, onRevoke }: SessionCardProps) {
   };
 
   const deviceInfo = session.deviceInfo;
-  const browserInfo = [deviceInfo?.browser, deviceInfo?.os].filter(Boolean).join(' on ');
+  const browserInfo =
+    deviceInfo?.browser && deviceInfo?.os
+      ? t('card.deviceWithOs', { browser: deviceInfo.browser, os: deviceInfo.os })
+      : deviceInfo?.browser ?? deviceInfo?.os ?? '';
 
   return (
     <Card className={cn(session.isCurrent && 'border-primary')}>
@@ -38,22 +43,22 @@ export function SessionCard({ session, onRevoke }: SessionCardProps) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium truncate">{browserInfo || 'Unknown device'}</p>
+            <p className="text-sm font-medium truncate">{browserInfo || t('card.unknownDevice')}</p>
             {session.isCurrent && (
               <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">
-                Current
+                {t('card.current')}
               </span>
             )}
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {session.ipAddress && <span>IP: {session.ipAddress}</span>}
-            <span>Last active: {formatDate(session.lastUsedAt)}</span>
-            <span>Created: {formatDate(session.createdAt)}</span>
+            {session.ipAddress && <span>{t('card.ip')} {session.ipAddress}</span>}
+            <span>{t('card.lastActive')} {formatDate(session.lastUsedAt)}</span>
+            <span>{t('card.created')} {formatDate(session.createdAt)}</span>
           </div>
         </div>
         {!session.isCurrent && (
           <Button variant="outline" size="sm" onClick={handleRevoke} disabled={isRevoking}>
-            {isRevoking ? <Loader2 className="size-4 animate-spin" /> : 'Revoke'}
+            {isRevoking ? <Loader2 className="size-4 animate-spin" /> : t('card.revoke')}
           </Button>
         )}
       </CardContent>
