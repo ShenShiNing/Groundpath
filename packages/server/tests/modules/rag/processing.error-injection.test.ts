@@ -31,6 +31,7 @@ const {
   documentRepositoryMock: {
     findById: vi.fn(),
     updateProcessingStatus: vi.fn(),
+    updateProcessingStatusWithPublishGeneration: vi.fn(),
   },
   documentVersionRepositoryMock: {
     findByDocumentAndVersion: vi.fn(),
@@ -145,6 +146,12 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
   inArray: vi.fn(),
+  sql: Object.assign(
+    (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
+    {
+      join: vi.fn(),
+    }
+  ),
 }));
 
 vi.mock('@shared/db/schema/document/documents.schema', () => ({
@@ -152,6 +159,8 @@ vi.mock('@shared/db/schema/document/documents.schema', () => ({
     id: 'id',
     processingStatus: 'processingStatus',
     processingError: 'processingError',
+    processingStartedAt: 'processingStartedAt',
+    publishGeneration: 'publishGeneration',
   },
 }));
 
@@ -180,6 +189,7 @@ describe('RAG Processing Error Injection', () => {
       knowledgeBaseId: kbId,
       chunkCount: 0,
       currentVersion: 1,
+      publishGeneration: 1,
     });
 
     // Default KB embedding config
@@ -202,7 +212,10 @@ describe('RAG Processing Error Injection', () => {
       rolloutMode: 'disabled',
     });
     documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-1' });
-    documentIndexServiceMock.completeBuild.mockResolvedValue(undefined);
+    documentIndexServiceMock.completeBuild.mockResolvedValue({
+      id: 'idx-build-1',
+      status: 'active',
+    });
     documentIndexServiceMock.failBuild.mockResolvedValue(undefined);
     documentIndexServiceMock.supersedeBuild.mockResolvedValue(undefined);
     documentIndexServiceMock.replaceGraph.mockResolvedValue(undefined);
@@ -248,8 +261,9 @@ describe('RAG Processing Error Injection', () => {
     await processingService.processDocument(docId, userId);
 
     // Should mark as failed
-    expect(documentRepositoryMock.updateProcessingStatus).toHaveBeenCalledWith(
+    expect(documentRepositoryMock.updateProcessingStatusWithPublishGeneration).toHaveBeenCalledWith(
       docId,
+      1,
       'failed',
       expect.stringContaining('Embedding API timeout')
     );
@@ -274,7 +288,7 @@ describe('RAG Processing Error Injection', () => {
     );
   });
 
-  it('should complete when old vector cleanup fails (best-effort)', async () => {
+  it('should keep prior build artifacts immutable after successful publish', async () => {
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       textContent: 'Some text',
     });
@@ -284,26 +298,15 @@ describe('RAG Processing Error Injection', () => {
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
 
-    // Has old chunks to clean up
-    documentChunkRepositoryMock.getChunkIdsByDocumentId.mockResolvedValue(['old-1', 'old-2']);
-
-    // Transaction succeeds
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
-
-    // Old vector cleanup fails
-    vectorRepositoryMock.deleteByIds.mockRejectedValue(new Error('Cleanup failed'));
 
     await processingService.processDocument(docId, userId);
 
-    // Should log warning but not fail
-    expect(loggerMock.warn).toHaveBeenCalledWith(
-      expect.objectContaining({ documentId: docId }),
-      expect.stringContaining('Failed to delete old vectors')
-    );
-    // Should still log completion
+    expect(documentChunkRepositoryMock.deleteByDocumentId).not.toHaveBeenCalled();
+    expect(documentChunkRepositoryMock.deleteByIds).not.toHaveBeenCalled();
+    expect(vectorRepositoryMock.deleteByIds).not.toHaveBeenCalled();
     expect(loggerMock.info).toHaveBeenCalledWith(
       expect.objectContaining({ documentId: docId, chunkCount: 1 }),
       'Document processing completed'
@@ -332,6 +335,7 @@ describe('RAG Processing Error Injection', () => {
       knowledgeBaseId: kbId,
       chunkCount: 0,
       currentVersion: 2,
+      publishGeneration: 1,
     });
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
@@ -350,26 +354,24 @@ describe('RAG Processing Error Injection', () => {
     expect(documentIndexServiceMock.startBuild).not.toHaveBeenCalled();
   });
 
-  it('should replace current-version chunks before retrying the same document version', async () => {
+  it('should append a new build for the same document version without deleting prior chunks', async () => {
     documentRepositoryMock.findById.mockResolvedValue({
       id: docId,
       knowledgeBaseId: kbId,
       chunkCount: 1,
       currentVersion: 1,
       documentType: 'markdown',
+      publishGeneration: 1,
     });
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       textContent: 'Some text',
     });
-    documentChunkRepositoryMock.getChunkIdsByDocumentId.mockResolvedValue(['old-1']);
-    documentChunkRepositoryMock.countByDocumentAndVersion.mockResolvedValue(1);
     chunkingServiceMock.chunkText.mockReturnValue([
       { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
     ]);
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentChunkRepositoryMock.deleteByDocumentId.mockResolvedValue(undefined);
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
@@ -378,11 +380,18 @@ describe('RAG Processing Error Injection', () => {
       reason: 'retry',
     });
 
-    expect(documentChunkRepositoryMock.deleteByDocumentId).toHaveBeenCalledWith(docId, {});
     expect(documentChunkRepositoryMock.createMany).toHaveBeenCalled();
-    expect(
-      documentChunkRepositoryMock.deleteByDocumentId.mock.invocationCallOrder[0]!
-    ).toBeLessThan(documentChunkRepositoryMock.createMany.mock.invocationCallOrder[0]!);
+    expect(documentChunkRepositoryMock.createMany).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          documentId: docId,
+          version: 1,
+          indexVersionId: 'idx-build-1',
+        }),
+      ]),
+      {}
+    );
+    expect(documentChunkRepositoryMock.deleteByDocumentId).not.toHaveBeenCalled();
     expect(documentChunkRepositoryMock.deleteByIds).not.toHaveBeenCalled();
   });
 
@@ -393,6 +402,7 @@ describe('RAG Processing Error Injection', () => {
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'markdown',
+      publishGeneration: 1,
     });
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       textContent: 'Some long text',
@@ -416,7 +426,6 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
     await processingService.processDocument(docId, userId);
@@ -445,6 +454,7 @@ describe('RAG Processing Error Injection', () => {
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'markdown',
+      publishGeneration: 1,
     });
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       textContent: '# Heading\n\nBody',
@@ -486,7 +496,6 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
     await processingService.processDocument(docId, userId);
@@ -515,6 +524,7 @@ describe('RAG Processing Error Injection', () => {
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'docx',
+      publishGeneration: 1,
     });
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       storageKey: 'docx-key',
@@ -543,7 +553,6 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
     await processingService.processDocument(docId, userId);
@@ -571,6 +580,7 @@ describe('RAG Processing Error Injection', () => {
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'pdf',
+      publishGeneration: 1,
     });
     documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
       storageKey: 'pdf-key',
@@ -599,7 +609,6 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentChunkRepositoryMock.deleteByIds.mockResolvedValue(undefined);
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
     await processingService.processDocument(docId, userId);
@@ -639,15 +648,21 @@ describe('RAG Processing Error Injection', () => {
 
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
-    vectorRepositoryMock.deleteByDocumentId.mockResolvedValue(true);
+    chunkingServiceMock.chunkText.mockReturnValue([]);
 
     await processingService.processDocument(docId, userId);
 
-    // Should complete with 0 chunks
     expect(loggerMock.warn).toHaveBeenCalledWith(
       expect.objectContaining({ documentId: docId }),
       'No text content available for processing'
     );
+    expect(documentIndexServiceMock.completeBuild).toHaveBeenCalledWith(
+      expect.objectContaining({
+        indexVersionId: 'idx-build-1',
+        parseMethod: 'chunked-empty',
+      })
+    );
+    expect(vectorRepositoryMock.deleteByDocumentId).not.toHaveBeenCalled();
   });
 
   it('should handle double error (processing fails + status update fails)', async () => {
