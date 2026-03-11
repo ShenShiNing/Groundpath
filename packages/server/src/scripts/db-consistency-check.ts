@@ -14,7 +14,7 @@
  * Checks performed:
  *   1. Orphan documents (reference non-existent knowledge_bases)
  *   2. Orphan document_versions (reference non-existent documents)
- *   3. Orphan document_chunks (reference non-existent documents)
+ *   3. Orphan document_chunks (reference non-existent documents or index versions)
  *   4. knowledge_bases.documentCount mismatch
  *   5. knowledge_bases.totalChunks mismatch
  *   6. documents.chunkCount mismatch
@@ -162,23 +162,27 @@ async function checkOrphanDocumentVersions(): Promise<CheckResult> {
   };
 }
 
-// Check 3: Orphan document_chunks (reference non-existent documents)
+// Check 3: Orphan document_chunks (reference non-existent documents or index versions)
 async function checkOrphanDocumentChunks(): Promise<CheckResult> {
-  const name = '3. Orphan document_chunks (missing document)';
+  const name = '3. Orphan document_chunks (missing document/index version)';
   const rows = await db
     .select({
       id: documentChunks.id,
       documentId: documentChunks.documentId,
+      indexVersionId: documentChunks.indexVersionId,
     })
     .from(documentChunks)
     .leftJoin(documents, eq(documentChunks.documentId, documents.id))
-    .where(isNull(documents.id));
+    .leftJoin(documentIndexVersions, eq(documentChunks.indexVersionId, documentIndexVersions.id))
+    .where(or(isNull(documents.id), isNull(documentIndexVersions.id)));
 
   return {
     name,
     passed: rows.length === 0,
     count: rows.length,
-    details: rows.map((r) => `chunk=${r.id} doc=${r.documentId}`),
+    details: rows.map(
+      (r) => `chunk=${r.id} doc=${r.documentId} indexVersionId=${r.indexVersionId}`
+    ),
   };
 }
 
@@ -256,7 +260,7 @@ async function checkKbTotalChunksMismatch(): Promise<CheckResult> {
   };
 }
 
-// Check 6: documents.chunkCount mismatch with actual document_chunks
+// Check 6: documents.chunkCount mismatch with active document_chunks
 async function checkDocumentChunkCountMismatch(): Promise<CheckResult> {
   const name = '6. Document chunkCount mismatch';
   const rows = await db.execute(sql`
@@ -267,9 +271,12 @@ async function checkDocumentChunkCountMismatch(): Promise<CheckResult> {
       COALESCE(agg.cnt, 0) AS actual_count
     FROM documents d
     LEFT JOIN (
-      SELECT document_id, COUNT(*) AS cnt
-      FROM document_chunks
-      GROUP BY document_id
+      SELECT dc.document_id, COUNT(*) AS cnt
+      FROM document_chunks dc
+      INNER JOIN documents docs
+        ON docs.id = dc.document_id
+       AND docs.active_index_version_id = dc.index_version_id
+      GROUP BY dc.document_id
     ) agg ON d.id = agg.document_id
     WHERE d.deleted_at IS NULL
       AND d.chunk_count != COALESCE(agg.cnt, 0)
@@ -334,24 +341,24 @@ async function checkStaleProcessingStatus(): Promise<CheckResult> {
   };
 }
 
-// Check 8: Duplicate document_chunks composite key (documentId, version, chunkIndex)
+// Check 8: Duplicate document_chunks composite key (documentId, indexVersionId, chunkIndex)
 async function checkDuplicateChunkKeys(): Promise<CheckResult> {
   const name = '8. Duplicate document_chunks composite key';
   const rows = await db.execute(sql`
     SELECT
       document_id,
-      version,
+      index_version_id,
       chunk_index,
       COUNT(*) AS cnt
     FROM document_chunks
-    GROUP BY document_id, version, chunk_index
+    GROUP BY document_id, index_version_id, chunk_index
     HAVING COUNT(*) > 1
     LIMIT 100
   `);
 
   const results = rows[0] as unknown as Array<{
     document_id: string;
-    version: number;
+    index_version_id: string;
     chunk_index: number;
     cnt: number;
   }>;
@@ -361,7 +368,8 @@ async function checkDuplicateChunkKeys(): Promise<CheckResult> {
     passed: results.length === 0,
     count: results.length,
     details: results.map(
-      (r) => `doc=${r.document_id} v${r.version} chunk=${r.chunk_index} count=${r.cnt}`
+      (r) =>
+        `doc=${r.document_id} indexVersionId=${r.index_version_id} chunk=${r.chunk_index} count=${r.cnt}`
     ),
   };
 }

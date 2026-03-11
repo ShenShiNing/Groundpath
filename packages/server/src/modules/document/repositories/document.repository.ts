@@ -144,6 +144,7 @@ export const documentRepository = {
         | 'processingStatus'
         | 'processingError'
         | 'processingStartedAt'
+        | 'publishGeneration'
         | 'chunkCount'
         | 'updatedBy'
       >
@@ -289,6 +290,63 @@ export const documentRepository = {
     return result[0].affectedRows > 0;
   },
 
+  async updateProcessingStatusWithPublishGeneration(
+    id: string,
+    expectedPublishGeneration: number,
+    status: Document['processingStatus'],
+    error?: string | null,
+    chunkCount?: number,
+    tx?: Transaction
+  ): Promise<boolean> {
+    const ctx = getDbContext(tx);
+    const updateData: Partial<Document> = { processingStatus: status };
+    if (error !== undefined) {
+      updateData.processingError = error;
+    }
+    if (chunkCount !== undefined) {
+      updateData.chunkCount = chunkCount;
+    }
+    updateData.processingStartedAt = status === 'processing' ? new Date() : null;
+    const result = await ctx
+      .update(documents)
+      .set(updateData)
+      .where(
+        and(
+          eq(documents.id, id),
+          eq(documents.publishGeneration, expectedPublishGeneration),
+          isNull(documents.deletedAt)
+        )
+      );
+    return result[0].affectedRows > 0;
+  },
+
+  async publishBuild(input: {
+    documentId: string;
+    activeIndexVersionId: string;
+    expectedPublishGeneration: number;
+    chunkCount: number;
+    tx?: Transaction;
+  }): Promise<boolean> {
+    const ctx = getDbContext(input.tx);
+    const result = await ctx
+      .update(documents)
+      .set({
+        activeIndexVersionId: input.activeIndexVersionId,
+        processingStatus: 'completed',
+        processingError: null,
+        processingStartedAt: null,
+        chunkCount: input.chunkCount,
+      })
+      .where(
+        and(
+          eq(documents.id, input.documentId),
+          eq(documents.publishGeneration, input.expectedPublishGeneration),
+          isNull(documents.deletedAt)
+        )
+      );
+    return result[0].affectedRows > 0;
+  },
+
   async listStaleProcessingDocuments(
     staleBefore: Date,
     limit: number
@@ -325,6 +383,7 @@ export const documentRepository = {
         processingStatus: 'pending',
         processingError: null,
         processingStartedAt: null,
+        publishGeneration: sql`${documents.publishGeneration} + 1`,
       })
       .where(
         and(
@@ -380,6 +439,25 @@ export const documentRepository = {
         )
       );
     return new Map(result.map((r) => [r.id, r.title]));
+  },
+
+  async getActiveIndexVersionMap(ids: string[]): Promise<Map<string, string | null>> {
+    if (ids.length === 0) return new Map();
+
+    const result = await db
+      .select({ id: documents.id, activeIndexVersionId: documents.activeIndexVersionId })
+      .from(documents)
+      .where(
+        and(
+          sql`${documents.id} IN (${sql.join(
+            ids.map((id) => sql`${id}`),
+            sql`, `
+          )})`,
+          isNull(documents.deletedAt)
+        )
+      );
+
+    return new Map(result.map((row) => [row.id, row.activeIndexVersionId]));
   },
 
   async listBackfillCandidates(options?: {
