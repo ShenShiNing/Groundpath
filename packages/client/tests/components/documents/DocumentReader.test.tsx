@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DocumentReader } from '@/components/documents/DocumentReader';
-import { render } from '@tests/utils/render';
+import { render } from '../../utils/render';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -13,7 +13,9 @@ describe('DocumentReader', () => {
     const view = await render(
       <DocumentReader
         documentType="markdown"
-        textContent={'# Title\n\n**Bold**\n\n<script>alert(1)</script>\n\n[bad](javascript:alert(1))'}
+        textContent={
+          '# Title\n\n**Bold**\n\n<script>alert(1)</script>\n\n[bad](javascript:alert(1))'
+        }
         storageUrl={null}
       />
     );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, fireClick, flushPromises } from '@tests/utils/render';
+import { render, fireClick, flushPromises } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({
   useConversations: vi.fn(),

@@ -3,7 +3,7 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryKeys } from '@/lib/query/keys';
 import { DocumentUpload } from '@/components/documents/DocumentUpload';
-import { fireClick, render } from '@tests/utils/render';
+import { fireClick, render } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({
   queue: {
@@ -31,16 +31,14 @@ const mocks = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
-  dropzoneOptions: null as
-    | null
-    | {
-        onDropRejected?: (
-          rejections: Array<{
-            file: File;
-            errors: Array<{ message: string }>;
-          }>
-        ) => void;
-      },
+  dropzoneOptions: null as null | {
+    onDropRejected?: (
+      rejections: Array<{
+        file: File;
+        errors: Array<{ message: string }>;
+      }>
+    ) => void;
+  },
 }));
 
 vi.mock('react-i18next', () => ({

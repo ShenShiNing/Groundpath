@@ -51,6 +51,7 @@
     "saveAsVersion": "Save as new version",
     "saving": "Saving...",
     "saved": "AI rewrite saved as new version",
+    "changeNotePrefix": "AI Rewrite: ",
     "cancel": "Cancel"
   },
   "versions": {

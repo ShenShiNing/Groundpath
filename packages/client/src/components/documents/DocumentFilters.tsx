@@ -42,8 +42,8 @@ export function DocumentFilters({
   const hasFilters = search || documentType;
 
   const documentTypeLabels: Record<DocumentType, string> = {
-    pdf: 'PDF',
-    markdown: 'Markdown',
+    pdf: t('type.pdf'),
+    markdown: t('type.markdown'),
     text: t('type.text'),
     docx: t('type.docx'),
     other: t('type.other'),

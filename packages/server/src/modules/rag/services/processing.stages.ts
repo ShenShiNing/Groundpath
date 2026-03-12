@@ -259,30 +259,6 @@ export async function replaceStructuredGraph(input: {
   }
 }
 
-export async function cleanupOldVectors(input: {
-  documentId: string;
-  collectionName: string;
-  oldChunkIds: string[];
-}): Promise<void> {
-  if (input.oldChunkIds.length === 0) {
-    return;
-  }
-
-  try {
-    await vectorRepository.deleteByIds(input.collectionName, input.oldChunkIds);
-  } catch (error) {
-    logger.warn(
-      {
-        documentId: input.documentId,
-        collectionName: input.collectionName,
-        oldChunkIds: input.oldChunkIds,
-        error,
-      },
-      'Failed to delete old vectors - orphaned vectors may exist'
-    );
-  }
-}
-
 export async function completeSuccessfulBuild(input: {
   document: ProcessingDocument;
   documentId: string;

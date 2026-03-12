@@ -37,6 +37,8 @@
     "refresh": "Refresh",
     "modelHelper": "Select from the list or enter a custom model name",
     "modelPlaceholder": "Select or enter model...",
+    "apiKeyLabel": "API Key",
+    "baseUrlLabel": "Base URL",
     "testConnection": "Test Connection",
     "clearConfig": "Clear Config",
     "clearConfirmTitle": "Clear AI configuration?",

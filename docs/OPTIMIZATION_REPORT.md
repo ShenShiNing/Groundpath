@@ -42,12 +42,21 @@
   1. 已补认证守卫与 token 刷新逻辑测试。
   2. 已补知识库列表/上传与聊天会话列表分页契约测试。
   3. 已补 `KnowledgeBaseDialog` 与 `ConversationList` 组件级交互测试。
+  4. 已补 `ChatPage` 页面级测试，覆盖优选知识库选择、文档 scope 收敛、上传弹窗编排、focus 高亮与 citation 导航。
 - 本轮可维护性拆分后，以下事项也已完成：
   1. `shared/config/env.ts` 已拆为薄门面 + `env/loader.ts`、`schema.ts`、`validated-env.ts`、`configs.ts`。
   2. `chat.service.ts` 已拆为主编排 + `chat-agent-stream.service.ts`、`chat-legacy-stream.service.ts`、`chat.helpers.ts`、`chat.types.ts`。
   3. `agent-executor.ts` 已拆为主循环 + `agent-executor.citations.ts`、`agent-executor.runtime.ts`、`agent-executor.types.ts`。
   4. `processing.service.ts` 已拆为 facade + `processing.executor.ts`、`processing.lock.ts`、`processing.structure.ts`、`processing.stages.ts`、`processing.types.ts`。
-  5. 上述拆分完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试均已通过。
+  5. `document.repository.ts` 已拆为薄门面 + `document.repository.core.ts`、`document.repository.processing.ts`、`document.repository.queries.ts`、`document.repository.backfill.ts`、`document.repository.types.ts`。
+  6. `scripts/db-consistency-check.ts` 已拆为 CLI entry + `db-consistency-check/checks.ts`、`report.ts`、`runner.ts`、`types.ts`。
+  7. 已补充评估 `processing.executor.ts` / `processing.stages.ts`，当前不建议继续物理拆分，仅移除未使用的 `cleanupOldVectors` helper 作为最小清理。
+  8. `StructuredRagOverview.tsx` 已拆为主容器 + `structured-rag/*` 子组件，主文件降至 `110` 行。
+  9. `ForgotPasswordForm.tsx` 已拆为父级 step state + `forgot-password/*` 子组件，主文件降至 `71` 行。
+  10. `KnowledgeBaseDetailPage.tsx` 已拆为页面壳 + `knowledge-base-detail/*` 子组件，主文件降至 `188` 行。
+  11. `AISettingsForm.tsx` 已拆为主表单 + `sections/*` 子组件，主文件降至 `259` 行。
+  12. `ChatPage.tsx` 已拆为页面壳 + `pages/chat-page/*` 控制 hook / 子组件，主文件降至 `121` 行。
+  13. 上述拆分与清理完成后，`@knowledge-agent/server build`、`agent-executor` 定向测试、`processing` 定向测试、`document-index/processing/search/counter-sync` 定向测试、`db-consistency-check` runner 定向测试、`@knowledge-agent/client build`、`ForgotPasswordForm` 定向测试、`KnowledgeBaseDetailPage` 定向测试与 `AISettingsForm` 定向测试均已通过。
 - 本轮文档处理架构升级后，以下事项也已完成：
   1. `document_chunks` 与 vector payload 已绑定 `indexVersionId`，chunk/vector/graph 全部切换到 immutable build 产物模型。
   2. 查询链路已统一改为只消费 `documents.activeIndexVersionId` 指向的 active build。
@@ -59,10 +68,17 @@
   2. build publish 已改为带 compare-and-set 约束的 fenced publish。
   3. 慢 worker 即使跑到最后，也不能再激活旧 build 或覆盖新的 `processing` 完成态。
   4. `db:migrate`、`db:check`、processing/activation/integration 定向测试均已通过。
+- 本轮 i18n 第二批收口后，以下事项也已完成：
+  1. `DocumentFilters.tsx`：`pdf` / `markdown` 类型标签已改用 `t('type.pdf/markdown')`。
+  2. `AIRewriteDialog.tsx`：`AI 改写: ` 前缀已改用 `t('aiRewrite.changeNotePrefix')`。
+  3. `AISettingsCredentialsSection.tsx`：`API Key` / `Base URL` label 已改用 `t('form.apiKeyLabel/baseUrlLabel')`。
+  4. `SaveToKBDialog.tsx`：provider 选项 `Zhipu AI / OpenAI / Ollama (Local)` 已改用 `t('createKb.providerZhipu/OpenAI/Ollama')`。
+  5. 对应 key 已同步补入 `en-US` / `zh-CN` 的 `settings.json`、`document.json`、`chat.json`。
+  6. `@knowledge-agent/client build` 通过。
 - 当前最需要优先处理的，已经切换为以下 4 项：
   1. 继续扩展到更多高风险页面/组件测试。
   2. 继续补齐前端 i18n 的剩余散落漏项。
-  3. 继续补更多“文档版本切换 / backfill / recovery”链路的高阶集成测试。
+  3. 继续补更多”文档版本切换 / backfill / recovery”链路的高阶集成测试。
   4. 若聊天会话量继续增长，优先复核 `conversations` 列表查询所需的 `updated_at` 复合索引，而不是 `created_at` / `messages.role`。
 
 ---
@@ -102,21 +118,21 @@
 
 ## 3. 核验结果总览
 
-| 编号 | 原报告结论                                     | 当前状态                                                                                | 结论   |
-| ---- | ---------------------------------------------- | --------------------------------------------------------------------------------------- | ------ |
-| K-1  | 大型后端/前端文件过多                          | 后端 4 个最突出的 600+ 行核心文件已完成第一轮拆分，但仍存在若干 400+ 行文件与前端大组件 | 成立   |
-| K-2  | Zustand `getState()` 绕过响应式系统            | 组件/路由层已完成收敛，store 内部保留少量非 React 快照访问                              | 已过时 |
-| K-3  | `throw new Error()` 未统一到 `Errors/AppError` | `server/client` 运行时代码已清零，CLI 脚本层仍保留少量原生 Error                        | 已过时 |
-| K-4  | 前端 i18n 覆盖不完整                           | 仍存在                                                                                  | 成立   |
-| K-5  | 路由级错误边界不足                             | 根路由外，聊天/文档详情/知识库详情/AI 设置已具备功能域级 `errorComponent`               | 已过时 |
-| K-6  | `GET /api/knowledge-bases` 无分页              | 已支持分页参数与分页返回                                                                | 已过时 |
-| K-7  | `GET /api/chat/conversations` 无分页           | 已支持 `limit/offset` 且返回 `items + pagination`                                       | 已过时 |
-| K-8  | 高开销 API 未限流                              | RAG / Chat / Document AI / Documents / KB 上传均已限流                                  | 已过时 |
-| K-9  | 文档相关表缺数据库级 FK                        | migration 已执行，相关 FK 已落库                                                        | 已过时 |
-| K-10 | `processing_started_at` 缺失                   | 字段已落库，超时恢复任务也已接入 scheduler                                              | 已过时 |
-| K-11 | 无 coverage 配置                               | 已有 `vitest --coverage` 与 V8 coverage                                                 | 已过时 |
-| K-12 | 无端到端测试                                   | 已有 server smoke e2e 和 integration tests                                              | 已过时 |
-| K-13 | `vlm` 完全无测试                               | factory / service / provider 测试已补齐                                                 | 已过时 |
+| 编号 | 原报告结论                                     | 当前状态                                                                                                                           | 结论   |
+| ---- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| K-1  | 大型后端/前端文件过多                          | 后端 4 个最突出的 600+ 行核心文件、`document.repository.ts` 与 `ChatPage.tsx` 已完成拆分，剩余压力更多转向少量中大型页面与测试覆盖 | 成立   |
+| K-2  | Zustand `getState()` 绕过响应式系统            | 组件/路由层已完成收敛，store 内部保留少量非 React 快照访问                                                                         | 已过时 |
+| K-3  | `throw new Error()` 未统一到 `Errors/AppError` | `server/client` 运行时代码已清零，CLI 脚本层仍保留少量原生 Error                                                                   | 已过时 |
+| K-4  | 前端 i18n 覆盖不完整                           | 仍存在                                                                                                                             | 成立   |
+| K-5  | 路由级错误边界不足                             | 根路由外，聊天/文档详情/知识库详情/AI 设置已具备功能域级 `errorComponent`                                                          | 已过时 |
+| K-6  | `GET /api/knowledge-bases` 无分页              | 已支持分页参数与分页返回                                                                                                           | 已过时 |
+| K-7  | `GET /api/chat/conversations` 无分页           | 已支持 `limit/offset` 且返回 `items + pagination`                                                                                  | 已过时 |
+| K-8  | 高开销 API 未限流                              | RAG / Chat / Document AI / Documents / KB 上传均已限流                                                                             | 已过时 |
+| K-9  | 文档相关表缺数据库级 FK                        | migration 已执行，相关 FK 已落库                                                                                                   | 已过时 |
+| K-10 | `processing_started_at` 缺失                   | 字段已落库，超时恢复任务也已接入 scheduler                                                                                         | 已过时 |
+| K-11 | 无 coverage 配置                               | 已有 `vitest --coverage` 与 V8 coverage                                                                                            | 已过时 |
+| K-12 | 无端到端测试                                   | 已有 server smoke e2e 和 integration tests                                                                                         | 已过时 |
+| K-13 | `vlm` 完全无测试                               | factory / service / provider 测试已补齐                                                                                            | 已过时 |
 
 ---
 
@@ -126,32 +142,29 @@
 
 #### 后端超大文件
 
-| 文件                                           | 行数 | 状态   |
-| ---------------------------------------------- | ---- | ------ |
-| `scripts/db-consistency-check.ts`              | 467  | 仍成立 |
-| `document/repositories/document.repository.ts` | 423  | 仍成立 |
-
-补充：
-
 - 原报告点名的 `rag/services/processing.service.ts`、`chat/services/chat.service.ts`、`agent/agent-executor.ts`、`shared/config/env.ts` 已完成第一轮拆分，不应继续作为“当前最突出的 600+ 行后端核心文件”示例。
-- 当前后端可维护性压力更多集中在剩余的 400+ 行文件，以及拆分后的若干编排/阶段模块是否还需要继续细分。
+- 本轮前述 `document/repositories/document.repository.ts` 也已拆为薄门面 + `core / processing / queries / backfill / types` 子模块，不应继续列为未处理的 400+ 行 repository。
+- 原本剩余的 `scripts/db-consistency-check.ts` 也已进一步拆为 CLI entry + `checks / report / runner / types` 子模块，不应继续作为剩余 400+ 行后端脚本案例。
+- 已补充评估 `processing.executor.ts` / `processing.stages.ts`，当前判断是不再继续物理拆分，以避免为了拆分而拆分；仅保留最小清理。
+- 当前后端可维护性压力更多集中在少量仍偏大的前端页面/组件与高风险链路测试覆盖，而不再是单个超大后端脚本。
 
 #### 前端超大文件
 
-| 文件                                                | 行数 | 状态   |
-| --------------------------------------------------- | ---- | ------ |
-| `pages/knowledge-bases/KnowledgeBaseDetailPage.tsx` | 540  | 仍成立 |
-| `components/settings/ai/AISettingsForm.tsx`         | 520  | 仍成立 |
-| `pages/ChatPage.tsx`                                | 496  | 仍成立 |
-| `components/auth/ForgotPasswordForm.tsx`            | 489  | 仍成立 |
-| `components/dashboard/StructuredRagOverview.tsx`    | 469  | 仍成立 |
-| `pages/documents/DocumentDetailPage.tsx`            | 419  | 仍成立 |
+本轮继续完成 `ChatPage.tsx` 拆分后，原报告首批点名的 `400+` 行前端大组件已全部收敛。
 
-> 注：原报告中部分前端文件路径已变化，但“大组件需要拆分”的结论没有变化。
+补充：
+
+- `pages/ChatPage.tsx` 已拆为页面壳 + `pages/chat-page/*` 子模块，当前主文件为 `121` 行。
+- `components/dashboard/StructuredRagOverview.tsx` 已拆分完成，当前主文件为 `110` 行，不应继续列为超大组件。
+- `components/auth/ForgotPasswordForm.tsx` 已拆分完成，当前主文件为 `70` 行，不应继续列为超大组件。
+- `pages/knowledge-bases/KnowledgeBaseDetailPage.tsx` 已拆分完成，当前主文件为 `188` 行，不应继续列为超大组件。
+- `components/settings/ai/AISettingsForm.tsx` 已拆分完成，当前主文件为 `259` 行，不应继续列为超大组件。
+- `pages/documents/DocumentDetailPage.tsx` 当前为 `379` 行，已不再属于首批 `400+` 行治理名单。
+- 原报告中部分前端文件路径已变化；当前前端结构治理的重点已从超大单文件，转向关键路径测试、i18n 完整性与少量中大型页面的持续整理。
 
 ### 4.2 前端国际化仍未补齐
 
-本轮已完成第一批 i18n 收口，但仍需继续扫描其余散落硬编码。
+本轮已完成第一批与第二批 i18n 收口，但仍需继续扫描其余散落硬编码。
 
 已完成收口的项包括：
 
@@ -161,6 +174,10 @@
 - `useLLMConfig.ts`：`AI settings saved successfully` 等 toast 文案
 - `lib/utils.ts`：`Bytes / KB / MB / GB / TB`
 - `lib/http/stream-client.ts`：`No response body`
+- `DocumentFilters.tsx`：`PDF / Markdown` 类型标签
+- `AIRewriteDialog.tsx`：`AI 改写: ` changeNote 前缀
+- `AISettingsCredentialsSection.tsx`：`API Key` / `Base URL` label
+- `SaveToKBDialog.tsx`：`Zhipu AI / OpenAI / Ollama (Local)` provider 选项
 
 当前剩余工作：
 
@@ -408,7 +425,7 @@
 - 新增 client 定向测试 `18` 个全部通过
 - `@knowledge-agent/client build` 通过
 
-### 5.13 后端四个超大核心文件已完成第一轮拆分
+### 5.13 后端核心大文件与 `db-consistency-check` 已完成结构拆分
 
 本次已完成以下结构治理：
 
@@ -416,18 +433,26 @@
 - `chat.service.ts` 已拆分为主编排、agent streaming、legacy streaming、helper、type 五部分。
 - `agent-executor.ts` 已拆分为主循环、citation 选择、运行时辅助、类型定义四部分。
 - `processing.service.ts` 已拆分为 facade、主执行器、锁管理、结构解析、阶段处理、类型定义六部分。
+- `document.repository.ts` 已进一步拆分为薄门面、CRUD/listing、processing、query helper、backfill、types 六部分。
+- `scripts/db-consistency-check.ts` 已拆为 CLI 入口与 `checks.ts`、`report.ts`、`runner.ts`、`types.ts` 四个职责子模块。
+- 已补充评估 `processing.executor.ts` / `processing.stages.ts` 的继续细化必要性，当前结论是不再新增文件层级，只移除未使用的 `cleanupOldVectors` helper。
 
 修订结论：
 
 - 原报告中“4 个 600+ 行后端核心文件仍然全部未拆”的说法已经过时。
 - “大文件问题”并未完全消失，但最突出的后端热点已经完成一轮可维护性收敛。
-- 当前更合理的下一步是继续处理剩余 400+ 行文件，以及按阶段继续细化 `processing` 拆分后的内部模块。
+- `document.repository.ts` 也不应继续作为“剩余 400+ 行后端文件”的代表案例。
+- 当前不建议继续拆分 `processing.executor.ts` / `processing.stages.ts`，因为它们仍保持“单一编排入口 + 阶段 helper 聚合”的清晰边界，继续拆分的收益低于复杂度成本。
+- 当前更合理的下一步是把治理重心转向前端大组件与高风险链路测试，而不是继续细碎化 processing 子模块。
 
 验证：
 
 - `pnpm -F @knowledge-agent/server build` 通过
+- 已删除未使用的 `cleanupOldVectors` helper，作为 processing 子模块的最小清理
+- `pnpm test -- packages/server/tests/scripts/db-consistency-check.runner.test.ts`：`4` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/agent/agent-executor.test.ts`：`32` 个测试全部通过
 - `pnpm test -- packages/server/tests/modules/rag/processing.error-injection.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts`：`17` 个测试全部通过
+- `pnpm test -- packages/server/tests/modules/document-index/document-index-backfill.service.test.ts packages/server/tests/modules/document-index/document-index-activation.service.test.ts packages/server/tests/modules/rag/processing-recovery.service.test.ts packages/server/tests/modules/rag/search.service.test.ts packages/server/tests/modules/knowledge-base/services/counter-sync.service.test.ts`：`21` 个测试全部通过
 
 ### 5.14 文档处理已切换为 immutable build + atomic publish
 
@@ -598,6 +623,123 @@
 
 - `pnpm test -- packages/server/tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts`：`2` 个测试全部通过
 
+### 5.23 `StructuredRagOverview` 已完成组件级拆分
+
+本次已完成以下前端结构治理：
+
+- `StructuredRagOverview.tsx` 已收敛为主容器，负责数据获取、筛选状态和导出动作编排。
+- 已新增 `components/dashboard/structured-rag/` 子目录，拆出：
+  - `StructuredRagHeader.tsx`
+  - `StructuredRagAlerts.tsx`
+  - `StructuredRagStats.tsx`
+  - `StructuredRagInsightsGrid.tsx`
+  - `StructuredRagBreakdownTable.tsx`
+  - `utils.ts`
+- 主文件当前降至 `110` 行，局部展示逻辑按“头部 / 告警 / 指标 / 详情 / 表格”边界分离。
+- 本次拆分未改动交互语义，仅降低页面级组件复杂度。
+
+修订结论：
+
+- `components/dashboard/StructuredRagOverview.tsx` 不应继续列为剩余 400+ 行前端大组件。
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
+
+### 5.24 `ForgotPasswordForm` 已完成按 step 拆分
+
+本次已完成以下前端结构治理：
+
+- `ForgotPasswordForm.tsx` 已收敛为父级状态编排，仅保留 `step` / `resetState` 和卡片壳。
+- 已新增 `components/auth/forgot-password/` 子目录，拆出：
+  - `StepIndicator.tsx`
+  - `EmailStep.tsx`
+  - `CodeStep.tsx`
+  - `PasswordStep.tsx`
+  - `types.ts`
+- 主文件当前降至 `71` 行，step 级表单逻辑分别内聚在对应子组件内。
+- 本次拆分未改变找回密码主流程，仅降低了父组件复杂度。
+
+修订结论：
+
+- `components/auth/ForgotPasswordForm.tsx` 不应继续列为剩余 400+ 行前端大组件。
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
+- `pnpm test -- packages/client/tests/components/auth/ForgotPasswordForm.test.tsx`：`2` 个测试全部通过
+
+### 5.25 `KnowledgeBaseDetailPage` 已完成页面级拆分
+
+本次已完成以下前端结构治理：
+
+- `KnowledgeBaseDetailPage.tsx` 已收敛为页面壳，负责 query、mutation、搜索态、视图态与导航编排。
+- 已新增 `pages/knowledge-bases/knowledge-base-detail/` 子目录，拆出：
+  - `KnowledgeBaseDetailStates.tsx`
+  - `KnowledgeBaseDetailHeader.tsx`
+  - `KnowledgeBaseDocumentsToolbar.tsx`
+  - `KnowledgeBaseDocumentsContent.tsx`
+  - `KnowledgeBaseUploadDialog.tsx`
+  - `KnowledgeBaseDeleteDialog.tsx`
+  - `types.ts`
+- 主文件当前降至 `188` 行，页面块按“状态 / header / toolbar / content / dialogs”边界分离。
+- 本次拆分未改变知识库详情页交互语义，仅降低页面级组件复杂度。
+
+修订结论：
+
+- `pages/knowledge-bases/KnowledgeBaseDetailPage.tsx` 不应继续列为剩余 400+ 行前端大组件。
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
+- `pnpm test -- packages/client/tests/pages/knowledge-bases/KnowledgeBaseDetailPage.test.tsx`：`2` 个测试全部通过
+
+### 5.26 `AISettingsForm` 已完成 section 级拆分
+
+本次已完成以下前端结构治理：
+
+- `AISettingsForm.tsx` 已收敛为主表单容器，负责 query、form store、provider capability 派生与 mutation handlers。
+- 已新增 `components/settings/ai/sections/` 子目录，拆出：
+  - `AISettingsCredentialsSection.tsx`
+  - `AISettingsModelSection.tsx`
+  - `AISettingsActions.tsx`
+- 同时补充了 `types.ts` 与 `utils.ts`，将 provider capability 计算收敛为纯函数。
+- 主文件当前降至 `259` 行，UI 已按“凭据 / 模型 / 操作”边界分离。
+- 本次拆分未改变 AI 设置页交互语义，仅降低表单级组件复杂度。
+
+修订结论：
+
+- `components/settings/ai/AISettingsForm.tsx` 不应继续列为剩余 400+ 行前端大组件。
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
+- `pnpm test -- packages/client/tests/components/settings/AISettingsForm.test.tsx`：`5` 个测试全部通过
+
+### 5.27 `ChatPage` 已完成页面级拆分
+
+本次已完成以下前端结构治理：
+
+- `ChatPage.tsx` 已收敛为页面壳，负责 skip link、消息输入区与 dialogs 装配。
+- 已新增 `pages/chat-page/` 子目录，拆出：
+  - `useChatPageController.ts`
+  - `ChatPageToolbar.tsx`
+  - `ChatPageConversation.tsx`
+  - `ChatPageDialogs.tsx`
+  - `ChatPageLoadingState.tsx`
+  - `utils.ts`
+- 主文件当前降至 `121` 行，query/store 同步、副作用、消息区渲染与弹窗编排已按边界分离。
+- 本次拆分未改变聊天页交互语义，仅降低页面级组件复杂度。
+
+修订结论：
+
+- `pages/ChatPage.tsx` 不应继续列为剩余 400+ 行前端大组件。
+- 前端结构治理的下一步重点应回到关键路径测试与 i18n 补漏。
+
+验证：
+
+- `pnpm -F @knowledge-agent/client build` 通过
+
 ---
 
 ## 6. 部分成立且需要继续落地的项
@@ -716,19 +858,20 @@
 
 - 如需进一步收敛，可再单独评估 CLI 脚本层是否也要统一到 `AppError`
 
-#### 7.7 已完成第一轮：拆分后端四个超大核心文件
+#### 7.7 已完成第二轮：拆分后端四个超大核心文件与 `db-consistency-check`
 
 已完成结果：
 
 - `processing.service.ts`、`chat.service.ts`、`agent-executor.ts`、`env.ts` 已完成第一轮物理拆分
+- `document.repository.ts` 已继续拆为 facade + `core` / `processing` / `queries` / `backfill` / `types`
+- `db-consistency-check.ts` 已进一步拆为 CLI entry + `checks` / `report` / `runner` / `types`
+- 已补充完成 `processing.executor.ts` / `processing.stages.ts` 的继续拆分评估，当前结论是不再物理拆分，仅移除未使用 helper
 - 对外导出与主要调用方式保持兼容
 - `@knowledge-agent/server build` 与相关定向测试均已通过
 
 当前剩余工作：
 
-- 继续拆分剩余 400+ 行的后端文件
-- 评估是否还要进一步细化 `processing.stages.ts` / `processing.executor.ts`
-- 前端超大页面/组件仍需后续治理
+- 前端首批超大页面/组件拆分已基本完成，后续更值得转入关键路径测试与 i18n 收口
 
 #### 7.8 已完成：调整批处理容错
 
@@ -780,9 +923,9 @@
 - 组件层和路由层不再直接访问 `.getState()`
 - 剩余 `.getState()` 已集中封装在 `authStore.ts` 的非 React 快照 helper 中
 
-#### 7.13 已完成第一批：补齐 i18n 漏项
+#### 7.13 已完成第二批：补齐 i18n 漏项
 
-已完成结果：
+已完成结果（第一批）：
 
 - 处理状态标签
 - 视图按钮 `aria-label`
@@ -791,10 +934,18 @@
 - 文件大小单位
 - SSE/stream 错误文案
 
+已完成结果（第二批）：
+
+- `DocumentFilters.tsx`：`pdf` / `markdown` 类型标签改用 `t('type.pdf/markdown')`
+- `AIRewriteDialog.tsx`：`AI 改写: ` 前缀改用 `t('aiRewrite.changeNotePrefix')`
+- `AISettingsCredentialsSection.tsx`：`API Key` / `Base URL` label 改用 `t('form.apiKeyLabel/baseUrlLabel')`
+- `SaveToKBDialog.tsx`：provider 选项改用 `t('createKb.providerZhipu/OpenAI/Ollama')`
+- 对应 key 已同步补入 `en-US` / `zh-CN` 的 `settings.json`、`document.json`、`chat.json`
+
 当前剩余工作：
 
 - 继续扫描其他页面级组件中的散落硬编码
-- 继续扫描 client 工具层/HTTP 层未纳入首批名单的 fallback 文案
+- 继续扫描 client 工具层/HTTP 层未纳入前两批名单的 fallback 文案
 
 #### 7.14 已完成：增加功能域级错误边界
 
@@ -813,6 +964,7 @@
 - 聊天会话列表分页与 legacy 兼容测试
 - `KnowledgeBaseDialog` 组件级交互测试
 - `ConversationList` 组件级交互测试
+- `ChatPage` 页面级测试
 - `DocumentUpload` 组件测试
 - `DocumentReader` 组件测试
 
@@ -845,7 +997,7 @@
 - 不建议继续写“`processing.service.ts`、`chat.service.ts`、`agent-executor.ts`、`env.ts` 仍是当前最突出的 600+ 行后端核心文件”，更准确的说法是：
   - 这 4 个文件已完成第一轮拆分
   - 主流程已下沉到更细的子模块
-  - 剩余可维护性压力主要转移到少数 400+ 行文件与前端大组件
+  - 剩余可维护性压力主要转移到前端关键路径测试、i18n 完整性与少量中大型页面
 - 不建议继续写“文档处理仍采用原地替换 chunk/vector 的发布模型”，更准确的说法是：
   - chunk / vector / graph 已切换到 immutable build 产物模型
   - 查询链路只消费 active build

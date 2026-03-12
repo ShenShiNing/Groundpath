@@ -37,6 +37,8 @@
     "refresh": "刷新",
     "modelHelper": "从列表选择或输入自定义模型名称",
     "modelPlaceholder": "选择或输入模型...",
+    "apiKeyLabel": "API Key",
+    "baseUrlLabel": "Base URL",
     "testConnection": "测试连接",
     "clearConfig": "清空配置",
     "clearConfirmTitle": "确认清空 AI 配置？",

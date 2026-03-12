@@ -314,9 +314,9 @@ export function SaveToKBDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="zhipu">Zhipu AI</SelectItem>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                    <SelectItem value="zhipu">{t('createKb.providerZhipu')}</SelectItem>
+                    <SelectItem value="openai">{t('createKb.providerOpenAI')}</SelectItem>
+                    <SelectItem value="ollama">{t('createKb.providerOllama')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
