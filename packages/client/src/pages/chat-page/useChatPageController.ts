@@ -148,15 +148,19 @@ export function useChatPageController() {
     setHighlightedMessageId(focusMessageId);
     skipNextAutoScrollRef.current = true;
     clearFocusMessageId();
+  }, [clearFocusMessageId, focusKeyword, focusMessageId, messages]);
+
+  useEffect(() => {
+    if (!highlightedMessageId) return;
 
     const timer = window.setTimeout(() => {
-      setHighlightedMessageId((current) => (current === focusMessageId ? null : current));
+      setHighlightedMessageId((current) => (current === highlightedMessageId ? null : current));
     }, 2200);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [clearFocusMessageId, focusKeyword, focusMessageId, messages]);
+  }, [highlightedMessageId]);
 
   useEffect(() => {
     if (kbError) {

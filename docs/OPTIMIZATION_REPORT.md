@@ -42,6 +42,7 @@
   1. 已补认证守卫与 token 刷新逻辑测试。
   2. 已补知识库列表/上传与聊天会话列表分页契约测试。
   3. 已补 `KnowledgeBaseDialog` 与 `ConversationList` 组件级交互测试。
+  4. 已补 `ChatPage` 页面级测试，覆盖优选知识库选择、文档 scope 收敛、上传弹窗编排、focus 高亮与 citation 导航。
 - 本轮可维护性拆分后，以下事项也已完成：
   1. `shared/config/env.ts` 已拆为薄门面 + `env/loader.ts`、`schema.ts`、`validated-env.ts`、`configs.ts`。
   2. `chat.service.ts` 已拆为主编排 + `chat-agent-stream.service.ts`、`chat-legacy-stream.service.ts`、`chat.helpers.ts`、`chat.types.ts`。
@@ -944,6 +945,7 @@
 - 聊天会话列表分页与 legacy 兼容测试
 - `KnowledgeBaseDialog` 组件级交互测试
 - `ConversationList` 组件级交互测试
+- `ChatPage` 页面级测试
 - `DocumentUpload` 组件测试
 - `DocumentReader` 组件测试
 
