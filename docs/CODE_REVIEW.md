@@ -123,45 +123,34 @@ pnpm monorepo 全栈项目，三个包：
 
 ---
 
-### P1 — 安全与规范
+### ~~P1 — 安全与规范~~ ✅ 已修复
 
-#### 4.4 `auth.routes.ts` 中间件顺序不一致 & 缺少 CSRF 保护
+> 修复分支：`fix/p1-security-and-standards`
+
+#### ~~4.4 `auth.routes.ts` 中间件顺序不一致 & 缺少 CSRF 保护~~ ✅
 
 **文件**: `packages/server/src/modules/auth/auth.routes.ts`
 
-**问题**:
+**已修复**: 为 `/logout-all` 添加 `requireCsrfProtection`，统一状态变更路由的 CSRF 保护。
 
-- `/refresh` 路由：`refreshRateLimiter, requireCsrfProtection`
-- `/logout` 路由：`requireCsrfProtection, authenticateRefreshToken`
-- CSRF 保护位置不统一
-- `/logout-all` 使用 access token 但没有 CSRF 保护
+#### ~~4.5 `auth.service.ts` 超过 400 行限制~~ ✅
 
-**建议**:
+**文件**: `packages/server/src/modules/auth/services/auth.service.ts`
 
-- 统一中间件顺序为 `rateLimiter → CSRF → authentication → validation`
-- 为 `/logout-all` 添加 `requireCsrfProtection`
+**已修复**:
 
-#### 4.5 `auth.service.ts` 超过 400 行限制
+- 提取 `resolveDeviceInfo()` 辅助函数，消除 3 处重复
+- 移除 6 个纯委托方法（logout/logoutAll/getSessions/revokeSession/changePassword/resetPassword）
+- 控制器直接调用 `sessionService` 和 `passwordService`
+- 文件从 417 行降至 ~350 行
 
-**文件**: `packages/server/src/modules/auth/services/auth.service.ts`（407 行）
+#### ~~4.6 添加 OpenAPI/Swagger API 文档~~ ✅
 
-**问题**:
+**已修复**: 基于 `@asteasolutions/zod-to-openapi` 构建完整 API 文档，复用现有 Zod schema。
 
-- `deviceInfo ?? parseDeviceInfo(userAgent)` 重复出现 3 次
-- `register` 和 `registerWithCode` 有大量重复逻辑
-- 第 340-403 行只是简单委托给 `sessionService` 和 `passwordService`
-
-**建议**:
-
-- 提取 `resolveDeviceInfo()`、`createUserAndBuildResponse()` 辅助函数
-- 移除纯委托方法，直接从子服务导出
-- 目标：降至 ~300 行
-
-#### 4.6 添加 OpenAPI/Swagger API 文档
-
-**现状**: 12 个路由模块，无 API 文档。
-
-**建议**: 使用 `@asteasolutions/zod-to-openapi` 从现有 Zod schema 自动生成 OpenAPI 文档，成本低且与现有验证层复用。
+- 覆盖全部 12 个路由模块（Auth、OAuth、Email、User、Document、Document AI、Knowledge Base、Chat、LLM、Logs、RAG、Storage）
+- Swagger UI 挂载于 `/api-docs`
+- 包含 Bearer Auth 安全方案、标准响应格式、分页响应
 
 ---
 
@@ -351,9 +340,9 @@ pnpm monorepo 全栈项目，三个包：
 | ~~P0~~ | 4.1  | refresh_tokens 外键级联            | 数据完整性 | ✅   |
 | ~~P0~~ | 4.2  | messages 外键级联                  | 数据完整性 | ✅   |
 | ~~P0~~ | 4.3  | conversations.knowledgeBaseId 外键 | 数据完整性 | ✅   |
-| P1     | 4.4  | auth.routes.ts CSRF 保护           | 安全       |      |
-| P1     | 4.5  | auth.service.ts 拆分               | 代码规范   |      |
-| P1     | 4.6  | OpenAPI 文档                       | 协作效率   |      |
+| ~~P1~~ | 4.4  | auth.routes.ts CSRF 保护           | 安全       | ✅   |
+| ~~P1~~ | 4.5  | auth.service.ts 拆分               | 代码规范   | ✅   |
+| ~~P1~~ | 4.6  | OpenAPI 文档                       | 协作效率   | ✅   |
 | P2     | 4.7  | token.service.ts 去重              | 可维护性   |      |
 | P2     | 4.8  | password.service.ts 去重           | 可维护性   |      |
 | P2     | 4.9  | processing.executor.ts 重构        | 可读性     |      |
