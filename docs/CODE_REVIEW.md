@@ -99,39 +99,27 @@ pnpm monorepo 全栈项目，三个包：
 
 ## 四、待优化项
 
-### P0 — 数据完整性
+### ~~P0 — 数据完整性~~ ✅ 已修复
 
-#### 4.1 `refresh_tokens` 缺少外键级联删除
+> 修复分支：`fix/p0-foreign-key-constraints` | 迁移文件：`0007_overjoyed_lily_hollister.sql`
+
+#### ~~4.1 `refresh_tokens` 缺少外键级联删除~~ ✅
 
 **文件**: `packages/server/src/shared/db/schema/auth/refresh-tokens.schema.ts`
 
-**现状**: 仅有 Drizzle `relations()` 定义，无数据库级外键约束。用户删除后刷新令牌成为孤儿记录。
+**已修复**: 添加 `refresh_tokens_user_id_fk` 外键约束，`user_id → users.id ON DELETE CASCADE`。删除用户时自动级联删除其刷新令牌。
 
-**建议**: 在表定义的索引数组中添加：
-
-```typescript
-foreignKey({
-  columns: [table.userId],
-  foreignColumns: [users.id],
-  name: 'refresh_tokens_user_id_fk',
-}).onDelete('cascade'),
-```
-
-#### 4.2 `messages` 缺少外键级联删除
+#### ~~4.2 `messages` 缺少外键级联删除~~ ✅
 
 **文件**: `packages/server/src/shared/db/schema/ai/messages.schema.ts`
 
-**现状**: 仅有 `relations()` 定义，无数据库级外键。对话删除后消息成为孤儿记录。
+**已修复**: 添加 `messages_conversation_id_fk` 外键约束，`conversation_id → conversations.id ON DELETE CASCADE`。删除对话时自动级联删除其消息。
 
-**建议**: 添加外键约束 `onDelete('cascade')`。
-
-#### 4.3 `conversations.knowledgeBaseId` 缺少外键约束
+#### ~~4.3 `conversations.knowledgeBaseId` 缺少外键约束~~ ✅
 
 **文件**: `packages/server/src/shared/db/schema/ai/conversations.schema.ts`
 
-**现状**: `knowledgeBaseId` 是可选字段，但无外键约束。知识库删除后对话中的引用悬空。
-
-**建议**: 添加外键约束 `onDelete('set null')`。
+**已修复**: 添加 `conversations_knowledge_base_id_fk` 外键约束，`knowledge_base_id → knowledge_bases.id ON DELETE SET NULL`。删除知识库时自动将关联对话的引用置空。
 
 ---
 
@@ -358,26 +346,26 @@ foreignKey({
 
 ## 五、优化优先级总览
 
-| 优先级 | 编号 | 描述                               | 影响       |
-| ------ | ---- | ---------------------------------- | ---------- |
-| P0     | 4.1  | refresh_tokens 外键级联            | 数据完整性 |
-| P0     | 4.2  | messages 外键级联                  | 数据完整性 |
-| P0     | 4.3  | conversations.knowledgeBaseId 外键 | 数据完整性 |
-| P1     | 4.4  | auth.routes.ts CSRF 保护           | 安全       |
-| P1     | 4.5  | auth.service.ts 拆分               | 代码规范   |
-| P1     | 4.6  | OpenAPI 文档                       | 协作效率   |
-| P2     | 4.7  | token.service.ts 去重              | 可维护性   |
-| P2     | 4.8  | password.service.ts 去重           | 可维护性   |
-| P2     | 4.9  | processing.executor.ts 重构        | 可读性     |
-| P2     | 4.10 | vector.repository.ts 去重          | 可维护性   |
-| P2     | 4.11 | activation.service.ts 去重         | 可维护性   |
-| P2     | 4.12 | 硬编码常量集中化                   | 配置规范   |
-| P3     | 4.13 | React Query staleTime              | 性能       |
-| P3     | 4.14 | 缓存失效策略优化                   | 性能       |
-| P3     | 4.15 | 客户端错误处理                     | 可调试性   |
-| P3     | 4.16 | 大型组件拆分                       | 代码规范   |
-| P3     | 4.17 | 客户端测试补充                     | 质量保障   |
-| P4     | 4.18 | chunking 健壮性                    | 稳定性     |
-| P4     | 4.19 | token 估算优化                     | 准确性     |
-| P4     | 4.20 | vector-cleanup 并发控制            | 稳定性     |
-| P4     | 4.21 | shared 目录重命名                  | 可读性     |
+| 优先级 | 编号 | 描述                               | 影响       | 状态 |
+| ------ | ---- | ---------------------------------- | ---------- | ---- |
+| ~~P0~~ | 4.1  | refresh_tokens 外键级联            | 数据完整性 | ✅   |
+| ~~P0~~ | 4.2  | messages 外键级联                  | 数据完整性 | ✅   |
+| ~~P0~~ | 4.3  | conversations.knowledgeBaseId 外键 | 数据完整性 | ✅   |
+| P1     | 4.4  | auth.routes.ts CSRF 保护           | 安全       |      |
+| P1     | 4.5  | auth.service.ts 拆分               | 代码规范   |      |
+| P1     | 4.6  | OpenAPI 文档                       | 协作效率   |      |
+| P2     | 4.7  | token.service.ts 去重              | 可维护性   |      |
+| P2     | 4.8  | password.service.ts 去重           | 可维护性   |      |
+| P2     | 4.9  | processing.executor.ts 重构        | 可读性     |      |
+| P2     | 4.10 | vector.repository.ts 去重          | 可维护性   |      |
+| P2     | 4.11 | activation.service.ts 去重         | 可维护性   |      |
+| P2     | 4.12 | 硬编码常量集中化                   | 配置规范   |      |
+| P3     | 4.13 | React Query staleTime              | 性能       |      |
+| P3     | 4.14 | 缓存失效策略优化                   | 性能       |      |
+| P3     | 4.15 | 客户端错误处理                     | 可调试性   |      |
+| P3     | 4.16 | 大型组件拆分                       | 代码规范   |      |
+| P3     | 4.17 | 客户端测试补充                     | 质量保障   |      |
+| P4     | 4.18 | chunking 健壮性                    | 稳定性     |      |
+| P4     | 4.19 | token 估算优化                     | 准确性     |      |
+| P4     | 4.20 | vector-cleanup 并发控制            | 稳定性     |      |
+| P4     | 4.21 | shared 目录重命名                  | 可读性     |      |
