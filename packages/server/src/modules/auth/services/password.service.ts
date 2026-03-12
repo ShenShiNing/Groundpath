@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ResetPasswordRequest } from '@knowledge-agent/shared/types';
 import { Errors } from '@shared/errors';
-import { withTransaction } from '@shared/db/db.utils';
+import { withTransaction, type Transaction } from '@shared/db/db.utils';
 import { normalizeEmail } from '@shared/utils';
 import { authConfig } from '@config/env';
 import { userService } from '../../user';
@@ -10,6 +10,34 @@ import { refreshTokenRepository } from '../repositories/refresh-token.repository
 import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 import { emailVerificationService } from '../verification/email-verification.service';
 import { logOperation } from '@shared/logger/operation-logger';
+
+/** Hash a plaintext password using the configured salt rounds. */
+function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, authConfig.bcrypt.saltRounds);
+}
+
+/** Revoke all refresh tokens and bump tokenValidAfter within a transaction. */
+async function revokeAllUserSessions(userId: string, tx: Transaction): Promise<number> {
+  const revoked = await refreshTokenRepository.revokeAllForUser(userId, tx);
+  await userTokenStateRepository.bumpTokenValidAfter(userId, tx);
+  return revoked;
+}
+
+async function updatePasswordAndMaybeRevokeSessions(input: {
+  userId: string;
+  hashedPassword: string;
+  revokeSessions: boolean;
+}): Promise<number | undefined> {
+  return withTransaction(async (tx) => {
+    await userService.updatePassword(input.userId, input.hashedPassword, tx);
+
+    if (!input.revokeSessions) {
+      return undefined;
+    }
+
+    return revokeAllUserSessions(input.userId, tx);
+  });
+}
 
 /**
  * Password service for managing user passwords
@@ -41,16 +69,13 @@ export const passwordService = {
     }
 
     // Hash new password (outside transaction - no DB writes)
-    const hashedPassword = await bcrypt.hash(newPassword, authConfig.bcrypt.saltRounds);
+    const hashedPassword = await hashPassword(newPassword);
 
     // Transaction: update password and revoke all tokens atomically
-    await withTransaction(async (tx) => {
-      // Update password
-      await userService.updatePassword(userId, hashedPassword, tx);
-
-      // Revoke all refresh tokens for security (force re-login on all devices)
-      await refreshTokenRepository.revokeAllForUser(userId, tx);
-      await userTokenStateRepository.bumpTokenValidAfter(userId, tx);
+    await updatePasswordAndMaybeRevokeSessions({
+      userId,
+      hashedPassword,
+      revokeSessions: true,
     });
 
     // Log the operation (outside transaction - non-critical)
@@ -98,20 +123,13 @@ export const passwordService = {
     }
 
     // Hash new password (outside transaction - no DB writes)
-    const hashedPassword = await bcrypt.hash(newPassword, authConfig.bcrypt.saltRounds);
+    const hashedPassword = await hashPassword(newPassword);
 
     // Transaction: update password and optionally revoke sessions atomically
-    const sessionsRevoked = await withTransaction(async (tx) => {
-      // Update password
-      await userService.updatePassword(user.id, hashedPassword, tx);
-
-      // Optionally revoke all sessions
-      if (logoutAllDevices !== false) {
-        const revoked = await refreshTokenRepository.revokeAllForUser(user.id, tx);
-        await userTokenStateRepository.bumpTokenValidAfter(user.id, tx);
-        return revoked;
-      }
-      return undefined;
+    const sessionsRevoked = await updatePasswordAndMaybeRevokeSessions({
+      userId: user.id,
+      hashedPassword,
+      revokeSessions: logoutAllDevices !== false,
     });
 
     return {

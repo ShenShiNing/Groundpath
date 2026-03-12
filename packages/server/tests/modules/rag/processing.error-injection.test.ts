@@ -684,6 +684,46 @@ describe('RAG Processing Error Injection', () => {
     );
   });
 
+  it('should log both cleanup failures after index build is created', async () => {
+    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+      textContent: 'Some text',
+    });
+    chunkingServiceMock.chunkText.mockImplementation(() => {
+      throw new Error('Chunking crashed');
+    });
+    documentIndexServiceMock.failBuild.mockRejectedValue(new Error('Index cleanup failed'));
+    documentRepositoryMock.updateProcessingStatusWithPublishGeneration.mockRejectedValue(
+      new Error('Status cleanup failed')
+    );
+
+    await processingService.processDocument(docId, userId);
+
+    expect(documentIndexServiceMock.failBuild).toHaveBeenCalledWith(
+      'idx-build-1',
+      'Chunking crashed'
+    );
+    expect(documentRepositoryMock.updateProcessingStatusWithPublishGeneration).toHaveBeenCalledWith(
+      docId,
+      1,
+      'failed',
+      'Chunking crashed'
+    );
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: docId,
+        indexError: expect.any(Error),
+      }),
+      'Failed to mark document index build as failed'
+    );
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: docId,
+        updateError: expect.any(Error),
+      }),
+      'Failed to update document status to failed'
+    );
+  });
+
   it('should always release lock even on error', async () => {
     documentRepositoryMock.findById.mockRejectedValue(new Error('Crash'));
     documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);

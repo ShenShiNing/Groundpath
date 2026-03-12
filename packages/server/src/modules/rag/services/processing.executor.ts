@@ -32,6 +32,63 @@ import type { DocumentProcessingEnqueueOptions } from '../queue/document-process
 
 const logger = createLogger('processing.service');
 
+async function checkVersionStaleness(input: {
+  documentId: string;
+  currentDocumentVersion?: number;
+  targetDocumentVersion?: number;
+}): Promise<boolean> {
+  if (input.targetDocumentVersion === undefined) {
+    return false;
+  }
+
+  if (input.currentDocumentVersion !== undefined) {
+    return input.currentDocumentVersion !== input.targetDocumentVersion;
+  }
+
+  return isStaleTargetVersion(input.documentId, input.targetDocumentVersion);
+}
+
+function logCleanupFailure(
+  documentId: string,
+  field: 'indexError' | 'updateError',
+  result: PromiseSettledResult<unknown>,
+  message: string
+): void {
+  if (result.status === 'rejected') {
+    logger.error({ documentId, [field]: result.reason }, message);
+  }
+}
+
+async function cleanupAfterProcessingFailure(
+  documentId: string,
+  context: ProcessingContext,
+  message: string
+): Promise<void> {
+  const cleanupResults = await Promise.allSettled([
+    context.state.indexBuildId
+      ? documentIndexService.failBuild(context.state.indexBuildId, message)
+      : Promise.resolve(),
+    markProcessingFailedWithFence({
+      documentId,
+      expectedPublishGeneration: context.state.publishGeneration,
+      message,
+    }),
+  ]);
+
+  logCleanupFailure(
+    documentId,
+    'indexError',
+    cleanupResults[0],
+    'Failed to mark document index build as failed'
+  );
+  logCleanupFailure(
+    documentId,
+    'updateError',
+    cleanupResults[1],
+    'Failed to update document status to failed'
+  );
+}
+
 function createInitialRuntimeState(): ProcessingRuntimeState {
   return {
     parsedStructure: null,
@@ -79,15 +136,18 @@ export async function processDocument(
     }
 
     if (
-      request?.targetDocumentVersion !== undefined &&
-      document.currentVersion !== request.targetDocumentVersion
+      await checkVersionStaleness({
+        documentId,
+        currentDocumentVersion: document.currentVersion,
+        targetDocumentVersion: request?.targetDocumentVersion,
+      })
     ) {
       logger.warn(
         {
           documentId,
-          targetDocumentVersion: request.targetDocumentVersion,
+          targetDocumentVersion: request?.targetDocumentVersion,
           currentDocumentVersion: document.currentVersion,
-          reason: request.reason,
+          reason: request?.reason,
         },
         'Skipping stale document processing job before processing'
       );
@@ -210,7 +270,12 @@ export async function processDocument(
       vectorPoints: artifacts.vectorPoints,
     });
 
-    if (await isStaleTargetVersion(documentId, request?.targetDocumentVersion)) {
+    if (
+      await checkVersionStaleness({
+        documentId,
+        targetDocumentVersion: request?.targetDocumentVersion,
+      })
+    ) {
       logger.warn(
         {
           documentId,
@@ -301,26 +366,7 @@ export async function processDocument(
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.error({ documentId, error: message }, 'Document processing failed');
 
-    try {
-      if (context.state.indexBuildId) {
-        await documentIndexService.failBuild(context.state.indexBuildId, message);
-      }
-    } catch (indexError) {
-      logger.error({ documentId, indexError }, 'Failed to mark document index build as failed');
-    }
-
-    try {
-      await markProcessingFailedWithFence({
-        documentId,
-        expectedPublishGeneration: context.state.publishGeneration,
-        message,
-      });
-    } catch (documentStatusError) {
-      logger.error(
-        { documentId, updateError: documentStatusError },
-        'Failed to update document status to failed'
-      );
-    }
+    await cleanupAfterProcessingFailure(documentId, context, message);
 
     if (context.state.knowledgeBaseId && context.state.documentVersion !== undefined) {
       structuredRagMetrics.recordIndexBuild({

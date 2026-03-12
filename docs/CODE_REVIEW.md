@@ -156,45 +156,37 @@ pnpm monorepo 全栈项目，三个包：
 
 ### P2 — 代码质量
 
-#### 4.7 `token.service.ts` 重复逻辑
+> 修复分支：`refactor/p2-code-quality`（已完成 4.7、4.8、4.9）
+
+#### ~~4.7 `token.service.ts` 重复逻辑~~ ✅
 
 **文件**: `packages/server/src/modules/auth/services/token.service.ts`
 
-**问题**:
+**已修复**:
 
-- `AccessTokenSubject` 构建逻辑与 `auth.service.ts` 重复
-- `refreshTokens` 方法 79 行，逻辑复杂
+- 提取 `buildAccessTokenSubject(user)` 到 `shared/utils/user.mappers.ts`，由 `auth.service.ts` 与 `token.service.ts` 共享
+- 将 `refreshTokens` 拆分为 `consumeRefreshTokenOrThrow()`、`validateRefreshUserOrThrow()`、`issueRefreshedTokens()` 三段
+- 封禁用户分支统一复用 `revokeUserSessionsAndInvalidateAccess()`，避免刷新令牌路径重复散落副作用
 
-**建议**:
-
-- 提取 `buildAccessTokenSubject(user)` 共享函数
-- 拆分 `refreshTokens` 为 token 消费、用户验证、token 生成三个子函数
-
-#### 4.8 `password.service.ts` 重复逻辑
+#### ~~4.8 `password.service.ts` 重复逻辑~~ ✅
 
 **文件**: `packages/server/src/modules/auth/services/password.service.ts`
 
-**问题**:
+**已修复**:
 
-- 密码哈希调用重复（第 44、101 行）
-- token 撤销逻辑重复（第 52-53、110-111 行）
-- `changePassword` 和 `resetPassword` 事务结构相似
+- 提取 `hashPassword()` 统一密码哈希入口
+- 提取 `revokeAllUserSessions()`，统一刷新令牌撤销 + `tokenValidAfter` bump
+- 新增 `updatePasswordAndMaybeRevokeSessions()` 复用 `changePassword` / `resetPassword` 的事务模板
 
-**建议**: 提取 `hashPassword()` 和 `revokeAllUserSessions()` 辅助函数。
-
-#### 4.9 `processing.executor.ts` 版本检查重复 & 错误处理嵌套过深
+#### ~~4.9 `processing.executor.ts` 版本检查重复 & 错误处理嵌套过深~~ ✅
 
 **文件**: `packages/server/src/modules/rag/services/processing.executor.ts`（349 行）
 
-**问题**:
+**已修复**:
 
-- 版本检查逻辑在第 81-96 行和第 213-232 行重复
-- 错误处理块有 3 层 try-catch 嵌套（第 300-323 行）
-
-**建议**:
-
-- 提取 `checkVersionStaleness()` 函数
-- 使用 `Promise.allSettled` 并行处理清理任务，减少嵌套
+- 提取 `checkVersionStaleness()`，统一处理处理前与向量写入后的目标版本校验
+- 提取 `cleanupAfterProcessingFailure()` + `logCleanupFailure()`，将失败清理收敛为单一出口
+- 使用 `Promise.allSettled` 并行执行 build 失败标记与文档失败状态回写，消除多层嵌套 `try-catch`
 
 #### 4.10 `vector.repository.ts` 重复的软删除模式
 
@@ -343,9 +335,9 @@ pnpm monorepo 全栈项目，三个包：
 | ~~P1~~ | 4.4  | auth.routes.ts CSRF 保护           | 安全       | ✅   |
 | ~~P1~~ | 4.5  | auth.service.ts 拆分               | 代码规范   | ✅   |
 | ~~P1~~ | 4.6  | OpenAPI 文档                       | 协作效率   | ✅   |
-| P2     | 4.7  | token.service.ts 去重              | 可维护性   |      |
-| P2     | 4.8  | password.service.ts 去重           | 可维护性   |      |
-| P2     | 4.9  | processing.executor.ts 重构        | 可读性     |      |
+| P2     | 4.7  | token.service.ts 去重              | 可维护性   | ✅   |
+| P2     | 4.8  | password.service.ts 去重           | 可维护性   | ✅   |
+| P2     | 4.9  | processing.executor.ts 重构        | 可读性     | ✅   |
 | P2     | 4.10 | vector.repository.ts 去重          | 可维护性   |      |
 | P2     | 4.11 | activation.service.ts 去重         | 可维护性   |      |
 | P2     | 4.12 | 硬编码常量集中化                   | 配置规范   |      |

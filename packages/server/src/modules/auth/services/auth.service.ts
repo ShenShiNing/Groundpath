@@ -11,8 +11,7 @@ import type {
   RegisterWithCodeRequest,
 } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
-import type { AccessTokenSubject } from '@shared/types';
-import { toUserPublicInfo, normalizeEmail } from '@shared/utils';
+import { toUserPublicInfo, normalizeEmail, buildAccessTokenSubject } from '@shared/utils';
 import { Errors } from '@shared/errors';
 import { authConfig } from '@config/env';
 import { userService } from '../../user';
@@ -34,15 +33,11 @@ async function buildAuthResponse(
   ipAddress: string | null,
   deviceInfo: DeviceInfo | null
 ): Promise<AuthResponse> {
-  const accessPayload: AccessTokenSubject = {
-    sub: user.id,
-    email: user.email,
-    username: user.username,
-    status: user.status,
-    emailVerified: user.emailVerified,
-  };
-
-  const tokens = await tokenService.generateTokenPair(accessPayload, ipAddress, deviceInfo);
+  const tokens = await tokenService.generateTokenPair(
+    buildAccessTokenSubject(user),
+    ipAddress,
+    deviceInfo
+  );
 
   return {
     user: toUserPublicInfo(user),
