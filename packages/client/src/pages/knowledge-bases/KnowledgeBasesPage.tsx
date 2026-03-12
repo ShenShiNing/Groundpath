@@ -345,7 +345,7 @@ export default function KnowledgeBasesPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                知识库
+                {t('page.title')}
               </h1>
             </div>
           </div>
