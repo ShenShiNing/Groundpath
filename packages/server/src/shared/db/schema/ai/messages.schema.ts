@@ -6,6 +6,7 @@ import {
   text,
   json,
   index,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { relations } from 'drizzle-orm';
 import { conversations } from './conversations.schema';
@@ -33,6 +34,11 @@ export const messages = mysqlTable(
   (table) => [
     index('conversation_id_idx').on(table.conversationId),
     index('conversation_created_idx').on(table.conversationId, table.createdAt),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [conversations.id],
+      name: 'messages_conversation_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

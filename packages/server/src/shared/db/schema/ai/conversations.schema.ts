@@ -37,6 +37,11 @@ export const conversations = mysqlTable(
       foreignColumns: [users.id],
       name: 'conversations_user_id_fk',
     }).onDelete('restrict'),
+    foreignKey({
+      columns: [table.knowledgeBaseId],
+      foreignColumns: [knowledgeBases.id],
+      name: 'conversations_knowledge_base_id_fk',
+    }).onDelete('set null'),
   ]
 );
 
