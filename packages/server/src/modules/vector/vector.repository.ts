@@ -1,8 +1,24 @@
-import { getQdrantClient } from './qdrant.client';
+import { vectorConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
+import { getQdrantClient } from './qdrant.client';
 import type { VectorPoint, SearchResult, ChunkPayload } from './vector.types';
 
 const logger = createLogger('vector.repository');
+
+type VectorFilter = {
+  documentId?: string;
+  knowledgeBaseId?: string;
+  indexVersionId?: string;
+};
+
+type SoftDeleteThenPhysicalDeleteInput = {
+  collectionName: string;
+  filter: VectorFilter;
+  timeoutLabel: string;
+  successMessage: string;
+  failureMessage: string;
+  logMeta: Record<string, unknown>;
+};
 
 // Helper to add timeout to async operations
 async function withTimeout<T>(promise: Promise<T>, ms: number, operation: string): Promise<T> {
@@ -17,7 +33,86 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, operation: string
   }
 }
 
-const QDRANT_TIMEOUT = 30_000; // 30 seconds
+function buildMustConditions(filter: VectorFilter): Array<Record<string, unknown>> {
+  const mustConditions: Array<Record<string, unknown>> = [];
+
+  if (filter.documentId) {
+    mustConditions.push({ key: 'documentId', match: { value: filter.documentId } });
+  }
+  if (filter.knowledgeBaseId) {
+    mustConditions.push({ key: 'knowledgeBaseId', match: { value: filter.knowledgeBaseId } });
+  }
+  if (filter.indexVersionId) {
+    mustConditions.push({ key: 'indexVersionId', match: { value: filter.indexVersionId } });
+  }
+
+  return mustConditions;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) return '';
+
+  const details = error as Error & {
+    data?: { status?: { error?: string } };
+    response?: { status?: number };
+    status?: number;
+    message?: string;
+  };
+
+  return details.data?.status?.error ?? details.message ?? '';
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (!(error instanceof Error)) return undefined;
+
+  const details = error as Error & {
+    response?: { status?: number };
+    status?: number;
+    data?: { status?: { code?: number } };
+  };
+
+  return details.response?.status ?? details.status ?? details.data?.status?.code;
+}
+
+function isCollectionNotFoundError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  const status = getErrorStatus(error);
+
+  return (
+    status === 404 ||
+    (message.includes('collection') &&
+      (message.includes('not found') || message.includes('does not exist')))
+  );
+}
+
+async function softDeleteThenPhysicalDelete(
+  input: SoftDeleteThenPhysicalDeleteInput
+): Promise<boolean> {
+  const qdrant = getQdrantClient();
+  const softDeleteSuccess = await vectorRepository.markAsDeleted(
+    input.collectionName,
+    input.filter
+  );
+
+  try {
+    await withTimeout(
+      qdrant.delete(input.collectionName, {
+        wait: true,
+        filter: {
+          must: buildMustConditions(input.filter),
+        },
+      }),
+      vectorConfig.mutationTimeoutMs,
+      input.timeoutLabel
+    );
+
+    logger.debug(input.logMeta, input.successMessage);
+  } catch (error) {
+    logger.warn({ ...input.logMeta, error, softDeleteSuccess }, input.failureMessage);
+  }
+
+  return softDeleteSuccess;
+}
 
 export const vectorRepository = {
   /**
@@ -37,7 +132,7 @@ export const vectorRepository = {
           payload: p.payload as unknown as Record<string, unknown>,
         })),
       }),
-      QDRANT_TIMEOUT,
+      vectorConfig.mutationTimeoutMs,
       `Qdrant upsert to ${collectionName}`
     );
 
@@ -96,7 +191,7 @@ export const vectorRepository = {
         filter,
         with_payload: true,
       }),
-      QDRANT_TIMEOUT,
+      vectorConfig.searchTimeoutMs,
       `Qdrant search in ${collectionName}`
     );
 
@@ -121,62 +216,25 @@ export const vectorRepository = {
    * Returns true if soft delete succeeded (vectors won't appear in search).
    */
   async deleteByDocumentId(collectionName: string, documentId: string): Promise<boolean> {
-    const qdrant = getQdrantClient();
-
-    // Step 1: Soft delete - mark vectors as deleted (critical for search exclusion)
-    const softDeleteSuccess = await this.markAsDeleted(collectionName, { documentId });
-
-    // Step 2: Physical delete - attempt to remove vectors entirely
-    try {
-      await withTimeout(
-        qdrant.delete(collectionName, {
-          wait: true,
-          filter: {
-            must: [{ key: 'documentId', match: { value: documentId } }],
-          },
-        }),
-        QDRANT_TIMEOUT,
-        `Qdrant delete by documentId ${documentId}`
-      );
-
-      logger.debug({ collectionName, documentId }, 'Deleted vectors for document');
-    } catch (error) {
-      logger.warn(
-        { collectionName, documentId, error, softDeleteSuccess },
-        'Physical vector deletion failed, but soft delete may have succeeded'
-      );
-      // Don't throw - soft delete provides safety net
-    }
-
-    return softDeleteSuccess;
+    return softDeleteThenPhysicalDelete({
+      collectionName,
+      filter: { documentId },
+      timeoutLabel: `Qdrant delete by documentId ${documentId}`,
+      successMessage: 'Deleted vectors for document',
+      failureMessage: 'Physical vector deletion failed, but soft delete may have succeeded',
+      logMeta: { collectionName, documentId },
+    });
   },
 
   async deleteByIndexVersionId(collectionName: string, indexVersionId: string): Promise<boolean> {
-    const qdrant = getQdrantClient();
-
-    const softDeleteSuccess = await this.markAsDeleted(collectionName, { indexVersionId });
-
-    try {
-      await withTimeout(
-        qdrant.delete(collectionName, {
-          wait: true,
-          filter: {
-            must: [{ key: 'indexVersionId', match: { value: indexVersionId } }],
-          },
-        }),
-        QDRANT_TIMEOUT,
-        `Qdrant delete by indexVersionId ${indexVersionId}`
-      );
-
-      logger.debug({ collectionName, indexVersionId }, 'Deleted vectors for index version');
-    } catch (error) {
-      logger.warn(
-        { collectionName, indexVersionId, error, softDeleteSuccess },
-        'Physical vector deletion failed for index version'
-      );
-    }
-
-    return softDeleteSuccess;
+    return softDeleteThenPhysicalDelete({
+      collectionName,
+      filter: { indexVersionId },
+      timeoutLabel: `Qdrant delete by indexVersionId ${indexVersionId}`,
+      successMessage: 'Deleted vectors for index version',
+      failureMessage: 'Physical vector deletion failed for index version',
+      logMeta: { collectionName, indexVersionId },
+    });
   },
 
   /**
@@ -185,33 +243,14 @@ export const vectorRepository = {
    * Returns true if soft delete succeeded.
    */
   async deleteByKnowledgeBaseId(collectionName: string, knowledgeBaseId: string): Promise<boolean> {
-    const qdrant = getQdrantClient();
-
-    // Step 1: Soft delete
-    const softDeleteSuccess = await this.markAsDeleted(collectionName, { knowledgeBaseId });
-
-    // Step 2: Physical delete
-    try {
-      await withTimeout(
-        qdrant.delete(collectionName, {
-          wait: true,
-          filter: {
-            must: [{ key: 'knowledgeBaseId', match: { value: knowledgeBaseId } }],
-          },
-        }),
-        QDRANT_TIMEOUT,
-        `Qdrant delete by knowledgeBaseId ${knowledgeBaseId}`
-      );
-
-      logger.debug({ collectionName, knowledgeBaseId }, 'Deleted vectors for knowledge base');
-    } catch (error) {
-      logger.warn(
-        { collectionName, knowledgeBaseId, error, softDeleteSuccess },
-        'Physical vector deletion failed for knowledge base'
-      );
-    }
-
-    return softDeleteSuccess;
+    return softDeleteThenPhysicalDelete({
+      collectionName,
+      filter: { knowledgeBaseId },
+      timeoutLabel: `Qdrant delete by knowledgeBaseId ${knowledgeBaseId}`,
+      successMessage: 'Deleted vectors for knowledge base',
+      failureMessage: 'Physical vector deletion failed for knowledge base',
+      logMeta: { collectionName, knowledgeBaseId },
+    });
   },
 
   /**
@@ -219,22 +258,9 @@ export const vectorRepository = {
    * This immediately excludes vectors from search results.
    * Returns true if the operation succeeded.
    */
-  async markAsDeleted(
-    collectionName: string,
-    filter: { documentId?: string; knowledgeBaseId?: string; indexVersionId?: string }
-  ): Promise<boolean> {
+  async markAsDeleted(collectionName: string, filter: VectorFilter): Promise<boolean> {
     const qdrant = getQdrantClient();
-
-    const mustConditions: unknown[] = [];
-    if (filter.documentId) {
-      mustConditions.push({ key: 'documentId', match: { value: filter.documentId } });
-    }
-    if (filter.knowledgeBaseId) {
-      mustConditions.push({ key: 'knowledgeBaseId', match: { value: filter.knowledgeBaseId } });
-    }
-    if (filter.indexVersionId) {
-      mustConditions.push({ key: 'indexVersionId', match: { value: filter.indexVersionId } });
-    }
+    const mustConditions = buildMustConditions(filter);
 
     if (mustConditions.length === 0) {
       logger.warn('markAsDeleted called without filter - skipping');
@@ -248,7 +274,7 @@ export const vectorRepository = {
           filter: { must: mustConditions },
           wait: true,
         }),
-        QDRANT_TIMEOUT,
+        vectorConfig.mutationTimeoutMs,
         `Qdrant markAsDeleted for ${JSON.stringify(filter)}`
       );
 
@@ -269,12 +295,16 @@ export const vectorRepository = {
 
     try {
       // First count how many will be deleted
-      const countResult = await qdrant.count(collectionName, {
-        filter: {
-          must: [{ key: 'isDeleted', match: { value: true } }],
-        },
-        exact: true,
-      });
+      const countResult = await withTimeout(
+        qdrant.count(collectionName, {
+          filter: {
+            must: [{ key: 'isDeleted', match: { value: true } }],
+          },
+          exact: true,
+        }),
+        vectorConfig.countTimeoutMs,
+        `Qdrant count deleted vectors in ${collectionName}`
+      );
 
       if (countResult.count === 0) {
         return 0;
@@ -288,7 +318,7 @@ export const vectorRepository = {
             must: [{ key: 'isDeleted', match: { value: true } }],
           },
         }),
-        QDRANT_TIMEOUT,
+        vectorConfig.maintenanceTimeoutMs,
         `Qdrant purge deleted vectors from ${collectionName}`
       );
 
@@ -307,15 +337,31 @@ export const vectorRepository = {
     const qdrant = getQdrantClient();
 
     try {
-      const result = await qdrant.count(collectionName, {
-        filter: {
-          must: [{ key: 'knowledgeBaseId', match: { value: knowledgeBaseId } }],
-        },
-        exact: true,
-      });
+      const result = await withTimeout(
+        qdrant.count(collectionName, {
+          filter: {
+            must: [{ key: 'knowledgeBaseId', match: { value: knowledgeBaseId } }],
+          },
+          exact: true,
+        }),
+        vectorConfig.countTimeoutMs,
+        `Qdrant count by knowledgeBaseId ${knowledgeBaseId}`
+      );
       return result.count;
-    } catch {
-      return 0;
+    } catch (error) {
+      if (isCollectionNotFoundError(error)) {
+        logger.info(
+          { collectionName, knowledgeBaseId },
+          'Vector collection missing while counting knowledge base vectors'
+        );
+        return 0;
+      }
+
+      logger.warn(
+        { collectionName, knowledgeBaseId, error },
+        'Failed to count vectors for knowledge base'
+      );
+      throw error;
     }
   },
 
@@ -336,7 +382,7 @@ export const vectorRepository = {
           points: ids,
           wait: true,
         }),
-        QDRANT_TIMEOUT,
+        vectorConfig.mutationTimeoutMs,
         `Qdrant mark vectors as deleted by IDs`
       );
     } catch (error) {
@@ -353,7 +399,7 @@ export const vectorRepository = {
           wait: true,
           points: ids,
         }),
-        QDRANT_TIMEOUT,
+        vectorConfig.mutationTimeoutMs,
         `Qdrant delete by IDs`
       );
 

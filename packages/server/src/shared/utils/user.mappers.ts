@@ -1,5 +1,6 @@
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { UserPublicInfo } from '@knowledge-agent/shared/types';
+import type { AccessTokenSubject } from '@shared/types';
 import { storageConfig } from '@config/env';
 import { storageProvider } from '@modules/storage';
 
@@ -54,5 +55,19 @@ export function toUserPublicInfo(user: User): UserPublicInfo {
     status: user.status,
     emailVerified: user.emailVerified,
     createdAt: user.createdAt,
+  };
+}
+
+/**
+ * Build access token payload from User entity
+ * Shared mapper used by auth and token services
+ */
+export function buildAccessTokenSubject(user: User): AccessTokenSubject {
+  return {
+    sub: user.id,
+    email: user.email,
+    username: user.username,
+    status: user.status,
+    emailVerified: user.emailVerified,
   };
 }

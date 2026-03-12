@@ -11,6 +11,7 @@ import {
   ragDefaults,
   storageSigningDefaults,
   structuredRagObservabilityDefaults,
+  vectorDefaults,
   vlmDefaults,
 } from '../defaults';
 import { validatedEnv } from './validated-env';
@@ -142,6 +143,7 @@ export const embeddingConfig = {
 } as const;
 
 export const vectorConfig = {
+  ...vectorDefaults,
   url: validatedEnv.QDRANT_URL,
   apiKey: validatedEnv.QDRANT_API_KEY,
 } as const;

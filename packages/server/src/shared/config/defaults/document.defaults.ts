@@ -10,6 +10,7 @@ export const documentDefaults = {
   chunkSize: 512,
   chunkOverlap: 50,
   vectorBatchSize: 20,
+  vectorUpsertBatchSize: 100,
   processingTimeoutMinutes: 30,
   processingRecoveryBatchSize: 100,
   buildCleanupRetentionDays: 7,
@@ -28,6 +29,16 @@ export const documentIndexDefaults = {
 export const ragDefaults = {
   searchDefaultLimit: 5,
   searchDefaultScoreThreshold: 0.5,
+  searchOverfetchFactor: 5,
+  searchMaxCandidates: 200,
+} as const;
+
+/** Vector repository operational defaults */
+export const vectorDefaults = {
+  mutationTimeoutMs: 30_000,
+  searchTimeoutMs: 30_000,
+  countTimeoutMs: 30_000,
+  maintenanceTimeoutMs: 30_000,
 } as const;
 
 /** Document-AI (summary, analysis, generation) parameters */

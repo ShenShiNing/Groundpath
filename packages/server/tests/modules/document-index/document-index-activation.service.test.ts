@@ -1,28 +1,67 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({
-  withTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback({})),
-  documentIndexVersionRepository: {
-    findById: vi.fn(),
-    update: vi.fn(),
-    supersedeActiveByDocumentId: vi.fn(),
-  },
-  documentRepository: {
-    findById: vi.fn(),
-    update: vi.fn(),
-    publishBuild: vi.fn(),
-  },
-  knowledgeBaseService: {
-    incrementTotalChunks: vi.fn(),
-  },
-  cacheService: {
-    invalidateDocumentCaches: vi.fn(),
-    invalidateQueryCaches: vi.fn(),
-  },
-}));
+const mocks = vi.hoisted(() => {
+  const afterCommitQueues = new Map<object, Array<() => Promise<void> | void>>();
+
+  return {
+    afterCommitQueues,
+    flushAfterCommitCallbacks: async (tx: object) => {
+      const callbacks = afterCommitQueues.get(tx) ?? [];
+      afterCommitQueues.delete(tx);
+
+      for (const callback of callbacks) {
+        await callback();
+      }
+    },
+    withTransaction: vi.fn(async (callback: (tx: unknown) => Promise<unknown>, tx?: unknown) => {
+      if (tx) {
+        return callback(tx);
+      }
+
+      const managedTx = {};
+      const result = await callback(managedTx);
+      const callbacks = afterCommitQueues.get(managedTx) ?? [];
+      afterCommitQueues.delete(managedTx);
+
+      for (const afterCommit of callbacks) {
+        await afterCommit();
+      }
+
+      return result;
+    }),
+    afterTransactionCommit: vi.fn(async (callback: () => Promise<void> | void, tx?: unknown) => {
+      if (!tx) {
+        await callback();
+        return;
+      }
+
+      const callbacks = afterCommitQueues.get(tx as object) ?? [];
+      callbacks.push(callback);
+      afterCommitQueues.set(tx as object, callbacks);
+    }),
+    documentIndexVersionRepository: {
+      findById: vi.fn(),
+      update: vi.fn(),
+      supersedeActiveByDocumentId: vi.fn(),
+    },
+    documentRepository: {
+      findById: vi.fn(),
+      update: vi.fn(),
+      publishBuild: vi.fn(),
+    },
+    knowledgeBaseService: {
+      incrementTotalChunks: vi.fn(),
+    },
+    cacheService: {
+      invalidateDocumentCaches: vi.fn(),
+      invalidateQueryCaches: vi.fn(),
+    },
+  };
+});
 
 vi.mock('@shared/db/db.utils', () => ({
   withTransaction: mocks.withTransaction,
+  afterTransactionCommit: mocks.afterTransactionCommit,
 }));
 
 vi.mock('@shared/logger', () => ({
@@ -56,6 +95,7 @@ import { documentIndexActivationService } from '@modules/document-index';
 describe('documentIndexActivationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.afterCommitQueues.clear();
   });
 
   it('activates an index version and updates activeIndexVersionId', async () => {
@@ -256,6 +296,48 @@ describe('documentIndexActivationService', () => {
       expect.anything()
     );
     expect(result).toEqual({ id: 'idx-row-5', status: 'active' });
+  });
+
+  it('defers cache invalidation until the outer transaction commits', async () => {
+    const outerTx = {};
+
+    mocks.documentIndexVersionRepository.findById.mockResolvedValue({
+      id: 'idx-row-6',
+      documentId: 'doc-1',
+      documentVersion: 7,
+      indexVersion: 'idx-v7',
+      status: 'active',
+    });
+    mocks.documentIndexVersionRepository.update.mockResolvedValue({
+      id: 'idx-row-6',
+      status: 'failed',
+    });
+    mocks.documentRepository.findById.mockResolvedValue({
+      id: 'doc-1',
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      activeIndexVersionId: 'idx-row-6',
+      publishGeneration: 3,
+    });
+
+    const result = await documentIndexActivationService.markFailed(
+      'idx-row-6',
+      'parse failed',
+      outerTx as never
+    );
+
+    expect(mocks.cacheService.invalidateDocumentCaches).not.toHaveBeenCalled();
+    expect(mocks.cacheService.invalidateQueryCaches).not.toHaveBeenCalled();
+    expect(mocks.afterTransactionCommit).toHaveBeenCalledWith(expect.any(Function), outerTx);
+
+    await mocks.flushAfterCommitCallbacks(outerTx);
+
+    expect(mocks.cacheService.invalidateDocumentCaches).toHaveBeenCalledWith('doc-1', 'idx-row-6');
+    expect(mocks.cacheService.invalidateQueryCaches).toHaveBeenCalledWith({
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+    });
+    expect(result).toEqual({ id: 'idx-row-6', status: 'failed' });
   });
 
   it('throws not found when index version is missing', async () => {

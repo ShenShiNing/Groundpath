@@ -4,6 +4,7 @@ export {
   documentAIDefaults,
   documentIndexDefaults,
   ragDefaults,
+  vectorDefaults,
 } from './document.defaults';
 
 // Agent & VLM

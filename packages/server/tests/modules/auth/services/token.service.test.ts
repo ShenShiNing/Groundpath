@@ -415,6 +415,7 @@ describe('tokenService', () => {
       expect(actual?.code).toBe(AUTH_ERROR_CODES.USER_BANNED);
       expect(actual?.statusCode).toBe(403);
       expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
+      expect(userTokenStateRepository.bumpTokenValidAfter).toHaveBeenCalledWith('user-123', {});
     });
 
     // 场景 8：令牌轮换 — 旧 token 原子消费

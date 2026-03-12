@@ -185,9 +185,14 @@ export async function upsertVectorPointsOrFail(input: {
   collectionName: string;
   vectorPoints: VectorPoint[];
 }): Promise<void> {
+  const batchSize = documentConfig.vectorUpsertBatchSize ?? documentConfig.vectorBatchSize;
+
   try {
-    for (let i = 0; i < input.vectorPoints.length; i += 100) {
-      await vectorRepository.upsert(input.collectionName, input.vectorPoints.slice(i, i + 100));
+    for (let i = 0; i < input.vectorPoints.length; i += batchSize) {
+      await vectorRepository.upsert(
+        input.collectionName,
+        input.vectorPoints.slice(i, i + batchSize)
+      );
     }
   } catch (error) {
     logger.error(

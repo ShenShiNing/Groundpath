@@ -53,6 +53,12 @@ vi.mock('@modules/auth/repositories/user-token-state.repository', () => ({
   },
 }));
 
+vi.mock('@modules/auth/verification/email-verification.service', () => ({
+  emailVerificationService: {
+    verifyToken: vi.fn(),
+  },
+}));
+
 vi.mock('@modules/auth/services/token.service', () => ({
   tokenService: {
     generateTokenPair: vi.fn(),
@@ -86,6 +92,7 @@ import { passwordService } from '@modules/auth';
 import { userService } from '@modules/user';
 import { refreshTokenRepository } from '@modules/auth';
 import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';
+import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
 
 // ==================== changePassword ====================
 // 场景：用户修改密码
@@ -122,6 +129,7 @@ describe('authService > changePassword', () => {
 
     expect(userService.updatePassword).toHaveBeenCalledWith(userId, '$2a$12$newhashedpassword', {});
     expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith(userId, {});
+    expect(userTokenStateRepository.bumpTokenValidAfter).toHaveBeenCalledWith(userId, {});
   });
 
   // 场景 2：验证旧密码是否正确比对
@@ -243,5 +251,90 @@ describe('authService > changePassword', () => {
 
     expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith(userId, {});
     expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledTimes(1);
+    expect(userTokenStateRepository.bumpTokenValidAfter).toHaveBeenCalledWith(userId, {});
+  });
+});
+
+// ==================== resetPassword ====================
+// 场景：用户通过已验证邮箱重置密码
+// 职责：验证 token → 查找用户 → 哈希新密码 → 更新密码 → 按需吊销会话
+describe('authService > resetPassword', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mockResolvedValue(undefined);
+    vi.mocked(emailVerificationService.verifyToken).mockReturnValue({
+      email: mockUser.email,
+    });
+  });
+
+  const resetRequest = {
+    email: mockUser.email,
+    newPassword: 'ResetPassword456',
+    confirmPassword: 'ResetPassword456',
+    verificationToken: 'verified-reset-token',
+    logoutAllDevices: true,
+  };
+
+  it('should reset password and revoke all sessions by default', async () => {
+    vi.mocked(userService.findByEmail).mockResolvedValue(mockUser);
+    vi.mocked(bcrypt.hash).mockResolvedValue('$2a$12$resetpasswordhash' as never);
+    vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
+    vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(4);
+
+    const result = await passwordService.resetPassword(resetRequest);
+
+    logTestInfo(
+      { email: resetRequest.email, logoutAllDevices: undefined },
+      { message: 'Password reset successfully', sessionsRevoked: 4 },
+      result
+    );
+
+    expect(emailVerificationService.verifyToken).toHaveBeenCalledWith(
+      'verified-reset-token',
+      'reset_password'
+    );
+    expect(userService.updatePassword).toHaveBeenCalledWith(
+      mockUser.id,
+      '$2a$12$resetpasswordhash',
+      {}
+    );
+    expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith(mockUser.id, {});
+    expect(userTokenStateRepository.bumpTokenValidAfter).toHaveBeenCalledWith(mockUser.id, {});
+    expect(result).toEqual({
+      message: 'Password reset successfully',
+      sessionsRevoked: 4,
+    });
+  });
+
+  it('should skip session revocation when logoutAllDevices is false', async () => {
+    vi.mocked(userService.findByEmail).mockResolvedValue(mockUser);
+    vi.mocked(bcrypt.hash).mockResolvedValue('$2a$12$resetpasswordhash' as never);
+    vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
+
+    const result = await passwordService.resetPassword({
+      ...resetRequest,
+      logoutAllDevices: false,
+    });
+
+    logTestInfo(
+      { email: resetRequest.email, logoutAllDevices: false },
+      { sessionsRevoked: undefined, revokeAllCalled: false },
+      {
+        sessionsRevoked: result.sessionsRevoked,
+        revokeAllCalled: vi.mocked(refreshTokenRepository.revokeAllForUser).mock.calls.length > 0,
+      }
+    );
+
+    expect(userService.updatePassword).toHaveBeenCalledWith(
+      mockUser.id,
+      '$2a$12$resetpasswordhash',
+      {}
+    );
+    expect(refreshTokenRepository.revokeAllForUser).not.toHaveBeenCalled();
+    expect(userTokenStateRepository.bumpTokenValidAfter).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      message: 'Password reset successfully',
+      sessionsRevoked: undefined,
+    });
   });
 });
