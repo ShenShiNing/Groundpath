@@ -79,7 +79,7 @@ export function AISettingsCredentialsSection({
         {showApiKeyField && (
           <div className="space-y-2">
             <Label htmlFor="apiKey">
-              API Key
+              {t('form.apiKeyLabel')}
               {hasSavedKey && config?.apiKeyMasked && (
                 <span className="ml-2 text-xs text-muted-foreground">
                   {t('form.currentApiKey', { masked: config.apiKeyMasked })}
@@ -118,7 +118,7 @@ export function AISettingsCredentialsSection({
         {showBaseUrlField && (
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="baseUrl">
-              Base URL
+              {t('form.baseUrlLabel')}
               {optionalBaseUrl && (
                 <span className="ml-2 text-xs text-muted-foreground">{t('form.optional')}</span>
               )}

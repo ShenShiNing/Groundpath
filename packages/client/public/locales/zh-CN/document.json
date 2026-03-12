@@ -51,6 +51,7 @@
     "saveAsVersion": "保存为新版本",
     "saving": "保存中...",
     "saved": "AI 改写已保存为新版本",
+    "changeNotePrefix": "AI 改写: ",
     "cancel": "取消"
   },
   "versions": {

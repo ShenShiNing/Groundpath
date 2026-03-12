@@ -137,7 +137,7 @@ export function AIRewriteDialog({
         break;
     }
 
-    const changeNote = `AI 改写: ${instruction.substring(0, 100)}`;
+    const changeNote = `${t('aiRewrite.changeNotePrefix')}${instruction.substring(0, 100)}`;
     try {
       await saveContent({ id: documentId, data: { content: finalContent, changeNote } });
       onSaveSuccess();
