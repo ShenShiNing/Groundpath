@@ -82,7 +82,7 @@ vi.mock('@shared/db/db.utils', () => ({
 }));
 
 // Import after mocks
-import { authService } from '@modules/auth';
+import { passwordService } from '@modules/auth';
 import { userService } from '@modules/user';
 import { refreshTokenRepository } from '@modules/auth';
 import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';
@@ -109,7 +109,7 @@ describe('authService > changePassword', () => {
     vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
 
-    await authService.changePassword(userId, oldPassword, newPassword);
+    await passwordService.changePassword(userId, oldPassword, newPassword);
 
     logTestInfo(
       { userId, oldPassword: '***', newPassword: '***' },
@@ -133,7 +133,7 @@ describe('authService > changePassword', () => {
     vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
 
-    await authService.changePassword(userId, oldPassword, newPassword);
+    await passwordService.changePassword(userId, oldPassword, newPassword);
 
     const compareCalls = vi.mocked(bcrypt.compare).mock.calls;
     logTestInfo(
@@ -154,7 +154,7 @@ describe('authService > changePassword', () => {
     vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
 
-    await authService.changePassword(userId, oldPassword, newPassword);
+    await passwordService.changePassword(userId, oldPassword, newPassword);
 
     const hashCalls = vi.mocked(bcrypt.hash).mock.calls;
     logTestInfo(
@@ -173,7 +173,7 @@ describe('authService > changePassword', () => {
 
     let actual: { code: string } | null = null;
     try {
-      await authService.changePassword(userId, oldPassword, newPassword);
+      await passwordService.changePassword(userId, oldPassword, newPassword);
     } catch (error) {
       actual = { code: (error as AppError).code };
     }
@@ -192,7 +192,7 @@ describe('authService > changePassword', () => {
 
     let actual: { code: string } | null = null;
     try {
-      await authService.changePassword(userId, oldPassword, newPassword);
+      await passwordService.changePassword(userId, oldPassword, newPassword);
     } catch (error) {
       actual = { code: (error as AppError).code };
     }
@@ -211,7 +211,7 @@ describe('authService > changePassword', () => {
 
     let actual: { code: string; statusCode: number } | null = null;
     try {
-      await authService.changePassword(userId, oldPassword, newPassword);
+      await passwordService.changePassword(userId, oldPassword, newPassword);
     } catch (error) {
       actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
     }
@@ -232,7 +232,7 @@ describe('authService > changePassword', () => {
     vi.mocked(userService.updatePassword).mockResolvedValue(undefined);
     vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(5);
 
-    await authService.changePassword(userId, oldPassword, newPassword);
+    await passwordService.changePassword(userId, oldPassword, newPassword);
 
     const revokeCalls = vi.mocked(refreshTokenRepository.revokeAllForUser).mock.calls;
     logTestInfo(

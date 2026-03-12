@@ -70,7 +70,7 @@ vi.mock('@shared/middleware/rate-limit.middleware', () => ({
 }));
 
 // Import after mocks
-import { authService, tokenService } from '@modules/auth';
+import { authService, tokenService, sessionService } from '@modules/auth';
 import { userRepository } from '@modules/user';
 
 // ==================== Session Management ====================
@@ -167,7 +167,7 @@ describe('authService > session management', () => {
     it('should revoke the specified token', async () => {
       vi.mocked(tokenService.revokeToken).mockResolvedValue(undefined);
 
-      await authService.logout('token-123');
+      await sessionService.logout('token-123');
 
       const calledWith = vi.mocked(tokenService.revokeToken).mock.calls[0]?.[0];
       logTestInfo(
@@ -188,7 +188,7 @@ describe('authService > session management', () => {
     it('should revoke all tokens for user', async () => {
       vi.mocked(tokenService.revokeAllUserTokens).mockResolvedValue(5);
 
-      const result = await authService.logoutAll('user-123');
+      const result = await sessionService.logoutAll('user-123');
 
       logTestInfo({ userId: 'user-123' }, { revokedCount: 5 }, { revokedCount: result });
 
@@ -251,7 +251,7 @@ describe('authService > session management', () => {
     it('should return user sessions', async () => {
       vi.mocked(tokenService.getUserSessions).mockResolvedValue(mockSessions);
 
-      const result = await authService.getSessions('user-123', 'session-1');
+      const result = await sessionService.getSessions('user-123', 'session-1');
 
       logTestInfo(
         { userId: 'user-123', currentTokenId: 'session-1' },
@@ -268,7 +268,7 @@ describe('authService > session management', () => {
     it('should work without currentTokenId', async () => {
       vi.mocked(tokenService.getUserSessions).mockResolvedValue(mockSessions);
 
-      await authService.getSessions('user-123');
+      await sessionService.getSessions('user-123');
 
       const calledWith = vi.mocked(tokenService.getUserSessions).mock.calls[0];
       logTestInfo(
@@ -310,7 +310,7 @@ describe('authService > session management', () => {
       vi.mocked(tokenService.getUserSessions).mockResolvedValue(userSessions);
       vi.mocked(tokenService.revokeToken).mockResolvedValue(undefined);
 
-      await authService.revokeSession('user-123', 'session-1');
+      await sessionService.revokeSession('user-123', 'session-1');
 
       const calledWith = vi.mocked(tokenService.revokeToken).mock.calls[0]?.[0];
       logTestInfo(
@@ -329,7 +329,7 @@ describe('authService > session management', () => {
 
       let actual: { code: string; statusCode: number } | null = null;
       try {
-        await authService.revokeSession('user-123', 'non-existent-session');
+        await sessionService.revokeSession('user-123', 'non-existent-session');
       } catch (error) {
         actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
       }
@@ -356,7 +356,7 @@ describe('authService > session management', () => {
 
       let actual: { code: string } | null = null;
       try {
-        await authService.revokeSession('user-123', 'session-1');
+        await sessionService.revokeSession('user-123', 'session-1');
       } catch (error) {
         actual = { code: (error as AppError).code };
       }

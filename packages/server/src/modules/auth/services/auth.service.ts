@@ -9,7 +9,6 @@ import type {
   UserPublicInfo,
   DeviceInfo,
   RegisterWithCodeRequest,
-  ResetPasswordRequest,
 } from '@knowledge-agent/shared/types';
 import type { User } from '@shared/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@shared/types';
@@ -24,8 +23,6 @@ import { checkAccountRateLimit, resetAccountRateLimit } from '@shared/middleware
 import { detectDevice } from '../../logs/services/device-detection.service';
 import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
 import { createLogger } from '@shared/logger';
-import { sessionService } from './session.service';
-import { passwordService } from './password.service';
 
 const logger = createLogger('auth.service');
 
@@ -51,6 +48,16 @@ async function buildAuthResponse(
     user: toUserPublicInfo(user),
     tokens,
   };
+}
+
+/**
+ * Resolve device info: use provided value or parse from user agent.
+ */
+function resolveDeviceInfo(
+  deviceInfo: DeviceInfo | undefined | null,
+  userAgent: string | null
+): DeviceInfo | null {
+  return deviceInfo ?? parseDeviceInfo(userAgent);
 }
 
 /**
@@ -172,7 +179,7 @@ export const authService = {
       email,
       ipAddress,
       userAgent,
-      deviceInfo ?? parseDeviceInfo(userAgent)
+      resolveDeviceInfo(deviceInfo, userAgent)
     );
   },
 
@@ -256,7 +263,7 @@ export const authService = {
     await resetAccountRateLimit(email);
     await userService.updateLastLogin(user.id, ipAddress);
 
-    return buildAuthResponse(user, ipAddress, deviceInfo ?? parseDeviceInfo(userAgent));
+    return buildAuthResponse(user, ipAddress, resolveDeviceInfo(deviceInfo, userAgent));
   },
 
   /**
@@ -322,7 +329,7 @@ export const authService = {
       email,
       ipAddress,
       userAgent,
-      deviceInfo ?? parseDeviceInfo(userAgent)
+      resolveDeviceInfo(deviceInfo, userAgent)
     );
   },
 
@@ -336,72 +343,4 @@ export const authService = {
     }
     return toUserPublicInfo(user);
   },
-
-  // ==================== Session Operations (delegated) ====================
-
-  /**
-   * Logout current device (revoke current refresh token)
-   */
-  logout(
-    tokenId: string,
-    userId?: string,
-    ipAddress?: string | null,
-    userAgent?: string | null
-  ): Promise<void> {
-    return sessionService.logout(tokenId, userId, ipAddress, userAgent);
-  },
-
-  /**
-   * Logout all devices (revoke all refresh tokens)
-   */
-  logoutAll(userId: string, ipAddress?: string | null, userAgent?: string | null): Promise<number> {
-    return sessionService.logoutAll(userId, ipAddress, userAgent);
-  },
-
-  /**
-   * Get active sessions for current user
-   */
-  getSessions(userId: string, currentSessionId?: string) {
-    return sessionService.getSessions(userId, currentSessionId);
-  },
-
-  /**
-   * Revoke a specific session
-   */
-  revokeSession(
-    userId: string,
-    sessionId: string,
-    ipAddress?: string | null,
-    userAgent?: string | null
-  ): Promise<void> {
-    return sessionService.revokeSession(userId, sessionId, ipAddress, userAgent);
-  },
-
-  // ==================== Password Operations (delegated) ====================
-
-  /**
-   * Change user password
-   */
-  changePassword(
-    userId: string,
-    oldPassword: string,
-    newPassword: string,
-    ipAddress?: string | null,
-    userAgent?: string | null
-  ): Promise<void> {
-    return passwordService.changePassword(userId, oldPassword, newPassword, ipAddress, userAgent);
-  },
-
-  /**
-   * Reset user password with verified email
-   */
-  resetPassword(
-    data: ResetPasswordRequest
-  ): Promise<{ message: string; sessionsRevoked?: number }> {
-    return passwordService.resetPassword(data);
-  },
 };
-
-// Re-export sub-services for direct access
-export { sessionService } from './session.service';
-export { passwordService } from './password.service';

@@ -1,0 +1,12 @@
+import './auth.paths';
+import './email.paths';
+import './oauth.paths';
+import './user.paths';
+import './document.paths';
+import './document-ai.paths';
+import './knowledge-base.paths';
+import './chat.paths';
+import './llm.paths';
+import './logs.paths';
+import './rag.paths';
+import './storage.paths';

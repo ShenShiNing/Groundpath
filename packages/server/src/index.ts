@@ -21,6 +21,7 @@ import { closeDatabase } from '@shared/db';
 import { closeRedis, connectRedis } from '@shared/redis';
 import { createShutdownHandler } from '@shared/server/shutdown';
 import { startDocumentProcessingWorker, stopDocumentProcessingWorker } from '@modules/rag';
+import { setupOpenApi } from '@shared/openapi';
 import router from './router';
 
 // ==================== App Setup ====================
@@ -63,6 +64,9 @@ function setupMiddleware(app: Express): void {
 
   // Routes
   app.use(router);
+
+  // OpenAPI docs (after routes, before error handler)
+  setupOpenApi(app);
 
   // Error handling (should be last)
   app.use(errorMiddleware);

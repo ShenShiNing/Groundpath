@@ -9,6 +9,8 @@ import type {
   AuthResponse,
 } from '@knowledge-agent/shared';
 import { authService } from '../services/auth.service';
+import { sessionService } from '../services/session.service';
+import { passwordService } from '../services/password.service';
 import { sendSuccessResponse, Errors } from '@shared/errors';
 import { AppError } from '@shared/errors/app-error';
 import { asyncHandler } from '@shared/errors/async-handler';
@@ -68,7 +70,7 @@ export const authController = {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
-    await authService.changePassword(userId, oldPassword, newPassword, ipAddress, userAgent);
+    await passwordService.changePassword(userId, oldPassword, newPassword, ipAddress, userAgent);
     sendSuccessResponse(res, { message: 'Password changed successfully' });
   }),
 
@@ -113,7 +115,7 @@ export const authController = {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
-    await authService.logout(sessionId, userId, ipAddress, userAgent);
+    await sessionService.logout(sessionId, userId, ipAddress, userAgent);
     clearRefreshTokenCookie(res);
     sendSuccessResponse(res, { message: 'Successfully logged out' });
   }),
@@ -126,7 +128,7 @@ export const authController = {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
-    const revokedCount = await authService.logoutAll(userId, ipAddress, userAgent);
+    const revokedCount = await sessionService.logoutAll(userId, ipAddress, userAgent);
     clearRefreshTokenCookie(res);
     sendSuccessResponse(res, {
       message: 'Successfully logged out from all devices',
@@ -149,7 +151,7 @@ export const authController = {
   sessions: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
     const currentSessionId = req.user?.sid;
-    const sessions = await authService.getSessions(userId, currentSessionId);
+    const sessions = await sessionService.getSessions(userId, currentSessionId);
     sendSuccessResponse(res, sessions);
   }),
 
@@ -168,7 +170,7 @@ export const authController = {
     const ipAddress = getClientIp(req);
     const userAgent = req.headers['user-agent'] ?? null;
 
-    await authService.revokeSession(userId, sessionId, ipAddress, userAgent);
+    await sessionService.revokeSession(userId, sessionId, ipAddress, userAgent);
     sendSuccessResponse(res, { message: 'Session revoked successfully' });
   }),
 
@@ -189,7 +191,7 @@ export const authController = {
    */
   resetPassword: asyncHandler(async (_req: Request, res: Response) => {
     const resetRequest = getValidatedBody<ResetPasswordRequest>(res);
-    const result = await authService.resetPassword(resetRequest);
+    const result = await passwordService.resetPassword(resetRequest);
     sendSuccessResponse(res, result);
   }),
 };

@@ -70,7 +70,7 @@ router.put(
 );
 
 // Logout all devices
-router.post('/logout-all', authenticate, authController.logoutAll);
+router.post('/logout-all', requireCsrfProtection, authenticate, authController.logoutAll);
 
 // Get current user info
 router.get('/me', generalRateLimiter, authenticate, authController.me);
