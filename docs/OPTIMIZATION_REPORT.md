@@ -68,10 +68,17 @@
   2. build publish 已改为带 compare-and-set 约束的 fenced publish。
   3. 慢 worker 即使跑到最后，也不能再激活旧 build 或覆盖新的 `processing` 完成态。
   4. `db:migrate`、`db:check`、processing/activation/integration 定向测试均已通过。
+- 本轮 i18n 第二批收口后，以下事项也已完成：
+  1. `DocumentFilters.tsx`：`pdf` / `markdown` 类型标签已改用 `t('type.pdf/markdown')`。
+  2. `AIRewriteDialog.tsx`：`AI 改写: ` 前缀已改用 `t('aiRewrite.changeNotePrefix')`。
+  3. `AISettingsCredentialsSection.tsx`：`API Key` / `Base URL` label 已改用 `t('form.apiKeyLabel/baseUrlLabel')`。
+  4. `SaveToKBDialog.tsx`：provider 选项 `Zhipu AI / OpenAI / Ollama (Local)` 已改用 `t('createKb.providerZhipu/OpenAI/Ollama')`。
+  5. 对应 key 已同步补入 `en-US` / `zh-CN` 的 `settings.json`、`document.json`、`chat.json`。
+  6. `@knowledge-agent/client build` 通过。
 - 当前最需要优先处理的，已经切换为以下 4 项：
   1. 继续扩展到更多高风险页面/组件测试。
   2. 继续补齐前端 i18n 的剩余散落漏项。
-  3. 继续补更多“文档版本切换 / backfill / recovery”链路的高阶集成测试。
+  3. 继续补更多”文档版本切换 / backfill / recovery”链路的高阶集成测试。
   4. 若聊天会话量继续增长，优先复核 `conversations` 列表查询所需的 `updated_at` 复合索引，而不是 `created_at` / `messages.role`。
 
 ---
@@ -157,7 +164,7 @@
 
 ### 4.2 前端国际化仍未补齐
 
-本轮已完成第一批 i18n 收口，但仍需继续扫描其余散落硬编码。
+本轮已完成第一批与第二批 i18n 收口，但仍需继续扫描其余散落硬编码。
 
 已完成收口的项包括：
 
@@ -167,6 +174,10 @@
 - `useLLMConfig.ts`：`AI settings saved successfully` 等 toast 文案
 - `lib/utils.ts`：`Bytes / KB / MB / GB / TB`
 - `lib/http/stream-client.ts`：`No response body`
+- `DocumentFilters.tsx`：`PDF / Markdown` 类型标签
+- `AIRewriteDialog.tsx`：`AI 改写: ` changeNote 前缀
+- `AISettingsCredentialsSection.tsx`：`API Key` / `Base URL` label
+- `SaveToKBDialog.tsx`：`Zhipu AI / OpenAI / Ollama (Local)` provider 选项
 
 当前剩余工作：
 
@@ -912,9 +923,9 @@
 - 组件层和路由层不再直接访问 `.getState()`
 - 剩余 `.getState()` 已集中封装在 `authStore.ts` 的非 React 快照 helper 中
 
-#### 7.13 已完成第一批：补齐 i18n 漏项
+#### 7.13 已完成第二批：补齐 i18n 漏项
 
-已完成结果：
+已完成结果（第一批）：
 
 - 处理状态标签
 - 视图按钮 `aria-label`
@@ -923,10 +934,18 @@
 - 文件大小单位
 - SSE/stream 错误文案
 
+已完成结果（第二批）：
+
+- `DocumentFilters.tsx`：`pdf` / `markdown` 类型标签改用 `t('type.pdf/markdown')`
+- `AIRewriteDialog.tsx`：`AI 改写: ` 前缀改用 `t('aiRewrite.changeNotePrefix')`
+- `AISettingsCredentialsSection.tsx`：`API Key` / `Base URL` label 改用 `t('form.apiKeyLabel/baseUrlLabel')`
+- `SaveToKBDialog.tsx`：provider 选项改用 `t('createKb.providerZhipu/OpenAI/Ollama')`
+- 对应 key 已同步补入 `en-US` / `zh-CN` 的 `settings.json`、`document.json`、`chat.json`
+
 当前剩余工作：
 
 - 继续扫描其他页面级组件中的散落硬编码
-- 继续扫描 client 工具层/HTTP 层未纳入首批名单的 fallback 文案
+- 继续扫描 client 工具层/HTTP 层未纳入前两批名单的 fallback 文案
 
 #### 7.14 已完成：增加功能域级错误边界
 
