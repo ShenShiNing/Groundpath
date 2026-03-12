@@ -1,123 +1,383 @@
 # Code Review 报告
 
-基于对仓库的全面审查，以下是四个维度的评审结果。
+> 审查日期：2026-03-12
+> 审查范围：全仓库（目录结构、代码质量、API 设计、数据库表设计）
+
+## 一、项目概览
+
+pnpm monorepo 全栈项目，三个包：
+
+- `packages/client` — React 19 + Vite + TanStack Router/Query + Zustand + Tailwind CSS
+- `packages/server` — Express 5 + Drizzle ORM + MySQL + Redis + BullMQ
+- `packages/shared` — Zod schemas + 类型定义 + 常量
+
+核心功能：知识库管理 + 文档 RAG 索引 + AI 智能问答
 
 ---
 
-## 一、目录结构
+## 二、评审总分
 
-整体采用 pnpm monorepo（`server` / `client` / `shared` 三包），结构清晰。
-
-**做得好的地方：**
-
-- 模块按业务域划分（`agent`、`auth`、`chat`、`document`、`rag`、`vector` 等 16 个模块），每个模块内部遵循 `controllers/ → services/ → repositories/` 分层
-- `shared/` 层职责明确：`config/`、`db/`、`middleware/`、`errors/`、`logger/` 各司其职
-- 配置分层合理：`env/schema.ts`（基础设施）+ `defaults/*.defaults.ts`（业务常量）+ `configs.ts`（合并导出）
-- `packages/shared` 通过 `exports` 字段精确控制公共 API
-
-**建议改进：**
-
-1. `document` 相关模块碎片化过多 — `document/`、`document-ai/`、`document-index/` 三个独立模块，加上 `rag/` 中也有大量文档处理逻辑。建议考虑将 `document-index/` 合并到 `document/` 下作为子目录，减少跨模块调用
-2. `rag/services/` 下文件拆分过细：`processing.service.ts`、`processing.executor.ts`、`processing.lock.ts`、`processing.stages.ts`、`processing.structure.ts`、`processing.types.ts` — 6 个文件共享 `processing.*` 前缀，说明它们本质上是一个处理管道，建议收拢到 `rag/services/processing/` 子目录
-3. `scripts/` 目录顶层已删除 Python 脚本，但 `src/scripts/` 下还有 4 个 TS 脚本 — 建议统一脚本位置
-4. 前端缺少 `tests/` 目录，测试全部集中在 server 端
+| 维度       | 评分     | 说明                                   |
+| ---------- | -------- | -------------------------------------- |
+| 目录结构   | 9/10     | DDD 模块化清晰，层次分明               |
+| 代码质量   | 9/10     | 事务、幂等、计数器保护等关键点扎实     |
+| API 设计   | 9.5/10   | RESTful 规范，响应格式统一，中间件完善 |
+| 数据库设计 | 8.5/10   | 命名规范，索引合理，但外键级联有缺口   |
+| 测试覆盖   | 7.5/10   | 服务端测试完善，客户端覆盖不足         |
+| **综合**   | **9/10** | 架构成熟，代码质量高                   |
 
 ---
 
-## 二、代码质量
+## 三、各维度详细评审
 
-**做得好的地方：**
+### 3.1 目录结构
 
-- 严格 TypeScript 配置，`as any` 仅出现 4 处，类型安全度高
-- 函数式服务模式（对象导出单例）一致且轻量，避免了类继承的复杂性
-- 统一的错误体系：`AppError` + `Errors` 工厂方法，覆盖所有 HTTP 状态码
-- Pino 日志带 PII 脱敏（redact 密码、token、API key）
-- 事务支持完善：`withTransaction()` + `getDbContext()` 模式，25 处事务调用
-- 双层处理锁（内存 Map + DB 条件更新），保证并发安全
-- 106 个测试文件，包含错误注入测试和集成测试
+**优点：**
 
-**需要关注的问题：**
+- 每个业务模块内部 `controllers → services → repositories` 三层分离
+- `shared/config/` 将基础设施配置（`env/schema.ts`）和业务常量（`defaults/*.defaults.ts`）分离，完全符合 CLAUDE.md 规范
+- 测试目录镜像源码结构，按 `modules/`、`integration/`、`e2e/` 分类
+- 大型 repository 合理拆分（`document.repository.core.ts`、`.processing.ts`、`.queries.ts`）
 
-1. `document.repository.ts` 达 557 行，超出 CLAUDE.md 约定的 ~400 行上限。建议拆分为 `document-crud.repository.ts` + `document-query.repository.ts`
+**问题：**
 
-2. 内存锁泄漏风险 — `processing.lock.ts` 使用内存 Map 做第一层锁，进程崩溃时无法清理。建议：
-   - 加入 TTL 自动过期机制
-   - 或完全依赖 DB 层的原子 UPDATE 作为唯一锁源
+- `packages/server/src/shared/` 与 `packages/shared/` 命名易混淆，前者是 server 内部基础设施（中间件、DB、Redis），后者是跨端共享类型
 
-3. 搜索过度获取 — `SEARCH_OVERFETCH_FACTOR = 5` 意味着每次搜索从向量库拉取 5 倍结果再过滤，对大知识库可能造成性能问题。建议做成可配置项并加监控
+### 3.2 代码质量
 
-4. 缺少 OpenAPI/Swagger 文档 — 虽然 Zod schema 定义了请求/响应类型，但没有自动生成 API 文档。建议集成 `zod-to-openapi` 或类似工具
+**CLAUDE.md 架构偏好遵循情况：**
 
-5. 前端无测试覆盖 — 所有测试集中在 server 端，client 端零测试
+| 架构要求                                          | 遵循情况 | 证据                                 |
+| ------------------------------------------------- | -------- | ------------------------------------ |
+| 多步骤流程在单个服务编排                          | ✅       | document-trash、document-upload 等   |
+| 副作用成对（delete→decrement; restore→increment） | ✅       | 所有计数器操作成对出现               |
+| 计数器 floor 保护                                 | ✅       | SQL `GREATEST(count + delta, 0)`     |
+| 队列任务幂等                                      | ✅       | 锁 + 版本检查 + publishGeneration    |
+| 一致性敏感流程用事务                              | ✅       | 所有多步骤操作使用 `withTransaction` |
+| 文件 < 400 行                                     | ⚠️       | `auth.service.ts` 407 行略超         |
 
-6. `agent-executor.test.ts` 达 1030 行 — 测试文件也应遵循可维护性原则，建议按场景拆分
+**其他亮点：**
 
----
+- 错误处理统一：`AppError` + `Errors` 工厂 + `asyncHandler` + 全局错误中间件
+- 请求验证完善：Zod schema → `validateBody/Query/Params` → `getValidatedBody` 类型安全获取
+- 安全中间件齐全：helmet、CORS、CSRF、XSS 清理、8 种粒度速率限制
 
-## 三、API 设计
+### 3.3 API 设计
 
-**做得好的地方：**
+**优点：**
 
-- RESTful 设计规范，资源命名清晰（`/api/documents`、`/api/knowledge-bases`、`/api/chat/conversations`）
-- 完整的安全中间件链：Helmet → CORS → RequestID → 日志 → 解析 → 消毒 → 路由 → 错误处理
-- 分级限流策略：认证端点 3-5/min、AI 端点 15/min、通用端点 100/min
-- 统一响应格式 `{ success, data/error }` + `requestId` 追踪
-- CSRF 双提交 cookie 模式 + 时序安全比较
-- SSE 流式响应用于 chat 和文档生成
-- Zod 中间件验证（body/query/params）+ 类型安全提取
+- HTTP 方法语义正确，资源嵌套合理（`/conversations/:id/messages`）
+- 响应格式统一：`{ success, data }` / `{ success, error: { code, message, requestId } }`
+- 分页响应标准化，SSE 流式响应设计完善（token/done/error 事件）
+- 错误码按模块组织
 
-**需要关注的问题：**
+**问题：**
 
-1. 文档端点过于扁平 — `/api/documents/:id/versions`、`/api/documents/:id/restore`、`/api/documents/trash` 等全部挂在同一路由文件下。当端点继续增长时，建议拆分为 `document-version.routes.ts`、`document-trash.routes.ts`
+- 缺少 OpenAPI/Swagger 文档
 
-2. 缺少 API 版本控制 — 当前所有端点直接挂在 `/api/` 下，没有 `/api/v1/` 前缀。对于面向外部的 API，建议尽早引入版本号
+### 3.4 数据库设计
 
-3. 知识库文档上传路径设计 — `POST /api/knowledge-bases/:id/documents` 上传文档到知识库，但 `POST /api/documents` 也能上传文档。两个入口可能导致逻辑分散，建议明确主路径
+**优点：**
 
-4. 分页不一致风险 — 多个列表端点都支持分页，但需确认是否统一使用了 `page/pageSize` 或 `cursor` 模式
+- 23 张表，命名规范统一（snake_case），UUID 主键
+- 软删除设计完善：`deletedAt + deletedBy`，唯一索引包含 `deletedAt` 支持重用
+- 文档版本控制优秀：`document_versions` + `document_index_versions` + `publishGeneration` 乐观并发
+- API 密钥加密存储（AES-256-GCM）
 
-5. 文件服务端点 `GET /api/files/{*key}` 使用签名验证，但路径中的通配符需要注意路径遍历攻击防护
+**问题：**
 
-6. 限流配置硬编码 — 各端点的限流值分散在路由文件中，建议收拢到 `defaults/rate-limit.defaults.ts`
+- `refresh_tokens` 和 `messages` 缺少外键级联删除
+- `messages` 表缺少软删除（`conversations` 支持但 `messages` 不支持）
+- `conversations.knowledgeBaseId` 缺少外键约束
 
----
+### 3.5 测试覆盖
 
-## 四、数据库表设计
-
-**做得好的地方：**
-
-- 完整的审计字段（`createdBy`、`updatedBy`、`deletedBy` + 时间戳），支持软删除
-- 文档版本管理设计成熟：`documents` → `document_versions` → `document_index_versions` → `document_chunks`/`document_nodes` 四层结构
-- 结构化 RAG 的图模型（`document_nodes` + `document_edges`）支持层级关系和交叉引用
-- 外键级联策略合理：文档子资源 CASCADE 删除，用户关联 RESTRICT 保护
-- 索引回填系统（`backfill_runs` + `backfill_items`）支持断点续传和状态追踪
-- API 密钥使用 AES-256-GCM 加密存储（iv:authTag:ciphertext 格式）
-- 复合唯一约束防止数据重复（如 `documentId + indexVersionId + chunkIndex`）
-
-**需要关注的问题：**
-
-1. 计数器字段冗余风险 — `knowledge_bases.documentCount`、`knowledge_bases.totalChunks`、`documents.chunkCount` 等反范式计数器需要严格的事务保护。虽然代码中有 `Math.max(0, ...)` 保护，但建议确认 `sync-counters.ts` 在 scheduler 中定期运行
-
-2. `documents` 表职责过重 — 同时承载文件元数据、处理状态、版本管理、计数器。随着字段增长，建议考虑将处理状态拆分到独立的 `document_processing_states` 表
-
-3. `messages.metadata` 使用 JSON 列存储引用和 token 使用量 — 如果需要按引用来源查询或统计 token 消耗，JSON 列无法建索引。建议评估是否需要将高频查询字段提升为独立列
-
-4. `llm_configs` 一个用户只能有一个配置（唯一约束 userId） — 这限制了用户为不同场景配置不同 LLM 的能力。建议改为 `userId + purpose` 复合唯一键
-
-5. `login_logs` 存储了完整的地理位置信息 — 需要注意 GDPR/隐私合规，建议增加数据保留策略（定期清理或匿名化）
-
-6. `tokenCount`、`chunkCount` 等数值字段缺少数据库级别的非负约束
-
-7. `document_node_contents` 以 `nodeId` 为主键且是 1:1 关系 — 可以考虑合并到 `document_nodes` 表中减少 JOIN 开销，除非分离是为了大文本字段的延迟加载优化
+- 服务端：108 个测试文件，覆盖单元/集成/E2E，模式规范
+- 客户端：21 个测试文件，核心 hooks 和大型组件缺少测试
 
 ---
 
-## 总结
+## 四、待优化项
 
-这是一个架构成熟度较高的全栈项目，分层清晰、类型安全、安全防护完善。主要改进方向集中在：
+### P0 — 数据完整性
 
-- 大文件拆分（`document.repository.ts` 等超限文件）
-- API 版本控制和文档自动生成
-- 前端测试覆盖
-- 数据库计数器校准机制的定期化
-- 内存锁的 TTL 保护
+#### 4.1 `refresh_tokens` 缺少外键级联删除
+
+**文件**: `packages/server/src/shared/db/schema/auth/refresh-tokens.schema.ts`
+
+**现状**: 仅有 Drizzle `relations()` 定义，无数据库级外键约束。用户删除后刷新令牌成为孤儿记录。
+
+**建议**: 在表定义的索引数组中添加：
+
+```typescript
+foreignKey({
+  columns: [table.userId],
+  foreignColumns: [users.id],
+  name: 'refresh_tokens_user_id_fk',
+}).onDelete('cascade'),
+```
+
+#### 4.2 `messages` 缺少外键级联删除
+
+**文件**: `packages/server/src/shared/db/schema/ai/messages.schema.ts`
+
+**现状**: 仅有 `relations()` 定义，无数据库级外键。对话删除后消息成为孤儿记录。
+
+**建议**: 添加外键约束 `onDelete('cascade')`。
+
+#### 4.3 `conversations.knowledgeBaseId` 缺少外键约束
+
+**文件**: `packages/server/src/shared/db/schema/ai/conversations.schema.ts`
+
+**现状**: `knowledgeBaseId` 是可选字段，但无外键约束。知识库删除后对话中的引用悬空。
+
+**建议**: 添加外键约束 `onDelete('set null')`。
+
+---
+
+### P1 — 安全与规范
+
+#### 4.4 `auth.routes.ts` 中间件顺序不一致 & 缺少 CSRF 保护
+
+**文件**: `packages/server/src/modules/auth/auth.routes.ts`
+
+**问题**:
+
+- `/refresh` 路由：`refreshRateLimiter, requireCsrfProtection`
+- `/logout` 路由：`requireCsrfProtection, authenticateRefreshToken`
+- CSRF 保护位置不统一
+- `/logout-all` 使用 access token 但没有 CSRF 保护
+
+**建议**:
+
+- 统一中间件顺序为 `rateLimiter → CSRF → authentication → validation`
+- 为 `/logout-all` 添加 `requireCsrfProtection`
+
+#### 4.5 `auth.service.ts` 超过 400 行限制
+
+**文件**: `packages/server/src/modules/auth/services/auth.service.ts`（407 行）
+
+**问题**:
+
+- `deviceInfo ?? parseDeviceInfo(userAgent)` 重复出现 3 次
+- `register` 和 `registerWithCode` 有大量重复逻辑
+- 第 340-403 行只是简单委托给 `sessionService` 和 `passwordService`
+
+**建议**:
+
+- 提取 `resolveDeviceInfo()`、`createUserAndBuildResponse()` 辅助函数
+- 移除纯委托方法，直接从子服务导出
+- 目标：降至 ~300 行
+
+#### 4.6 添加 OpenAPI/Swagger API 文档
+
+**现状**: 12 个路由模块，无 API 文档。
+
+**建议**: 使用 `@asteasolutions/zod-to-openapi` 从现有 Zod schema 自动生成 OpenAPI 文档，成本低且与现有验证层复用。
+
+---
+
+### P2 — 代码质量
+
+#### 4.7 `token.service.ts` 重复逻辑
+
+**文件**: `packages/server/src/modules/auth/services/token.service.ts`
+
+**问题**:
+
+- `AccessTokenSubject` 构建逻辑与 `auth.service.ts` 重复
+- `refreshTokens` 方法 79 行，逻辑复杂
+
+**建议**:
+
+- 提取 `buildAccessTokenSubject(user)` 共享函数
+- 拆分 `refreshTokens` 为 token 消费、用户验证、token 生成三个子函数
+
+#### 4.8 `password.service.ts` 重复逻辑
+
+**文件**: `packages/server/src/modules/auth/services/password.service.ts`
+
+**问题**:
+
+- 密码哈希调用重复（第 44、101 行）
+- token 撤销逻辑重复（第 52-53、110-111 行）
+- `changePassword` 和 `resetPassword` 事务结构相似
+
+**建议**: 提取 `hashPassword()` 和 `revokeAllUserSessions()` 辅助函数。
+
+#### 4.9 `processing.executor.ts` 版本检查重复 & 错误处理嵌套过深
+
+**文件**: `packages/server/src/modules/rag/services/processing.executor.ts`（349 行）
+
+**问题**:
+
+- 版本检查逻辑在第 81-96 行和第 213-232 行重复
+- 错误处理块有 3 层 try-catch 嵌套（第 300-323 行）
+
+**建议**:
+
+- 提取 `checkVersionStaleness()` 函数
+- 使用 `Promise.allSettled` 并行处理清理任务，减少嵌套
+
+#### 4.10 `vector.repository.ts` 重复的软删除模式
+
+**文件**: `packages/server/src/modules/vector/vector.repository.ts`（369 行）
+
+**问题**:
+
+- 三个删除函数（`deleteByDocument`、`deleteByIndexVersion`、`deleteByKnowledgeBase`）有大量重复的软删除 + 物理删除模式
+- 超时时间硬编码 30 秒
+- `countByKnowledgeBaseId` 捕获所有错误返回 0，可能隐藏严重问题
+
+**建议**:
+
+- 提取 `softDeleteThenPhysicalDelete()` 通用函数
+- 将超时时间移到 `defaults.ts`，按操作类型区分
+- `countByKnowledgeBaseId` 区分"集合不存在"和"查询失败"
+
+#### 4.11 `document-index-activation.service.ts` 重复的缓存失效逻辑
+
+**文件**: `packages/server/src/modules/document-index/services/document-index-activation.service.ts`（230 行）
+
+**问题**:
+
+- `activateVersion`、`markFailed`、`markSuperseded` 三个函数有大量重复的缓存失效代码
+- 缓存失效在事务外执行，事务回滚后缓存可能已被清除
+
+**建议**:
+
+- 提取 `withCacheInvalidation()` 高阶函数
+- 考虑使用事务后钩子执行缓存失效
+
+#### 4.12 硬编码常量散落在业务代码中
+
+**涉及文件**:
+
+- `processing.stages.ts` — 批量 upsert 批次大小 100
+- `search.service.ts` — `SEARCH_OVERFETCH_FACTOR`、`SEARCH_MAX_CANDIDATES`
+- `vector.repository.ts` — 超时时间 30 秒
+
+**建议**: 统一移到 `shared/config/defaults/*.defaults.ts`，符合 CLAUDE.md 配置规范。
+
+---
+
+### P3 — 客户端优化
+
+#### 4.13 React Query hooks 缺少 `staleTime` 配置
+
+**涉及文件**: `useDocuments.ts`、`useConversations.ts`
+
+**问题**: 大多数查询使用默认 `staleTime`（0），导致每次组件挂载都重新请求。
+
+**建议**: 为常用查询添加合理的 `staleTime`（如列表查询 30s，详情查询 60s）。
+
+#### 4.14 缓存失效策略过于宽泛
+
+**涉及文件**: `useDocuments.ts`、`useConversations.ts`
+
+**问题**:
+
+- 多个 mutation 失效整个 `documents.lists()`，可能导致不必要的重新请求
+- `useConversations.ts` 使用 `predicate` 进行缓存失效，性能不如精确 queryKey
+
+**建议**: 使用精确的 queryKey 失效，或使用 `setQueryData` 进行乐观更新。
+
+#### 4.15 错误处理静默失败
+
+**涉及文件**:
+
+- `chatPanelStore.ts` 第 260 行 — `loadConversation` catch 块完全静默
+- `authStore.ts` 第 49-52、68-70、85-88 行 — catch 块直接抛出但无日志
+- `lib/http/auth.ts` 第 78-80 行 — catch 块吞掉错误不记录
+- `lib/http/sse.ts` 第 28-30 行 — JSON 解析失败静默跳过
+
+**建议**: 统一使用错误日志工具（如 `console.error` 或集成 Sentry），避免静默失败。
+
+#### 4.16 大型组件需要拆分
+
+**涉及文件**:
+
+- `AppLayout.tsx`（406 行）— 超过 400 行限制
+- `SaveToKBDialog.tsx`（381 行）— 接近限制
+
+**建议**: 提取子组件，降低单文件复杂度。
+
+#### 4.17 客户端测试覆盖不足
+
+**缺失测试**:
+
+- Hooks：`useDocuments`、`useConversations`、`useKnowledgeBases`、`useLLMConfig`
+- Store：`authStore`
+- 大型组件：`SaveToKBDialog`、`AppLayout`、`AISettingsForm`
+- 工具：`stream-client.ts`、`error.ts`
+
+**建议**: 优先补充 hooks 和 authStore 的单元测试。
+
+---
+
+### P4 — 长期改进
+
+#### 4.18 `chunking.service.ts` 健壮性
+
+**文件**: `packages/server/src/modules/rag/services/chunking.service.ts`
+
+**问题**:
+
+- 偏移量计算假设段落分隔符总是 `\n\n`
+- `splitLongChunk` 递归调用边界条件不清晰
+- 无超大文本保护（>10MB 可能 OOM）
+
+**建议**: 添加文本大小限制检查，改用滑动窗口算法替代递归。
+
+#### 4.19 `document-parse-router.service.ts` token 估算不准确
+
+**文件**: `packages/server/src/modules/document-index/services/document-parse-router.service.ts`
+
+**问题**: token 估算使用简单的字符数除法，对 CJK 字符不准确。
+
+**建议**: 区分 ASCII 和 CJK 字符，使用不同的 `charsPerToken` 系数。
+
+#### 4.20 `vector-cleanup.service.ts` 缺少并发控制
+
+**文件**: `packages/server/src/modules/vector/vector-cleanup.service.ts`
+
+**问题**:
+
+- 无并发控制，可能与正在进行的写入操作冲突
+- 无失败率阈值，超过 50% 集合清理失败时应中止并告警
+
+**建议**: 添加分布式锁和失败率阈值检查。
+
+#### 4.21 server 内部 `shared/` 命名优化
+
+**现状**: `packages/server/src/shared/` 与 `packages/shared/` 容易混淆。
+
+**建议**: 将 server 内部的 `shared/` 重命名为 `infrastructure/` 或 `core/`。
+
+---
+
+## 五、优化优先级总览
+
+| 优先级 | 编号 | 描述                               | 影响       |
+| ------ | ---- | ---------------------------------- | ---------- |
+| P0     | 4.1  | refresh_tokens 外键级联            | 数据完整性 |
+| P0     | 4.2  | messages 外键级联                  | 数据完整性 |
+| P0     | 4.3  | conversations.knowledgeBaseId 外键 | 数据完整性 |
+| P1     | 4.4  | auth.routes.ts CSRF 保护           | 安全       |
+| P1     | 4.5  | auth.service.ts 拆分               | 代码规范   |
+| P1     | 4.6  | OpenAPI 文档                       | 协作效率   |
+| P2     | 4.7  | token.service.ts 去重              | 可维护性   |
+| P2     | 4.8  | password.service.ts 去重           | 可维护性   |
+| P2     | 4.9  | processing.executor.ts 重构        | 可读性     |
+| P2     | 4.10 | vector.repository.ts 去重          | 可维护性   |
+| P2     | 4.11 | activation.service.ts 去重         | 可维护性   |
+| P2     | 4.12 | 硬编码常量集中化                   | 配置规范   |
+| P3     | 4.13 | React Query staleTime              | 性能       |
+| P3     | 4.14 | 缓存失效策略优化                   | 性能       |
+| P3     | 4.15 | 客户端错误处理                     | 可调试性   |
+| P3     | 4.16 | 大型组件拆分                       | 代码规范   |
+| P3     | 4.17 | 客户端测试补充                     | 质量保障   |
+| P4     | 4.18 | chunking 健壮性                    | 稳定性     |
+| P4     | 4.19 | token 估算优化                     | 准确性     |
+| P4     | 4.20 | vector-cleanup 并发控制            | 稳定性     |
+| P4     | 4.21 | shared 目录重命名                  | 可读性     |
