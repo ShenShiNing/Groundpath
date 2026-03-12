@@ -1,4 +1,4 @@
-import { withTransaction, type Transaction } from '@shared/db/db.utils';
+import { afterTransactionCommit, withTransaction, type Transaction } from '@shared/db/db.utils';
 import { Errors } from '@shared/errors';
 import { createLogger } from '@shared/logger';
 import { documentRepository } from '@modules/document';
@@ -7,6 +7,71 @@ import { documentIndexVersionRepository } from '../repositories/document-index-v
 import { documentIndexCacheService } from './document-index-cache.service';
 
 const logger = createLogger('document-index-activation.service');
+
+interface CacheInvalidationContext {
+  documentId?: string;
+  indexVersionId: string;
+  userId?: string;
+  knowledgeBaseId?: string | null;
+}
+
+function shouldInvalidateCaches(context: CacheInvalidationContext): boolean {
+  return Boolean(context.documentId || (context.userId && context.knowledgeBaseId));
+}
+
+async function invalidateCaches(context: CacheInvalidationContext): Promise<void> {
+  if (context.documentId) {
+    await documentIndexCacheService.invalidateDocumentCaches(
+      context.documentId,
+      context.indexVersionId
+    );
+  }
+
+  await documentIndexCacheService.invalidateQueryCaches({
+    userId: context.userId,
+    knowledgeBaseId: context.knowledgeBaseId,
+  });
+}
+
+async function hydrateCacheInvalidationContext(
+  context: CacheInvalidationContext,
+  documentId: string,
+  tx: Transaction
+) {
+  context.documentId = documentId;
+
+  const document = await documentRepository.findById(documentId, tx);
+  context.userId = document?.userId;
+  context.knowledgeBaseId = document?.knowledgeBaseId;
+
+  return document;
+}
+
+async function findVersionOrThrow(indexVersionId: string, tx: Transaction) {
+  const version = await documentIndexVersionRepository.findById(indexVersionId, tx);
+  if (!version) {
+    throw Errors.notFound('Document index version');
+  }
+
+  return version;
+}
+
+async function withCacheInvalidation<T>(
+  indexVersionId: string,
+  operation: (tx: Transaction, context: CacheInvalidationContext) => Promise<T>,
+  tx?: Transaction
+): Promise<T> {
+  return withTransaction(async (trx) => {
+    const context: CacheInvalidationContext = { indexVersionId };
+    const result = await operation(trx, context);
+
+    if (shouldInvalidateCaches(context)) {
+      await afterTransactionCommit(() => invalidateCaches(context), trx);
+    }
+
+    return result;
+  }, tx);
+}
 
 export const documentIndexActivationService = {
   async activateVersion(
@@ -19,212 +84,169 @@ export const documentIndexActivationService = {
     },
     tx?: Transaction
   ) {
-    let documentIdForInvalidation: string | undefined;
-    let userIdForInvalidation: string | undefined;
-    let knowledgeBaseIdForInvalidation: string | undefined;
-    const activatedVersion = await withTransaction(async (trx) => {
-      const version = await documentIndexVersionRepository.findById(indexVersionId, trx);
-      if (!version) {
-        throw Errors.notFound('Document index version');
-      }
-      documentIdForInvalidation = version.documentId;
+    return withCacheInvalidation(
+      indexVersionId,
+      async (trx, cacheContext) => {
+        const version = await findVersionOrThrow(indexVersionId, trx);
 
-      if (options?.expectedPublishGeneration !== undefined) {
-        const published = await documentRepository.publishBuild({
-          documentId: version.documentId,
-          activeIndexVersionId: version.id,
-          expectedPublishGeneration: options.expectedPublishGeneration,
-          chunkCount: options.chunkCount ?? 0,
-          tx: trx,
-        });
+        if (options?.expectedPublishGeneration !== undefined) {
+          const published = await documentRepository.publishBuild({
+            documentId: version.documentId,
+            activeIndexVersionId: version.id,
+            expectedPublishGeneration: options.expectedPublishGeneration,
+            chunkCount: options.chunkCount ?? 0,
+            tx: trx,
+          });
 
-        if (!published) {
-          await documentIndexVersionRepository.update(
-            version.id,
+          if (!published) {
+            await documentIndexVersionRepository.update(
+              version.id,
+              {
+                status: 'superseded',
+                error: 'Publish fencing rejected stale build activation',
+              },
+              trx
+            );
+            return undefined;
+          }
+        } else {
+          await documentRepository.update(
+            version.documentId,
             {
-              status: 'superseded',
-              error: 'Publish fencing rejected stale build activation',
+              activeIndexVersionId: version.id,
             },
             trx
           );
-          return undefined;
         }
-      } else {
-        await documentRepository.update(
+
+        await documentIndexVersionRepository.supersedeActiveByDocumentId(
           version.documentId,
+          version.id,
+          trx
+        );
+        const activatedVersion = await documentIndexVersionRepository.update(
+          version.id,
           {
-            activeIndexVersionId: version.id,
+            status: 'active',
+            error: null,
+            activatedAt: new Date(),
           },
           trx
         );
-      }
 
-      await documentIndexVersionRepository.supersedeActiveByDocumentId(
-        version.documentId,
-        version.id,
-        trx
-      );
-      const activatedVersion = await documentIndexVersionRepository.update(
-        version.id,
-        {
-          status: 'active',
-          error: null,
-          activatedAt: new Date(),
-        },
-        trx
-      );
+        if (options?.chunkDelta && options.chunkDelta !== 0 && options.knowledgeBaseId) {
+          await knowledgeBaseService.incrementTotalChunks(
+            options.knowledgeBaseId,
+            options.chunkDelta,
+            trx
+          );
+        }
 
-      if (options?.chunkDelta && options.chunkDelta !== 0 && options.knowledgeBaseId) {
-        await knowledgeBaseService.incrementTotalChunks(
-          options.knowledgeBaseId,
-          options.chunkDelta,
-          trx
+        await hydrateCacheInvalidationContext(cacheContext, version.documentId, trx);
+
+        logger.info(
+          {
+            documentId: version.documentId,
+            documentVersion: version.documentVersion,
+            indexVersionId: version.id,
+            indexVersion: version.indexVersion,
+          },
+          'Activated document index version'
         );
-      }
 
-      const document = await documentRepository.findById(version.documentId, trx);
-      userIdForInvalidation = document?.userId;
-      knowledgeBaseIdForInvalidation = document?.knowledgeBaseId;
-
-      logger.info(
-        {
-          documentId: version.documentId,
-          documentVersion: version.documentVersion,
-          indexVersionId: version.id,
-          indexVersion: version.indexVersion,
-        },
-        'Activated document index version'
-      );
-
-      return activatedVersion;
-    }, tx);
-    if (!activatedVersion) {
-      return undefined;
-    }
-    if (documentIdForInvalidation) {
-      await documentIndexCacheService.invalidateDocumentCaches(
-        documentIdForInvalidation,
-        indexVersionId
-      );
-    }
-    await documentIndexCacheService.invalidateQueryCaches({
-      userId: userIdForInvalidation,
-      knowledgeBaseId: knowledgeBaseIdForInvalidation,
-    });
-    return activatedVersion;
+        return activatedVersion;
+      },
+      tx
+    );
   },
 
   async markFailed(indexVersionId: string, error: string, tx?: Transaction) {
-    let documentIdForInvalidation: string | undefined;
-    let userIdForInvalidation: string | undefined;
-    let knowledgeBaseIdForInvalidation: string | undefined;
-    const failedVersion = await withTransaction(async (trx) => {
-      const version = await documentIndexVersionRepository.findById(indexVersionId, trx);
-      if (!version) {
-        throw Errors.notFound('Document index version');
-      }
-      documentIdForInvalidation = version.documentId;
+    return withCacheInvalidation(
+      indexVersionId,
+      async (trx, cacheContext) => {
+        const version = await findVersionOrThrow(indexVersionId, trx);
 
-      const failedVersion = await documentIndexVersionRepository.update(
-        version.id,
-        {
-          status: 'failed',
-          error,
-        },
-        trx
-      );
-
-      const document = await documentRepository.findById(version.documentId, trx);
-      userIdForInvalidation = document?.userId;
-      knowledgeBaseIdForInvalidation = document?.knowledgeBaseId;
-      if (document?.activeIndexVersionId === version.id) {
-        await documentRepository.update(
-          version.documentId,
+        const failedVersion = await documentIndexVersionRepository.update(
+          version.id,
           {
-            activeIndexVersionId: null,
+            status: 'failed',
+            error,
           },
           trx
         );
-      }
 
-      logger.warn(
-        {
-          documentId: version.documentId,
-          documentVersion: version.documentVersion,
-          indexVersionId: version.id,
-          error,
-        },
-        'Marked document index version as failed'
-      );
+        const document = await hydrateCacheInvalidationContext(
+          cacheContext,
+          version.documentId,
+          trx
+        );
+        if (document?.activeIndexVersionId === version.id) {
+          await documentRepository.update(
+            version.documentId,
+            {
+              activeIndexVersionId: null,
+            },
+            trx
+          );
+        }
 
-      return failedVersion;
-    }, tx);
-    if (documentIdForInvalidation) {
-      await documentIndexCacheService.invalidateDocumentCaches(
-        documentIdForInvalidation,
-        indexVersionId
-      );
-    }
-    await documentIndexCacheService.invalidateQueryCaches({
-      userId: userIdForInvalidation,
-      knowledgeBaseId: knowledgeBaseIdForInvalidation,
-    });
-    return failedVersion;
+        logger.warn(
+          {
+            documentId: version.documentId,
+            documentVersion: version.documentVersion,
+            indexVersionId: version.id,
+            error,
+          },
+          'Marked document index version as failed'
+        );
+
+        return failedVersion;
+      },
+      tx
+    );
   },
 
   async markSuperseded(indexVersionId: string, tx?: Transaction) {
-    let documentIdForInvalidation: string | undefined;
-    let userIdForInvalidation: string | undefined;
-    let knowledgeBaseIdForInvalidation: string | undefined;
-    const supersededVersion = await withTransaction(async (trx) => {
-      const version = await documentIndexVersionRepository.findById(indexVersionId, trx);
-      if (!version) {
-        throw Errors.notFound('Document index version');
-      }
-      documentIdForInvalidation = version.documentId;
+    return withCacheInvalidation(
+      indexVersionId,
+      async (trx, cacheContext) => {
+        const version = await findVersionOrThrow(indexVersionId, trx);
 
-      const supersededVersion = await documentIndexVersionRepository.update(
-        version.id,
-        {
-          status: 'superseded',
-        },
-        trx
-      );
-
-      const document = await documentRepository.findById(version.documentId, trx);
-      userIdForInvalidation = document?.userId;
-      knowledgeBaseIdForInvalidation = document?.knowledgeBaseId;
-      if (document?.activeIndexVersionId === version.id) {
-        await documentRepository.update(
-          version.documentId,
+        const supersededVersion = await documentIndexVersionRepository.update(
+          version.id,
           {
-            activeIndexVersionId: null,
+            status: 'superseded',
           },
           trx
         );
-      }
 
-      logger.info(
-        {
-          documentId: version.documentId,
-          documentVersion: version.documentVersion,
-          indexVersionId: version.id,
-        },
-        'Marked document index version as superseded'
-      );
+        const document = await hydrateCacheInvalidationContext(
+          cacheContext,
+          version.documentId,
+          trx
+        );
+        if (document?.activeIndexVersionId === version.id) {
+          await documentRepository.update(
+            version.documentId,
+            {
+              activeIndexVersionId: null,
+            },
+            trx
+          );
+        }
 
-      return supersededVersion;
-    }, tx);
-    if (documentIdForInvalidation) {
-      await documentIndexCacheService.invalidateDocumentCaches(
-        documentIdForInvalidation,
-        indexVersionId
-      );
-    }
-    await documentIndexCacheService.invalidateQueryCaches({
-      userId: userIdForInvalidation,
-      knowledgeBaseId: knowledgeBaseIdForInvalidation,
-    });
-    return supersededVersion;
+        logger.info(
+          {
+            documentId: version.documentId,
+            documentVersion: version.documentVersion,
+            indexVersionId: version.id,
+          },
+          'Marked document index version as superseded'
+        );
+
+        return supersededVersion;
+      },
+      tx
+    );
   },
 };

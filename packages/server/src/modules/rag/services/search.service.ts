@@ -1,3 +1,4 @@
+import { ragConfig } from '@config/env';
 import { createLogger } from '@shared/logger';
 import { getEmbeddingProviderByType } from '@modules/embedding';
 import { vectorRepository, ensureCollection } from '@modules/vector';
@@ -7,8 +8,6 @@ import { knowledgeBaseService } from '@modules/knowledge-base';
 import { documentRepository } from '@modules/document';
 
 const logger = createLogger('search.service');
-const SEARCH_OVERFETCH_FACTOR = 5;
-const SEARCH_MAX_CANDIDATES = 200;
 
 export interface KBSearchOptions {
   userId: string;
@@ -26,6 +25,8 @@ export const searchService = {
   async searchInKnowledgeBase(options: KBSearchOptions): Promise<SearchResult[]> {
     const { userId, knowledgeBaseId, query, limit, scoreThreshold, documentIds } = options;
     const targetLimit = limit ?? 5;
+    const searchOverfetchFactor = ragConfig.searchOverfetchFactor;
+    const searchMaxCandidates = ragConfig.searchMaxCandidates;
 
     logger.debug(
       { userId, knowledgeBaseId, query: query.substring(0, 50), limit },
@@ -45,12 +46,12 @@ export const searchService = {
 
     // Search in Qdrant with KB filter
     let fetchLimit = Math.min(
-      Math.max(targetLimit * SEARCH_OVERFETCH_FACTOR, targetLimit),
-      SEARCH_MAX_CANDIDATES
+      Math.max(targetLimit * searchOverfetchFactor, targetLimit),
+      searchMaxCandidates
     );
     let filteredResults: SearchResult[] = [];
 
-    while (fetchLimit <= SEARCH_MAX_CANDIDATES) {
+    while (fetchLimit <= searchMaxCandidates) {
       const candidates = await vectorRepository.search(collectionName, queryVector, userId, {
         limit: fetchLimit,
         scoreThreshold,
@@ -75,11 +76,11 @@ export const searchService = {
         break;
       }
 
-      if (fetchLimit === SEARCH_MAX_CANDIDATES) {
+      if (fetchLimit === searchMaxCandidates) {
         break;
       }
 
-      fetchLimit = Math.min(fetchLimit * 2, SEARCH_MAX_CANDIDATES);
+      fetchLimit = Math.min(fetchLimit * 2, searchMaxCandidates);
     }
 
     logger.debug(

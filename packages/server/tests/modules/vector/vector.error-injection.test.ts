@@ -138,6 +138,27 @@ describe('Vector Repository Error Injection', () => {
     });
   });
 
+  describe('deleteByKnowledgeBaseId', () => {
+    it('should return true when soft-delete succeeds but hard-delete fails', async () => {
+      mockQdrant.setPayload.mockResolvedValue(undefined);
+      mockQdrant.delete.mockRejectedValue(new Error('Hard delete failed'));
+
+      const result = await vectorRepository.deleteByKnowledgeBaseId('col', 'kb-1');
+
+      expect(result).toBe(true);
+      expect(loggerMock.warn).toHaveBeenCalled();
+    });
+
+    it('should return false when soft-delete fails', async () => {
+      mockQdrant.setPayload.mockRejectedValue(new Error('setPayload failed'));
+      mockQdrant.delete.mockRejectedValue(new Error('delete also failed'));
+
+      const result = await vectorRepository.deleteByKnowledgeBaseId('col', 'kb-1');
+
+      expect(result).toBe(false);
+    });
+  });
+
   // ─── markAsDeleted ───
   describe('markAsDeleted', () => {
     it('should return false when called without filter', async () => {
@@ -221,12 +242,25 @@ describe('Vector Repository Error Injection', () => {
 
   // ─── countByKnowledgeBaseId ───
   describe('countByKnowledgeBaseId', () => {
-    it('should return 0 on count failure', async () => {
-      mockQdrant.count.mockRejectedValue(new Error('Connection lost'));
+    it('should return 0 when the collection does not exist', async () => {
+      mockQdrant.count.mockRejectedValue(
+        Object.assign(new Error('Collection does not exist'), {
+          response: { status: 404 },
+        })
+      );
 
       const result = await vectorRepository.countByKnowledgeBaseId('col', 'kb-1');
 
       expect(result).toBe(0);
+    });
+
+    it('should throw on non-not-found count failure', async () => {
+      mockQdrant.count.mockRejectedValue(new Error('Connection lost'));
+
+      await expect(vectorRepository.countByKnowledgeBaseId('col', 'kb-1')).rejects.toThrow(
+        'Connection lost'
+      );
+      expect(loggerMock.warn).toHaveBeenCalled();
     });
   });
 

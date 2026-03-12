@@ -17,6 +17,40 @@ export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
  */
 export type DbContext = typeof db | Transaction;
 
+type AfterTransactionCommitCallback = () => Promise<void> | void;
+
+const afterCommitCallbacks = new WeakMap<object, AfterTransactionCommitCallback[]>();
+
+function getAfterCommitCallbacks(tx: Transaction): AfterTransactionCommitCallback[] | undefined {
+  return afterCommitCallbacks.get(tx as object);
+}
+
+function createAfterCommitCallbacks(tx: Transaction): AfterTransactionCommitCallback[] {
+  const callbacks: AfterTransactionCommitCallback[] = [];
+  afterCommitCallbacks.set(tx as object, callbacks);
+  return callbacks;
+}
+
+async function flushAfterCommitCallbacks(tx: Transaction): Promise<void> {
+  const callbacks = getAfterCommitCallbacks(tx);
+  afterCommitCallbacks.delete(tx as object);
+
+  if (!callbacks?.length) {
+    return;
+  }
+
+  const results = await Promise.allSettled(
+    callbacks.map((callback) => Promise.resolve().then(callback))
+  );
+  const rejected = results.find(
+    (result): result is PromiseRejectedResult => result.status === 'rejected'
+  );
+
+  if (rejected) {
+    throw rejected.reason;
+  }
+}
+
 /**
  * Execute a callback within a database transaction
  * Automatically commits on success, rolls back on error
@@ -45,7 +79,50 @@ export async function withTransaction<T>(
   tx?: Transaction
 ): Promise<T> {
   if (tx) return callback(tx);
-  return db.transaction(callback);
+
+  let managedTx: Transaction | undefined;
+
+  const result = await db.transaction(async (trx) => {
+    managedTx = trx;
+    createAfterCommitCallbacks(trx);
+
+    try {
+      return await callback(trx);
+    } catch (error) {
+      afterCommitCallbacks.delete(trx as object);
+      throw error;
+    }
+  });
+
+  if (managedTx) {
+    await flushAfterCommitCallbacks(managedTx);
+  }
+
+  return result;
+}
+
+/**
+ * Register a callback that should run after the surrounding managed transaction commits.
+ *
+ * If no transaction is provided, or if the transaction was not created via `withTransaction`,
+ * the callback executes immediately.
+ */
+export async function afterTransactionCommit(
+  callback: AfterTransactionCommitCallback,
+  tx?: Transaction
+): Promise<void> {
+  if (!tx) {
+    await callback();
+    return;
+  }
+
+  const callbacks = getAfterCommitCallbacks(tx);
+  if (!callbacks) {
+    await callback();
+    return;
+  }
+
+  callbacks.push(callback);
 }
 
 /**

@@ -154,9 +154,9 @@ pnpm monorepo 全栈项目，三个包：
 
 ---
 
-### P2 — 代码质量
+### ~~P2 — 代码质量~~ ✅ 已修复
 
-> 修复分支：`refactor/p2-code-quality`（已完成 4.7、4.8、4.9）
+> 修复分支：`refactor/p2-code-quality`
 
 #### ~~4.7 `token.service.ts` 重复逻辑~~ ✅
 
@@ -188,37 +188,27 @@ pnpm monorepo 全栈项目，三个包：
 - 提取 `cleanupAfterProcessingFailure()` + `logCleanupFailure()`，将失败清理收敛为单一出口
 - 使用 `Promise.allSettled` 并行执行 build 失败标记与文档失败状态回写，消除多层嵌套 `try-catch`
 
-#### 4.10 `vector.repository.ts` 重复的软删除模式
+#### ~~4.10 `vector.repository.ts` 重复的软删除模式~~ ✅
 
 **文件**: `packages/server/src/modules/vector/vector.repository.ts`（369 行）
 
-**问题**:
+**已修复**:
 
-- 三个删除函数（`deleteByDocument`、`deleteByIndexVersion`、`deleteByKnowledgeBase`）有大量重复的软删除 + 物理删除模式
-- 超时时间硬编码 30 秒
-- `countByKnowledgeBaseId` 捕获所有错误返回 0，可能隐藏严重问题
+- 提取 `buildMustConditions()` 与 `softDeleteThenPhysicalDelete()`，统一 document / indexVersion / knowledgeBase 三条软删除 + 物理删除路径
+- 将 Qdrant 超时迁移到 `vectorDefaults`，并通过 `vectorConfig` 暴露 `mutation/search/count/maintenance` 四类超时
+- `countByKnowledgeBaseId()` 仅在集合不存在时返回 `0`，真实查询失败会记录日志并继续抛出
 
-**建议**:
-
-- 提取 `softDeleteThenPhysicalDelete()` 通用函数
-- 将超时时间移到 `defaults.ts`，按操作类型区分
-- `countByKnowledgeBaseId` 区分"集合不存在"和"查询失败"
-
-#### 4.11 `document-index-activation.service.ts` 重复的缓存失效逻辑
+#### ~~4.11 `document-index-activation.service.ts` 重复的缓存失效逻辑~~ ✅
 
 **文件**: `packages/server/src/modules/document-index/services/document-index-activation.service.ts`（230 行）
 
-**问题**:
+**已修复**:
 
-- `activateVersion`、`markFailed`、`markSuperseded` 三个函数有大量重复的缓存失效代码
-- 缓存失效在事务外执行，事务回滚后缓存可能已被清除
+- 提取 `withCacheInvalidation()`、`hydrateCacheInvalidationContext()` 与 `invalidateCaches()`，收敛三条状态流转路径的缓存失效逻辑
+- 在 `db.utils.ts` 新增 `afterTransactionCommit()`，确保传入外层事务时只在提交成功后执行缓存失效
+- 新增 `document-index-activation.service` 与 `db.utils` 测试，覆盖外层事务延迟失效与回滚不触发回调
 
-**建议**:
-
-- 提取 `withCacheInvalidation()` 高阶函数
-- 考虑使用事务后钩子执行缓存失效
-
-#### 4.12 硬编码常量散落在业务代码中
+#### ~~4.12 硬编码常量散落在业务代码中~~ ✅
 
 **涉及文件**:
 
@@ -226,7 +216,11 @@ pnpm monorepo 全栈项目，三个包：
 - `search.service.ts` — `SEARCH_OVERFETCH_FACTOR`、`SEARCH_MAX_CANDIDATES`
 - `vector.repository.ts` — 超时时间 30 秒
 
-**建议**: 统一移到 `shared/config/defaults/*.defaults.ts`，符合 CLAUDE.md 配置规范。
+**已修复**:
+
+- `processing.stages.ts` 的向量 upsert 批次大小迁移到 `documentDefaults.vectorUpsertBatchSize`
+- `search.service.ts` 的候选放大系数与上限迁移到 `ragDefaults.searchOverfetchFactor` / `searchMaxCandidates`
+- `vector.repository.ts` 的操作超时迁移到 `vectorDefaults`，符合 `env/schema.ts + defaults + env/configs.ts` 的配置出口约束
 
 ---
 
@@ -338,9 +332,9 @@ pnpm monorepo 全栈项目，三个包：
 | P2     | 4.7  | token.service.ts 去重              | 可维护性   | ✅   |
 | P2     | 4.8  | password.service.ts 去重           | 可维护性   | ✅   |
 | P2     | 4.9  | processing.executor.ts 重构        | 可读性     | ✅   |
-| P2     | 4.10 | vector.repository.ts 去重          | 可维护性   |      |
-| P2     | 4.11 | activation.service.ts 去重         | 可维护性   |      |
-| P2     | 4.12 | 硬编码常量集中化                   | 配置规范   |      |
+| P2     | 4.10 | vector.repository.ts 去重          | 可维护性   | ✅   |
+| P2     | 4.11 | activation.service.ts 去重         | 可维护性   | ✅   |
+| P2     | 4.12 | 硬编码常量集中化                   | 配置规范   | ✅   |
 | P3     | 4.13 | React Query staleTime              | 性能       |      |
 | P3     | 4.14 | 缓存失效策略优化                   | 性能       |      |
 | P3     | 4.15 | 客户端错误处理                     | 可调试性   |      |
