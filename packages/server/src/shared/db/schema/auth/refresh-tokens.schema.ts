@@ -6,6 +6,7 @@ import {
   index,
   uniqueIndex,
   json,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { users } from '../user/users.schema';
 import { relations } from 'drizzle-orm';
@@ -43,6 +44,11 @@ export const refreshTokens = mysqlTable(
     uniqueIndex('token_idx').on(table.token),
     index('expires_at_idx').on(table.expiresAt),
     index('revoked_idx').on(table.revoked),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: 'refresh_tokens_user_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 
