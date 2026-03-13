@@ -1,11 +1,11 @@
 import { eq, and, isNull, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
+import { db } from '@core/db';
+import { now, getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   knowledgeBases,
   type KnowledgeBase,
   type NewKnowledgeBase,
-} from '@shared/db/schema/document/knowledge-bases.schema';
+} from '@core/db/schema/document/knowledge-bases.schema';
 
 function extractRows<T>(result: unknown): T[] {
   return (result as [T[]])[0] ?? [];

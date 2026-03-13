@@ -9,7 +9,7 @@ const { queueAddMock, processingServiceMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@shared/config/env', () => ({
+vi.mock('@core/config/env', () => ({
   queueConfig: {
     concurrency: 2,
     maxRetries: 3,
@@ -27,7 +27,7 @@ vi.mock('@shared/config/env', () => ({
   },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),

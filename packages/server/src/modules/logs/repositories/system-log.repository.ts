@@ -1,14 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { hostname } from 'os';
 import { desc, eq, and, lt, sql, inArray } from 'drizzle-orm';
-import { db } from '@shared/db';
+import { db } from '@core/db';
 import {
   systemLogs,
   type NewSystemLog,
   type SystemLog,
   type LogLevel,
   type LogCategory,
-} from '@shared/db/schema/system/system-logs.schema';
+} from '@core/db/schema/system/system-logs.schema';
 
 export interface SystemLogListParams {
   page: number;

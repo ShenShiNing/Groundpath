@@ -30,7 +30,7 @@ vi.mock('uuid', () => ({
   v4: mocks.uuidV4,
 }));
 
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: mocks.withTransaction,
 }));
 

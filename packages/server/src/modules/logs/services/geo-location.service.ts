@@ -1,4 +1,4 @@
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('geo-location.service');
 

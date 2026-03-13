@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Request, Response } from 'express';
 import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import {
   mockUserId,
   mockDocumentId,
@@ -22,8 +22,8 @@ vi.mock('@modules/document-ai/services/generation.service', () => ({
   },
 }));
 
-vi.mock('@shared/errors', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@shared/errors')>();
+vi.mock('@core/errors', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@core/errors')>();
   return {
     ...original,
     sendSuccessResponse: vi.fn((res, data) => {
@@ -40,7 +40,7 @@ vi.mock('@shared/errors', async (importOriginal) => {
 // Import after mocks
 import { generationController } from '@modules/document-ai/controllers/generation.controller';
 import { generationService } from '@modules/document-ai/services/generation.service';
-import { sendSuccessResponse, handleError } from '@shared/errors';
+import { sendSuccessResponse, handleError } from '@core/errors';
 
 // ==================== Test Helpers ====================
 

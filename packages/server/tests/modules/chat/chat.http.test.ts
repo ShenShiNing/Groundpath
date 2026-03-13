@@ -81,7 +81,7 @@ const {
   };
 });
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   authenticate: authenticateMock,
   aiRateLimiter: aiRateLimiterMock,
 }));

@@ -1,12 +1,12 @@
 // Import Express type augmentations (must be imported for side effects)
-import '@shared/types';
+import '@core/types';
 
 import express, { type Express } from 'express';
 import cookieParser from 'cookie-parser';
 import { createServer, type Server } from 'http';
 import { serverConfig } from '@config/env';
-import { logger } from '@shared/logger';
-import { requestLogger } from '@shared/logger/request-logger';
+import { logger } from '@core/logger';
+import { requestLogger } from '@core/logger/request-logger';
 import {
   errorMiddleware,
   helmetMiddleware,
@@ -14,14 +14,14 @@ import {
   requestIdMiddleware,
   sanitizeMiddleware,
   requestLoggerMiddleware,
-} from '@shared/middleware';
-import { systemLogger } from '@shared/logger/system-logger';
-import { initializeScheduler } from '@shared/scheduler';
-import { closeDatabase } from '@shared/db';
-import { closeRedis, connectRedis } from '@shared/redis';
-import { createShutdownHandler } from '@shared/server/shutdown';
+} from '@core/middleware';
+import { systemLogger } from '@core/logger/system-logger';
+import { initializeScheduler } from '@core/scheduler';
+import { closeDatabase } from '@core/db';
+import { closeRedis, connectRedis } from '@core/redis';
+import { createShutdownHandler } from '@core/server/shutdown';
 import { startDocumentProcessingWorker, stopDocumentProcessingWorker } from '@modules/rag';
-import { setupOpenApi } from '@shared/openapi';
+import { setupOpenApi } from '@core/openapi';
 import router from './router';
 
 // ==================== App Setup ====================

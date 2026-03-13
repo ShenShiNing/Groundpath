@@ -2,17 +2,17 @@ import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
 import { authConfig } from '@config/env';
-import type { User } from '@shared/db/schema/user/users.schema';
-import type { AccessTokenSubject } from '@shared/types';
-import { Errors } from '@shared/errors';
+import type { User } from '@core/db/schema/user/users.schema';
+import type { AccessTokenSubject } from '@core/types';
+import { Errors } from '@core/errors';
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
   buildAccessTokenSubject,
-} from '@shared/utils';
-import { withTransaction, type Transaction } from '@shared/db/db.utils';
-import { systemLogger } from '@shared/logger/system-logger';
+} from '@core/utils';
+import { withTransaction, type Transaction } from '@core/db/db.utils';
+import { systemLogger } from '@core/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 import { userService } from '../../user';

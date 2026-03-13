@@ -3,7 +3,7 @@ import { sendMessageSchema, listMessagesSchema } from '@knowledge-agent/shared/s
 import { chatService } from '../services/chat.service';
 import { messageService } from '../services/message.service';
 import { conversationService } from '../services/conversation.service';
-import { sendSuccessResponse, handleError } from '@shared/errors';
+import { sendSuccessResponse, handleError } from '@core/errors';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;

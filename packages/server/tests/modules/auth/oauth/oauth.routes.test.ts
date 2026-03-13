@@ -45,7 +45,7 @@ vi.mock('@modules/auth/oauth/oauth.controller', () => ({
   oauthController: oauthControllerMock,
 }));
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   requireCsrfProtection: requireCsrfProtectionMock,
   validateBody: validateBodyMock,
 }));

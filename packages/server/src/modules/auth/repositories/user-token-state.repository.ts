@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { getDbContext, now, type Transaction } from '@shared/db/db.utils';
-import { userTokenStates } from '@shared/db/schema/auth/user-token-states.schema';
+import { db } from '@core/db';
+import { getDbContext, now, type Transaction } from '@core/db/db.utils';
+import { userTokenStates } from '@core/db/schema/auth/user-token-states.schema';
 import { userRepository } from '@modules/user/repositories/user.repository';
 
 export const userTokenStateRepository = {

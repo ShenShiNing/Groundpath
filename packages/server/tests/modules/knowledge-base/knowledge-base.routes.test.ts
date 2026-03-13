@@ -168,7 +168,7 @@ vi.mock('@modules/knowledge-base/controllers/knowledge-base.controller', () => (
   knowledgeBaseController: knowledgeBaseControllerMock,
 }));
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   authenticate: authenticateMock,
   generalRateLimiter: generalRateLimiterMock,
   validateBody: validateBodyMock,
@@ -188,19 +188,19 @@ vi.mock('@modules/document', () => ({
   documentService: documentServiceMock,
 }));
 
-vi.mock('@shared/errors', () => ({
+vi.mock('@core/errors', () => ({
   sendSuccessResponse: sendSuccessResponseMock,
 }));
 
-vi.mock('@shared/errors/app-error', () => ({
+vi.mock('@core/errors/app-error', () => ({
   AppError: AppErrorMock,
 }));
 
-vi.mock('@shared/errors/async-handler', () => ({
+vi.mock('@core/errors/async-handler', () => ({
   asyncHandler: asyncHandlerMock,
 }));
 
-vi.mock('@shared/utils', () => ({
+vi.mock('@core/utils', () => ({
   requireUserId: requireUserIdMock,
   getParamId: getParamIdMock,
   getClientIp: getClientIpMock,
@@ -214,9 +214,9 @@ vi.mock('@knowledge-agent/shared', () => ({
 
 import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
 import { documentService } from '@modules/document';
-import { sendSuccessResponse } from '@shared/errors';
-import { requireUserId, getParamId, getClientIp } from '@shared/utils';
-import { getValidatedQuery } from '@shared/middleware';
+import { sendSuccessResponse } from '@core/errors';
+import { requireUserId, getParamId, getClientIp } from '@core/utils';
+import { getValidatedQuery } from '@core/middleware';
 
 function createMockResponse(): Response {
   return {

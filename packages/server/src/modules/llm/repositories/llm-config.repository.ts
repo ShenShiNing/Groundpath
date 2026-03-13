@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
-import { db } from '@shared/db';
+import { db } from '@core/db';
 import {
   llmConfigs,
   type LLMConfig,
   type NewLLMConfig,
-} from '@shared/db/schema/ai/llm-configs.schema';
+} from '@core/db/schema/ai/llm-configs.schema';
 
 export const llmConfigRepository = {
   /**

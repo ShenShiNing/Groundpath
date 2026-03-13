@@ -5,7 +5,7 @@ const { loggerMock } = vi.hoisted(() => ({
   loggerMock: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => loggerMock,
 }));
 
@@ -134,11 +134,11 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'test-uuid-' + Math.random().toString(36).slice(2, 8)),
 }));
 
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: withTransactionMock,
 }));
 
-vi.mock('@shared/db', () => ({
+vi.mock('@core/db', () => ({
   db: dbMock,
 }));
 
@@ -154,7 +154,7 @@ vi.mock('drizzle-orm', () => ({
   ),
 }));
 
-vi.mock('@shared/db/schema/document/documents.schema', () => ({
+vi.mock('@core/db/schema/document/documents.schema', () => ({
   documents: {
     id: 'id',
     processingStatus: 'processingStatus',

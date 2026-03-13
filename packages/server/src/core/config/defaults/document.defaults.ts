@@ -7,6 +7,7 @@ export const documentDefaults = {
   maxSize: 22_020_096,
   textContentMaxLength: 500_000,
   textPreviewMaxLength: 50_000,
+  chunkingMaxTextBytes: 10_485_760,
   chunkSize: 512,
   chunkOverlap: 50,
   vectorBatchSize: 20,
@@ -21,6 +22,8 @@ export const documentDefaults = {
 export const documentIndexDefaults = {
   routeTokenThreshold: 5_000,
   charsPerToken: 4,
+  asciiCharsPerToken: 4,
+  cjkCharsPerToken: 1.6,
   pdfTimeoutMs: 30_000,
   pdfConcurrency: 2,
 } as const;
@@ -39,6 +42,8 @@ export const vectorDefaults = {
   searchTimeoutMs: 30_000,
   countTimeoutMs: 30_000,
   maintenanceTimeoutMs: 30_000,
+  cleanupLockTtlMs: 900_000,
+  cleanupFailureThreshold: 0.5,
 } as const;
 
 /** Document-AI (summary, analysis, generation) parameters */

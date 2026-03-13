@@ -15,7 +15,7 @@ if (!process.env.DATABASE_URL) {
 
 export default defineConfig({
   out: './drizzle',
-  schema: './src/shared/db/schema/index.ts',
+  schema: './src/core/db/schema/index.ts',
   dialect: 'mysql',
   dbCredentials: {
     url: process.env.DATABASE_URL,

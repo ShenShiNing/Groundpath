@@ -1,7 +1,7 @@
 import type { EmbeddingProvider } from '../embedding.types';
 import { embeddingConfig } from '@config/env';
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 import pLimit from 'p-limit';
 
 const logger = createLogger('embedding.ollama');

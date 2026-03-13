@@ -143,7 +143,7 @@ vi.mock('@modules/document/controllers/document.controller', () => ({
   documentController: documentControllerMock,
 }));
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   authenticate: authenticateMock,
   validateBody: validateBodyMock,
   validateQuery: validateQueryMock,

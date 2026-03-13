@@ -12,7 +12,7 @@
  *   1 - Issues found (or error occurred)
  */
 
-import { databaseConfig, isEnvLoaded } from '@shared/config/env';
+import { databaseConfig, isEnvLoaded } from '@core/config/env';
 
 function getBootstrapError(): string | null {
   if (!isEnvLoaded()) {

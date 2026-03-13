@@ -1,6 +1,6 @@
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
-import { structuredRagMetrics } from '@shared/observability';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
+import { structuredRagMetrics } from '@core/observability';
 import { documentRepository, documentVersionRepository } from '@modules/document';
 import { documentIndexService } from '@modules/document-index/services/document-index.service';
 import { documentParseRouterService } from '@modules/document-index/services/document-parse-router.service';

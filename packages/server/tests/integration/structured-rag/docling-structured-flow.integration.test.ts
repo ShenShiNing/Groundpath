@@ -17,7 +17,7 @@ vi.mock('uuid', () => ({
   v4: () => `generated-${++state.uuidCounter}`,
 }));
 
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: async (callback: (tx: unknown) => Promise<unknown>) => callback({}),
 }));
 
@@ -53,7 +53,7 @@ vi.mock('@config/env', () => ({
   },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),

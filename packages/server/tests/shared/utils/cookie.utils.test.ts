@@ -7,7 +7,7 @@ import {
   clearRefreshTokenCookie,
   getRefreshTokenFromRequest,
   getCsrfTokenFromRequest,
-} from '@shared/utils/cookie.utils';
+} from '@core/utils/cookie.utils';
 
 describe('cookie.utils', () => {
   it('should set refresh token cookie with secure options', () => {

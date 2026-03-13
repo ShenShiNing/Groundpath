@@ -1,11 +1,11 @@
 import { eq, inArray } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { getDbContext, type Transaction } from '@shared/db/db.utils';
+import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   documentNodes,
   type DocumentNode,
   type NewDocumentNode,
-} from '@shared/db/schema/document/document-nodes.schema';
+} from '@core/db/schema/document/document-nodes.schema';
 
 export const documentNodeRepository = {
   async createMany(data: NewDocumentNode[], tx?: Transaction): Promise<void> {

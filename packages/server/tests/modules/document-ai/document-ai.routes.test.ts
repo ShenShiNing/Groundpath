@@ -75,7 +75,7 @@ vi.mock('express', () => ({
   Router: RouterMock,
 }));
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   authenticate: authenticateMock,
   validateBody: validateBodyMock,
   aiRateLimiter: vi.fn(),

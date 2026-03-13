@@ -59,12 +59,12 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: mocks.withTransaction,
   afterTransactionCommit: mocks.afterTransactionCommit,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -89,7 +89,7 @@ vi.mock('@modules/document-index/services/document-index-cache.service', () => (
   documentIndexCacheService: mocks.cacheService,
 }));
 
-import { AppError } from '@shared/errors/app-error';
+import { AppError } from '@core/errors/app-error';
 import { documentIndexActivationService } from '@modules/document-index';
 
 describe('documentIndexActivationService', () => {

@@ -5,13 +5,13 @@ import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
 import { emailConfig } from '@config/env';
 import { emailVerificationRepository } from '../verification/email-verification.repository';
 import { emailService } from './email.service';
-import { AppError, Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
+import { AppError, Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 import {
   generateEmailVerificationToken,
   normalizeEmail,
   verifyEmailVerificationToken,
-} from '@shared/utils';
+} from '@core/utils';
 
 const logger = createLogger('email-verification');
 

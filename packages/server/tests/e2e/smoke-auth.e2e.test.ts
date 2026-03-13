@@ -98,8 +98,8 @@ const {
 });
 
 vi.mock('@modules/auth/controllers/auth.controller', async () => {
-  const { asyncHandler } = await import('@shared/errors/async-handler');
-  const { sendSuccessResponse } = await import('@shared/errors');
+  const { asyncHandler } = await import('@core/errors/async-handler');
+  const { sendSuccessResponse } = await import('@core/errors');
   const { HTTP_STATUS } = await import('@knowledge-agent/shared');
 
   return {
@@ -138,8 +138,8 @@ vi.mock('@modules/auth/controllers/auth.controller', async () => {
   };
 });
 
-vi.mock('@shared/middleware', async () => {
-  const actual = await vi.importActual<typeof import('@shared/middleware')>('@shared/middleware');
+vi.mock('@core/middleware', async () => {
+  const actual = await vi.importActual<typeof import('@core/middleware')>('@core/middleware');
   return {
     ...actual,
     authenticate: authenticateMock,

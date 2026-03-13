@@ -6,10 +6,10 @@ import { documentChunkRepository, documentRepository } from '@modules/document';
 import { documentIndexService } from '@modules/document-index/services/document-index.service';
 import { chunkingService } from './chunking.service';
 import { vectorRepository } from '@modules/vector';
-import type { NewDocumentChunk } from '@shared/db/schema/document/document-chunks.schema';
-import { withTransaction } from '@shared/db/db.utils';
-import { createLogger } from '@shared/logger';
-import { structuredRagMetrics } from '@shared/observability';
+import type { NewDocumentChunk } from '@core/db/schema/document/document-chunks.schema';
+import { withTransaction } from '@core/db/db.utils';
+import { createLogger } from '@core/logger';
+import { structuredRagMetrics } from '@core/observability';
 import type { VectorPoint } from '@modules/vector';
 import type {
   ChunkProcessingArtifacts,

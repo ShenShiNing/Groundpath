@@ -9,7 +9,7 @@ import {
   validateBody,
   validateQuery,
   createSanitizeMiddleware,
-} from '@shared/middleware';
+} from '@core/middleware';
 import {
   createKnowledgeBaseSchema,
   updateKnowledgeBaseSchema,
@@ -17,11 +17,11 @@ import {
   knowledgeBaseListParamsSchema,
 } from '@knowledge-agent/shared/schemas';
 import { documentService } from '@modules/document';
-import { sendSuccessResponse } from '@shared/errors';
-import { AppError } from '@shared/errors/app-error';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId, getParamId, getClientIp } from '@shared/utils';
-import { getValidatedQuery } from '@shared/middleware';
+import { sendSuccessResponse } from '@core/errors';
+import { AppError } from '@core/errors/app-error';
+import { asyncHandler } from '@core/errors/async-handler';
+import { requireUserId, getParamId, getClientIp } from '@core/utils';
+import { getValidatedQuery } from '@core/middleware';
 import { HTTP_STATUS } from '@knowledge-agent/shared';
 import type { DocumentListParams } from '@knowledge-agent/shared/types';
 

@@ -97,7 +97,7 @@ vi.mock('@modules/auth/controllers/auth.controller', () => ({
   authController: authControllerMock,
 }));
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   authenticate: authenticateMock,
   authenticateRefreshToken: authenticateRefreshTokenMock,
   loginRateLimiter: loginRateLimiterMock,

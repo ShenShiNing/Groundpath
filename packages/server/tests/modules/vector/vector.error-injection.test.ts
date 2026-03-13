@@ -5,7 +5,7 @@ const { loggerMock } = vi.hoisted(() => ({
   loggerMock: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => loggerMock,
   logger: loggerMock,
 }));
@@ -183,6 +183,15 @@ describe('Vector Repository Error Injection', () => {
       const result = await vectorRepository.markAsDeleted('col', { documentId: 'doc-1' });
 
       expect(result).toBe(true);
+      expect(mockQdrant.setPayload).toHaveBeenCalledWith(
+        'col',
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            isDeleted: true,
+            deletedAtMs: expect.any(Number),
+          }),
+        })
+      );
     });
 
     it('should support indexVersionId filter', async () => {
@@ -213,21 +222,17 @@ describe('Vector Repository Error Injection', () => {
       expect(mockQdrant.delete).not.toHaveBeenCalled();
     });
 
-    it('should return 0 on count failure', async () => {
+    it('should throw on count failure', async () => {
       mockQdrant.count.mockRejectedValue(new Error('Count failed'));
 
-      const result = await vectorRepository.purgeDeletedVectors('col');
-
-      expect(result).toBe(0);
+      await expect(vectorRepository.purgeDeletedVectors('col')).rejects.toThrow('Count failed');
     });
 
-    it('should return 0 on delete failure after successful count', async () => {
+    it('should throw on delete failure after successful count', async () => {
       mockQdrant.count.mockResolvedValue({ count: 5 });
       mockQdrant.delete.mockRejectedValue(new Error('Delete failed'));
 
-      const result = await vectorRepository.purgeDeletedVectors('col');
-
-      expect(result).toBe(0);
+      await expect(vectorRepository.purgeDeletedVectors('col')).rejects.toThrow('Delete failed');
     });
 
     it('should return count on successful purge', async () => {
@@ -237,6 +242,36 @@ describe('Vector Repository Error Injection', () => {
       const result = await vectorRepository.purgeDeletedVectors('col');
 
       expect(result).toBe(3);
+    });
+
+    it('should scope cleanup to vectors deleted before the run started', async () => {
+      mockQdrant.count.mockResolvedValue({ count: 2 });
+      mockQdrant.delete.mockResolvedValue(undefined);
+
+      await vectorRepository.purgeDeletedVectors('col', 1234);
+
+      expect(mockQdrant.count).toHaveBeenCalledWith(
+        'col',
+        expect.objectContaining({
+          filter: {
+            must: [
+              { key: 'isDeleted', match: { value: true } },
+              { key: 'deletedAtMs', range: { lte: 1234 } },
+            ],
+          },
+        })
+      );
+      expect(mockQdrant.delete).toHaveBeenCalledWith(
+        'col',
+        expect.objectContaining({
+          filter: {
+            must: [
+              { key: 'isDeleted', match: { value: true } },
+              { key: 'deletedAtMs', range: { lte: 1234 } },
+            ],
+          },
+        })
+      );
     });
   });
 
@@ -290,6 +325,23 @@ describe('Vector Repository Error Injection', () => {
 
       // Should have 2 warnings: one for soft, one for hard
       expect(loggerMock.warn).toHaveBeenCalledTimes(2);
+    });
+
+    it('should stamp deletedAtMs during point soft delete', async () => {
+      mockQdrant.setPayload.mockResolvedValue(undefined);
+      mockQdrant.delete.mockResolvedValue(undefined);
+
+      await vectorRepository.deleteByIds('col', ['id-1']);
+
+      expect(mockQdrant.setPayload).toHaveBeenCalledWith(
+        'col',
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            isDeleted: true,
+            deletedAtMs: expect.any(Number),
+          }),
+        })
+      );
     });
   });
 });

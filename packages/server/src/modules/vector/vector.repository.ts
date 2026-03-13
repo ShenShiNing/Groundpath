@@ -1,5 +1,5 @@
 import { vectorConfig } from '@config/env';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import { getQdrantClient } from './qdrant.client';
 import type { VectorPoint, SearchResult, ChunkPayload } from './vector.types';
 
@@ -44,6 +44,21 @@ function buildMustConditions(filter: VectorFilter): Array<Record<string, unknown
   }
   if (filter.indexVersionId) {
     mustConditions.push({ key: 'indexVersionId', match: { value: filter.indexVersionId } });
+  }
+
+  return mustConditions;
+}
+
+function buildDeletedVectorConditions(deletedBeforeMs?: number): Array<Record<string, unknown>> {
+  const mustConditions: Array<Record<string, unknown>> = [
+    { key: 'isDeleted', match: { value: true } },
+  ];
+
+  if (deletedBeforeMs !== undefined) {
+    mustConditions.push({
+      key: 'deletedAtMs',
+      range: { lte: deletedBeforeMs },
+    });
   }
 
   return mustConditions;
@@ -270,7 +285,7 @@ export const vectorRepository = {
     try {
       await withTimeout(
         qdrant.setPayload(collectionName, {
-          payload: { isDeleted: true },
+          payload: { isDeleted: true, deletedAtMs: Date.now() },
           filter: { must: mustConditions },
           wait: true,
         }),
@@ -290,15 +305,16 @@ export const vectorRepository = {
    * Physically delete vectors that are marked as deleted (cleanup task).
    * Returns the number of vectors deleted.
    */
-  async purgeDeletedVectors(collectionName: string): Promise<number> {
+  async purgeDeletedVectors(collectionName: string, deletedBeforeMs?: number): Promise<number> {
     const qdrant = getQdrantClient();
+    const mustConditions = buildDeletedVectorConditions(deletedBeforeMs);
 
     try {
       // First count how many will be deleted
       const countResult = await withTimeout(
         qdrant.count(collectionName, {
           filter: {
-            must: [{ key: 'isDeleted', match: { value: true } }],
+            must: mustConditions,
           },
           exact: true,
         }),
@@ -315,7 +331,7 @@ export const vectorRepository = {
         qdrant.delete(collectionName, {
           wait: true,
           filter: {
-            must: [{ key: 'isDeleted', match: { value: true } }],
+            must: mustConditions,
           },
         }),
         vectorConfig.maintenanceTimeoutMs,
@@ -326,7 +342,7 @@ export const vectorRepository = {
       return countResult.count;
     } catch (error) {
       logger.warn({ collectionName, error }, 'Failed to purge deleted vectors');
-      return 0;
+      throw error;
     }
   },
 
@@ -378,7 +394,7 @@ export const vectorRepository = {
     try {
       await withTimeout(
         qdrant.setPayload(collectionName, {
-          payload: { isDeleted: true },
+          payload: { isDeleted: true, deletedAtMs: Date.now() },
           points: ids,
           wait: true,
         }),

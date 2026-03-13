@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
+import type { KnowledgeBase } from '@core/db/schema/document/knowledge-bases.schema';
 
 const loggerMock = vi.hoisted(() => ({
   info: vi.fn(),
@@ -8,7 +8,7 @@ const loggerMock = vi.hoisted(() => ({
   debug: vi.fn(),
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: vi.fn(() => loggerMock),
 }));
 

@@ -137,7 +137,7 @@ function resetState() {
   ];
 }
 
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: async (callback: (tx: unknown) => Promise<unknown>, tx?: unknown) =>
     callback(tx ?? {}),
 }));
@@ -147,7 +147,7 @@ vi.mock('@config/env', () => ({
   backfillConfig: configState.backfillConfig,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),

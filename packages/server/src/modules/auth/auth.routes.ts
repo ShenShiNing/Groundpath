@@ -10,7 +10,7 @@ import {
   passwordResetRateLimiter,
   requireCsrfProtection,
   validateBody,
-} from '@shared/middleware';
+} from '@core/middleware';
 import {
   loginRequestSchema,
   registerRequestSchema,

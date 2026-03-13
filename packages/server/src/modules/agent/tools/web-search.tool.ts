@@ -1,6 +1,6 @@
 import type { AgentTool, ToolContext, ToolExecutionResult, ToolDefinition } from './tool.interface';
-import { agentConfig } from '@shared/config/env';
-import { createLogger } from '@shared/logger';
+import { agentConfig } from '@core/config/env';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('web-search.tool');
 

@@ -3,8 +3,8 @@ import { LLM_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { createLLMProvider } from '../llm.factory';
 import { llmConfigService } from './llm-config.service';
 import type { LLMProvider, GenerateOptions } from '../providers/llm-provider.interface';
-import { Errors } from '@shared/errors';
-import { logger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { logger } from '@core/logger';
 
 function getDefaultModelForProvider(provider: LLMProviderType): string {
   switch (provider) {

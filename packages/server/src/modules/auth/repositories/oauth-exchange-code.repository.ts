@@ -1,8 +1,8 @@
 import { and, eq, gt, inArray, isNotNull, isNull, lt, or } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { addSeconds, now } from '@shared/db/db.utils';
-import { oauthExchangeCodes } from '@shared/db/schema/auth/oauth-exchange-codes.schema';
-import { hashOAuthExchangeCode } from '@shared/utils';
+import { db } from '@core/db';
+import { addSeconds, now } from '@core/db/db.utils';
+import { oauthExchangeCodes } from '@core/db/schema/auth/oauth-exchange-codes.schema';
+import { hashOAuthExchangeCode } from '@core/utils';
 
 export interface OAuthExchangeCodeContext {
   userId: string;

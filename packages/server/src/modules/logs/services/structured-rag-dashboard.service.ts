@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { systemLogs } from '@shared/db/schema/system/system-logs.schema';
+import { db } from '@core/db';
+import { systemLogs } from '@core/db/schema/system/system-logs.schema';
 import { structuredRagObservabilityConfig } from '@config/env';
 import type {
   StructuredRagDashboardAlert,

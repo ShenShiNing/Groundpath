@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@shared/config/env', () => mocks.env);
+vi.mock('@core/config/env', () => mocks.env);
 
 vi.mock('@modules/document-index/services/structured-rag-rollout.service', () => ({
   structuredRagRolloutService: mocks.rolloutService,
@@ -67,7 +67,7 @@ vi.mock('@modules/agent/tools/web-search.tool', () => ({
   },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),

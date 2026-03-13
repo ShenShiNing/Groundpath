@@ -1,7 +1,11 @@
 import { documentConfig } from '@config/env';
-import { createLogger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('chunking.service');
+const SENTENCE_BOUNDARY_CHARS = new Set(['.', '!', '?', '。', '！', '？']);
+const SENTENCE_CLOSERS = new Set(['"', "'", ')', ']', '}', '”', '’', '」', '』']);
+const MIN_BOUNDARY_RATIO = 0.5;
 
 export interface Chunk {
   content: string;
@@ -9,6 +13,104 @@ export interface Chunk {
   metadata: {
     startOffset: number;
     endOffset: number;
+  };
+}
+
+function isWhitespace(char: string | undefined): boolean {
+  return char !== undefined && /\s/u.test(char);
+}
+
+function skipLeadingWhitespace(text: string, index: number): number {
+  let next = index;
+  while (next < text.length && isWhitespace(text[next])) {
+    next++;
+  }
+  return next;
+}
+
+function trimRange(text: string, start: number, end: number): { start: number; end: number } {
+  let trimmedStart = start;
+  let trimmedEnd = end;
+
+  while (trimmedStart < trimmedEnd && isWhitespace(text[trimmedStart])) {
+    trimmedStart++;
+  }
+
+  while (trimmedEnd > trimmedStart && isWhitespace(text[trimmedEnd - 1])) {
+    trimmedEnd--;
+  }
+
+  return { start: trimmedStart, end: trimmedEnd };
+}
+
+function findLastParagraphBreak(text: string, minEnd: number, maxEnd: number): number | null {
+  let match = text.lastIndexOf('\n\n', maxEnd - 1);
+
+  while (match >= minEnd) {
+    if (text[match - 1] !== '\n') {
+      return match;
+    }
+    match = text.lastIndexOf('\n\n', match - 1);
+  }
+
+  return null;
+}
+
+function findLastSentenceBreak(text: string, minEnd: number, maxEnd: number): number | null {
+  for (let index = maxEnd - 1; index >= minEnd; index--) {
+    const char = text[index];
+    if (!char || !SENTENCE_BOUNDARY_CHARS.has(char)) {
+      continue;
+    }
+
+    let boundary = index + 1;
+    while (boundary < maxEnd && SENTENCE_CLOSERS.has(text[boundary] ?? '')) {
+      boundary++;
+    }
+
+    return boundary;
+  }
+
+  return null;
+}
+
+function findLastWhitespaceBreak(text: string, minEnd: number, maxEnd: number): number | null {
+  for (let index = maxEnd - 1; index >= minEnd; index--) {
+    if (isWhitespace(text[index])) {
+      return index;
+    }
+  }
+
+  return null;
+}
+
+function findChunkEnd(text: string, start: number, targetEnd: number, overlap: number): number {
+  const minEnd = Math.min(
+    targetEnd,
+    start + Math.max(Math.floor((targetEnd - start) * MIN_BOUNDARY_RATIO), overlap + 1)
+  );
+
+  return (
+    findLastParagraphBreak(text, minEnd, targetEnd) ??
+    findLastSentenceBreak(text, minEnd, targetEnd) ??
+    findLastWhitespaceBreak(text, minEnd, targetEnd) ??
+    targetEnd
+  );
+}
+
+function createChunk(text: string, chunkIndex: number, start: number, end: number): Chunk | null {
+  const trimmed = trimRange(text, start, end);
+  if (trimmed.start >= trimmed.end) {
+    return null;
+  }
+
+  return {
+    content: text.slice(trimmed.start, trimmed.end),
+    chunkIndex,
+    metadata: {
+      startOffset: trimmed.start,
+      endOffset: trimmed.end,
+    },
   };
 }
 
@@ -23,150 +125,51 @@ export const chunkingService = {
 
     // Normalize whitespace
     const normalized = text.replace(/\r\n/g, '\n');
+    const textBytes = Buffer.byteLength(normalized, 'utf8');
 
-    // Split into paragraphs first for natural boundaries
-    const paragraphs = normalized.split(/\n\n+/);
+    if (textBytes > documentConfig.chunkingMaxTextBytes) {
+      throw Errors.validation('Document text is too large to chunk safely', {
+        textBytes,
+        maxTextBytes: documentConfig.chunkingMaxTextBytes,
+      });
+    }
+
     const chunks: Chunk[] = [];
-    let currentChunk = '';
-    let currentStart = 0;
+    let start = skipLeadingWhitespace(normalized, 0);
     let chunkIndex = 0;
-    let offset = 0;
 
-    for (const paragraph of paragraphs) {
-      const trimmed = paragraph.trim();
-      if (!trimmed) {
-        offset += paragraph.length + 2; // account for \n\n
+    while (start < normalized.length) {
+      const targetEnd = Math.min(start + chunkSize, normalized.length);
+      const rawEnd =
+        targetEnd === normalized.length
+          ? normalized.length
+          : findChunkEnd(normalized, start, targetEnd, overlap);
+      const chunk = createChunk(normalized, chunkIndex, start, rawEnd);
+
+      if (!chunk) {
+        start = skipLeadingWhitespace(normalized, Math.max(rawEnd, start + 1));
         continue;
       }
 
-      // If adding this paragraph would exceed chunk size
-      if (currentChunk.length > 0 && currentChunk.length + trimmed.length + 1 > chunkSize) {
-        // Save current chunk
-        chunks.push({
-          content: currentChunk.trim(),
-          chunkIndex,
-          metadata: {
-            startOffset: currentStart,
-            endOffset: currentStart + currentChunk.length,
-          },
-        });
-        chunkIndex++;
+      chunks.push(chunk);
+      chunkIndex++;
 
-        // Handle overlap: keep the tail of the current chunk
-        if (overlap > 0 && currentChunk.length > overlap) {
-          const overlapText = currentChunk.slice(-overlap);
-          currentChunk = overlapText + ' ' + trimmed;
-          currentStart = Math.max(0, offset - overlap);
-        } else {
-          currentChunk = trimmed;
-          currentStart = offset;
-        }
-      } else {
-        if (currentChunk.length === 0) {
-          currentStart = offset;
-          currentChunk = trimmed;
-        } else {
-          currentChunk += '\n\n' + trimmed;
-        }
+      if (chunk.metadata.endOffset >= normalized.length) {
+        break;
       }
 
-      offset += paragraph.length + 2;
-
-      // If a single paragraph is larger than chunk size, split by sentences
-      if (currentChunk.length > chunkSize) {
-        const sentenceChunks = this.splitLongChunk(
-          currentChunk,
-          chunkSize,
-          overlap,
-          currentStart,
-          chunkIndex
-        );
-        for (const sc of sentenceChunks.slice(0, -1)) {
-          chunks.push(sc);
-          chunkIndex++;
-        }
-        // Keep the last piece as the continuing chunk
-        const last = sentenceChunks[sentenceChunks.length - 1];
-        if (last) {
-          currentChunk = last.content;
-          currentStart = last.metadata.startOffset;
-          chunkIndex = last.chunkIndex;
-        }
-      }
-    }
-
-    // Don't forget the last chunk
-    if (currentChunk.trim().length > 0) {
-      chunks.push({
-        content: currentChunk.trim(),
-        chunkIndex,
-        metadata: {
-          startOffset: currentStart,
-          endOffset: currentStart + currentChunk.length,
-        },
-      });
+      const chunkLength = chunk.metadata.endOffset - chunk.metadata.startOffset;
+      const nextStart =
+        overlap > 0 && chunkLength > overlap
+          ? chunk.metadata.endOffset - overlap
+          : chunk.metadata.endOffset;
+      start = skipLeadingWhitespace(
+        normalized,
+        Math.max(nextStart, chunk.metadata.startOffset + 1)
+      );
     }
 
     logger.debug({ totalChunks: chunks.length, textLength: text.length }, 'Text chunked');
-    return chunks;
-  },
-
-  splitLongChunk(
-    text: string,
-    chunkSize: number,
-    overlap: number,
-    baseOffset: number,
-    baseIndex: number
-  ): Chunk[] {
-    // Split by sentence boundaries
-    const sentences = text.match(/[^.!?。！？]+[.!?。！？]?\s*/g) || [text];
-    const chunks: Chunk[] = [];
-    let current = '';
-    let currentStart = baseOffset;
-    let index = baseIndex;
-    let sentenceOffset = 0;
-
-    for (const sentence of sentences) {
-      if (current.length > 0 && current.length + sentence.length > chunkSize) {
-        chunks.push({
-          content: current.trim(),
-          chunkIndex: index,
-          metadata: {
-            startOffset: currentStart,
-            endOffset: currentStart + current.length,
-          },
-        });
-        index++;
-
-        if (overlap > 0 && current.length > overlap) {
-          const overlapText = current.slice(-overlap);
-          current = overlapText + sentence;
-          currentStart = Math.max(0, baseOffset + sentenceOffset - overlap);
-        } else {
-          current = sentence;
-          currentStart = baseOffset + sentenceOffset;
-        }
-      } else {
-        if (current.length === 0) {
-          currentStart = baseOffset + sentenceOffset;
-        }
-        current += sentence;
-      }
-
-      sentenceOffset += sentence.length;
-    }
-
-    if (current.trim().length > 0) {
-      chunks.push({
-        content: current.trim(),
-        chunkIndex: index,
-        metadata: {
-          startOffset: currentStart,
-          endOffset: currentStart + current.length,
-        },
-      });
-    }
-
     return chunks;
   },
 };

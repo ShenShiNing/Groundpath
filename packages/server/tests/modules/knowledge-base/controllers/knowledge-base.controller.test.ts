@@ -14,8 +14,8 @@ vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   },
 }));
 
-vi.mock('@shared/errors', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@shared/errors')>();
+vi.mock('@core/errors', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@core/errors')>();
   return {
     ...original,
     sendSuccessResponse: sendSuccessResponseMock,

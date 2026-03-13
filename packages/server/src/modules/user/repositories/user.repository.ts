@@ -1,10 +1,10 @@
 import { eq, and, isNull, ne } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { now, getDbContext, type Transaction } from '@shared/db/db.utils';
-import { userTokenStates } from '@shared/db/schema/auth/user-token-states.schema';
-import { users, type User, type NewUser } from '@shared/db/schema/user/users.schema';
-import { cacheService } from '@shared/cache';
-import { normalizeEmail } from '@shared/utils';
+import { db } from '@core/db';
+import { now, getDbContext, type Transaction } from '@core/db/db.utils';
+import { userTokenStates } from '@core/db/schema/auth/user-token-states.schema';
+import { users, type User, type NewUser } from '@core/db/schema/user/users.schema';
+import { cacheService } from '@core/cache';
+import { normalizeEmail } from '@core/utils';
 
 export interface UserAuthState {
   id: string;

@@ -51,7 +51,7 @@ vi.mock('@modules/auth/verification/email.controller', () => ({
   emailController: emailControllerMock,
 }));
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   emailSendRateLimiter: emailSendRateLimiterMock,
   emailVerifyRateLimiter: emailVerifyRateLimiterMock,
   validateBody: validateBodyMock,

@@ -15,7 +15,7 @@ vi.mock('@modules/llm/services/llm-config.service', () => ({
   llmConfigService: mocks.llmConfigService,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   logger: {
     error: vi.fn(),
     warn: vi.fn(),

@@ -10,18 +10,18 @@ import type {
   DeviceInfo,
   RegisterWithCodeRequest,
 } from '@knowledge-agent/shared/types';
-import type { User } from '@shared/db/schema/user/users.schema';
-import { toUserPublicInfo, normalizeEmail, buildAccessTokenSubject } from '@shared/utils';
-import { Errors } from '@shared/errors';
+import type { User } from '@core/db/schema/user/users.schema';
+import { toUserPublicInfo, normalizeEmail, buildAccessTokenSubject } from '@core/utils';
+import { Errors } from '@core/errors';
 import { authConfig } from '@config/env';
 import { userService } from '../../user';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from './token.service';
 import { emailVerificationService } from '../verification/email-verification.service';
-import { checkAccountRateLimit, resetAccountRateLimit } from '@shared/middleware';
+import { checkAccountRateLimit, resetAccountRateLimit } from '@core/middleware';
 import { detectDevice } from '../../logs/services/device-detection.service';
 import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('auth.service');
 

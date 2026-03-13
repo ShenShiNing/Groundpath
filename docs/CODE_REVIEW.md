@@ -35,13 +35,13 @@ pnpm monorepo 全栈项目，三个包：
 **优点：**
 
 - 每个业务模块内部 `controllers → services → repositories` 三层分离
-- `shared/config/` 将基础设施配置（`env/schema.ts`）和业务常量（`defaults/*.defaults.ts`）分离，完全符合 CLAUDE.md 规范
+- `core/config/` 将基础设施配置（`env/schema.ts`）和业务常量（`defaults/*.defaults.ts`）分离，完全符合 CLAUDE.md 规范
 - 测试目录镜像源码结构，按 `modules/`、`integration/`、`e2e/` 分类
 - 大型 repository 合理拆分（`document.repository.core.ts`、`.processing.ts`、`.queries.ts`）
 
-**问题：**
+**现状更新：**
 
-- `packages/server/src/shared/` 与 `packages/shared/` 命名易混淆，前者是 server 内部基础设施（中间件、DB、Redis），后者是跨端共享类型
+- server 内部基础设施目录已统一迁移到 `packages/server/src/core/`，并将 alias 从 `@shared/*` 切换为 `@core/*`，与 `packages/shared/` 的职责边界更清晰
 
 ### 3.2 代码质量
 
@@ -105,19 +105,19 @@ pnpm monorepo 全栈项目，三个包：
 
 #### ~~4.1 `refresh_tokens` 缺少外键级联删除~~ ✅
 
-**文件**: `packages/server/src/shared/db/schema/auth/refresh-tokens.schema.ts`
+**文件**: `packages/server/src/core/db/schema/auth/refresh-tokens.schema.ts`
 
 **已修复**: 添加 `refresh_tokens_user_id_fk` 外键约束，`user_id → users.id ON DELETE CASCADE`。删除用户时自动级联删除其刷新令牌。
 
 #### ~~4.2 `messages` 缺少外键级联删除~~ ✅
 
-**文件**: `packages/server/src/shared/db/schema/ai/messages.schema.ts`
+**文件**: `packages/server/src/core/db/schema/ai/messages.schema.ts`
 
 **已修复**: 添加 `messages_conversation_id_fk` 外键约束，`conversation_id → conversations.id ON DELETE CASCADE`。删除对话时自动级联删除其消息。
 
 #### ~~4.3 `conversations.knowledgeBaseId` 缺少外键约束~~ ✅
 
-**文件**: `packages/server/src/shared/db/schema/ai/conversations.schema.ts`
+**文件**: `packages/server/src/core/db/schema/ai/conversations.schema.ts`
 
 **已修复**: 添加 `conversations_knowledge_base_id_fk` 外键约束，`knowledge_base_id → knowledge_bases.id ON DELETE SET NULL`。删除知识库时自动将关联对话的引用置空。
 
@@ -164,7 +164,7 @@ pnpm monorepo 全栈项目，三个包：
 
 **已修复**:
 
-- 提取 `buildAccessTokenSubject(user)` 到 `shared/utils/user.mappers.ts`，由 `auth.service.ts` 与 `token.service.ts` 共享
+- 提取 `buildAccessTokenSubject(user)` 到 `core/utils/user.mappers.ts`，由 `auth.service.ts` 与 `token.service.ts` 共享
 - 将 `refreshTokens` 拆分为 `consumeRefreshTokenOrThrow()`、`validateRefreshUserOrThrow()`、`issueRefreshedTokens()` 三段
 - 封禁用户分支统一复用 `revokeUserSessionsAndInvalidateAccess()`，避免刷新令牌路径重复散落副作用
 
@@ -307,44 +307,53 @@ pnpm monorepo 全栈项目，三个包：
 
 ---
 
-### P4 — 长期改进
+### ~~P4 — 长期改进~~ ✅ 已修复
 
-#### 4.18 `chunking.service.ts` 健壮性
+> 修复分支：`feat/p4-long-term-improvements`
+
+#### ~~4.18 `chunking.service.ts` 健壮性~~ ✅
 
 **文件**: `packages/server/src/modules/rag/services/chunking.service.ts`
 
-**问题**:
+**已修复**:
 
-- 偏移量计算假设段落分隔符总是 `\n\n`
-- `splitLongChunk` 递归调用边界条件不清晰
-- 无超大文本保护（>10MB 可能 OOM）
+- 新增 `documentDefaults.chunkingMaxTextBytes = 10MB`，在分块前基于 UTF-8 字节数做保护
+- 用滑动窗口替代旧的段落拼接逻辑，优先按段落、句子和空白边界截断，不再假设分隔符固定为 `\n\n`
+- 新增 `chunking.service.test.ts`，覆盖三连换行偏移、长文本 overlap 以及超大文本拒绝路径
 
-**建议**: 添加文本大小限制检查，改用滑动窗口算法替代递归。
-
-#### 4.19 `document-parse-router.service.ts` token 估算不准确
+#### ~~4.19 `document-parse-router.service.ts` token 估算不准确~~ ✅
 
 **文件**: `packages/server/src/modules/document-index/services/document-parse-router.service.ts`
 
-**问题**: token 估算使用简单的字符数除法，对 CJK 字符不准确。
+**已修复**:
 
-**建议**: 区分 ASCII 和 CJK 字符，使用不同的 `charsPerToken` 系数。
+- 新增 `document-token-estimator.ts`，按 ASCII / CJK / other 三类字符估算 token
+- 在 `documentIndexDefaults` 中补充 `asciiCharsPerToken` 与 `cjkCharsPerToken`
+- 新增 CJK 路由测试，覆盖原先 ASCII 估算会低估 token 数的场景
 
-#### 4.20 `vector-cleanup.service.ts` 缺少并发控制
+#### ~~4.20 `vector-cleanup.service.ts` 缺少并发控制~~ ✅
 
 **文件**: `packages/server/src/modules/vector/vector-cleanup.service.ts`
 
-**问题**:
+**已修复**:
 
-- 无并发控制，可能与正在进行的写入操作冲突
-- 无失败率阈值，超过 50% 集合清理失败时应中止并告警
+- 为 cleanup 任务增加 Redis 分布式锁，避免多实例/手动触发并发执行
+- 为软删除向量补充 `deletedAtMs`，清理任务只 purge 本轮启动前已标记删除的数据，避免与并发写入互相干扰
+- 新增 `cleanupFailureThreshold` 阈值，超过 50% 集合失败时立即中止并抛错
+- 补充 `vector-cleanup.service.test.ts` 与 `vector.error-injection.test.ts`，覆盖锁、阈值和快照过滤逻辑
 
-**建议**: 添加分布式锁和失败率阈值检查。
+#### ~~4.21 server 内部 `shared/` 命名优化~~ ✅
 
-#### 4.21 server 内部 `shared/` 命名优化
+**已修复**:
 
-**现状**: `packages/server/src/shared/` 与 `packages/shared/` 容易混淆。
+- 将 `packages/server/src/shared/` 物理迁移为 `packages/server/src/core/`
+- 将服务端 alias 从 `@shared/*` 统一切换为 `@core/*`，并同步更新 `tsconfig.json`、`vitest.config.ts`
+- 迁移源码、脚本与测试中的路径引用，避免继续与工作区根部的 `packages/shared/` 混淆
 
-**建议**: 将 server 内部的 `shared/` 重命名为 `infrastructure/` 或 `core/`。
+**验证**:
+
+- `pnpm -F @knowledge-agent/server build`
+- `pnpm test -- packages/server/tests/modules/rag/chunking.service.test.ts packages/server/tests/modules/document-index/document-parse-router.service.test.ts packages/server/tests/modules/vector/vector.error-injection.test.ts packages/server/tests/modules/vector/vector-cleanup.service.test.ts`
 
 ---
 
@@ -369,7 +378,7 @@ pnpm monorepo 全栈项目，三个包：
 | P3     | 4.15 | 客户端错误处理                     | 可调试性   | ✅   |
 | P3     | 4.16 | 大型组件拆分                       | 代码规范   | ✅   |
 | P3     | 4.17 | 客户端测试补充                     | 质量保障   | ✅   |
-| P4     | 4.18 | chunking 健壮性                    | 稳定性     |      |
-| P4     | 4.19 | token 估算优化                     | 准确性     |      |
-| P4     | 4.20 | vector-cleanup 并发控制            | 稳定性     |      |
-| P4     | 4.21 | shared 目录重命名                  | 可读性     |      |
+| ~~P4~~ | 4.18 | chunking 健壮性                    | 稳定性     | ✅   |
+| ~~P4~~ | 4.19 | token 估算优化                     | 准确性     | ✅   |
+| ~~P4~~ | 4.20 | vector-cleanup 并发控制            | 稳定性     | ✅   |
+| ~~P4~~ | 4.21 | shared 目录重命名                  | 可读性     | ✅   |

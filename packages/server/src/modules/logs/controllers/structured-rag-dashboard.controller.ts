@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
 import type { StructuredRagDashboardQueryParams } from '@knowledge-agent/shared/schemas';
-import { sendSuccessResponse } from '@shared/errors';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { getValidatedQuery } from '@shared/middleware';
-import { requireUserId } from '@shared/utils';
+import { sendSuccessResponse } from '@core/errors';
+import { asyncHandler } from '@core/errors/async-handler';
+import { getValidatedQuery } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 import { structuredRagDashboardService } from '../services/structured-rag-dashboard.service';
 
 export const structuredRagDashboardController = {

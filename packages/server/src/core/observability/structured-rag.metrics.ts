@@ -1,14 +1,14 @@
 import type { AgentStopReason } from '@knowledge-agent/shared/types';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('structured-rag.metrics');
 
 function persistMetric(
-  params: Parameters<typeof import('@shared/logger/system-logger').logSystemEvent>[0]
+  params: Parameters<typeof import('@core/logger/system-logger').logSystemEvent>[0]
 ): void {
   if (process.env.NODE_ENV === 'test') return;
 
-  void import('@shared/logger/system-logger')
+  void import('@core/logger/system-logger')
     .then(({ logSystemEvent }) => {
       logSystemEvent(params);
     })

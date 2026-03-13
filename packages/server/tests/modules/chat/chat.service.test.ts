@@ -69,7 +69,7 @@ vi.mock('@modules/agent', () => ({
   executeAgentLoop: mocks.executeAgentLoop,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),

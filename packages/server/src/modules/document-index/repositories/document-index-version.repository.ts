@@ -1,11 +1,11 @@
 import { and, asc, desc, eq, inArray, isNull, lt, ne, or } from 'drizzle-orm';
-import { getDbContext, type Transaction } from '@shared/db/db.utils';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   documentIndexVersions,
   type DocumentIndexVersion,
   type NewDocumentIndexVersion,
-} from '@shared/db/schema/document/document-index-versions.schema';
-import { documents } from '@shared/db/schema/document/documents.schema';
+} from '@core/db/schema/document/document-index-versions.schema';
+import { documents } from '@core/db/schema/document/documents.schema';
 
 export interface DocumentIndexCleanupCandidate {
   indexVersionId: string;

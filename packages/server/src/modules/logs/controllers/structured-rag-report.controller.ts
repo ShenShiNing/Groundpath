@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
 import type { StructuredRagReportQueryParams } from '@knowledge-agent/shared/schemas';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { sendSuccessResponse } from '@shared/errors';
-import { getValidatedQuery } from '@shared/middleware';
-import { requireUserId } from '@shared/utils';
+import { asyncHandler } from '@core/errors/async-handler';
+import { sendSuccessResponse } from '@core/errors';
+import { getValidatedQuery } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 import { structuredRagReportService } from '../services/structured-rag-report.service';
 
 export const structuredRagReportController = {

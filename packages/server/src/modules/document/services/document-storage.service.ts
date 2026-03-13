@@ -3,7 +3,7 @@ import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { documentConfig, storageConfig } from '@config/env';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import { storageProvider } from '../../storage';
 
 const logger = createLogger('document-storage');

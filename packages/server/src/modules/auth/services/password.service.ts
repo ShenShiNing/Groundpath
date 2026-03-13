@@ -1,15 +1,15 @@
 import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ResetPasswordRequest } from '@knowledge-agent/shared/types';
-import { Errors } from '@shared/errors';
-import { withTransaction, type Transaction } from '@shared/db/db.utils';
-import { normalizeEmail } from '@shared/utils';
+import { Errors } from '@core/errors';
+import { withTransaction, type Transaction } from '@core/db/db.utils';
+import { normalizeEmail } from '@core/utils';
 import { authConfig } from '@config/env';
 import { userService } from '../../user';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 import { emailVerificationService } from '../verification/email-verification.service';
-import { logOperation } from '@shared/logger/operation-logger';
+import { logOperation } from '@core/logger/operation-logger';
 
 /** Hash a plaintext password using the configured salt rounds. */
 function hashPassword(password: string): Promise<string> {

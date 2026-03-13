@@ -1,5 +1,5 @@
 import { ragConfig } from '@config/env';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import { getEmbeddingProviderByType } from '@modules/embedding';
 import { vectorRepository, ensureCollection } from '@modules/vector';
 import type { SearchResult } from '@modules/vector';

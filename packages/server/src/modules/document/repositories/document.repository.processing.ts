@@ -1,7 +1,7 @@
 import { and, asc, eq, isNotNull, isNull, lt, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { getDbContext, type Transaction } from '@shared/db/db.utils';
-import { documents, type Document } from '@shared/db/schema/document/documents.schema';
+import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
+import { documents, type Document } from '@core/db/schema/document/documents.schema';
 import type { StaleProcessingDocument } from './document.repository.types';
 
 function buildProcessingUpdate(

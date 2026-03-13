@@ -1,5 +1,6 @@
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { documentIndexConfig, featureFlags } from '@config/env';
+import { estimateDocumentTokens } from './document-token-estimator';
 import { structuredRagRolloutService } from './structured-rag-rollout.service';
 
 export type DocumentRouteMode = 'structured' | 'chunked';
@@ -24,7 +25,7 @@ const STRUCTURED_DOCUMENT_TYPES = new Set<DocumentType>(['markdown', 'docx', 'pd
 
 export const documentParseRouterService = {
   estimateTokens(textContent: string): number {
-    return Math.ceil(textContent.length / documentIndexConfig.charsPerToken);
+    return estimateDocumentTokens(textContent);
   },
 
   decideRoute(input: {

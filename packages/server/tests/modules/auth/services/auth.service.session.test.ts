@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import { mockUser, mockTokenPair, mockSessions, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
@@ -57,7 +57,7 @@ vi.mock('@modules/auth/services/token.service', () => ({
   },
 }));
 
-vi.mock('@shared/middleware/rate-limit.middleware', () => ({
+vi.mock('@core/middleware/rate-limit.middleware', () => ({
   checkAccountRateLimit: vi.fn(() => ({ allowed: true })),
   resetAccountRateLimit: vi.fn(),
   loginRateLimiter: vi.fn((_req, _res, next) => next()),

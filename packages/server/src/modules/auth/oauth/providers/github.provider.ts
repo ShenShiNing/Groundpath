@@ -1,5 +1,5 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { Errors } from '@shared/errors';
+import { Errors } from '@core/errors';
 import { serverConfig, oauthConfig } from '@config/env';
 import type {
   OAuthProviderConfig,

@@ -5,8 +5,8 @@ import {
 } from '@modules/document/repositories/document.repository';
 import { enqueueDocumentProcessing } from '@modules/rag/queue/document-processing.queue';
 import type { DocumentType } from '@knowledge-agent/shared/types';
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 import { documentIndexBackfillProgressService } from './document-index-backfill-progress.service';
 
 const logger = createLogger('document-index-backfill.service');

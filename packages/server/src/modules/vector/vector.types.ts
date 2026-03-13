@@ -14,6 +14,8 @@ export interface ChunkPayload {
   content: string;
   /** Soft delete marker - vectors marked as deleted will be excluded from search */
   isDeleted?: boolean;
+  /** Cleanup watermark so background purge only removes vectors deleted before the run started */
+  deletedAtMs?: number;
 }
 
 export interface SearchOptions {

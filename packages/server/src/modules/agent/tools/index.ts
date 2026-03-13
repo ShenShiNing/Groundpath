@@ -1,5 +1,5 @@
 import type { AgentTool, ToolContext } from './tool.interface';
-import { agentConfig } from '@shared/config/env';
+import { agentConfig } from '@core/config/env';
 import { KBSearchTool } from './kb-search.tool';
 import { OutlineSearchTool } from './outline-search.tool';
 import { NodeReadTool } from './node-read.tool';

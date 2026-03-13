@@ -7,9 +7,9 @@ import type {
 import { LLM_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { llmConfigRepository } from '../repositories/llm-config.repository';
 import { encryptionService } from './encryption.service';
-import { Errors } from '@shared/errors';
-import { logger } from '@shared/logger';
-import type { LLMConfig } from '@shared/db/schema/ai/llm-configs.schema';
+import { Errors } from '@core/errors';
+import { logger } from '@core/logger';
+import type { LLMConfig } from '@core/db/schema/ai/llm-configs.schema';
 
 function toConfigInfo(config: LLMConfig): LLMConfigInfo {
   let apiKeyMasked: string | null = null;

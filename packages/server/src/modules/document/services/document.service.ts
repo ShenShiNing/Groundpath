@@ -11,14 +11,14 @@ import type {
   DocumentContentResponse,
   SaveDocumentContentRequest,
 } from '@knowledge-agent/shared/types';
-import type { Document } from '@shared/db/schema/document/documents.schema';
-import { withTransaction } from '@shared/db/db.utils';
-import { Errors } from '@shared/errors';
-import { buildPagination } from '@shared/utils';
+import type { Document } from '@core/db/schema/document/documents.schema';
+import { withTransaction } from '@core/db/db.utils';
+import { Errors } from '@core/errors';
+import { buildPagination } from '@core/utils';
 import { documentRepository } from '../repositories/document.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
-import { createLogger } from '@shared/logger';
-import { logOperation } from '@shared/logger/operation-logger';
+import { createLogger } from '@core/logger';
+import { logOperation } from '@core/logger/operation-logger';
 import { vectorRepository } from '@modules/vector';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 import { documentTrashService } from './document-trash.service';

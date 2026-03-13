@@ -1,6 +1,6 @@
-import type { Document } from '@shared/db/schema/document/documents.schema';
-import type { DocumentVersion } from '@shared/db/schema/document/document-versions.schema';
-import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
+import type { Document } from '@core/db/schema/document/documents.schema';
+import type { DocumentVersion } from '@core/db/schema/document/document-versions.schema';
+import type { KnowledgeBase } from '@core/db/schema/document/knowledge-bases.schema';
 
 // ==================== Shared Test Data ====================
 

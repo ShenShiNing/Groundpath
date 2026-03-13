@@ -56,11 +56,11 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     documentIds: [firstDocumentId, secondDocumentId] as const,
   };
 
-  let db: typeof import('@shared/db').db;
-  let closeDatabase: typeof import('@shared/db').closeDatabase;
+  let db: typeof import('@core/db').db;
+  let closeDatabase: typeof import('@core/db').closeDatabase;
   let documentIndexBackfillService: typeof import('@modules/document-index/services/document-index-backfill.service').documentIndexBackfillService;
   let documentProcessingQueue: typeof import('@modules/rag/queue/document-processing.queue').documentProcessingQueue;
-  let schema: typeof import('@shared/db/schema');
+  let schema: typeof import('@core/db/schema');
   let drizzle: typeof import('drizzle-orm');
 
   beforeAll(async () => {
@@ -89,11 +89,11 @@ describeRealIntegration('document index backfill real db/queue integration', () 
       LOG_LEVEL: 'silent',
     });
 
-    ({ db, closeDatabase } = await import('@shared/db'));
+    ({ db, closeDatabase } = await import('@core/db'));
     ({ documentIndexBackfillService } =
       await import('@modules/document-index/services/document-index-backfill.service'));
     ({ documentProcessingQueue } = await import('@modules/rag/queue/document-processing.queue'));
-    schema = await import('@shared/db/schema');
+    schema = await import('@core/db/schema');
     drizzle = await import('drizzle-orm');
 
     const now = new Date();

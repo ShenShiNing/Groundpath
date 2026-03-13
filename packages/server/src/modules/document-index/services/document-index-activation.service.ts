@@ -1,6 +1,6 @@
-import { afterTransactionCommit, withTransaction, type Transaction } from '@shared/db/db.utils';
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
+import { afterTransactionCommit, withTransaction, type Transaction } from '@core/db/db.utils';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 import { documentRepository } from '@modules/document';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';

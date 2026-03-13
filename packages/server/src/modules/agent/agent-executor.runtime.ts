@@ -1,6 +1,6 @@
 import type { AgentMessage, ChatMessage } from '@modules/llm';
-import { agentConfig } from '@shared/config/env';
-import { createLogger } from '@shared/logger';
+import { agentConfig } from '@core/config/env';
+import { createLogger } from '@core/logger';
 import type { ToolExecutionResult } from './tools';
 import { buildAgentExecutorResult } from './agent-executor.citations';
 import type {

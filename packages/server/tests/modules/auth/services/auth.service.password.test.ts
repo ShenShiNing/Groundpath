@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import { mockUser, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
@@ -17,7 +17,7 @@ vi.mock('bcryptjs', () => ({
   },
 }));
 
-vi.mock('@shared/utils/jwt.utils', () => ({
+vi.mock('@core/utils/jwt.utils', () => ({
   verifyRefreshToken: vi.fn(),
 }));
 
@@ -69,7 +69,7 @@ vi.mock('@modules/auth/services/token.service', () => ({
   },
 }));
 
-vi.mock('@shared/middleware/rate-limit.middleware', () => ({
+vi.mock('@core/middleware/rate-limit.middleware', () => ({
   checkAccountRateLimit: vi.fn(() => ({ allowed: true })),
   resetAccountRateLimit: vi.fn(),
   loginRateLimiter: vi.fn((_req, _res, next) => next()),
@@ -82,7 +82,7 @@ vi.mock('@shared/middleware/rate-limit.middleware', () => ({
 }));
 
 // Mock withTransaction to bypass real database
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
   getDbContext: vi.fn((tx?: unknown) => tx ?? {}),
 }));

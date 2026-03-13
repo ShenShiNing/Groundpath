@@ -42,7 +42,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  vi.doMock('@shared/config/env', () => ({
+  vi.doMock('@core/config/env', () => ({
     loggingConfig: {
       cleanup: {
         enabled: cleanupEnabled,
@@ -69,7 +69,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  vi.doMock('@shared/logger', () => ({
+  vi.doMock('@core/logger', () => ({
     createLogger: vi.fn(() => ({
       info: loggerInfoMock,
       warn: loggerWarnMock,
@@ -77,7 +77,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     })),
   }));
 
-  vi.doMock('@shared/logger/system-logger', () => ({
+  vi.doMock('@core/logger/system-logger', () => ({
     systemLogger: {
       schedulerError: schedulerErrorMock,
       schedulerRun: vi.fn(),
@@ -126,7 +126,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  return import('@shared/scheduler');
+  return import('@core/scheduler');
 }
 
 describe('shared/scheduler', () => {

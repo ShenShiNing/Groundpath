@@ -1,7 +1,7 @@
 import type { LLMProvider, ChatMessage, GenerateOptions } from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
-import { Errors } from '@shared/errors';
-import { logger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { logger } from '@core/logger';
 
 interface OllamaChatResponse {
   message: { content: string };

@@ -121,7 +121,7 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
     processingService: processingServiceMock,
   }));
 
-  const { db, closeDatabase } = await import('@shared/db');
+  const { db, closeDatabase } = await import('@core/db');
   const { documentIndexBackfillService } =
     await import('@modules/document-index/services/document-index-backfill.service');
   const { processingRecoveryService } =
@@ -134,7 +134,7 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
   } = await import('@modules/rag/queue/document-processing.queue');
   const { documentIndexBackfillProgressService } =
     await import('@modules/document-index/services/document-index-backfill-progress.service');
-  const schema = await import('@shared/db/schema');
+  const schema = await import('@core/db/schema');
   const drizzle = await import('drizzle-orm');
 
   const now = new Date();

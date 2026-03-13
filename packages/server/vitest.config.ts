@@ -7,9 +7,9 @@ const env = loadEnv('test', __dirname, '');
 export default defineProject({
   resolve: {
     alias: {
-      '@shared': path.resolve(__dirname, 'src/shared'),
+      '@core': path.resolve(__dirname, 'src/core'),
       '@modules': path.resolve(__dirname, 'src/modules'),
-      '@config': path.resolve(__dirname, 'src/shared/config'),
+      '@config': path.resolve(__dirname, 'src/core/config'),
       '@tests': path.resolve(__dirname, 'tests'),
     },
   },

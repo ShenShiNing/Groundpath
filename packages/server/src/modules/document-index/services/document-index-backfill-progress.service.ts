@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { createLogger } from '@shared/logger';
-import { Errors } from '@shared/errors';
+import { createLogger } from '@core/logger';
+import { Errors } from '@core/errors';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { documentIndexBackfillRunRepository } from '../repositories/document-index-backfill-run.repository';
 import { documentIndexBackfillItemRepository } from '../repositories/document-index-backfill-item.repository';
-import type { DocumentIndexBackfillItem } from '@shared/db/schema/document/document-index-backfill-items.schema';
-import type { DocumentIndexBackfillRun } from '@shared/db/schema/document/document-index-backfill-runs.schema';
+import type { DocumentIndexBackfillItem } from '@core/db/schema/document/document-index-backfill-items.schema';
+import type { DocumentIndexBackfillRun } from '@core/db/schema/document/document-index-backfill-runs.schema';
 
 const logger = createLogger('document-index-backfill-progress.service');
 

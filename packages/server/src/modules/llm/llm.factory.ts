@@ -7,7 +7,7 @@ import { DeepSeekProvider } from './providers/deepseek.provider';
 import { OllamaProvider } from './providers/ollama.provider';
 import { CustomProvider } from './providers/custom.provider';
 import { llmConfig } from '@config/env';
-import { Errors } from '@shared/errors';
+import { Errors } from '@core/errors';
 
 export interface LLMProviderConfig {
   apiKey?: string;

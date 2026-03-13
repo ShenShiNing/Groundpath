@@ -51,11 +51,11 @@ vi.mock('@modules/auth', () => ({
   emailService: mocks.emailService,
 }));
 
-vi.mock('@shared/logger/system-logger', () => ({
+vi.mock('@core/logger/system-logger', () => ({
   systemLogger: mocks.systemLogger,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => mocks.logger,
 }));
 

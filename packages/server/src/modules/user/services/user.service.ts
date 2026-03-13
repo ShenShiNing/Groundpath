@@ -1,10 +1,10 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { UpdateProfileRequest, UserPublicInfo } from '@knowledge-agent/shared/types';
-import type { User, NewUser } from '@shared/db/schema/user/users.schema';
-import type { Transaction } from '@shared/db/db.utils';
-import { Errors } from '@shared/errors';
+import type { User, NewUser } from '@core/db/schema/user/users.schema';
+import type { Transaction } from '@core/db/db.utils';
+import { Errors } from '@core/errors';
 import { userRepository } from '../repositories/user.repository';
-import { toUserPublicInfo } from '@shared/utils';
+import { toUserPublicInfo } from '@core/utils';
 
 /**
  * User service for profile management and cross-module user operations

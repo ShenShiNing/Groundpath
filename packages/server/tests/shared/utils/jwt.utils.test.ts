@@ -7,10 +7,10 @@ import {
   generateRefreshToken,
   verifyRefreshToken,
   extractBearerToken,
-} from '@shared/utils/jwt.utils';
+} from '@core/utils/jwt.utils';
 import { authConfig } from '@config/env';
-import type { AccessTokenPayload } from '@shared/types';
-import { AppError } from '@shared/errors';
+import type { AccessTokenPayload } from '@core/types';
+import { AppError } from '@core/errors';
 
 describe('jwt utils', () => {
   const accessPayload: AccessTokenPayload = {

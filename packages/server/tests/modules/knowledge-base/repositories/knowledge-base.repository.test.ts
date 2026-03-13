@@ -80,16 +80,16 @@ vi.mock('drizzle-orm', () => ({
   sql: sqlMock,
 }));
 
-vi.mock('@shared/db', () => ({
+vi.mock('@core/db', () => ({
   db: dbMock,
 }));
 
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   now: nowMock,
   getDbContext: getDbContextMock,
 }));
 
-vi.mock('@shared/db/schema/document/knowledge-bases.schema', () => ({
+vi.mock('@core/db/schema/document/knowledge-bases.schema', () => ({
   knowledgeBases: knowledgeBasesMock,
 }));
 

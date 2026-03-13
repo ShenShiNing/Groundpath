@@ -1,7 +1,7 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { Errors } from '@shared/errors';
+import { Errors } from '@core/errors';
 import { tokenService } from './token.service';
-import { logOperation } from '@shared/logger/operation-logger';
+import { logOperation } from '@core/logger/operation-logger';
 import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 
 /**

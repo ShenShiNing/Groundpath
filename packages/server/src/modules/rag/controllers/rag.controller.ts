@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { ragSearchRequestSchema } from '@knowledge-agent/shared/schemas';
-import { sendSuccessResponse, handleError, Errors } from '@shared/errors';
-import { getParamId } from '@shared/utils';
+import { sendSuccessResponse, handleError, Errors } from '@core/errors';
+import { getParamId } from '@core/utils';
 import { searchService } from '../services/search.service';
 import { enqueueDocumentProcessing } from '../queue';
 import { documentRepository } from '@modules/document';

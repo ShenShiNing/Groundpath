@@ -9,8 +9,8 @@ import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { conversationRepository } from '../repositories/conversation.repository';
 import { messageRepository } from '../repositories/message.repository';
 import { knowledgeBaseService } from '@modules/knowledge-base';
-import { Errors } from '@shared/errors';
-import type { Conversation } from '@shared/db/schema/ai/conversations.schema';
+import { Errors } from '@core/errors';
+import type { Conversation } from '@core/db/schema/ai/conversations.schema';
 
 function toConversationInfo(conv: Conversation): ConversationInfo {
   return {

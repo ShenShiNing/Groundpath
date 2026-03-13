@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { LoginRequest } from '@knowledge-agent/shared/types';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import { mockUser, mockTokenPair, logTestInfo } from '@tests/__mocks__/auth.mocks';
 
 // ==================== Mocks ====================
@@ -18,7 +18,7 @@ vi.mock('bcryptjs', () => ({
   },
 }));
 
-vi.mock('@shared/utils/jwt.utils', () => ({
+vi.mock('@core/utils/jwt.utils', () => ({
   verifyRefreshToken: vi.fn(),
 }));
 
@@ -57,7 +57,7 @@ vi.mock('@modules/auth/services/token.service', () => ({
   },
 }));
 
-vi.mock('@shared/middleware/rate-limit.middleware', () => ({
+vi.mock('@core/middleware/rate-limit.middleware', () => ({
   checkAccountRateLimit: vi.fn(async () => ({ allowed: true })),
   resetAccountRateLimit: vi.fn(),
   // no-op placeholders to satisfy barrel exports used by routes
@@ -78,7 +78,7 @@ import { tokenService } from '@modules/auth';
 import {
   checkAccountRateLimit,
   resetAccountRateLimit,
-} from '@shared/middleware/rate-limit.middleware';
+} from '@core/middleware/rate-limit.middleware';
 
 // ==================== login ====================
 // 场景：用户使用邮箱密码登录

@@ -1,5 +1,5 @@
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
 import { documentRepository } from '@modules/document';
 

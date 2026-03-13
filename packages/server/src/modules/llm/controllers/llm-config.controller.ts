@@ -7,7 +7,7 @@ import {
 import { llmConfigService } from '../services/llm-config.service';
 import { llmService } from '../services/llm.service';
 import { modelFetcherService } from '../services/model-fetcher.service';
-import { sendSuccessResponse, handleError } from '@shared/errors';
+import { sendSuccessResponse, handleError } from '@core/errors';
 
 export const llmConfigController = {
   /**

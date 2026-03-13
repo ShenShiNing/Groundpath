@@ -2,7 +2,7 @@ import { documentConfig } from '@config/env';
 import { documentChunkRepository } from '@modules/document';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 import { vectorRepository } from '@modules/vector';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';
 
 const logger = createLogger('document-index-artifact-cleanup.service');

@@ -1,9 +1,9 @@
 import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { documents } from '@shared/db/schema/document/documents.schema';
-import { documentNodes } from '@shared/db/schema/document/document-nodes.schema';
-import { documentNodeContents } from '@shared/db/schema/document/document-node-contents.schema';
-import { documentIndexVersions } from '@shared/db/schema/document/document-index-versions.schema';
+import { db } from '@core/db';
+import { documents } from '@core/db/schema/document/documents.schema';
+import { documentNodes } from '@core/db/schema/document/document-nodes.schema';
+import { documentNodeContents } from '@core/db/schema/document/document-node-contents.schema';
+import { documentIndexVersions } from '@core/db/schema/document/document-index-versions.schema';
 
 export interface AccessibleNodeRow {
   nodeId: string;

@@ -46,7 +46,7 @@ vi.mock('@modules/document-index/services/document-index-backfill-progress.servi
   documentIndexBackfillProgressService: mocks.backfillProgress,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => mocks.logger,
 }));
 

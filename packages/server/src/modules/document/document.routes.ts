@@ -9,7 +9,7 @@ import {
   validateQuery,
   createSanitizeMiddleware,
   generalRateLimiter,
-} from '@shared/middleware';
+} from '@core/middleware';
 import {
   updateDocumentRequestSchema,
   documentListParamsSchema,

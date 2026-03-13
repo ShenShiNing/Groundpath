@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { documents } from '@shared/db/schema/document/documents.schema';
-import { createLogger } from '@shared/logger';
+import { db } from '@core/db';
+import { documents } from '@core/db/schema/document/documents.schema';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('processing.service');
 const processingLocks = new Map<string, boolean>();

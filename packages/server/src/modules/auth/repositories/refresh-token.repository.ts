@@ -1,12 +1,12 @@
 import { eq, and, gt, or, lt, inArray, sql } from 'drizzle-orm';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
-import { db } from '@shared/db';
-import { now, addSeconds, getDbContext, type Transaction } from '@shared/db/db.utils';
-import { refreshTokens, type RefreshToken } from '@shared/db/schema/auth/refresh-tokens.schema';
+import { db } from '@core/db';
+import { now, addSeconds, getDbContext, type Transaction } from '@core/db/db.utils';
+import { refreshTokens, type RefreshToken } from '@core/db/schema/auth/refresh-tokens.schema';
 import { authConfig } from '@config/env';
-import { cacheService } from '@shared/cache';
-import { hashRefreshToken } from '@shared/utils/refresh-token.utils';
-import { isStoredRefreshTokenMatch } from '@shared/utils/refresh-token.utils';
+import { cacheService } from '@core/cache';
+import { hashRefreshToken } from '@core/utils/refresh-token.utils';
+import { isStoredRefreshTokenMatch } from '@core/utils/refresh-token.utils';
 
 export type ConsumeRefreshTokenResult =
   | 'consumed'

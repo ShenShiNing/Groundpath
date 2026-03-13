@@ -11,17 +11,17 @@ import type {
 import { authService } from '../services/auth.service';
 import { sessionService } from '../services/session.service';
 import { passwordService } from '../services/password.service';
-import { sendSuccessResponse, Errors } from '@shared/errors';
-import { AppError } from '@shared/errors/app-error';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { getValidatedBody } from '@shared/middleware';
+import { sendSuccessResponse, Errors } from '@core/errors';
+import { AppError } from '@core/errors/app-error';
+import { asyncHandler } from '@core/errors/async-handler';
+import { getValidatedBody } from '@core/middleware';
 import {
   getClientIp,
   requireUserId,
   setRefreshTokenCookie,
   clearRefreshTokenCookie,
   getRefreshTokenFromRequest,
-} from '@shared/utils';
+} from '@core/utils';
 
 /**
  * Set refresh token as HttpOnly cookie and strip it from the JSON response

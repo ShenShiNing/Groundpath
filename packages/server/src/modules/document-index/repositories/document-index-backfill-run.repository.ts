@@ -1,10 +1,10 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
-import { getDbContext, type Transaction } from '@shared/db/db.utils';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   documentIndexBackfillRuns,
   type DocumentIndexBackfillRun,
   type NewDocumentIndexBackfillRun,
-} from '@shared/db/schema/document/document-index-backfill-runs.schema';
+} from '@core/db/schema/document/document-index-backfill-runs.schema';
 
 export const documentIndexBackfillRunRepository = {
   async create(

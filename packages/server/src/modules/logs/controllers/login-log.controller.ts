@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
 import type { LoginLogQueryParams } from '@knowledge-agent/shared/schemas';
 import { loginLogService } from '../services/login-log.service';
-import { sendSuccessResponse } from '@shared/errors';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId } from '@shared/utils';
-import { getValidatedQuery } from '@shared/middleware';
+import { sendSuccessResponse } from '@core/errors';
+import { asyncHandler } from '@core/errors/async-handler';
+import { requireUserId } from '@core/utils';
+import { getValidatedQuery } from '@core/middleware';
 
 export const loginLogController = {
   /**

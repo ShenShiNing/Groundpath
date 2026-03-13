@@ -75,7 +75,7 @@ vi.mock('multer', () => ({
   default: multerFactoryMock,
 }));
 
-vi.mock('@shared/middleware', () => ({
+vi.mock('@core/middleware', () => ({
   authenticate: authenticateMock,
   validateBody: validateBodyMock,
 }));

@@ -1,5 +1,5 @@
 import type { DocumentType } from '@knowledge-agent/shared/types';
-import type { Document } from '@shared/db/schema/document/documents.schema';
+import type { Document } from '@core/db/schema/document/documents.schema';
 
 export interface DocumentBackfillCandidate {
   id: string;

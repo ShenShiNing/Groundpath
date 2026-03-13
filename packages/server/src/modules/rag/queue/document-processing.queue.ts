@@ -1,8 +1,8 @@
 import { Queue, Worker, type Job } from 'bullmq';
-import { getQueueConnection, getQueuePrefix } from '@shared/queue';
+import { getQueueConnection, getQueuePrefix } from '@core/queue';
 import { queueConfig } from '@config/env';
 import { processingService } from '../services/processing.service';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import type {
   DocumentProcessingEnqueueOptions,
   DocumentProcessingJobData,

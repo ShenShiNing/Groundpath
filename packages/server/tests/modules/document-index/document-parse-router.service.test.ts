@@ -4,6 +4,8 @@ const envMocks = vi.hoisted(() => ({
   documentIndexConfig: {
     routeTokenThreshold: 5000,
     charsPerToken: 4,
+    asciiCharsPerToken: 4,
+    cjkCharsPerToken: 1.6,
   },
   featureFlags: {
     structuredRagEnabled: false,
@@ -82,6 +84,22 @@ describe('documentParseRouterService', () => {
       routeMode: 'structured',
       reason: 'meets_threshold',
       estimatedTokens: 6000,
+    });
+  });
+
+  it('treats dense CJK content as higher token volume than ASCII-only estimation', () => {
+    envMocks.featureFlags.structuredRagEnabled = true;
+    envMocks.featureFlags.structuredRagRolloutMode = 'all';
+
+    const result = documentParseRouterService.decideRoute({
+      documentType: 'markdown',
+      textContent: '你'.repeat(8000),
+    });
+
+    expect(result).toMatchObject({
+      routeMode: 'structured',
+      reason: 'meets_threshold',
+      estimatedTokens: 5000,
     });
   });
 

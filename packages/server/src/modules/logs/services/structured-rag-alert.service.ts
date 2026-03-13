@@ -1,8 +1,8 @@
 import { structuredRagObservabilityConfig } from '@config/env';
 import { emailService } from '@modules/auth';
 import { systemLogRepository } from '../repositories/system-log.repository';
-import { systemLogger } from '@shared/logger/system-logger';
-import { createLogger } from '@shared/logger';
+import { systemLogger } from '@core/logger/system-logger';
+import { createLogger } from '@core/logger';
 import { structuredRagReportService } from './structured-rag-report.service';
 import type { StructuredRagDashboardAlert } from '@knowledge-agent/shared/types';
 

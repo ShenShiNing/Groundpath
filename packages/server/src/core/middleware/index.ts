@@ -30,4 +30,4 @@ export {
   getValidatedQuery,
   getValidatedParams,
 } from './validation.middleware';
-export { requestLoggerMiddleware } from '@shared/middleware/request-logger.middleware';
+export { requestLoggerMiddleware } from '@core/middleware/request-logger.middleware';

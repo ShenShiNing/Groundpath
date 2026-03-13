@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import {
   mockUserId,
   mockDocument,
@@ -16,7 +16,7 @@ vi.mock('uuid', () => ({
 }));
 
 // Mock withTransaction to simply execute the callback
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: vi.fn((callback) => callback({})),
   getDbContext: vi.fn((tx) => tx ?? {}),
   now: vi.fn(() => new Date()),
@@ -86,12 +86,12 @@ vi.mock('@modules/rag/queue/document-processing.queue', () => ({
   enqueueDocumentProcessing: vi.fn(() => Promise.resolve()),
 }));
 
-vi.mock('@shared/logger/operation-logger', () => ({
+vi.mock('@core/logger/operation-logger', () => ({
   logOperation: vi.fn(),
 }));
 
 // Mock logger - use inline object to avoid hoisting issues
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   logger: {
     info: vi.fn(),
     warn: vi.fn(),

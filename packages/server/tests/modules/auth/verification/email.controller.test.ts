@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import { logTestInfo } from '@tests/__mocks__/email.mocks';
 
 // ==================== Mocks ====================
@@ -22,7 +22,7 @@ vi.mock('@modules/user', () => ({
   userRepository: {},
 }));
 
-vi.mock('@shared/utils/request.utils', () => ({
+vi.mock('@core/utils/request.utils', () => ({
   getClientIp: vi.fn(() => '192.168.1.1'),
   requireUserId: vi.fn(),
   getParamId: vi.fn(),

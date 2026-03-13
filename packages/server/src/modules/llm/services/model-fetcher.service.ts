@@ -3,8 +3,8 @@ import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 import type { ModelInfo, FetchModelsOptions } from '../providers/llm-provider.interface';
 import { llmConfig } from '@config/env';
-import { Errors } from '@shared/errors';
-import { logger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { logger } from '@core/logger';
 
 interface OllamaTagsResponse {
   models: Array<{

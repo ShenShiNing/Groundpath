@@ -4,13 +4,13 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
 }));
 
-vi.mock('../../../src/shared/db/index.ts', () => ({
+vi.mock('../../../src/core/db/index.ts', () => ({
   db: {
     transaction: mocks.transaction,
   },
 }));
 
-import { afterTransactionCommit, withTransaction } from '@shared/db/db.utils';
+import { afterTransactionCommit, withTransaction } from '@core/db/db.utils';
 
 describe('db.utils transaction hooks', () => {
   beforeEach(() => {

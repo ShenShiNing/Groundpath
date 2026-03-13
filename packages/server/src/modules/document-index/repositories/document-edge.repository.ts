@@ -1,11 +1,11 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { getDbContext, type Transaction } from '@shared/db/db.utils';
+import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   documentEdges,
   type DocumentEdge,
   type NewDocumentEdge,
-} from '@shared/db/schema/document/document-edges.schema';
+} from '@core/db/schema/document/document-edges.schema';
 
 export const documentEdgeRepository = {
   async createMany(data: NewDocumentEdge[], tx?: Transaction): Promise<void> {

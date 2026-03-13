@@ -3,7 +3,7 @@ import {
   hashRefreshToken,
   safeCompareTokenHash,
   isStoredRefreshTokenMatch,
-} from '@shared/utils/refresh-token.utils';
+} from '@core/utils/refresh-token.utils';
 
 describe('refresh-token.utils', () => {
   describe('hashRefreshToken', () => {

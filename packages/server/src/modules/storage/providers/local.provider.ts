@@ -4,8 +4,8 @@ import path from 'path';
 import { Readable } from 'stream';
 import type { SignedUrlOptions, StorageProvider } from '../storage.types';
 import { serverConfig, storageConfig } from '@config/env';
-import { generateSignedUrl } from '@shared/utils';
-import { Errors } from '@shared/errors';
+import { generateSignedUrl } from '@core/utils';
+import { Errors } from '@core/errors';
 
 export class LocalStorageProvider implements StorageProvider {
   private basePath: string;

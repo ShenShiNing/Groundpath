@@ -6,7 +6,7 @@ import type {
   DocumentRouteReason,
 } from '@modules/document-index/services/document-parse-router.service';
 import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
-import type { NewDocumentChunk } from '@shared/db/schema/document/document-chunks.schema';
+import type { NewDocumentChunk } from '@core/db/schema/document/document-chunks.schema';
 import type { VectorPoint } from '@modules/vector';
 
 export interface DocumentProcessingResult {

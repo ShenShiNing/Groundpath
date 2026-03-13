@@ -4,7 +4,7 @@ import type { AgentTool, ToolContext, ToolDefinition } from '@modules/agent/tool
 import type { LLMProvider, ChatMessage, GenerateOptions } from '@modules/llm';
 import type { Citation } from '@knowledge-agent/shared/types';
 
-vi.mock('@shared/config/env', () => ({
+vi.mock('@core/config/env', () => ({
   agentConfig: {
     maxIterations: 5,
     maxStructuredRounds: 3,
@@ -19,7 +19,7 @@ vi.mock('@shared/config/env', () => ({
   },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),

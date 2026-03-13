@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import {
   mockUserId,
   mockDocumentId,
@@ -13,7 +13,7 @@ import {
 
 // ==================== Mocks ====================
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: vi.fn(() => ({
     warn: vi.fn(),
     info: vi.fn(),
@@ -290,7 +290,9 @@ describe('summaryService > hierarchicalSummarize', () => {
     );
 
     const mergeMessages = vi.mocked(mockLLMProvider.generate).mock.calls.at(-1)?.[0];
-    const mergeUserMessage = mergeMessages?.find((message: { role: string }) => message.role === 'user');
+    const mergeUserMessage = mergeMessages?.find(
+      (message: { role: string }) => message.role === 'user'
+    );
 
     expect(result).toBe('Final merged summary');
     expect(mockLLMProvider.generate).toHaveBeenCalledTimes(4);

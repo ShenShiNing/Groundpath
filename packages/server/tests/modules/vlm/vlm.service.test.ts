@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@config/env', () => mocks.env);
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     warn: mocks.loggerWarn,
     info: mocks.loggerInfo,

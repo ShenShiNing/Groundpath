@@ -1,11 +1,11 @@
 import { eq, and, isNull, desc, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { now } from '@shared/db/db.utils';
+import { db } from '@core/db';
+import { now } from '@core/db/db.utils';
 import {
   conversations,
   type Conversation,
   type NewConversation,
-} from '@shared/db/schema/ai/conversations.schema';
+} from '@core/db/schema/ai/conversations.schema';
 
 export const conversationRepository = {
   /**

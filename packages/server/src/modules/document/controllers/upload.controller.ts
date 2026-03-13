@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
 import { storageService } from '../services/document-storage.service';
 import { userService } from '../../user';
-import { toUserPublicInfo, requireUserId } from '@shared/utils';
-import { sendSuccessResponse } from '@shared/errors';
-import { AppError } from '@shared/errors/app-error';
-import { asyncHandler } from '@shared/errors/async-handler';
+import { toUserPublicInfo, requireUserId } from '@core/utils';
+import { sendSuccessResponse } from '@core/errors';
+import { AppError } from '@core/errors/app-error';
+import { asyncHandler } from '@core/errors/async-handler';
 
 export const uploadController = {
   /**

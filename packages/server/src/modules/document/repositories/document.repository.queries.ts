@@ -1,6 +1,6 @@
 import { and, count, eq, isNull, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { documents } from '@shared/db/schema/document/documents.schema';
+import { db } from '@core/db';
+import { documents } from '@core/db/schema/document/documents.schema';
 
 export const documentRepositoryQueries = {
   async countByKnowledgeBaseId(knowledgeBaseId: string): Promise<number> {

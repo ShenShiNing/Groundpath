@@ -26,7 +26,7 @@ vi.mock('@modules/chat/services/message.service', () => ({
   messageService: mocks.messageService,
 }));
 
-vi.mock('@shared/errors', () => ({
+vi.mock('@core/errors', () => ({
   sendSuccessResponse: mocks.sendSuccessResponse,
   handleError: mocks.handleError,
 }));

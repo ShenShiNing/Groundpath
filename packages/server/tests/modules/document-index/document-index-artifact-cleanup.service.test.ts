@@ -20,14 +20,14 @@ const {
   loggerErrorMock: vi.fn(),
 }));
 
-vi.mock('@shared/config/env', () => ({
+vi.mock('@core/config/env', () => ({
   documentConfig: {
     buildCleanupRetentionDays: 7,
     buildCleanupBatchSize: 100,
   },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: loggerInfoMock,
     warn: loggerWarnMock,

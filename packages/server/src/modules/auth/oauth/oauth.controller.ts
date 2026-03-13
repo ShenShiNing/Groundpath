@@ -2,19 +2,19 @@ import type { Request, Response } from 'express';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { OAuthExchangeRequest, AuthResponse } from '@knowledge-agent/shared/types';
 import { serverConfig } from '@config/env';
-import { createLogger } from '@shared/logger';
-import { sendSuccessResponse, Errors } from '@shared/errors';
-import { systemLogger } from '@shared/logger/system-logger';
+import { createLogger } from '@core/logger';
+import { sendSuccessResponse, Errors } from '@core/errors';
+import { systemLogger } from '@core/logger/system-logger';
 import { githubProvider } from './providers/github.provider';
 import { googleProvider } from './providers/google.provider';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { getValidatedBody } from '@shared/middleware';
+import { asyncHandler } from '@core/errors/async-handler';
+import { getValidatedBody } from '@core/middleware';
 import {
   getClientIp,
   setRefreshTokenCookie,
   getRefreshTokenFromRequest,
   verifyRefreshToken,
-} from '@shared/utils';
+} from '@core/utils';
 import { consumeOAuthExchangeCode, createOAuthExchangeCode } from './oauth.service';
 import { authService } from '../services/auth.service';
 

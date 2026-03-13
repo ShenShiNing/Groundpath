@@ -1,13 +1,13 @@
 import { eq, and, desc, inArray } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { getDbContext, type Transaction } from '@shared/db/db.utils';
+import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   documentChunks,
   type DocumentChunk,
   type NewDocumentChunk,
-} from '@shared/db/schema/document/document-chunks.schema';
-import { documentIndexVersions } from '@shared/db/schema/document/document-index-versions.schema';
-import { documents } from '@shared/db/schema/document/documents.schema';
+} from '@core/db/schema/document/document-chunks.schema';
+import { documentIndexVersions } from '@core/db/schema/document/document-index-versions.schema';
+import { documents } from '@core/db/schema/document/documents.schema';
 
 /**
  * Document chunk repository for RAG operations

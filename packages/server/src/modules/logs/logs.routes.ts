@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticate, validateQuery } from '@shared/middleware';
+import { authenticate, validateQuery } from '@core/middleware';
 import {
   loginLogQuerySchema,
   operationLogQuerySchema,

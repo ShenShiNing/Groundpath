@@ -46,7 +46,7 @@ vi.mock('node:child_process', () => ({
   spawn: mocks.spawn,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => mocks.logger,
 }));
 

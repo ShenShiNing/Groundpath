@@ -1,18 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  redisEvalMock,
+  redisSetMock,
   getQdrantClientMock,
   purgeDeletedVectorsMock,
   loggerInfoMock,
   loggerWarnMock,
   loggerErrorMock,
 } = vi.hoisted(() => ({
+  redisEvalMock: vi.fn(),
+  redisSetMock: vi.fn(),
   getQdrantClientMock: vi.fn(),
   purgeDeletedVectorsMock: vi.fn(),
   loggerInfoMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   loggerErrorMock: vi.fn(),
 }));
+
+const envMocks = vi.hoisted(() => ({
+  vectorConfig: {
+    cleanupLockTtlMs: 30_000,
+    cleanupFailureThreshold: 0.5,
+  },
+}));
+
+vi.mock('@config/env', () => envMocks);
 
 vi.mock('@modules/vector/qdrant.client', () => ({
   getQdrantClient: getQdrantClientMock,
@@ -24,7 +37,15 @@ vi.mock('@modules/vector/vector.repository', () => ({
   },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/redis', () => ({
+  buildRedisKey: vi.fn((key: string) => `test:${key}`),
+  getRedisClient: vi.fn(() => ({
+    set: redisSetMock,
+    eval: redisEvalMock,
+  })),
+}));
+
+vi.mock('@core/logger', () => ({
   createLogger: vi.fn(() => ({
     info: loggerInfoMock,
     warn: loggerWarnMock,
@@ -37,6 +58,8 @@ import { vectorCleanupService } from '@modules/vector/vector-cleanup.service';
 describe('vector-cleanup.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    redisSetMock.mockResolvedValue('OK');
+    redisEvalMock.mockResolvedValue(1);
   });
 
   it('should purge deleted vectors from all collections', async () => {
@@ -55,8 +78,9 @@ describe('vector-cleanup.service', () => {
       totalPurged: 3,
       errors: 0,
     });
-    expect(purgeDeletedVectorsMock).toHaveBeenNthCalledWith(1, 'kb_1');
-    expect(purgeDeletedVectorsMock).toHaveBeenNthCalledWith(2, 'kb_2');
+    expect(purgeDeletedVectorsMock).toHaveBeenNthCalledWith(1, 'kb_1', expect.any(Number));
+    expect(purgeDeletedVectorsMock).toHaveBeenNthCalledWith(2, 'kb_2', expect.any(Number));
+    expect(redisEvalMock).toHaveBeenCalledTimes(1);
   });
 
   it('should continue processing collections when one purge fails', async () => {
@@ -92,5 +116,37 @@ describe('vector-cleanup.service', () => {
       { error: connectionError },
       'Vector cleanup failed'
     );
+  });
+
+  it('should skip when another cleanup run already holds the distributed lock', async () => {
+    redisSetMock.mockResolvedValue(null);
+
+    const result = await vectorCleanupService.runCleanup();
+
+    expect(result).toEqual({
+      collectionsProcessed: 0,
+      totalPurged: 0,
+      errors: 0,
+    });
+    expect(getQdrantClientMock).not.toHaveBeenCalled();
+    expect(redisEvalMock).not.toHaveBeenCalled();
+  });
+
+  it('should abort when collection failures exceed the configured threshold', async () => {
+    getQdrantClientMock.mockReturnValue({
+      getCollections: vi.fn().mockResolvedValue({
+        collections: [{ name: 'kb_1' }, { name: 'kb_2' }, { name: 'kb_3' }],
+      }),
+    });
+
+    purgeDeletedVectorsMock
+      .mockRejectedValueOnce(new Error('purge failed 1'))
+      .mockRejectedValueOnce(new Error('purge failed 2'));
+
+    await expect(vectorCleanupService.runCleanup()).rejects.toThrow(
+      'Vector cleanup aborted after 2/3 collections failed'
+    );
+    expect(purgeDeletedVectorsMock).toHaveBeenCalledTimes(2);
+    expect(redisEvalMock).toHaveBeenCalledTimes(1);
   });
 });

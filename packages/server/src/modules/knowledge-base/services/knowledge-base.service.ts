@@ -9,11 +9,11 @@ import type {
   KnowledgeBaseListParams,
   EmbeddingProviderType,
 } from '@knowledge-agent/shared/types';
-import type { KnowledgeBase } from '@shared/db/schema/document/knowledge-bases.schema';
-import type { Transaction } from '@shared/db/db.utils';
-import { Errors } from '@shared/errors';
+import type { KnowledgeBase } from '@core/db/schema/document/knowledge-bases.schema';
+import type { Transaction } from '@core/db/db.utils';
+import { Errors } from '@core/errors';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
-import { logOperation } from '@shared/logger/operation-logger';
+import { logOperation } from '@core/logger/operation-logger';
 import { embeddingConfig } from '@config/env';
 
 export interface RequestContext {

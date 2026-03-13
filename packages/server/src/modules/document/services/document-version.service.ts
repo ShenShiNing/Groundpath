@@ -1,15 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DocumentInfo, VersionListResponse } from '@knowledge-agent/shared/types';
-import type { Document } from '@shared/db/schema/document/documents.schema';
-import { withTransaction } from '@shared/db/db.utils';
-import { Errors } from '@shared/errors';
+import type { Document } from '@core/db/schema/document/documents.schema';
+import { withTransaction } from '@core/db/db.utils';
+import { Errors } from '@core/errors';
 import { documentConfig } from '@config/env';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentStorageService } from './document-storage.service';
-import { createLogger } from '@shared/logger';
-import { logOperation } from '@shared/logger/operation-logger';
+import { createLogger } from '@core/logger';
+import { logOperation } from '@core/logger/operation-logger';
 import { enqueueDocumentProcessing } from '@modules/rag';
 
 const logger = createLogger('document-version.service');

@@ -20,7 +20,7 @@ vi.mock('@config/env', () => ({
   documentConfig: mocks.env,
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),

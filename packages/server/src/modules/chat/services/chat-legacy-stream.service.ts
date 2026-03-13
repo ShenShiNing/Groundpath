@@ -1,8 +1,8 @@
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { ragConfig } from '@config/env';
 import { searchService } from '@modules/rag';
-import { structuredRagMetrics } from '@shared/observability';
-import { createLogger } from '@shared/logger';
+import { structuredRagMetrics } from '@core/observability';
+import { createLogger } from '@core/logger';
 import { messageService } from './message.service';
 import { promptService } from './prompt.service';
 import {

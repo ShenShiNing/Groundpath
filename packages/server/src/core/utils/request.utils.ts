@@ -1,5 +1,5 @@
 import type { Request } from 'express';
-import { AppError } from '@shared/errors/app-error';
+import { AppError } from '@core/errors/app-error';
 
 /**
  * Normalize email address for consistent storage and lookup.

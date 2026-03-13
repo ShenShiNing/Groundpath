@@ -3,11 +3,11 @@ import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { SendVerificationCodeRequest, VerifyCodeRequest } from '@knowledge-agent/shared';
 import { emailVerificationService } from '../verification/email-verification.service';
 import { userService } from '../../user';
-import { sendSuccessResponse } from '@shared/errors';
-import { Errors } from '@shared/errors';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { getValidatedBody } from '@shared/middleware';
-import { getClientIp, normalizeEmail } from '@shared/utils';
+import { sendSuccessResponse } from '@core/errors';
+import { Errors } from '@core/errors';
+import { asyncHandler } from '@core/errors/async-handler';
+import { getValidatedBody } from '@core/middleware';
+import { getClientIp, normalizeEmail } from '@core/utils';
 
 export const emailController = {
   /**

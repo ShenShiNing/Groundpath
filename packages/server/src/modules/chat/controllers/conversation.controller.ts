@@ -7,7 +7,7 @@ import {
 } from '@knowledge-agent/shared/schemas';
 import { conversationService } from '../services/conversation.service';
 import { messageService } from '../services/message.service';
-import { sendSuccessResponse, handleError } from '@shared/errors';
+import { sendSuccessResponse, handleError } from '@core/errors';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;

@@ -1,5 +1,5 @@
-import { createLogger } from '@shared/logger';
-import { buildRedisKey, getRedisClient } from '@shared/redis';
+import { createLogger } from '@core/logger';
+import { buildRedisKey, getRedisClient } from '@core/redis';
 
 const logger = createLogger('cache.service');
 

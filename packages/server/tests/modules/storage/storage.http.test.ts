@@ -34,8 +34,8 @@ vi.mock('@config/env', async () => {
   };
 });
 
-vi.mock('@shared/utils', async () => {
-  const actual = await vi.importActual<typeof import('@shared/utils')>('@shared/utils');
+vi.mock('@core/utils', async () => {
+  const actual = await vi.importActual<typeof import('@core/utils')>('@core/utils');
   return {
     ...actual,
     verifySignature: verifySignatureMock,

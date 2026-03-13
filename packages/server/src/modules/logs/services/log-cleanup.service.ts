@@ -1,6 +1,6 @@
-import { loggingConfig } from '@shared/config/env';
-import { createLogger } from '@shared/logger';
-import { systemLogger } from '@shared/logger/system-logger';
+import { loggingConfig } from '@core/config/env';
+import { createLogger } from '@core/logger';
+import { systemLogger } from '@core/logger/system-logger';
 import { loginLogRepository } from '../../auth/repositories/login-log.repository';
 import { operationLogRepository } from '../repositories/operation-log.repository';
 import { systemLogRepository } from '../repositories/system-log.repository';

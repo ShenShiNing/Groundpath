@@ -1,4 +1,4 @@
-import { agentConfig } from '@shared/config/env';
+import { agentConfig } from '@core/config/env';
 import type { AgentTool } from './tools';
 import type { AgentStep, AgentStopReason, Citation } from '@knowledge-agent/shared/types';
 import type {

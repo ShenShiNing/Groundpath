@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createShutdownHandler } from '@shared/server/shutdown';
+import { createShutdownHandler } from '@core/server/shutdown';
 
 function flushMicrotasks() {
   return Promise.resolve().then(() => Promise.resolve());

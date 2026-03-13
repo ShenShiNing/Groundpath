@@ -6,7 +6,7 @@ import {
 } from '@aws-sdk/client-s3';
 import type { SignedUrlOptions, StorageProvider } from '../storage.types';
 import { storageConfig } from '@config/env';
-import { Errors } from '@shared/errors';
+import { Errors } from '@core/errors';
 
 export class R2StorageProvider implements StorageProvider {
   private client: S3Client;

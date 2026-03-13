@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { withTransaction } from '@shared/db/db.utils';
+import { withTransaction } from '@core/db/db.utils';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';
 import { documentNodeRepository } from '../repositories/document-node.repository';
 import { documentNodeContentRepository } from '../repositories/document-node-content.repository';

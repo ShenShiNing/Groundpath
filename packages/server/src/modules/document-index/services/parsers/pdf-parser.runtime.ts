@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import pLimit from 'p-limit';
 import { documentIndexConfig, featureFlags } from '@config/env';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import type { ExtractedPdfImage } from './types';
 
 const logger = createLogger('pdf-parser.runtime');

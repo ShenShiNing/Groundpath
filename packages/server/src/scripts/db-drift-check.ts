@@ -19,7 +19,7 @@ const packageRoot = path.resolve(import.meta.dirname, '../..');
 const drizzleDir = path.join(packageRoot, 'drizzle');
 const metaDir = path.join(drizzleDir, 'meta');
 const drizzleOutPath = 'drizzle';
-const schemaPath = 'src/shared/db/schema/index.ts';
+const schemaPath = 'src/core/db/schema/index.ts';
 
 function toCliPath(input: string): string {
   return input.replace(/\\/g, '/');

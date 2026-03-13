@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, aiRateLimiter } from '@shared/middleware';
+import { authenticate, aiRateLimiter } from '@core/middleware';
 import { ragController } from './controllers/rag.controller';
 
 const router = Router();

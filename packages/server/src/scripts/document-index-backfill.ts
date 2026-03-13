@@ -17,7 +17,7 @@
  *   --dry-run                Show candidates without enqueueing jobs
  */
 
-import { databaseConfig, isEnvLoaded } from '@shared/config/env';
+import { databaseConfig, isEnvLoaded } from '@core/config/env';
 
 if (!isEnvLoaded()) {
   console.error('Error: Environment not loaded. Check .env file exists.');
@@ -32,7 +32,7 @@ if (!databaseConfig.url) {
 
 import { DOCUMENT_TYPES, type DocumentType } from '@knowledge-agent/shared/types';
 import { documentIndexBackfillService } from '@modules/document-index';
-import { closeDatabase } from '@shared/db';
+import { closeDatabase } from '@core/db';
 
 function getArg(args: string[], flag: string): string | undefined {
   const index = args.indexOf(flag);

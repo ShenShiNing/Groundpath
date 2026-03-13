@@ -17,7 +17,7 @@
  */
 
 // Ensure environment is loaded before any imports that depend on it
-import { databaseConfig, isEnvLoaded } from '@shared/config/env';
+import { databaseConfig, isEnvLoaded } from '@core/config/env';
 
 // Verify environment loaded successfully
 if (!isEnvLoaded()) {

@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { MessageInfo, MessageRole, MessageMetadata } from '@knowledge-agent/shared/types';
 import { messageRepository } from '../repositories/message.repository';
-import type { Message } from '@shared/db/schema/ai/messages.schema';
+import type { Message } from '@core/db/schema/ai/messages.schema';
 
 function toMessageInfo(msg: Message): MessageInfo {
   return {

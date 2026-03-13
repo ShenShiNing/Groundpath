@@ -4,7 +4,7 @@
  */
 
 import crypto from 'crypto';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import { documentAIConfig } from '@config/env';
 
 const logger = createLogger('document-ai-cache');

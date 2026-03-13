@@ -4,12 +4,12 @@ import type {
   ResourceHistoryParams,
 } from '@knowledge-agent/shared/schemas';
 import { operationLogService } from '../services/operation-log.service';
-import { sendSuccessResponse } from '@shared/errors';
-import { AppError } from '@shared/errors/app-error';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { requireUserId, getParamId } from '@shared/utils';
-import { getValidatedQuery } from '@shared/middleware';
-import type { ResourceType } from '@shared/db/schema/system/operation-logs.schema';
+import { sendSuccessResponse } from '@core/errors';
+import { AppError } from '@core/errors/app-error';
+import { asyncHandler } from '@core/errors/async-handler';
+import { requireUserId, getParamId } from '@core/utils';
+import { getValidatedQuery } from '@core/middleware';
+import type { ResourceType } from '@core/db/schema/system/operation-logs.schema';
 
 export const operationLogController = {
   /**

@@ -1,5 +1,5 @@
 import '@config/env/loader';
-import { Errors } from '@shared/errors/app-error';
+import { Errors } from '@core/errors/app-error';
 import { envDir, nodeEnv } from '@config/env/loader';
 import { envSchema } from '@config/env/schema';
 

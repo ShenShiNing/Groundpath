@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { createRequestLogger } from '@shared/logger';
+import { createRequestLogger } from '@core/logger';
 
 /**
  * Middleware to attach request-scoped logger with requestId

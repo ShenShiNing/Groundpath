@@ -7,9 +7,9 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
-import { Errors } from '@shared/errors';
+import { Errors } from '@core/errors';
 import { openaiCompatGenerateWithTools } from './openai-compat';
-import { logger } from '@shared/logger';
+import { logger } from '@core/logger';
 
 interface ZhipuChoice {
   message: { content: string; reasoning_content?: string };

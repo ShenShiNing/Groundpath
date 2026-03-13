@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Request, Response } from 'express';
-import { requireCsrfProtection } from '@shared/middleware/security.middleware';
-import { CSRF_TOKEN_COOKIE_NAME } from '@shared/utils/cookie.utils';
+import { requireCsrfProtection } from '@core/middleware/security.middleware';
+import { CSRF_TOKEN_COOKIE_NAME } from '@core/utils/cookie.utils';
 
 function createResponseMock(): Response {
   const status = vi.fn();

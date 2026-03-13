@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import { authConfig } from '@config/env';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import {
   mockEmail,
   mockCode,

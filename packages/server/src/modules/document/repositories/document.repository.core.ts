@@ -1,12 +1,12 @@
 import { and, asc, count, desc, eq, isNotNull, isNull, like } from 'drizzle-orm';
 import type { DocumentListParams, TrashListParams } from '@knowledge-agent/shared/types';
-import { db } from '@shared/db';
-import { getDbContext, now, type Transaction } from '@shared/db/db.utils';
+import { db } from '@core/db';
+import { getDbContext, now, type Transaction } from '@core/db/db.utils';
 import {
   documents,
   type Document,
   type NewDocument,
-} from '@shared/db/schema/document/documents.schema';
+} from '@core/db/schema/document/documents.schema';
 import type { DocumentUpdateInput } from './document.repository.types';
 
 async function findActiveDocumentById(id: string, tx?: Transaction): Promise<Document | undefined> {

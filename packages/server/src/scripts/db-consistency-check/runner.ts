@@ -1,5 +1,5 @@
 import { counterSyncService } from '@modules/knowledge-base';
-import { closeDatabase } from '@shared/db';
+import { closeDatabase } from '@core/db';
 import { runDatabaseConsistencyChecks } from './checks';
 import {
   printCounterFixSummary,

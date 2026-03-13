@@ -15,8 +15,8 @@ import { llmService } from '@modules/llm';
 import type { ChatMessage } from '@modules/llm';
 import { documentContentService } from '@modules/document';
 import { searchService } from '@modules/rag';
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 import { ragConfig } from '@config/env';
 import {
   buildGenerationSystemPrompt,

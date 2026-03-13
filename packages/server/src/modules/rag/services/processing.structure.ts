@@ -5,8 +5,8 @@ import { markdownStructureParser } from '@modules/document-index/services/parser
 import { pdfStructureParser } from '@modules/document-index/services/parsers/pdf-structure.parser';
 import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
 import { storageProvider } from '@modules/storage';
-import { createLogger } from '@shared/logger';
-import { structuredRagMetrics } from '@shared/observability';
+import { createLogger } from '@core/logger';
+import { structuredRagMetrics } from '@core/observability';
 import type { ProcessingDocument, ProcessingVersion } from './processing.types';
 
 const logger = createLogger('processing.service');

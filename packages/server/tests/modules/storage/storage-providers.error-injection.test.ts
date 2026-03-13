@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // ─── Mock config and logger ───
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -49,11 +49,11 @@ vi.mock('fs', () => ({
   createReadStream: vi.fn(),
 }));
 
-vi.mock('@shared/utils', () => ({
+vi.mock('@core/utils', () => ({
   generateSignedUrl: vi.fn(() => '/api/signed/test'),
 }));
 
-vi.mock('@shared/errors', () => ({
+vi.mock('@core/errors', () => ({
   Errors: {
     validation: (msg: string) => new Error(msg),
     external: (msg: string) => new Error(msg),

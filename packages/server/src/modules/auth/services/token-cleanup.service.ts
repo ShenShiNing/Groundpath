@@ -1,6 +1,6 @@
-import { loggingConfig } from '@shared/config/env';
-import { createLogger } from '@shared/logger';
-import { systemLogger } from '@shared/logger/system-logger';
+import { loggingConfig } from '@core/config/env';
+import { createLogger } from '@core/logger';
+import { systemLogger } from '@core/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 
 const logger = createLogger('token-cleanup.service');

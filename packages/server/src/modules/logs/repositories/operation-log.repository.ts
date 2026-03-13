@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import { desc, eq, and, lt, sql, inArray } from 'drizzle-orm';
-import { db } from '@shared/db';
+import { db } from '@core/db';
 import {
   operationLogs,
   type NewOperationLog,
   type OperationLog,
   type ResourceType,
   type OperationAction,
-} from '@shared/db/schema/system/operation-logs.schema';
+} from '@core/db/schema/system/operation-logs.schema';
 
 export interface OperationLogListParams {
   page: number;

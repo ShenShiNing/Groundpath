@@ -2,9 +2,9 @@ import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ApiResponse } from '@knowledge-agent/shared';
 import { featureFlags, serverConfig } from '@config/env';
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
-import { buildRedisKey, getRedisClient } from '@shared/redis';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
+import { buildRedisKey, getRedisClient } from '@core/redis';
 import { getClientIp } from '../utils/request.utils';
 
 interface RateLimitOptions {

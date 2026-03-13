@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { messages, type Message, type NewMessage } from '@shared/db/schema/ai/messages.schema';
-import { conversations } from '@shared/db/schema/ai/conversations.schema';
+import { db } from '@core/db';
+import { messages, type Message, type NewMessage } from '@core/db/schema/ai/messages.schema';
+import { conversations } from '@core/db/schema/ai/conversations.schema';
 import type { ConversationSearchItem } from '@knowledge-agent/shared/types';
 
 function buildBooleanSearchQuery(query: string): string {

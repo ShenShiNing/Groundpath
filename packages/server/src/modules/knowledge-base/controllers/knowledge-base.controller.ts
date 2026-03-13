@@ -6,11 +6,11 @@ import type {
   KnowledgeBaseListParams,
 } from '@knowledge-agent/shared/types';
 import { knowledgeBaseService } from '../services/knowledge-base.service';
-import { sendSuccessResponse } from '@shared/errors';
-import { AppError } from '@shared/errors/app-error';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { getValidatedBody, getValidatedQuery } from '@shared/middleware';
-import { requireUserId, getParamId, getClientIp } from '@shared/utils';
+import { sendSuccessResponse } from '@core/errors';
+import { AppError } from '@core/errors/app-error';
+import { asyncHandler } from '@core/errors/async-handler';
+import { getValidatedBody, getValidatedQuery } from '@core/middleware';
+import { requireUserId, getParamId, getClientIp } from '@core/utils';
 
 /**
  * Simple UUID validation

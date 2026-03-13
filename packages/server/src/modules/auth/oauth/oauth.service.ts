@@ -2,10 +2,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
 import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
-import type { User } from '@shared/db/schema/user/users.schema';
-import type { AccessTokenSubject } from '@shared/types';
-import { generateOAuthStateToken, toUserPublicInfo, verifyOAuthStateToken } from '@shared/utils';
-import { Errors } from '@shared/errors';
+import type { User } from '@core/db/schema/user/users.schema';
+import type { AccessTokenSubject } from '@core/types';
+import { generateOAuthStateToken, toUserPublicInfo, verifyOAuthStateToken } from '@core/utils';
+import { Errors } from '@core/errors';
 import { userService } from '../../user';
 import { userAuthRepository } from '../repositories/user-auth.repository';
 import { loginLogRepository } from '../repositories/login-log.repository';
@@ -15,7 +15,7 @@ import type { OAuthExchangeCodeContext } from '../repositories/oauth-exchange-co
 import type { OAuthProviderType, OAuthUserData } from './oauth.types';
 import { detectDevice } from '../../logs/services/device-detection.service';
 import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('oauth.service');
 

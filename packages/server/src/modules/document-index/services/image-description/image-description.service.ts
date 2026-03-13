@@ -1,5 +1,5 @@
 import { featureFlags, vlmConfig } from '@config/env';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import { vlmService } from '@modules/vlm';
 import type { ImageClassification } from './image-classifier';
 import { classifyImageByContext } from './image-classifier';

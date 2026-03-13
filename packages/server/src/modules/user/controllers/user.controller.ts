@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
 import type { UpdateProfileRequest } from '@knowledge-agent/shared/types';
 import { userService } from '../services/user.service';
-import { sendSuccessResponse } from '@shared/errors';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { getValidatedBody } from '@shared/middleware';
-import { requireUserId } from '@shared/utils';
+import { sendSuccessResponse } from '@core/errors';
+import { asyncHandler } from '@core/errors/async-handler';
+import { getValidatedBody } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 
 export const userController = {
   /**

@@ -1,11 +1,11 @@
 import { eq, and, desc } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { getDbContext, type Transaction } from '@shared/db/db.utils';
+import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   documentVersions,
   type DocumentVersion,
   type NewDocumentVersion,
-} from '@shared/db/schema/document/document-versions.schema';
+} from '@core/db/schema/document/document-versions.schema';
 
 /**
  * Document version repository for database operations

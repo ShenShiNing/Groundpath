@@ -130,8 +130,8 @@ vi.mock('@modules/document/controllers/document.controller', () => ({
   documentController: documentControllerMock,
 }));
 
-vi.mock('@shared/middleware', async () => {
-  const actual = await vi.importActual<typeof import('@shared/middleware')>('@shared/middleware');
+vi.mock('@core/middleware', async () => {
+  const actual = await vi.importActual<typeof import('@core/middleware')>('@core/middleware');
   return {
     ...actual,
     authenticate: authenticateMock,

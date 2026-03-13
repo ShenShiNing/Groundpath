@@ -1,12 +1,12 @@
-import { db } from '@shared/db';
+import { db } from '@core/db';
 import { sql, eq, and, isNull, isNotNull, count, or, lt } from 'drizzle-orm';
-import { documentConfig } from '@shared/config/env';
-import { documents } from '@shared/db/schema/document/documents.schema';
-import { documentVersions } from '@shared/db/schema/document/document-versions.schema';
-import { documentChunks } from '@shared/db/schema/document/document-chunks.schema';
-import { documentIndexVersions } from '@shared/db/schema/document/document-index-versions.schema';
-import { documentNodes } from '@shared/db/schema/document/document-nodes.schema';
-import { knowledgeBases } from '@shared/db/schema/document/knowledge-bases.schema';
+import { documentConfig } from '@core/config/env';
+import { documents } from '@core/db/schema/document/documents.schema';
+import { documentVersions } from '@core/db/schema/document/document-versions.schema';
+import { documentChunks } from '@core/db/schema/document/document-chunks.schema';
+import { documentIndexVersions } from '@core/db/schema/document/document-index-versions.schema';
+import { documentNodes } from '@core/db/schema/document/document-nodes.schema';
+import { knowledgeBases } from '@core/db/schema/document/knowledge-bases.schema';
 import type { CheckResult } from './types';
 
 function extractRows<T>(result: unknown): T[] {

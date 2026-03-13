@@ -3,8 +3,8 @@ import { ZhipuProvider } from './providers/zhipu.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { OllamaProvider } from './providers/ollama.provider';
 import { embeddingConfig } from '@config/env';
-import { Errors } from '@shared/errors';
-import { createLogger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('embedding.factory');
 

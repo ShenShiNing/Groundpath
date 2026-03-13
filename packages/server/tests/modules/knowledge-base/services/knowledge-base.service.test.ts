@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 
 const mockEmbeddingConfig = vi.hoisted(() => ({
   openai: {
@@ -34,7 +34,7 @@ vi.mock('@config/env', async (importOriginal) => {
   };
 });
 
-vi.mock('@shared/logger/operation-logger', () => ({
+vi.mock('@core/logger/operation-logger', () => ({
   logOperation: logOperationMock,
 }));
 

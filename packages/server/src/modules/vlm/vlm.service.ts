@@ -1,6 +1,6 @@
 import pLimit from 'p-limit';
 import { vlmConfig } from '@config/env';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 import { getVLMProvider } from './vlm.factory';
 import type { VLMDescribeOptions, VLMImageInput } from './vlm-provider.interface';
 

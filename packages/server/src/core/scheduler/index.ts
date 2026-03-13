@@ -5,9 +5,9 @@ import {
   loggingConfig,
   featureFlags,
   structuredRagObservabilityConfig,
-} from '@shared/config/env';
-import { createLogger } from '@shared/logger';
-import { systemLogger } from '@shared/logger/system-logger';
+} from '@core/config/env';
+import { createLogger } from '@core/logger';
+import { systemLogger } from '@core/logger/system-logger';
 import { logCleanupService, structuredRagAlertService } from '@modules/logs';
 import {
   documentIndexArtifactCleanupService,

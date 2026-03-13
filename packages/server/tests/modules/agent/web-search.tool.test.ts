@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToolContext } from '@modules/agent/tools/tool.interface';
 
-vi.mock('@shared/config/env', () => ({
+vi.mock('@core/config/env', () => ({
   agentConfig: {
     tavilyApiKey: 'test-tavily-key',
     toolTimeout: 5000,
@@ -10,7 +10,7 @@ vi.mock('@shared/config/env', () => ({
   },
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock('@shared/logger', () => ({
 }));
 
 import { WebSearchTool } from '@modules/agent/tools/web-search.tool';
-import { agentConfig } from '@shared/config/env';
+import { agentConfig } from '@core/config/env';
 
 // ==================== Tests ====================
 

@@ -6,7 +6,7 @@ const { searchInKnowledgeBaseMock, getTitlesByIdsMock } = vi.hoisted(() => ({
   getTitlesByIdsMock: vi.fn(),
 }));
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),

@@ -8,9 +8,9 @@
     // Path aliases to reduce deep relative imports
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"],
+      "@core/*": ["src/core/*"],
       "@modules/*": ["src/modules/*"],
-      "@config/*": ["src/shared/config/*"],
+      "@config/*": ["src/core/config/*"],
       "@tests/*": ["tests/*"]
     },
 

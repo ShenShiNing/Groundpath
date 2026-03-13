@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared';
-import { AppError } from '@shared/errors';
+import { AppError } from '@core/errors';
 import {
   mockUserId,
   mockDocumentId,
@@ -14,7 +14,7 @@ import {
 
 // ==================== Mocks ====================
 
-vi.mock('@shared/logger', () => ({
+vi.mock('@core/logger', () => ({
   createLogger: vi.fn(() => ({
     warn: vi.fn(),
     info: vi.fn(),

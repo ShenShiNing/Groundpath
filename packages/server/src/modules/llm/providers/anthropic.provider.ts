@@ -8,8 +8,8 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType, ToolCallInfo } from '@knowledge-agent/shared/types';
-import { Errors } from '@shared/errors';
-import { logger } from '@shared/logger';
+import { Errors } from '@core/errors';
+import { logger } from '@core/logger';
 
 export class AnthropicProvider implements LLMProvider {
   readonly name: LLMProviderType = 'anthropic';

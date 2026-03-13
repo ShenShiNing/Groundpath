@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { AppError } from '@shared/errors/app-error';
-import { logger } from '@shared/logger';
+import { AppError } from '@core/errors/app-error';
+import { logger } from '@core/logger';
 import { serverConfig } from '@config/env';
 
 /**

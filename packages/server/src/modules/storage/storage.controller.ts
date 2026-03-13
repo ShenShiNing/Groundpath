@@ -1,12 +1,12 @@
 import type { Request, Response } from 'express';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { asyncHandler } from '@shared/errors/async-handler';
-import { Errors } from '@shared/errors';
+import { asyncHandler } from '@core/errors/async-handler';
+import { Errors } from '@core/errors';
 import { serverConfig, storageConfig } from '@config/env';
-import { verifySignature } from '@shared/utils';
+import { verifySignature } from '@core/utils';
 import { storageProvider } from './storage.factory';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('storage.controller');
 

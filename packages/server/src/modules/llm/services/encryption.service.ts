@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { authConfig } from '@config/env';
-import { Errors } from '@shared/errors';
+import { Errors } from '@core/errors';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;

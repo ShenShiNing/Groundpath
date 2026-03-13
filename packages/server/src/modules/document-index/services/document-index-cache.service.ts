@@ -1,5 +1,5 @@
-import { cacheService, shortCache } from '@shared/cache';
-import { createLogger } from '@shared/logger';
+import { cacheService, shortCache } from '@core/cache';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('document-index-cache.service');
 

@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 import { desc, eq, lt, sql, inArray, and } from 'drizzle-orm';
-import { db } from '@shared/db';
-import { loginLogs, type LoginLog } from '@shared/db/schema/system/login-logs.schema';
+import { db } from '@core/db';
+import { loginLogs, type LoginLog } from '@core/db/schema/system/login-logs.schema';
 import type { DeviceDetectionInfo } from '../../logs/services/device-detection.service';
 import type { GeoLocationInfo } from '../../logs/services/geo-location.service';
-import { createLogger } from '@shared/logger';
+import { createLogger } from '@core/logger';
 
 const logger = createLogger('login-log.repository');
 

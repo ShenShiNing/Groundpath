@@ -1,6 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
-import { authenticate, validateBody } from '@shared/middleware';
+import { authenticate, validateBody } from '@core/middleware';
 import { updateProfileRequestSchema } from '@knowledge-agent/shared/schemas';
 import { userController } from './controllers/user.controller';
 // Direct import to avoid circular dependency through barrels

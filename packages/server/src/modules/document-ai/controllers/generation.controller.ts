@@ -6,7 +6,7 @@
 import type { Request, Response } from 'express';
 import { generateRequestSchema, expandRequestSchema } from '@knowledge-agent/shared/schemas';
 import { generationService } from '../services/generation.service';
-import { sendSuccessResponse, handleError } from '@shared/errors';
+import { sendSuccessResponse, handleError } from '@core/errors';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;

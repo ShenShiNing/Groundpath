@@ -2,8 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
 import { tokenService } from '@modules/auth';
-import { AppError } from '@shared/errors';
-import type { AccessTokenSubject } from '@shared/types';
+import { AppError } from '@core/errors';
+import type { AccessTokenSubject } from '@core/types';
 
 // ==================== Mocks ====================
 
@@ -11,7 +11,7 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'mock-uuid-token-id'),
 }));
 
-vi.mock('@shared/utils/jwt.utils', () => ({
+vi.mock('@core/utils/jwt.utils', () => ({
   generateAccessToken: vi.fn(() => 'mock-access-token'),
   generateRefreshToken: vi.fn(() => 'mock-refresh-token'),
   verifyRefreshToken: vi.fn(),
@@ -52,7 +52,7 @@ vi.mock('@config/auth.config', () => ({
 }));
 
 // Mock withTransaction to bypass real database
-vi.mock('@shared/db/db.utils', () => ({
+vi.mock('@core/db/db.utils', () => ({
   withTransaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({})),
   getDbContext: vi.fn((tx?: unknown) => tx ?? {}),
 }));
@@ -65,7 +65,7 @@ import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-} from '@shared/utils/jwt.utils';
+} from '@core/utils/jwt.utils';
 
 // ==================== 日志辅助函数 ====================
 

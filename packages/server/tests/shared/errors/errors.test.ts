@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AppError, Errors } from '@shared/errors';
+import { AppError, Errors } from '@core/errors';
 
 describe('AppError', () => {
   it('should create an error with correct properties', () => {
