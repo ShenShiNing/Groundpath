@@ -1,5 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const authLogMocks = vi.hoisted(() => ({
+  logClientError: vi.fn(),
+}));
+
+vi.mock('@/lib/logger', () => ({
+  logClientError: authLogMocks.logClientError,
+  logClientWarning: vi.fn(),
+}));
+
 async function importAuthModule() {
   vi.resetModules();
   return import('@/lib/http/auth');
@@ -7,6 +16,7 @@ async function importAuthModule() {
 
 describe('lib/http/auth', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.unstubAllGlobals();
     document.cookie = 'csrf_token=test-csrf-token';
   });
@@ -89,8 +99,13 @@ describe('lib/http/auth', () => {
 
     await expect(auth.ensureAccessToken()).rejects.toMatchObject({
       code: 'AUTH_ERROR',
-      message: 'Session expired. Please login again.',
     });
     expect(onAuthError).toHaveBeenCalledTimes(1);
+    expect(authLogMocks.logClientError).toHaveBeenCalledWith(
+      'http.auth.executeRefresh',
+      expect.objectContaining({
+        code: 'AUTH_ERROR',
+      })
+    );
   });
 });

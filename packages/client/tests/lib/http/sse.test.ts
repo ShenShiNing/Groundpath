@@ -1,4 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const sseLogMocks = vi.hoisted(() => ({
+  logClientError: vi.fn(),
+  logClientWarning: vi.fn(),
+}));
+
+vi.mock('@/lib/logger', () => ({
+  logClientError: sseLogMocks.logClientError,
+  logClientWarning: sseLogMocks.logClientWarning,
+}));
+
 import { parseSSEStream, type SSEEventHandlers } from '@/lib/http/sse';
 
 // Helper: create a reader from string chunks
@@ -18,6 +29,10 @@ function createReader(chunks: string[]): ReadableStreamDefaultReader<Uint8Array>
 }
 
 describe('parseSSEStream', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('parses multiple SSE events', async () => {
     const events: unknown[] = [];
     const handlers: SSEEventHandlers<{ type: string }> = {
@@ -45,6 +60,13 @@ describe('parseSSEStream', () => {
     await parseSSEStream(reader, handlers);
 
     expect(events).toEqual([{ type: 'valid' }]);
+    expect(sseLogMocks.logClientWarning).toHaveBeenCalledWith(
+      'http.sse.processLine',
+      'Failed to parse SSE event payload',
+      expect.objectContaining({
+        payload: 'not-json',
+      })
+    );
   });
 
   it('does not swallow handler errors as JSON parse errors', async () => {
@@ -68,6 +90,13 @@ describe('parseSSEStream', () => {
     expect(callCount).toBe(2);
     // Stream-level onError should NOT be called for handler errors
     expect(handlers.onError).not.toHaveBeenCalled();
+    expect(sseLogMocks.logClientError).toHaveBeenCalledWith(
+      'http.sse.processLine',
+      handlerError,
+      expect.objectContaining({
+        event: { type: 'b' },
+      })
+    );
   });
 
   it('processes remaining buffer data after stream ends', async () => {
@@ -118,6 +147,12 @@ describe('parseSSEStream', () => {
       code: 'STREAM_ERROR',
       message: 'network failure',
     });
+    expect(sseLogMocks.logClientError).toHaveBeenCalledWith(
+      'http.sse.parseSSEStream',
+      expect.objectContaining({
+        message: 'network failure',
+      })
+    );
   });
 
   it('silently handles AbortError', async () => {

@@ -3,6 +3,8 @@
  * Handles TextDecoder, buffer management, and event dispatch.
  */
 
+import { logClientError, logClientWarning } from '@/lib/logger';
+
 export interface SSEEventHandlers<T> {
   onEvent: (event: T) => void;
   onError: (error: { code: string; message: string }) => void;
@@ -15,7 +17,7 @@ export interface SSEParserOptions {
 
 /**
  * Process a single SSE data line: parse JSON and dispatch to handler.
- * Separates parse errors (silently skipped) from handler errors (logged).
+ * Separates parse errors from handler errors while keeping the stream alive.
  */
 function processLine<T>(line: string, handlers: SSEEventHandlers<T>): void {
   if (!line.startsWith('data: ')) return;
@@ -25,14 +27,18 @@ function processLine<T>(line: string, handlers: SSEEventHandlers<T>): void {
   let event: T;
   try {
     event = JSON.parse(jsonStr) as T;
-  } catch {
-    return; // Skip malformed JSON
+  } catch (error) {
+    logClientWarning('http.sse.processLine', 'Failed to parse SSE event payload', {
+      error,
+      payload: jsonStr.slice(0, 200),
+    });
+    return;
   }
 
   try {
     handlers.onEvent(event);
-  } catch {
-    // swallow handler errors to keep the SSE stream alive
+  } catch (error) {
+    logClientError('http.sse.processLine', error, { event });
   }
 }
 
@@ -76,6 +82,7 @@ export async function parseSSEStream<T>(
     if (error instanceof Error && error.name === 'AbortError') {
       return; // Intentional abort, don't report as error
     }
+    logClientError('http.sse.parseSSEStream', error);
     handlers.onError({
       code: 'STREAM_ERROR',
       message: error instanceof Error ? error.message : 'Stream failed',

@@ -6,6 +6,7 @@ import type {
   RegisterWithCodeRequest,
 } from '@knowledge-agent/shared/types';
 import { authApi, setTokenAccessors } from '@/api';
+import { logClientError } from '@/lib/logger';
 
 interface AuthState {
   // 状态
@@ -25,8 +26,10 @@ interface AuthState {
   clearAuth: () => void;
 }
 
+type AuthPersistedState = Pick<AuthState, 'user' | 'isAuthenticated'>;
+
 export const useAuthStore = create<AuthState>()(
-  persist(
+  persist<AuthState, AuthPersistedState>(
     (set, get) => ({
       // 初始状态
       user: null,
@@ -47,6 +50,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
+          logClientError('authStore.login', error, { email });
           set({ isLoading: false });
           throw error;
         }
@@ -65,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
+          logClientError('authStore.register', error, { email: data.email });
           set({ isLoading: false });
           throw error;
         }
@@ -83,6 +88,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
+          logClientError('authStore.registerWithCode', error, { email: data.email });
           set({ isLoading: false });
           throw error;
         }
@@ -97,8 +103,8 @@ export const useAuthStore = create<AuthState>()(
           if (isAuthenticated) {
             await authApi.logout();
           }
-        } catch {
-          // 登出失败也要继续清除本地状态
+        } catch (error) {
+          logClientError('authStore.logout', error);
         } finally {
           set({
             user: null,
@@ -115,8 +121,8 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           await authApi.logoutAll();
-        } catch {
-          // 登出失败也要继续清除本地状态
+        } catch (error) {
+          logClientError('authStore.logoutAll', error);
         } finally {
           set({
             user: null,
@@ -152,16 +158,16 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       version: 2,
-      migrate: (persistedState) => {
-        const state = persistedState as Partial<AuthState> | undefined;
-        // Security hardening: ensure legacy persisted accessToken is dropped.
+      migrate: (persistedState): AuthPersistedState => {
+        const state = persistedState as Partial<AuthPersistedState> | undefined;
+        // Security hardening: ignore legacy persisted accessToken and only keep whitelisted fields.
         return {
-          ...state,
-          accessToken: null,
-        } as Partial<AuthState>;
+          user: state?.user ?? null,
+          isAuthenticated: state?.isAuthenticated ?? false,
+        };
       },
       // 只持久化必要的认证状态
-      partialize: (state) => ({
+      partialize: (state): AuthPersistedState => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),

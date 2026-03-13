@@ -1,65 +1,18 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  buildConversationMarkdownForKnowledgeSeed,
-  sanitizeMessageContentForKnowledgeSeed,
-} from '@/lib/chat';
 import { knowledgeBasesApi, conversationApi } from '@/api';
 import { useCreateKnowledgeBase, useKnowledgeBases } from '@/hooks';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
-import type { ChatMessage } from '@/stores/chatPanelStore';
+import {
+  buildKnowledgeSeedContent,
+  getKnowledgeSeedDocumentTitle,
+  sanitizeFileName,
+} from './SaveToKBDialog.helpers';
+import { SaveToKBDialogForm } from './SaveToKBDialogForm';
+import type { KbSeedMode, KnowledgeSeedSource, SaveToKBDialogProps } from './SaveToKBDialog.types';
 
-type KnowledgeSeedSource = 'conversation' | 'latest-assistant';
-type KbSeedMode = 'new' | 'existing';
-
-function sanitizeFileName(input: string): string {
-  const invalidChars = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
-  const sanitized = input
-    .trim()
-    .split('')
-    .map((char) => {
-      const codePoint = char.charCodeAt(0);
-      if (codePoint <= 31 || invalidChars.has(char)) {
-        return '_';
-      }
-      return char;
-    })
-    .join('');
-
-  return input ? sanitized.replace(/\s+/g, '-').slice(0, 80) : '';
-}
-
-export interface SaveToKBDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  messages: ChatMessage[];
-  conversationId: string | null;
-  selectedKnowledgeBaseId: string | undefined;
-  knowledgeBaseName?: string;
-  onKbSwitch: (kbId: string) => void;
-}
+export type { SaveToKBDialogProps } from './SaveToKBDialog.types';
 
 export function SaveToKBDialog({
   open,
@@ -117,39 +70,12 @@ export function SaveToKBDialog({
       return;
     }
 
-    const conversationContent = buildConversationMarkdownForKnowledgeSeed(
-      messages
-        .filter((message) => !message.isLoading)
-        .map((message) => ({
-          role: message.role,
-          content: message.content,
-          timestamp: message.timestamp,
-          citations: message.citations,
-          toolSteps: message.toolSteps?.map((step) => ({
-            toolCalls: step.toolCalls.map((call) => ({ name: call.name })),
-            toolResults: step.toolResults?.map((result) => ({ content: result.content })),
-          })),
-        })),
-      {
-        transcript: t('export.transcriptTitle'),
-        user: t('export.user'),
-        assistant: t('export.assistant'),
-      }
+    const selectedContent = buildKnowledgeSeedContent(
+      messages,
+      latestAssistantMessage,
+      seedSource,
+      t
     );
-    const latestAssistantContent = latestAssistantMessage
-      ? sanitizeMessageContentForKnowledgeSeed({
-          role: latestAssistantMessage.role,
-          content: latestAssistantMessage.content,
-          timestamp: latestAssistantMessage.timestamp,
-          citations: latestAssistantMessage.citations,
-          toolSteps: latestAssistantMessage.toolSteps?.map((step) => ({
-            toolCalls: step.toolCalls.map((call) => ({ name: call.name })),
-            toolResults: step.toolResults?.map((result) => ({ content: result.content })),
-          })),
-        })
-      : '';
-    const selectedContent =
-      seedSource === 'latest-assistant' ? latestAssistantContent : conversationContent;
 
     if (!selectedContent.trim()) {
       toast.error(t('content.empty'));
@@ -171,10 +97,7 @@ export function SaveToKBDialog({
         finalKbId = knowledgeBase.id;
       }
 
-      const documentTitle =
-        seedSource === 'latest-assistant'
-          ? t('seed.documentTitle.latestAssistant')
-          : t('seed.documentTitle.transcript');
+      const documentTitle = getKnowledgeSeedDocumentTitle(seedSource, t);
       const fileBaseName =
         sanitizeFileName(documentTitle || (kbSeedMode === 'new' ? newKbName.trim() : '')) ||
         'chat-notes';
@@ -223,159 +146,27 @@ export function SaveToKBDialog({
   ]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle>{t('createKb.title')}</DialogTitle>
-          <DialogDescription>{t('createKb.description')}</DialogDescription>
-        </DialogHeader>
-
-        <div className="grid gap-4 py-2">
-          <div className="flex gap-4">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="kb-seed-mode"
-                value="new"
-                checked={kbSeedMode === 'new'}
-                onChange={() => setKbSeedMode('new')}
-                className="accent-primary"
-              />
-              <span className="text-sm">{t('createKb.modeNew')}</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="radio"
-                name="kb-seed-mode"
-                value="existing"
-                checked={kbSeedMode === 'existing'}
-                onChange={() => setKbSeedMode('existing')}
-                disabled={knowledgeBases.length === 0}
-                className="accent-primary"
-              />
-              <span
-                className={cn('text-sm', knowledgeBases.length === 0 && 'text-muted-foreground')}
-              >
-                {t('createKb.modeExisting')}
-              </span>
-            </label>
-          </div>
-
-          {kbSeedMode === 'existing' ? (
-            <div className="grid gap-2">
-              <Label htmlFor="chat-target-kb">{t('createKb.selectKb')}</Label>
-              <Select value={targetKbId ?? ''} onValueChange={(value) => setTargetKbId(value)}>
-                <SelectTrigger id="chat-target-kb">
-                  <SelectValue placeholder={t('createKb.selectKb')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {knowledgeBases.map((kb) => (
-                    <SelectItem key={kb.id} value={kb.id}>
-                      {kb.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="chat-kb-name">{t('createKb.name')}</Label>
-                <Input
-                  id="chat-kb-name"
-                  value={newKbName}
-                  onChange={(event) => setNewKbName(event.target.value)}
-                  placeholder={t('createKb.namePlaceholder')}
-                  maxLength={200}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="chat-kb-description">{t('createKb.descriptionLabel')}</Label>
-                <Textarea
-                  id="chat-kb-description"
-                  value={newKbDescription}
-                  onChange={(event) => setNewKbDescription(event.target.value)}
-                  placeholder={t('createKb.descriptionPlaceholder')}
-                  maxLength={2000}
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="chat-kb-provider">{t('createKb.provider')}</Label>
-                <Select
-                  value={newKbEmbeddingProvider}
-                  onValueChange={(value) =>
-                    setNewKbEmbeddingProvider(value as EmbeddingProviderType)
-                  }
-                >
-                  <SelectTrigger id="chat-kb-provider">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="zhipu">{t('createKb.providerZhipu')}</SelectItem>
-                    <SelectItem value="openai">{t('createKb.providerOpenAI')}</SelectItem>
-                    <SelectItem value="ollama">{t('createKb.providerOllama')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-
-          <div className="grid gap-2">
-            <Label htmlFor="chat-seed-source">{t('createKb.seedSource')}</Label>
-            <Select
-              value={seedSource}
-              onValueChange={(value) => setSeedSource(value as KnowledgeSeedSource)}
-            >
-              <SelectTrigger id="chat-seed-source">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="conversation">{t('createKb.seedSourceConversation')}</SelectItem>
-                <SelectItem value="latest-assistant" disabled={!latestAssistantMessage}>
-                  {t('createKb.seedSourceLatestAssistant')}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {seedSource === 'latest-assistant' && !latestAssistantMessage && (
-              <p className="text-xs text-amber-600">
-                {t('createKb.seedSourceLatestAssistantEmpty')}
-              </p>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="switch-to-new-kb"
-              checked={switchToNewKb}
-              onCheckedChange={(checked) => setSwitchToNewKb(checked === true)}
-            />
-            <Label htmlFor="switch-to-new-kb" className="text-sm">
-              {t('createKb.switchToKb')}
-            </Label>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('createKb.cancel')}
-          </Button>
-          <Button onClick={() => void handleSave()} disabled={isCreating}>
-            {isCreating ? (
-              <>
-                <Loader2 className="size-4 mr-2 animate-spin" />
-                {t('createKb.creating')}
-              </>
-            ) : kbSeedMode === 'existing' ? (
-              t('createKb.submitAppend')
-            ) : (
-              t('createKb.submit')
-            )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <SaveToKBDialogForm
+      open={open}
+      onOpenChange={onOpenChange}
+      knowledgeBases={knowledgeBases}
+      kbSeedMode={kbSeedMode}
+      onKbSeedModeChange={setKbSeedMode}
+      targetKbId={targetKbId}
+      onTargetKbIdChange={setTargetKbId}
+      newKbName={newKbName}
+      onNewKbNameChange={setNewKbName}
+      newKbDescription={newKbDescription}
+      onNewKbDescriptionChange={setNewKbDescription}
+      newKbEmbeddingProvider={newKbEmbeddingProvider}
+      onNewKbEmbeddingProviderChange={setNewKbEmbeddingProvider}
+      seedSource={seedSource}
+      onSeedSourceChange={setSeedSource}
+      hasLatestAssistantMessage={latestAssistantMessage !== null}
+      switchToNewKb={switchToNewKb}
+      onSwitchToNewKbChange={setSwitchToNewKb}
+      isCreating={isCreating}
+      onSave={() => void handleSave()}
+    />
   );
 }

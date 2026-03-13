@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import i18n from '@/i18n/i18n';
 import { conversationApi, sendMessageWithSSE } from '@/api';
+import { logClientError } from '@/lib/logger';
 import { queryClient } from '@/lib/query';
 import type { ChatMessage, ChatPanelState, ToolStep } from './chatPanelStore.types';
 import { toStoreCitation, agentTraceToToolSteps } from './chatPanelStore.types';
@@ -96,7 +97,10 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         convId = conversation.id;
         set({ conversationId: convId });
         invalidateConversationQueries();
-      } catch {
+      } catch (error) {
+        logClientError('chatPanelStore.sendMessage.createConversation', error, {
+          knowledgeBaseId,
+        });
         addMessage({
           id: `error-${Date.now()}`,
           role: 'assistant',
@@ -257,8 +261,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         knowledgeBaseId: conversation.knowledgeBaseId,
         messages,
       });
-    } catch {
-      // silently fail — caller can retry
+    } catch (error) {
+      logClientError('chatPanelStore.loadConversation', error, { conversationId });
     }
   },
 

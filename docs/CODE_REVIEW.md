@@ -255,7 +255,7 @@ pnpm monorepo 全栈项目，三个包：
 - 删除 `ConversationList.tsx` 中对会话列表的重复手动失效，避免 hook 已更新缓存后组件再触发一次重请求
 - 新增 hooks 与组件测试，覆盖精确失效和缓存同步行为
 
-#### 4.15 错误处理静默失败
+#### ~~4.15 错误处理静默失败~~ ✅
 
 **涉及文件**:
 
@@ -264,16 +264,28 @@ pnpm monorepo 全栈项目，三个包：
 - `lib/http/auth.ts` 第 78-80 行 — catch 块吞掉错误不记录
 - `lib/http/sse.ts` 第 28-30 行 — JSON 解析失败静默跳过
 
-**建议**: 统一使用错误日志工具（如 `console.error` 或集成 Sentry），避免静默失败。
+**已修复**:
 
-#### 4.16 大型组件需要拆分
+- 新增 `packages/client/src/lib/logger.ts` 作为客户端统一日志出口，封装 `logClientError` / `logClientWarning`
+- `chatPanelStore.ts` 为会话创建失败、历史会话加载失败补充显式日志，保留现有 UI 降级提示与重试行为
+- `authStore.ts` 为 `login` / `register` / `registerWithCode` / `logout` / `logoutAll` 补充错误日志，避免仅抛出或静默吞掉异常
+- `lib/http/auth.ts` 在 refresh token 失败时先记录日志，再执行认证状态清理
+- `lib/http/sse.ts` 为 SSE JSON 解析失败、事件处理器异常、流级异常统一落日志，避免调试信息丢失
+- 新增 `authStore`、`chatPanelStore.loadConversation`、`lib/http/auth`、`lib/http/sse` 针对性测试，覆盖日志路径
+
+#### ~~4.16 大型组件需要拆分~~ ✅
 
 **涉及文件**:
 
 - `AppLayout.tsx`（406 行）— 超过 400 行限制
 - `SaveToKBDialog.tsx`（381 行）— 接近限制
 
-**建议**: 提取子组件，降低单文件复杂度。
+**已修复**:
+
+- `AppLayout.tsx` 收敛为布局编排入口，侧边栏导航、会话历史、快捷操作拆分到 `AppSidebar.tsx`
+- `SaveToKBDialog.tsx` 拆分为 `SaveToKBDialogForm.tsx`、`SaveToKBDialog.helpers.ts`、`SaveToKBDialog.types.ts`
+- 两个主入口文件只保留状态编排和副作用逻辑，避免继续堆叠 UI 细节
+- 对外导出 API 保持不变，现有页面调用方无需调整
 
 #### 4.17 客户端测试覆盖不足
 
@@ -347,8 +359,8 @@ pnpm monorepo 全栈项目，三个包：
 | P2     | 4.12 | 硬编码常量集中化                   | 配置规范   | ✅   |
 | P3     | 4.13 | React Query staleTime              | 性能       | ✅   |
 | P3     | 4.14 | 缓存失效策略优化                   | 性能       | ✅   |
-| P3     | 4.15 | 客户端错误处理                     | 可调试性   |      |
-| P3     | 4.16 | 大型组件拆分                       | 代码规范   |      |
+| P3     | 4.15 | 客户端错误处理                     | 可调试性   | ✅   |
+| P3     | 4.16 | 大型组件拆分                       | 代码规范   | ✅   |
 | P3     | 4.17 | 客户端测试补充                     | 质量保障   |      |
 | P4     | 4.18 | chunking 健壮性                    | 稳定性     |      |
 | P4     | 4.19 | token 估算优化                     | 准确性     |      |

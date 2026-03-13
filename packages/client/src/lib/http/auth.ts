@@ -6,6 +6,7 @@
 
 import type { ApiResponse, AuthResponse } from '@knowledge-agent/shared/types';
 import i18n from '@/i18n/i18n';
+import { logClientError } from '@/lib/logger';
 import { ApiRequestError, unwrapResponse } from './error';
 import { buildHeaders } from './headers';
 
@@ -44,10 +45,7 @@ let refreshPromise: Promise<string> | null = null;
 /** 执行 token 刷新请求（使用原生 fetch，避免与 apiClient 循环依赖） */
 async function executeRefresh(): Promise<string> {
   if (!tokenAccessors?.isAuthenticated()) {
-    throw new ApiRequestError(
-      'AUTH_ERROR',
-      i18n.t('auth.noActiveSession', { ns: 'common' })
-    );
+    throw new ApiRequestError('AUTH_ERROR', i18n.t('auth.noActiveSession', { ns: 'common' }));
   }
 
   try {
@@ -76,6 +74,7 @@ async function executeRefresh(): Promise<string> {
 
     return accessToken;
   } catch (error) {
+    logClientError('http.auth.executeRefresh', error);
     tokenAccessors?.onAuthError();
     throw error;
   }
