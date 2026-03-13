@@ -22,6 +22,12 @@ export interface ToolStep {
   status: 'running' | 'completed';
 }
 
+export interface StreamControls {
+  push: (text: string) => void;
+  flush: () => void;
+  reset: () => void;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -50,13 +56,22 @@ export interface ChatPanelState {
   open: (kbId?: string | null) => void;
   close: () => void;
   toggle: () => void;
-  sendMessage: (content: string, getAccessToken: () => string | null) => Promise<void>;
+  sendMessage: (
+    content: string,
+    getAccessToken: () => string | null,
+    stream?: StreamControls
+  ) => Promise<void>;
   editMessage: (
     messageId: string,
     content: string,
-    getAccessToken: () => string | null
+    getAccessToken: () => string | null,
+    stream?: StreamControls
   ) => Promise<void>;
-  retryMessage: (messageId: string, getAccessToken: () => string | null) => Promise<void>;
+  retryMessage: (
+    messageId: string,
+    getAccessToken: () => string | null,
+    stream?: StreamControls
+  ) => Promise<void>;
   stopGeneration: () => void;
   setDocumentScope: (ids: string[]) => void;
   clearMessages: () => void;

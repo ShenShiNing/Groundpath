@@ -71,14 +71,12 @@ export function ChatPageConversation({
                 >
                   <ChatMessage
                     message={message}
+                    canEdit={canEdit}
+                    canRegenerate={message.role === 'assistant' && !message.isLoading}
                     onCitationClick={onCitationClick}
-                    onCopy={(format) => onCopyMessage(message.content, format)}
-                    onEdit={canEdit ? (content) => onEditMessage(message.id, content) : undefined}
-                    onRegenerate={
-                      message.role === 'assistant' && !message.isLoading
-                        ? () => onRetry(message.id)
-                        : undefined
-                    }
+                    onCopyMessage={onCopyMessage}
+                    onEditMessage={onEditMessage}
+                    onRegenerateMessage={onRetry}
                   />
                 </div>
               );

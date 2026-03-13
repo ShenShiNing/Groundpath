@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useKBDocuments, useKnowledgeBases } from '@/hooks';
+import { useStreamBuffer } from '@/hooks/useStreamBuffer';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { getAccessTokenSnapshot, useChatPanelStore, type Citation } from '@/stores';
 import { toast } from 'sonner';
@@ -11,6 +12,8 @@ import {
   getProcessingDocumentCount,
   getSearchableDocuments,
 } from './utils';
+
+const AUTO_SCROLL_THRESHOLD_PX = 48;
 
 export function useChatPageController() {
   const { t } = useTranslation('chat');
@@ -29,6 +32,7 @@ export function useChatPageController() {
   const editMessage = useChatPanelStore((state) => state.editMessage);
   const retryMessage = useChatPanelStore((state) => state.retryMessage);
   const stopGeneration = useChatPanelStore((state) => state.stopGeneration);
+  const appendToLastMessage = useChatPanelStore((state) => state.appendToLastMessage);
   const setDocumentScope = useChatPanelStore((state) => state.setDocumentScope);
   const clearMessages = useChatPanelStore((state) => state.clearMessages);
   const startNewConversation = useChatPanelStore((state) => state.startNewConversation);
@@ -68,6 +72,13 @@ export function useChatPageController() {
     () => messages.some((message) => !message.isLoading && message.content.trim().length > 0),
     [messages]
   );
+  const streamBuffer = useStreamBuffer(appendToLastMessage);
+
+  const getMessagesViewport = useCallback((): HTMLDivElement | null => {
+    return messagesEndRef.current?.closest(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLDivElement | null;
+  }, []);
 
   useEffect(() => {
     if (knowledgeBases.length === 0) {
@@ -124,8 +135,21 @@ export function useChatPageController() {
       return;
     }
 
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [focusMessageId, messages]);
+    const viewport = getMessagesViewport();
+    const isNearBottom =
+      !viewport ||
+      viewport.scrollTop + viewport.clientHeight >=
+        viewport.scrollHeight - AUTO_SCROLL_THRESHOLD_PX;
+
+    if (!isNearBottom) {
+      return;
+    }
+
+    messagesEndRef.current?.scrollIntoView({
+      behavior: isLoading ? 'auto' : 'smooth',
+      block: 'end',
+    });
+  }, [focusMessageId, getMessagesViewport, isLoading, messages]);
 
   useEffect(() => {
     if (!focusMessageId || messages.length === 0) return;
@@ -181,24 +205,29 @@ export function useChatPageController() {
       if (knowledgeBaseId !== targetKnowledgeBaseId) {
         open(targetKnowledgeBaseId);
       }
-      void sendMessage(content, getAccessTokenSnapshot);
+      void sendMessage(content, getAccessTokenSnapshot, streamBuffer);
     },
-    [knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage]
+    [knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage, streamBuffer]
   );
 
   const handleRetry = useCallback(
     (messageId: string) => {
-      void retryMessage(messageId, getAccessTokenSnapshot);
+      void retryMessage(messageId, getAccessTokenSnapshot, streamBuffer);
     },
-    [retryMessage]
+    [retryMessage, streamBuffer]
   );
 
   const handleEditMessage = useCallback(
     (messageId: string, content: string) => {
-      void editMessage(messageId, content, getAccessTokenSnapshot);
+      void editMessage(messageId, content, getAccessTokenSnapshot, streamBuffer);
     },
-    [editMessage]
+    [editMessage, streamBuffer]
   );
+
+  const handleStopGeneration = useCallback(() => {
+    streamBuffer.flush();
+    stopGeneration();
+  }, [stopGeneration, streamBuffer]);
 
   const handleCitationClick = useCallback((citation: Citation) => {
     setPreviewCitation(citation);
@@ -272,7 +301,7 @@ export function useChatPageController() {
     setCreateKbDialogOpen,
     highlightedMessageId,
     messagesEndRef,
-    stopGeneration,
+    stopGeneration: handleStopGeneration,
     setDocumentScope,
     startNewConversation,
     clearMessages,

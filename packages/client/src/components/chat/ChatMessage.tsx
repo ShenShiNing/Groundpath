@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Copy,
   RefreshCw,
@@ -31,10 +31,12 @@ import { useTranslation } from 'react-i18next';
 
 export interface ChatMessageProps {
   message: ChatMessageType;
+  canEdit?: boolean;
+  canRegenerate?: boolean;
   onCitationClick: (citation: Citation) => void;
-  onCopy?: (format: CopyFormat) => void | Promise<void>;
-  onEdit?: (content: string) => void | Promise<void>;
-  onRegenerate?: () => void;
+  onCopyMessage?: (content: string, format: CopyFormat) => void | Promise<void>;
+  onEditMessage?: (messageId: string, content: string) => void | Promise<void>;
+  onRegenerateMessage?: (messageId: string) => void;
 }
 
 const PURE_CODE_BLOCK_PATTERN = /^\s*(?:```[\s\S]*?```|~~~[\s\S]*?~~~)\s*$/;
@@ -50,12 +52,14 @@ function formatTime(date: Date): string {
 // Component
 // ============================================================================
 
-export function ChatMessage({
+function ChatMessageBase({
   message,
+  canEdit = false,
+  canRegenerate = false,
   onCitationClick,
-  onCopy,
-  onEdit,
-  onRegenerate,
+  onCopyMessage,
+  onEditMessage,
+  onRegenerateMessage,
 }: ChatMessageProps) {
   const { t } = useTranslation('chat');
   const isUser = message.role === 'user';
@@ -83,9 +87,9 @@ export function ChatMessage({
 
   const handleCopy = useCallback(
     async (format: CopyFormat) => {
-      if (!onCopy) return;
+      if (!onCopyMessage) return;
       try {
-        await onCopy(format);
+        await onCopyMessage(message.content, format);
         setCopiedFormat(format);
         if (copyTimerRef.current !== null) {
           window.clearTimeout(copyTimerRef.current);
@@ -95,11 +99,11 @@ export function ChatMessage({
         setCopiedFormat(null);
       }
     },
-    [onCopy]
+    [message.content, onCopyMessage]
   );
 
   const handleSubmitEdit = useCallback(async () => {
-    if (!onEdit) return;
+    if (!onEditMessage) return;
 
     const trimmedDraft = draft.trim();
     if (!trimmedDraft || trimmedDraft === message.content.trim()) {
@@ -110,12 +114,12 @@ export function ChatMessage({
 
     setIsSavingEdit(true);
     try {
-      await onEdit(trimmedDraft);
+      await onEditMessage(message.id, trimmedDraft);
       setIsEditing(false);
     } finally {
       setIsSavingEdit(false);
     }
-  }, [draft, message.content, onEdit]);
+  }, [draft, message.content, message.id, onEditMessage]);
 
   // User message
   if (isUser) {
@@ -177,7 +181,7 @@ export function ChatMessage({
               </div>
               <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
                 <span>{formatTime(message.timestamp)}</span>
-                {onEdit && (
+                {canEdit && onEditMessage && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -237,6 +241,7 @@ export function ChatMessage({
             content={message.content}
             citations={message.citations}
             onCitationClick={onCitationClick}
+            isStreaming={Boolean(message.isLoading)}
           />
           {message.isLoading && (
             <Loader2 className="inline-block size-3.5 ml-1 text-muted-foreground animate-spin align-text-bottom" />
@@ -258,7 +263,7 @@ export function ChatMessage({
             <span className="text-[10px] text-muted-foreground mr-1">
               {formatTime(message.timestamp)}
             </span>
-            {onCopy && !isPureCodeBlock && (
+            {onCopyMessage && !isPureCodeBlock && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -294,12 +299,12 @@ export function ChatMessage({
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            {onRegenerate && (
+            {canRegenerate && onRegenerateMessage && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 text-[10px] text-muted-foreground cursor-pointer"
-                onClick={onRegenerate}
+                onClick={() => onRegenerateMessage(message.id)}
               >
                 <RefreshCw className="size-3 mr-1" />
                 {t('message.regenerate')}
@@ -311,3 +316,6 @@ export function ChatMessage({
     </div>
   );
 }
+
+export const ChatMessage = memo(ChatMessageBase);
+ChatMessage.displayName = 'ChatMessage';

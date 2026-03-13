@@ -4,7 +4,7 @@ import { conversationApi, sendMessageWithSSE } from '@/api';
 import { logClientError } from '@/lib/logger';
 import { queryClient } from '@/lib/query';
 import type { ConversationWithMessages, MessageInfo } from '@knowledge-agent/shared/types';
-import type { ChatMessage, ChatPanelState, ToolStep } from './chatPanelStore.types';
+import type { ChatMessage, ChatPanelState, StreamControls, ToolStep } from './chatPanelStore.types';
 import { toStoreCitation, agentTraceToToolSteps } from './chatPanelStore.types';
 
 export type { Citation, ToolStep, ChatMessage, ChatPanelState } from './chatPanelStore.types';
@@ -103,7 +103,11 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     }
   },
 
-  sendMessage: async (content: string, getAccessToken: () => string | null) => {
+  sendMessage: async (
+    content: string,
+    getAccessToken: () => string | null,
+    stream?: StreamControls
+  ) => {
     const {
       knowledgeBaseId,
       conversationId,
@@ -117,6 +121,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
 
     const trimmedContent = content.trim();
     if (!trimmedContent) return;
+    stream?.reset();
 
     // Create conversation if needed
     let convId = conversationId;
@@ -181,6 +186,10 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       },
       {
         onChunk: (text) => {
+          if (stream) {
+            stream.push(text);
+            return;
+          }
           appendToLastMessage(text);
         },
         onSources: (citations) => {
@@ -202,6 +211,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           });
         },
         onDone: (data) => {
+          stream?.flush();
           const lastMsg = get().messages[get().messages.length - 1];
           if (lastMsg && !lastMsg.content.trim()) {
             updateLastMessage({
@@ -221,6 +231,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           set({ isLoading: false, abortController: null });
         },
         onError: (error) => {
+          stream?.flush();
           const fallbackMessage = getChatErrorMessage(error);
           updateLastMessage({
             content: get().messages[get().messages.length - 1]?.content || fallbackMessage,
@@ -236,7 +247,12 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     set({ abortController });
   },
 
-  editMessage: async (messageId: string, content: string, getAccessToken: () => string | null) => {
+  editMessage: async (
+    messageId: string,
+    content: string,
+    getAccessToken: () => string | null,
+    stream?: StreamControls
+  ) => {
     const trimmedContent = content.trim();
     if (!trimmedContent) return;
 
@@ -261,6 +277,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     }
 
     if (isPendingLatestUser) {
+      stream?.flush();
       stopGeneration();
     }
 
@@ -281,7 +298,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       return;
     }
 
-    await get().sendMessage(trimmedContent, getAccessToken);
+    await get().sendMessage(trimmedContent, getAccessToken, stream);
   },
 
   stopGeneration: () => {
@@ -294,7 +311,11 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     }
   },
 
-  retryMessage: async (messageId: string, getAccessToken: () => string | null) => {
+  retryMessage: async (
+    messageId: string,
+    getAccessToken: () => string | null,
+    stream?: StreamControls
+  ) => {
     if (get().isLoading) return;
 
     const { conversationId, messages } = get();
@@ -327,7 +348,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       return;
     }
 
-    await get().sendMessage(userContent, getAccessToken);
+    await get().sendMessage(userContent, getAccessToken, stream);
   },
 
   setDocumentScope: (ids: string[]) => {

@@ -123,7 +123,11 @@ vi.mock('@/components/ui/dialog', () => ({
 }));
 
 vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollArea: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ScrollArea: ({ children }: { children: React.ReactNode }) => (
+    <div>
+      <div data-slot="scroll-area-viewport">{children}</div>
+    </div>
+  ),
 }));
 
 vi.mock('@/components/ui/skeleton', () => ({
@@ -165,24 +169,28 @@ vi.mock('@/components/chat', () => ({
   },
   ChatMessage: ({
     message,
+    canEdit,
+    canRegenerate,
     onCitationClick,
-    onCopy,
-    onEdit,
-    onRegenerate,
+    onCopyMessage,
+    onEditMessage,
+    onRegenerateMessage,
   }: {
     message: StoreChatMessage;
+    canEdit?: boolean;
+    canRegenerate?: boolean;
     onCitationClick: (citation: Citation) => void;
-    onCopy: (format: 'plain' | 'markdown') => void;
-    onEdit?: (content: string) => void;
-    onRegenerate?: () => void;
+    onCopyMessage: (content: string, format: 'plain' | 'markdown') => void;
+    onEditMessage?: (messageId: string, content: string) => void;
+    onRegenerateMessage?: (messageId: string) => void;
   }) => (
     <article>
       <p>{message.content}</p>
-      <button type="button" onClick={() => onCopy('plain')}>
+      <button type="button" onClick={() => onCopyMessage(message.content, 'plain')}>
         copy-message
       </button>
-      {onEdit ? (
-        <button type="button" onClick={() => onEdit(`edited:${message.id}`)}>
+      {canEdit && onEditMessage ? (
+        <button type="button" onClick={() => onEditMessage(message.id, `edited:${message.id}`)}>
           edit-message
         </button>
       ) : null}
@@ -191,8 +199,8 @@ vi.mock('@/components/chat', () => ({
           open-citation
         </button>
       ) : null}
-      {onRegenerate ? (
-        <button type="button" onClick={onRegenerate}>
+      {canRegenerate && onRegenerateMessage ? (
+        <button type="button" onClick={() => onRegenerateMessage(message.id)}>
           regenerate-message
         </button>
       ) : null}
@@ -393,7 +401,15 @@ describe('ChatPage', () => {
     );
     await fireClick(sendButton ?? null);
 
-    expect(sendMessage).toHaveBeenCalledWith('Explain the ready guide', expect.any(Function));
+    expect(sendMessage).toHaveBeenCalledWith(
+      'Explain the ready guide',
+      expect.any(Function),
+      expect.objectContaining({
+        push: expect.any(Function),
+        flush: expect.any(Function),
+        reset: expect.any(Function),
+      })
+    );
 
     const uploadButton = Array.from(view.container.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('actions.uploadFile')
@@ -531,7 +547,16 @@ describe('ChatPage', () => {
     );
     await fireClick(editButton ?? null);
 
-    expect(editMessage).toHaveBeenCalledWith('user-1', 'edited:user-1', expect.any(Function));
+    expect(editMessage).toHaveBeenCalledWith(
+      'user-1',
+      'edited:user-1',
+      expect.any(Function),
+      expect.objectContaining({
+        push: expect.any(Function),
+        flush: expect.any(Function),
+        reset: expect.any(Function),
+      })
+    );
 
     await view.unmount();
   });

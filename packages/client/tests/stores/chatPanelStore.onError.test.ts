@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SSEHandlers } from '@/api/chat';
+import type { StreamControls } from '@/stores/chatPanelStore.types';
 
 let capturedHandlers: SSEHandlers | null = null;
 
@@ -20,6 +21,25 @@ vi.mock('@/api/chat', () => ({
 import { useChatPanelStore } from '@/stores/chatPanelStore';
 
 describe('chatPanelStore onError handling', () => {
+  function createBufferedStream(): StreamControls {
+    let buffer = '';
+
+    return {
+      push: (text: string) => {
+        buffer += text;
+      },
+      flush: () => {
+        if (!buffer) return;
+        const nextText = buffer;
+        buffer = '';
+        useChatPanelStore.getState().appendToLastMessage(nextText);
+      },
+      reset: () => {
+        buffer = '';
+      },
+    };
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     capturedHandlers = null;
@@ -53,6 +73,23 @@ describe('chatPanelStore onError handling', () => {
 
     const state = useChatPanelStore.getState();
     expect(state.messages[1]?.content).toContain('error.llmApiKeyUnreadable');
+    expect(state.messages[1]?.isLoading).toBe(false);
+    expect(state.isLoading).toBe(false);
+  });
+
+  it('flushes buffered chunk content before handling stream errors', async () => {
+    const stream = createBufferedStream();
+
+    await useChatPanelStore.getState().sendMessage('Hello', () => 'token', stream);
+
+    capturedHandlers!.onChunk('Partial answer');
+    capturedHandlers!.onError({
+      code: 'UNEXPECTED_ERROR',
+      message: 'stream failed',
+    });
+
+    const state = useChatPanelStore.getState();
+    expect(state.messages[1]?.content).toBe('Partial answer');
     expect(state.messages[1]?.isLoading).toBe(false);
     expect(state.isLoading).toBe(false);
   });

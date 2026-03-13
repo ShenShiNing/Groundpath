@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SSEHandlers } from '@/api/chat';
+import type { StreamControls } from '@/stores/chatPanelStore.types';
 
 // Capture SSE handlers passed to sendMessageWithSSE
 let capturedHandlers: SSEHandlers | null = null;
@@ -21,6 +22,25 @@ vi.mock('@/api/chat', () => ({
 import { useChatPanelStore } from '@/stores/chatPanelStore';
 
 describe('chatPanelStore onDone empty content guard', () => {
+  function createBufferedStream(): StreamControls {
+    let buffer = '';
+
+    return {
+      push: (text: string) => {
+        buffer += text;
+      },
+      flush: () => {
+        if (!buffer) return;
+        const nextText = buffer;
+        buffer = '';
+        useChatPanelStore.getState().appendToLastMessage(nextText);
+      },
+      reset: () => {
+        buffer = '';
+      },
+    };
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     capturedHandlers = null;
@@ -74,6 +94,20 @@ describe('chatPanelStore onDone empty content guard', () => {
     expect(finalState.messages[1]?.content).toBe('Real answer');
     expect(finalState.messages[1]?.id).toBe('msg-server-2');
     expect(finalState.messages[1]?.stopReason).toBe('answered');
+    expect(finalState.messages[1]?.isLoading).toBe(false);
+  });
+
+  it('flushes buffered chunk content before applying the done payload', async () => {
+    const stream = createBufferedStream();
+
+    await useChatPanelStore.getState().sendMessage('Hello', () => 'token', stream);
+
+    capturedHandlers!.onChunk('Buffered answer');
+    capturedHandlers!.onDone({ messageId: 'msg-server-3', stopReason: 'answered' });
+
+    const finalState = useChatPanelStore.getState();
+    expect(finalState.messages[1]?.content).toBe('Buffered answer');
+    expect(finalState.messages[1]?.id).toBe('msg-server-3');
     expect(finalState.messages[1]?.isLoading).toBe(false);
   });
 });
