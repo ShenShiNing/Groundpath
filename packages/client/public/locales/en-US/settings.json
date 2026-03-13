@@ -57,7 +57,8 @@
     "testFailed": "Connection failed. Please check API Key, model, and Base URL.",
     "testSuccessLatency": "Connection successful ({{latency}}ms)",
     "testSuccess": "Connection successful",
-    "testError": "Connection test failed"
+    "testError": "Connection test failed",
+    "apiKeyUnreadable": "The saved API key can no longer be decrypted by this server. Enter it again and save to continue."
   },
   "sidebar": {
     "statusTitle": "Configuration Overview",

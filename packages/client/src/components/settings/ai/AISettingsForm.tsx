@@ -123,6 +123,9 @@ export function AISettingsForm() {
   const isClearing = deleteMutation.isPending;
   const isBusy = isSaving || isClearing;
   const hasSavedKey = !!(config?.hasApiKey && config.provider === values.provider);
+  const hasUnreadableSavedKey = !!(
+    config?.apiKeyStatus === 'unreadable' && config.provider === values.provider
+  );
   const hasModel = !!values.model;
   const canTestConnection =
     !isBusy &&
@@ -251,6 +254,7 @@ export function AISettingsForm() {
         showApiKeyField={showApiKeyField}
         showApiKey={showApiKey}
         hasSavedKey={hasSavedKey}
+        showUnreadableApiKeyWarning={hasUnreadableSavedKey}
         showBaseUrlField={showBaseUrlField}
         optionalBaseUrl={optionalBaseUrl}
         defaultBaseUrl={defaultBaseUrl}

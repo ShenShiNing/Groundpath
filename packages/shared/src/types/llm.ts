@@ -17,6 +17,7 @@ export interface LLMConfigInfo {
   model: string;
   apiKeyMasked: string | null; // Last 4 chars only, e.g., "****1234"
   hasApiKey: boolean;
+  apiKeyStatus?: 'missing' | 'valid' | 'unreadable';
   baseUrl: string | null;
   temperature: number;
   maxTokens: number;

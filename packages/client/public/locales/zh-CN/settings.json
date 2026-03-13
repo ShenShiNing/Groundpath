@@ -57,7 +57,8 @@
     "testFailed": "连接失败，请检查 API Key、模型与 Base URL 配置",
     "testSuccessLatency": "连接成功 ({{latency}}ms)",
     "testSuccess": "连接成功",
-    "testError": "连接测试失败"
+    "testError": "连接测试失败",
+    "apiKeyUnreadable": "检测到已保存的 API Key 无法被当前服务端解密。请重新输入并保存。"
   },
   "sidebar": {
     "statusTitle": "配置概览",

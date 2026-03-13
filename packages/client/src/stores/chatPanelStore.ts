@@ -17,6 +17,17 @@ function invalidateConversationQueries(): void {
   });
 }
 
+function getChatErrorMessage(error: { code: string; message: string }): string {
+  switch (error.code) {
+    case 'LLM_CONFIG_NOT_FOUND':
+      return i18n.t('error.llmNotConfigured', { ns: 'chat' });
+    case 'LLM_DECRYPTION_FAILED':
+      return i18n.t('error.llmApiKeyUnreadable', { ns: 'chat' });
+    default:
+      return `Error: ${error.message}`;
+  }
+}
+
 // ============================================================================
 // Store
 // ============================================================================
@@ -183,10 +194,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           set({ isLoading: false, abortController: null });
         },
         onError: (error) => {
-          const fallbackMessage =
-            error.code === 'LLM_CONFIG_NOT_FOUND'
-              ? i18n.t('error.llmNotConfigured', { ns: 'chat' })
-              : `Error: ${error.message}`;
+          const fallbackMessage = getChatErrorMessage(error);
           updateLastMessage({
             content: get().messages[get().messages.length - 1]?.content || fallbackMessage,
             isLoading: false,

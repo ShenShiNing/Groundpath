@@ -162,6 +162,7 @@
   "error": {
     "conversationFailed": "无法开始对话。请先前往 [AI 设置页面](/settings/ai) 完成模型配置后再试。",
     "llmNotConfigured": "尚未配置 AI 模型。请先前往 [AI 设置页面](/settings/ai) 完成配置后再试。",
+    "llmApiKeyUnreadable": "已保存的 AI API Key 无法被当前服务端解密。请前往 [AI 设置页面](/settings/ai) 重新输入并保存后再试。",
     "emptyResponse": "模型返回了空响应，请重试。",
     "loadFailed": "加载数据失败，请稍后重试。"
   },

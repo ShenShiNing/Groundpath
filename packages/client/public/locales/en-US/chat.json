@@ -162,6 +162,7 @@
   "error": {
     "conversationFailed": "Unable to start a conversation. Please go to [AI Settings](/settings/ai) and configure a model first.",
     "llmNotConfigured": "No AI model configured. Please go to [AI Settings](/settings/ai) to set up a model first.",
+    "llmApiKeyUnreadable": "The saved AI API key can no longer be decrypted by this server. Go to [AI Settings](/settings/ai), enter it again, and save before retrying.",
     "emptyResponse": "The model returned an empty response. Please try again.",
     "loadFailed": "Failed to load data. Please try again later."
   },

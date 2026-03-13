@@ -1,4 +1,4 @@
-import { Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ interface AISettingsCredentialsSectionProps {
   showApiKeyField: boolean;
   showApiKey: boolean;
   hasSavedKey: boolean;
+  showUnreadableApiKeyWarning: boolean;
   showBaseUrlField: boolean;
   optionalBaseUrl: boolean;
   defaultBaseUrl?: string;
@@ -37,6 +38,7 @@ export function AISettingsCredentialsSection({
   showApiKeyField,
   showApiKey,
   hasSavedKey,
+  showUnreadableApiKeyWarning,
   showBaseUrlField,
   optionalBaseUrl,
   defaultBaseUrl,
@@ -109,6 +111,14 @@ export function AISettingsCredentialsSection({
                 {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {showUnreadableApiKeyWarning && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>{t('form.apiKeyUnreadable')}</p>
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               {values.provider === 'custom' ? t('form.apiKeyHelperCustom') : t('form.apiKeyHelper')}
             </p>

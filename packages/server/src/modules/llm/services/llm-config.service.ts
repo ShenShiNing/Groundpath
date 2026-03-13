@@ -11,16 +11,41 @@ import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
 import type { LLMConfig } from '@core/db/schema/ai/llm-configs.schema';
 
-function toConfigInfo(config: LLMConfig): LLMConfigInfo {
-  let apiKeyMasked: string | null = null;
-  if (config.apiKeyEncrypted) {
-    try {
-      const decrypted = encryptionService.decrypt(config.apiKeyEncrypted);
-      apiKeyMasked = encryptionService.maskApiKey(decrypted);
-    } catch {
-      apiKeyMasked = '****';
-    }
+type ApiKeyStatus = NonNullable<LLMConfigInfo['apiKeyStatus']>;
+
+function createApiKeyDecryptionError(userId: string, error: unknown) {
+  logger.error({ error, userId }, 'Failed to decrypt API key');
+  return Errors.auth(
+    LLM_ERROR_CODES.LLM_DECRYPTION_FAILED,
+    'Saved API key can no longer be decrypted. Please update it in AI Settings.',
+    409
+  );
+}
+
+function readStoredApiKey(
+  config: Pick<LLMConfig, 'apiKeyEncrypted'>,
+  options?: { strict?: boolean; userId?: string }
+): { apiKey: string | null; status: ApiKeyStatus } {
+  if (!config.apiKeyEncrypted) {
+    return { apiKey: null, status: 'missing' };
   }
+
+  try {
+    return {
+      apiKey: encryptionService.decrypt(config.apiKeyEncrypted),
+      status: 'valid',
+    };
+  } catch (error) {
+    if (options?.strict && options.userId) {
+      throw createApiKeyDecryptionError(options.userId, error);
+    }
+    return { apiKey: null, status: 'unreadable' };
+  }
+}
+
+function toConfigInfo(config: LLMConfig): LLMConfigInfo {
+  const { apiKey, status } = readStoredApiKey(config);
+  const apiKeyMasked = apiKey ? encryptionService.maskApiKey(apiKey) : null;
 
   return {
     id: config.id,
@@ -28,7 +53,8 @@ function toConfigInfo(config: LLMConfig): LLMConfigInfo {
     provider: config.provider as LLMProviderType,
     model: config.model,
     apiKeyMasked,
-    hasApiKey: !!config.apiKeyEncrypted,
+    hasApiKey: status === 'valid',
+    apiKeyStatus: status,
     baseUrl: config.baseUrl,
     temperature: Number(config.temperature),
     maxTokens: config.maxTokens,
@@ -117,12 +143,7 @@ export const llmConfigService = {
     const config = await llmConfigRepository.findByUserId(userId);
     if (!config?.apiKeyEncrypted) return null;
 
-    try {
-      return encryptionService.decrypt(config.apiKeyEncrypted);
-    } catch (error) {
-      logger.error({ error, userId }, 'Failed to decrypt API key');
-      throw Errors.auth(LLM_ERROR_CODES.LLM_DECRYPTION_FAILED, 'Failed to decrypt API key', 500);
-    }
+    return readStoredApiKey(config, { strict: true, userId }).apiKey;
   },
 
   /**
@@ -140,15 +161,7 @@ export const llmConfigService = {
     const config = await llmConfigRepository.findByUserId(userId);
     if (!config) return null;
 
-    let apiKey: string | null = null;
-    if (config.apiKeyEncrypted) {
-      try {
-        apiKey = encryptionService.decrypt(config.apiKeyEncrypted);
-      } catch (error) {
-        logger.error({ error, userId }, 'Failed to decrypt API key');
-        throw Errors.auth(LLM_ERROR_CODES.LLM_DECRYPTION_FAILED, 'Failed to decrypt API key', 500);
-      }
-    }
+    const { apiKey } = readStoredApiKey(config, { strict: true, userId });
 
     return {
       provider: config.provider as LLMProviderType,

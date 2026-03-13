@@ -20,10 +20,18 @@ export function AISettingsPage() {
   const { data: config } = useLLMConfig();
   const { data: providers = [] } = useLLMProviders();
 
-  const isConfigured = !!config?.provider && !!config?.model;
-  const currentProviderName = config?.provider
-    ? (providers.find((p) => p.provider === config.provider)?.name ?? config.provider)
+  const currentProvider = config?.provider
+    ? providers.find((provider) => provider.provider === config.provider)
     : null;
+  const currentProviderName = currentProvider?.name ?? config?.provider ?? null;
+  const requiresApiKey =
+    currentProvider?.requiresApiKey ?? (config?.provider ? config.provider !== 'ollama' : false);
+  const requiresBaseUrl = currentProvider?.requiresBaseUrl ?? config?.provider === 'custom';
+  const isConfigured =
+    !!config?.provider &&
+    !!config?.model &&
+    (!requiresApiKey || !!config?.hasApiKey) &&
+    (!requiresBaseUrl || !!config?.baseUrl);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">

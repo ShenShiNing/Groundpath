@@ -120,6 +120,7 @@ vi.mock('@/components/settings/ai/sections/AISettingsCredentialsSection', () => 
     values,
     showBaseUrlField,
     showApiKeyField,
+    showUnreadableApiKeyWarning,
     onProviderChange,
     onApiKeyChange,
     onBaseUrlChange,
@@ -127,6 +128,7 @@ vi.mock('@/components/settings/ai/sections/AISettingsCredentialsSection', () => 
     values: { provider: string; apiKey: string; baseUrl: string };
     showBaseUrlField: boolean;
     showApiKeyField: boolean;
+    showUnreadableApiKeyWarning: boolean;
     onProviderChange: (provider: 'openai' | 'custom' | 'ollama') => void;
     onApiKeyChange: (value: string) => void;
     onBaseUrlChange: (value: string) => void;
@@ -144,6 +146,9 @@ vi.mock('@/components/settings/ai/sections/AISettingsCredentialsSection', () => 
       </button>
       <div data-testid="show-api-key">{showApiKeyField ? 'yes' : 'no'}</div>
       <div data-testid="show-base-url">{showBaseUrlField ? 'yes' : 'no'}</div>
+      <div data-testid="show-unreadable-api-key-warning">
+        {showUnreadableApiKeyWarning ? 'yes' : 'no'}
+      </div>
       <input
         id="apiKey"
         value={values.apiKey}
@@ -287,6 +292,32 @@ describe('AISettingsForm', () => {
     );
     expect((view.container.querySelector('#baseUrl') as HTMLInputElement | null)?.value).toBe('');
     expect(storeState.resetPendingCredentials).toHaveBeenCalled();
+
+    await view.unmount();
+  });
+
+  it('should expose unreadable saved api key warning for the active provider', async () => {
+    setConfig({
+      id: 'cfg-openai-broken-key',
+      userId: 'user-1',
+      provider: 'openai',
+      model: 'gpt-4o-mini',
+      apiKeyMasked: null,
+      hasApiKey: false,
+      apiKeyStatus: 'unreadable',
+      baseUrl: null,
+      temperature: 0.7,
+      maxTokens: 2048,
+      topP: 1,
+      createdAt: new Date('2026-03-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-03-02T00:00:00.000Z'),
+    });
+
+    const view = await render(<AISettingsForm />);
+
+    expect(
+      view.container.querySelector('[data-testid="show-unreadable-api-key-warning"]')?.textContent
+    ).toBe('yes');
 
     await view.unmount();
   });
