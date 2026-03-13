@@ -2,8 +2,9 @@ import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import type { Citation, MessageMetadata } from '@knowledge-agent/shared/types';
 import { resolveTools } from '@modules/agent';
-import { llmService } from '@modules/llm';
+import { llmService, type LLMProvider } from '@modules/llm';
 import { searchService } from '@modules/rag';
+import { chatConfig } from '@core/config/env/configs';
 import { createLogger } from '@core/logger';
 import { structuredRagMetrics } from '@core/observability';
 import { conversationRepository } from '../repositories/conversation.repository';
@@ -22,6 +23,33 @@ import type { EnrichedSearchResult, SendMessageOptions, StreamContext } from './
 
 const logger = createLogger('chat.service');
 
+const TITLE_GEN_SYSTEM_PROMPT =
+  'Generate a concise conversation title (max 20 characters) based on the user message below. ' +
+  'Reply with only the title text, no quotes or extra formatting. ' +
+  'Use the same language as the user message.';
+
+async function generateAITitle(provider: LLMProvider, content: string): Promise<string | null> {
+  const result = await provider.generate(
+    [
+      { role: 'system', content: TITLE_GEN_SYSTEM_PROMPT },
+      { role: 'user', content },
+    ],
+    {
+      maxTokens: chatConfig.titleGenMaxTokens,
+      temperature: chatConfig.titleGenTemperature,
+    }
+  );
+
+  let title = result
+    .trim()
+    .replace(/^["'"\u201C\u201D\u2018\u2019]+|["'"\u201C\u201D\u2018\u2019]+$/g, '');
+  if (!title) return null;
+  if (title.length > chatConfig.titleMaxLength) {
+    title = title.substring(0, chatConfig.titleMaxLength - 3) + '...';
+  }
+  return title;
+}
+
 async function prepareChatRequest(options: SendMessageOptions) {
   const { userId, conversationId, content, documentIds, editedMessageId } = options;
 
@@ -37,7 +65,8 @@ async function prepareChatRequest(options: SendMessageOptions) {
   }
 
   const messageCount = await messageService.count(conversationId);
-  if (messageCount === 1) {
+  const isFirstMessage = messageCount === 1;
+  if (isFirstMessage) {
     const title = conversationService.generateTitle(content);
     await conversationRepository.update(conversationId, { title, updatedBy: userId });
   }
@@ -51,7 +80,7 @@ async function prepareChatRequest(options: SendMessageOptions) {
   const provider = await llmService.getProviderForUser(userId);
   const genOptions = await llmService.getOptionsForUser(userId);
 
-  return { conversation, tools, provider, genOptions, userMessageId };
+  return { conversation, tools, provider, genOptions, userMessageId, isFirstMessage };
 }
 
 export const chatService = {
@@ -65,7 +94,7 @@ export const chatService = {
     res.socket?.setTimeout(0);
 
     try {
-      const { conversation, tools, provider, genOptions, userMessageId } =
+      const { conversation, tools, provider, genOptions, userMessageId, isFirstMessage } =
         await prepareChatRequest(options);
       const assistantMessageId = uuidv4();
       const abortController = new AbortController();
@@ -106,6 +135,25 @@ export const chatService = {
 
       if (clientDisconnected || res.writableEnded) return;
 
+      let generatedTitle: string | undefined;
+      if (isFirstMessage) {
+        try {
+          const aiTitle = await generateAITitle(provider, content);
+          if (aiTitle) {
+            await conversationRepository.update(conversationId, {
+              title: aiTitle,
+              updatedBy: userId,
+            });
+            generatedTitle = aiTitle;
+          }
+        } catch (err) {
+          logger.warn(
+            { err, conversationId },
+            'AI title generation failed, keeping fallback title'
+          );
+        }
+      }
+
       await conversationRepository.touch(conversationId, userId);
       sendSSE(res, {
         type: 'done',
@@ -113,6 +161,7 @@ export const chatService = {
           messageId: assistantMessageId,
           userMessageId,
           stopReason: ctx.completionStopReason,
+          title: generatedTitle,
         },
       });
       res.end();
@@ -147,7 +196,8 @@ export const chatService = {
     citations?: Citation[];
   }> {
     const { userId, conversationId, content, documentIds } = options;
-    const { conversation, tools, provider, genOptions } = await prepareChatRequest(options);
+    const { conversation, tools, provider, genOptions, isFirstMessage } =
+      await prepareChatRequest(options);
 
     const useAgentMode = tools.length > 0 && !!provider.generateWithTools;
     if (useAgentMode) {
@@ -195,6 +245,18 @@ export const chatService = {
       });
 
       await conversationRepository.touch(conversationId, userId);
+
+      if (isFirstMessage) {
+        generateAITitle(provider, content)
+          .then(async (title) => {
+            if (title) {
+              await conversationRepository.update(conversationId, { title, updatedBy: userId });
+            }
+          })
+          .catch((err) => {
+            logger.warn({ err, conversationId }, 'AI title generation failed');
+          });
+      }
 
       return {
         messageId: assistantMessage.id,
@@ -260,6 +322,18 @@ export const chatService = {
     });
 
     await conversationRepository.touch(conversationId, userId);
+
+    if (isFirstMessage) {
+      generateAITitle(provider, content)
+        .then(async (title) => {
+          if (title) {
+            await conversationRepository.update(conversationId, { title, updatedBy: userId });
+          }
+        })
+        .catch((err) => {
+          logger.warn({ err, conversationId }, 'AI title generation failed');
+        });
+    }
 
     return {
       messageId: assistantMessage.id,

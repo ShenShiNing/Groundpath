@@ -10,6 +10,9 @@ export {
 // Agent & VLM
 export { agentDefaults, vlmDefaults } from './agent.defaults';
 
+// Chat
+export { chatDefaults } from './chat.defaults';
+
 // Auth, email verification, storage signing
 export { authDefaults, emailVerificationDefaults, storageSigningDefaults } from './auth.defaults';
 

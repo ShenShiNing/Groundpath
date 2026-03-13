@@ -140,6 +140,7 @@ export interface SSEHandlers {
   onDone: (data: {
     messageId: string;
     userMessageId?: string;
+    title?: string;
     stopReason?: import('@knowledge-agent/shared/types').AgentStopReason;
   }) => void;
   onError: (error: { code: string; message: string }) => void;

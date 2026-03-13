@@ -2,6 +2,7 @@ import {
   agentDefaults,
   authDefaults,
   backfillDefaults,
+  chatDefaults,
   documentAIDefaults,
   documentDefaults,
   documentIndexDefaults,
@@ -156,6 +157,8 @@ export const agentConfig = {
   ...agentDefaults,
   tavilyApiKey: validatedEnv.TAVILY_API_KEY,
 } as const;
+
+export const chatConfig = { ...chatDefaults } as const;
 
 export const vlmConfig = {
   ...vlmDefaults,

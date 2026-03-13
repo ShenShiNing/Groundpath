@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import i18n from '@/i18n/i18n';
 import { conversationApi, sendMessageWithSSE } from '@/api';
 import { logClientError } from '@/lib/logger';
-import { queryClient } from '@/lib/query';
+import { queryClient, queryKeys } from '@/lib/query';
 import type { ConversationWithMessages, MessageInfo } from '@knowledge-agent/shared/types';
 import type { ChatMessage, ChatPanelState, StreamControls, ToolStep } from './chatPanelStore.types';
 import { toStoreCitation, agentTraceToToolSteps } from './chatPanelStore.types';
@@ -11,10 +11,7 @@ export type { Citation, ToolStep, ChatMessage, ChatPanelState } from './chatPane
 
 function invalidateConversationQueries(): void {
   void queryClient.invalidateQueries({
-    predicate: (query) =>
-      Array.isArray(query.queryKey) &&
-      query.queryKey.includes('knowledgeBases') &&
-      query.queryKey.includes('conversations'),
+    queryKey: queryKeys.conversations.lists(),
   });
 }
 
