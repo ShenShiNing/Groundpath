@@ -109,6 +109,14 @@ async function renderWithClient(client: QueryClient, ui: React.ReactElement) {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
+function getQueryStaleTime(queryClient: QueryClient, queryKey: readonly unknown[]) {
+  const options = queryClient.getQueryCache().find({ queryKey })?.options as
+    | { staleTime?: number }
+    | undefined;
+
+  return options?.staleTime;
+}
+
 describe('useConversations hooks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -139,14 +147,12 @@ describe('useConversations hooks', () => {
         queryClient.getQueryData(queryKeys.conversations.search(searchParams)) !== undefined
     );
 
-    expect(
-      queryClient.getQueryCache().find({ queryKey: queryKeys.conversations.list('__global__') })
-        ?.options.staleTime
-    ).toBe(30_000);
-    expect(
-      queryClient.getQueryCache().find({ queryKey: queryKeys.conversations.search(searchParams) })
-        ?.options.staleTime
-    ).toBe(30_000);
+    expect(getQueryStaleTime(queryClient, queryKeys.conversations.list('__global__'))).toBe(
+      30_000
+    );
+    expect(getQueryStaleTime(queryClient, queryKeys.conversations.search(searchParams))).toBe(
+      30_000
+    );
 
     await view.unmount();
   });
@@ -176,23 +182,39 @@ describe('useConversations hooks', () => {
       conversationSearchFixture
     );
 
-    let mutation:
-      | {
-          updateConversation: ReturnType<typeof useUpdateConversation>;
-        }
-      | undefined;
-
-    function MutationProbe() {
-      mutation = {
-        updateConversation: useUpdateConversation(),
+    const mutationRef: {
+      current?: {
+        updateConversation: ReturnType<typeof useUpdateConversation>;
       };
+    } = {};
+
+    function MutationProbe({
+      onReady,
+    }: {
+      onReady: (mutation: { updateConversation: ReturnType<typeof useUpdateConversation> }) => void;
+    }) {
+      const updateConversation = useUpdateConversation();
+
+      React.useEffect(() => {
+        onReady({ updateConversation });
+      }, [onReady, updateConversation]);
+
       return null;
     }
 
-    const view = await renderWithClient(queryClient, <MutationProbe />);
+    const view = await renderWithClient(
+      queryClient,
+      <MutationProbe
+        onReady={(mutation) => {
+          mutationRef.current = mutation;
+        }}
+      />
+    );
+
+    await waitFor(() => mutationRef.current !== undefined);
 
     await act(async () => {
-      await mutation?.updateConversation.mutateAsync({
+      await mutationRef.current?.updateConversation.mutateAsync({
         id: conversationFixture.id,
         data: { title: updatedConversation.title },
       });
@@ -251,23 +273,39 @@ describe('useConversations hooks', () => {
       conversationSearchFixture
     );
 
-    let mutation:
-      | {
-          deleteConversation: ReturnType<typeof useDeleteConversation>;
-        }
-      | undefined;
-
-    function MutationProbe() {
-      mutation = {
-        deleteConversation: useDeleteConversation(),
+    const mutationRef: {
+      current?: {
+        deleteConversation: ReturnType<typeof useDeleteConversation>;
       };
+    } = {};
+
+    function MutationProbe({
+      onReady,
+    }: {
+      onReady: (mutation: { deleteConversation: ReturnType<typeof useDeleteConversation> }) => void;
+    }) {
+      const deleteConversation = useDeleteConversation();
+
+      React.useEffect(() => {
+        onReady({ deleteConversation });
+      }, [deleteConversation, onReady]);
+
       return null;
     }
 
-    const view = await renderWithClient(queryClient, <MutationProbe />);
+    const view = await renderWithClient(
+      queryClient,
+      <MutationProbe
+        onReady={(mutation) => {
+          mutationRef.current = mutation;
+        }}
+      />
+    );
+
+    await waitFor(() => mutationRef.current !== undefined);
 
     await act(async () => {
-      await mutation?.deleteConversation.mutateAsync(conversationFixture.id);
+      await mutationRef.current?.deleteConversation.mutateAsync(conversationFixture.id);
     });
 
     expect(

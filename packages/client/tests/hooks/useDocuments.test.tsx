@@ -144,6 +144,14 @@ async function renderWithClient(client: QueryClient, ui: React.ReactElement) {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
+function getQueryStaleTime(queryClient: QueryClient, queryKey: readonly unknown[]) {
+  const options = queryClient.getQueryCache().find({ queryKey })?.options as
+    | { staleTime?: number }
+    | undefined;
+
+  return options?.staleTime;
+}
+
 describe('useDocuments hooks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -177,27 +185,17 @@ describe('useDocuments hooks', () => {
         queryClient.getQueryData(queryKeys.trash.list({})) !== undefined
     );
 
-    expect(
-      queryClient.getQueryCache().find({ queryKey: queryKeys.documents.list({}) })?.options
-        .staleTime
-    ).toBe(30_000);
-    expect(
-      queryClient.getQueryCache().find({ queryKey: queryKeys.documents.detail(documentFixture.id) })
-        ?.options.staleTime
-    ).toBe(60_000);
-    expect(
-      queryClient
-        .getQueryCache()
-        .find({ queryKey: queryKeys.documents.content(documentFixture.id) })?.options.staleTime
-    ).toBe(60_000);
-    expect(
-      queryClient
-        .getQueryCache()
-        .find({ queryKey: queryKeys.documents.versions(documentFixture.id) })?.options.staleTime
-    ).toBe(60_000);
-    expect(
-      queryClient.getQueryCache().find({ queryKey: queryKeys.trash.list({}) })?.options.staleTime
-    ).toBe(30_000);
+    expect(getQueryStaleTime(queryClient, queryKeys.documents.list({}))).toBe(30_000);
+    expect(getQueryStaleTime(queryClient, queryKeys.documents.detail(documentFixture.id))).toBe(
+      60_000
+    );
+    expect(getQueryStaleTime(queryClient, queryKeys.documents.content(documentFixture.id))).toBe(
+      60_000
+    );
+    expect(getQueryStaleTime(queryClient, queryKeys.documents.versions(documentFixture.id))).toBe(
+      60_000
+    );
+    expect(getQueryStaleTime(queryClient, queryKeys.trash.list({}))).toBe(30_000);
 
     await view.unmount();
   });
@@ -219,23 +217,39 @@ describe('useDocuments hooks', () => {
       documentContentFixture
     );
 
-    let mutation:
-      | {
-          updateDocument: ReturnType<typeof useUpdateDocument>;
-        }
-      | undefined;
-
-    function MutationProbe() {
-      mutation = {
-        updateDocument: useUpdateDocument(),
+    const mutationRef: {
+      current?: {
+        updateDocument: ReturnType<typeof useUpdateDocument>;
       };
+    } = {};
+
+    function MutationProbe({
+      onReady,
+    }: {
+      onReady: (mutation: { updateDocument: ReturnType<typeof useUpdateDocument> }) => void;
+    }) {
+      const updateDocument = useUpdateDocument();
+
+      React.useEffect(() => {
+        onReady({ updateDocument });
+      }, [onReady, updateDocument]);
+
       return null;
     }
 
-    const view = await renderWithClient(queryClient, <MutationProbe />);
+    const view = await renderWithClient(
+      queryClient,
+      <MutationProbe
+        onReady={(mutation) => {
+          mutationRef.current = mutation;
+        }}
+      />
+    );
+
+    await waitFor(() => mutationRef.current !== undefined);
 
     await act(async () => {
-      await mutation?.updateDocument.mutateAsync({
+      await mutationRef.current?.updateDocument.mutateAsync({
         id: documentFixture.id,
         data: { title: updatedDocument.title },
       });
@@ -272,23 +286,39 @@ describe('useDocuments hooks', () => {
     );
     queryClient.setQueryData(queryKeys.documents.versions(documentFixture.id), versionFixture);
 
-    let mutation:
-      | {
-          deleteDocument: ReturnType<typeof useDeleteDocument>;
-        }
-      | undefined;
-
-    function MutationProbe() {
-      mutation = {
-        deleteDocument: useDeleteDocument(),
+    const mutationRef: {
+      current?: {
+        deleteDocument: ReturnType<typeof useDeleteDocument>;
       };
+    } = {};
+
+    function MutationProbe({
+      onReady,
+    }: {
+      onReady: (mutation: { deleteDocument: ReturnType<typeof useDeleteDocument> }) => void;
+    }) {
+      const deleteDocument = useDeleteDocument();
+
+      React.useEffect(() => {
+        onReady({ deleteDocument });
+      }, [deleteDocument, onReady]);
+
       return null;
     }
 
-    const view = await renderWithClient(queryClient, <MutationProbe />);
+    const view = await renderWithClient(
+      queryClient,
+      <MutationProbe
+        onReady={(mutation) => {
+          mutationRef.current = mutation;
+        }}
+      />
+    );
+
+    await waitFor(() => mutationRef.current !== undefined);
 
     await act(async () => {
-      await mutation?.deleteDocument.mutateAsync(documentFixture.id);
+      await mutationRef.current?.deleteDocument.mutateAsync(documentFixture.id);
     });
 
     expect(

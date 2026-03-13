@@ -99,7 +99,7 @@ describe('ConversationList', () => {
     const conversationButton = Array.from(view.container.querySelectorAll('[role="button"]')).find(
       (element) => element.textContent?.includes('Today chat')
     );
-    await fireClick(conversationButton);
+    await fireClick(conversationButton ?? null);
 
     expect(onSelect).toHaveBeenCalledWith('conv-today');
 
