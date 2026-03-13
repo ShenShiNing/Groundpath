@@ -1,18 +1,19 @@
 import { useState } from 'react';
-import { ChevronDown, FileText, X } from 'lucide-react';
+import { Check, FileText, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import type { DocumentListItem } from '@knowledge-agent/shared/types';
+import { CHAT_SELECTOR_INPUT_CLASSNAME } from './chatSelectorStyles';
 
 // ============================================================================
 // Types
@@ -37,17 +38,13 @@ export function DocumentScopeSelector({
 }: DocumentScopeSelectorProps) {
   const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
 
   const isAllSelected = selectedIds.length === 0;
   const selectedCount = selectedIds.length;
-
-  const handleToggleDocument = (docId: string) => {
-    if (selectedIds.includes(docId)) {
-      onChange(selectedIds.filter((id) => id !== docId));
-    } else {
-      onChange([...selectedIds, docId]);
-    }
-  };
+  const selectedValueIds = selectedIds.filter((id) =>
+    documents.some((document) => document.id === id)
+  );
 
   const handleSelectAll = () => {
     onChange([]);
@@ -65,67 +62,99 @@ export function DocumentScopeSelector({
   const buttonLabel = isAllSelected
     ? t('scope.allDocuments')
     : t('scope.selectedDocuments', { count: selectedCount });
+  const filteredDocuments = documents.filter((document) =>
+    document.title.toLocaleLowerCase().includes(searchInput.trim().toLocaleLowerCase())
+  );
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-7 text-xs justify-between min-w-35">
-            <span className="truncate">{buttonLabel}</span>
-            <ChevronDown className="size-3.5 ml-1 shrink-0" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-62.5">
-          <DropdownMenuLabel className="text-xs">{t('scope.label')}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
+      <Combobox
+        multiple
+        value={selectedValueIds}
+        onValueChange={(nextValue) => {
+          const normalizedIds = nextValue.filter((id) =>
+            documents.some((document) => document.id === id)
+          );
 
-          {/* All Documents Option */}
-          <DropdownMenuCheckboxItem checked={isAllSelected} onCheckedChange={handleSelectAll}>
-            <span className="flex items-center gap-2">
-              <FileText className="size-4" />
-              {t('scope.allDocuments')}
-            </span>
-          </DropdownMenuCheckboxItem>
+          if (normalizedIds.length === 0 || normalizedIds.length === documents.length) {
+            onChange([]);
+            return;
+          }
 
-          <DropdownMenuSeparator />
-
-          {/* Individual Documents */}
-          <div className="max-h-50 overflow-y-auto">
-            {documents.length === 0 ? (
-              <div className="py-4 text-center text-xs text-muted-foreground">
-                {t('scope.noDocuments')}
+          onChange(normalizedIds);
+        }}
+        open={open}
+        onOpenChange={(isOpen) => {
+          setOpen(isOpen);
+          if (!isOpen) {
+            setSearchInput('');
+          }
+        }}
+      >
+        <ComboboxInput
+          id="chat-document-scope"
+          value={searchInput || buttonLabel}
+          placeholder={t('scope.searchDocumentsPlaceholder')}
+          onChange={(event) => {
+            setSearchInput(event.target.value);
+            if (!open) {
+              setOpen(true);
+            }
+          }}
+          showTrigger
+          className={CHAT_SELECTOR_INPUT_CLASSNAME}
+        />
+        <ComboboxContent className="p-0">
+          <div className="border-b p-1">
+            <button
+              type="button"
+              className="data-highlighted:bg-accent data-highlighted:text-accent-foreground relative flex w-full cursor-pointer items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground"
+              onClick={handleSelectAll}
+            >
+              <FileText className="size-4 text-muted-foreground" />
+              <div className="flex min-w-0 flex-1 flex-col text-left">
+                <span className="truncate">{t('scope.allDocuments')}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {t('scope.allDocumentsDescription', { count: documents.length })}
+                </span>
               </div>
-            ) : (
-              documents.map((doc) => (
-                <DropdownMenuCheckboxItem
-                  key={doc.id}
-                  checked={selectedIds.includes(doc.id)}
-                  onCheckedChange={() => handleToggleDocument(doc.id)}
-                >
-                  <span className="truncate">{doc.title}</span>
-                </DropdownMenuCheckboxItem>
-              ))
-            )}
+              {isAllSelected ? (
+                <span className="absolute right-2 flex size-4 items-center justify-center">
+                  <Check className="size-4" />
+                </span>
+              ) : null}
+            </button>
           </div>
+          <ComboboxList>
+            {filteredDocuments.map((document) => (
+              <ComboboxItem key={document.id} value={document.id}>
+                <FileText className="size-4 text-muted-foreground" />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate">{document.title}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {document.fileName}
+                  </span>
+                </div>
+              </ComboboxItem>
+            ))}
+          </ComboboxList>
+          <ComboboxEmpty>{t('scope.noDocumentMatch')}</ComboboxEmpty>
 
           {selectedCount > 0 && (
-            <>
-              <DropdownMenuSeparator />
-              <div className="p-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full h-7 text-xs justify-center"
-                  onClick={handleClearSelection}
-                >
-                  <X className="size-3 mr-1" />
-                  {t('scope.clearSelection')}
-                </Button>
-              </div>
-            </>
+            <div className="border-t p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full justify-center text-xs"
+                onClick={handleClearSelection}
+              >
+                <X className="mr-1 size-3" />
+                {t('scope.clearSelection')}
+              </Button>
+            </div>
           )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+        </ComboboxContent>
+      </Combobox>
 
       {/* Selected Document Badges (optional) */}
       {!isAllSelected && selectedCount <= 2 && (

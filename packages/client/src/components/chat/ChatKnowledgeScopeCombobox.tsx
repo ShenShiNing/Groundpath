@@ -10,6 +10,7 @@ import {
   ComboboxList,
 } from '@/components/ui/combobox';
 import { useTranslation } from 'react-i18next';
+import { CHAT_SELECTOR_INPUT_CLASSNAME } from './chatSelectorStyles';
 
 export interface ChatKnowledgeScopeComboboxProps {
   knowledgeBases: KnowledgeBaseListItem[];
@@ -111,7 +112,7 @@ export function ChatKnowledgeScopeCombobox({
         }}
         disabled={disabled}
         showTrigger
-        className="min-w-64"
+        className={CHAT_SELECTOR_INPUT_CLASSNAME}
       />
       <ComboboxContent className="p-0">
         <ComboboxList>

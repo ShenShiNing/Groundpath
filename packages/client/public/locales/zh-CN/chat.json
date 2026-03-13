@@ -24,14 +24,17 @@
   },
   "scope": {
     "allDocuments": "全部文档",
+    "allDocumentsDescription": "检索当前知识库的全部 {{count}} 份文档",
     "selectedDocuments": "{{count}} 份文档",
     "label": "文档范围",
     "noDocuments": "暂无可用文档",
     "clearSelection": "清空选择",
     "searchPlaceholder": "搜索知识库或切换到通用模式",
+    "searchDocumentsPlaceholder": "搜索文档范围",
     "generalDescription": "不限定知识库，直接进行通用聊天",
     "knowledgeBaseDocumentCount": "{{count}} 份文档",
     "noKnowledgeBaseMatch": "没有匹配的聊天范围",
+    "noDocumentMatch": "没有匹配的文档",
     "switchConfirm": {
       "title": "切换聊天范围",
       "description": "当前聊天已有消息。切换到“{{scope}}”会新建聊天，当前记录会保留不变。",
