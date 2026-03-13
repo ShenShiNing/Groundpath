@@ -29,7 +29,7 @@ interface AuthState {
 type AuthPersistedState = Pick<AuthState, 'user' | 'isAuthenticated'>;
 
 export const useAuthStore = create<AuthState>()(
-  persist<AuthState, AuthPersistedState>(
+  persist<AuthState, [], [], AuthPersistedState>(
     (set, get) => ({
       // 初始状态
       user: null,
