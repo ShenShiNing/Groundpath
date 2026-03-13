@@ -7,7 +7,6 @@ const mocks = vi.hoisted(() => ({
     list: vi.fn(),
     search: vi.fn(),
     getById: vi.fn(),
-    fork: vi.fn(),
     update: vi.fn(),
     updateTitle: vi.fn(),
     delete: vi.fn(),
@@ -123,27 +122,6 @@ describe('conversationController', () => {
       title: 'Title',
       messages: [{ id: 'msg-1' }],
     });
-  });
-
-  it('fork should validate payload and return a branched conversation', async () => {
-    const req = createReq({
-      params: { id: 'conv-1' },
-      body: { beforeMessageId: 'msg-user-2' },
-    });
-    const res = createRes();
-    const forkedConversation = {
-      id: 'conv-branch-1',
-      knowledgeBaseId: 'kb-1',
-      messages: [{ id: 'msg-branch-1' }],
-    };
-    mocks.conversationService.fork.mockResolvedValue(forkedConversation);
-
-    await conversationController.fork(req, res);
-
-    expect(mocks.conversationService.fork).toHaveBeenCalledWith('user-1', 'conv-1', {
-      beforeMessageId: 'msg-user-2',
-    });
-    expect(mocks.sendSuccessResponse).toHaveBeenCalledWith(res, forkedConversation, 201);
   });
 
   it('update should validate body and call update', async () => {

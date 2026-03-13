@@ -55,21 +55,4 @@ describe('conversationApi.list / chatApi.listConversations', () => {
 
     expect(result).toEqual(responsePayload.items);
   });
-
-  it('should fork a conversation before the requested message', async () => {
-    const forkedConversation = {
-      id: 'conv-branch-1',
-      knowledgeBaseId: 'kb-1',
-      messages: [],
-    };
-    mocks.post.mockResolvedValue({ data: { success: true, data: forkedConversation } });
-    mocks.unwrapResponse.mockReturnValue(forkedConversation);
-
-    const result = await conversationApi.fork('conv-1', { beforeMessageId: 'msg-user-2' });
-
-    expect(mocks.post).toHaveBeenCalledWith('/api/chat/conversations/conv-1/fork', {
-      beforeMessageId: 'msg-user-2',
-    });
-    expect(result).toEqual(forkedConversation);
-  });
 });

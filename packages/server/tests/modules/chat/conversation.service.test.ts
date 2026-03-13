@@ -13,17 +13,11 @@ const mocks = vi.hoisted(() => ({
   messageRepository: {
     getStatsForConversations: vi.fn(),
     searchByContent: vi.fn(),
-    listByConversation: vi.fn(),
-    createMany: vi.fn(),
   },
-  withTransaction: vi.fn(async (callback: (tx: { id: string }) => Promise<unknown>) =>
-    callback({ id: 'tx-1' })
-  ),
-  uuidV4Mock: vi.fn(() => 'conv-uuid-001'),
 }));
 
 vi.mock('uuid', () => ({
-  v4: mocks.uuidV4Mock,
+  v4: vi.fn(() => 'conv-uuid-001'),
 }));
 
 vi.mock('@modules/chat/repositories/conversation.repository', () => ({
@@ -32,10 +26,6 @@ vi.mock('@modules/chat/repositories/conversation.repository', () => ({
 
 vi.mock('@modules/chat/repositories/message.repository', () => ({
   messageRepository: mocks.messageRepository,
-}));
-
-vi.mock('@core/db/db.utils', () => ({
-  withTransaction: mocks.withTransaction,
 }));
 
 import { conversationService } from '@modules/chat/services/conversation.service';
@@ -274,177 +264,6 @@ describe('conversationService', () => {
         statusCode: 404,
       }
     );
-  });
-
-  it('should fork a conversation before the target user message', async () => {
-    const createdAt = new Date('2026-03-03T12:00:00.000Z');
-    const updatedAt = new Date('2026-03-03T12:30:00.000Z');
-    const sourceMessages = [
-      {
-        id: 'msg-user-1',
-        conversationId: 'conv-1',
-        role: 'user',
-        content: 'First question',
-        metadata: null,
-        createdAt,
-      },
-      {
-        id: 'msg-assistant-1',
-        conversationId: 'conv-1',
-        role: 'assistant',
-        content: 'First answer',
-        metadata: { stopReason: 'answered' },
-        createdAt: new Date('2026-03-03T12:01:00.000Z'),
-      },
-      {
-        id: 'msg-user-2',
-        conversationId: 'conv-1',
-        role: 'user',
-        content: 'Second question',
-        metadata: null,
-        createdAt: new Date('2026-03-03T12:02:00.000Z'),
-      },
-    ];
-
-    mocks.conversationRepository.findByIdAndUser.mockResolvedValue({
-      id: 'conv-1',
-      userId: 'user-1',
-      knowledgeBaseId: 'kb-1',
-      title: 'Original title',
-      createdAt,
-      updatedAt,
-    });
-    mocks.conversationRepository.create.mockResolvedValue({
-      id: 'conv-uuid-001',
-      userId: 'user-1',
-      knowledgeBaseId: 'kb-1',
-      title: 'Original title',
-      createdAt,
-      updatedAt,
-    });
-    mocks.messageRepository.listByConversation.mockResolvedValue(sourceMessages);
-    mocks.messageRepository.createMany.mockResolvedValue([
-      {
-        id: 'fork-msg-user-1',
-        conversationId: 'conv-uuid-001',
-        role: 'user',
-        content: 'First question',
-        metadata: null,
-        createdAt,
-      },
-      {
-        id: 'fork-msg-assistant-1',
-        conversationId: 'conv-uuid-001',
-        role: 'assistant',
-        content: 'First answer',
-        metadata: { stopReason: 'answered' },
-        createdAt: new Date('2026-03-03T12:01:00.000Z'),
-      },
-    ]);
-    mocks.uuidV4Mock
-      .mockReturnValueOnce('conv-uuid-001')
-      .mockReturnValueOnce('fork-msg-user-1')
-      .mockReturnValueOnce('fork-msg-assistant-1');
-
-    const result = await conversationService.fork('user-1', 'conv-1', {
-      beforeMessageId: 'msg-user-2',
-    });
-
-    expect(mocks.messageRepository.listByConversation).toHaveBeenCalledWith('conv-1');
-    expect(mocks.conversationRepository.create).toHaveBeenCalledWith(
-      {
-        id: 'conv-uuid-001',
-        userId: 'user-1',
-        knowledgeBaseId: 'kb-1',
-        title: 'Original title',
-        createdBy: 'user-1',
-      },
-      { id: 'tx-1' }
-    );
-    expect(mocks.messageRepository.createMany).toHaveBeenCalledWith(
-      [
-        {
-          id: 'fork-msg-user-1',
-          conversationId: 'conv-uuid-001',
-          role: 'user',
-          content: 'First question',
-          metadata: null,
-          createdAt,
-        },
-        {
-          id: 'fork-msg-assistant-1',
-          conversationId: 'conv-uuid-001',
-          role: 'assistant',
-          content: 'First answer',
-          metadata: { stopReason: 'answered' },
-          createdAt: new Date('2026-03-03T12:01:00.000Z'),
-        },
-      ],
-      { id: 'tx-1' }
-    );
-    expect(result).toEqual({
-      id: 'conv-uuid-001',
-      userId: 'user-1',
-      knowledgeBaseId: 'kb-1',
-      title: 'Original title',
-      createdAt,
-      updatedAt,
-      messages: [
-        {
-          id: 'fork-msg-user-1',
-          conversationId: 'conv-uuid-001',
-          role: 'user',
-          content: 'First question',
-          metadata: null,
-          createdAt,
-        },
-        {
-          id: 'fork-msg-assistant-1',
-          conversationId: 'conv-uuid-001',
-          role: 'assistant',
-          content: 'First answer',
-          metadata: { stopReason: 'answered' },
-          createdAt: new Date('2026-03-03T12:01:00.000Z'),
-        },
-      ],
-    });
-  });
-
-  it('should reject fork when the message is missing or not editable', async () => {
-    const createdAt = new Date('2026-03-03T12:00:00.000Z');
-
-    mocks.conversationRepository.findByIdAndUser.mockResolvedValue({
-      id: 'conv-1',
-      userId: 'user-1',
-      knowledgeBaseId: 'kb-1',
-      title: 'Original title',
-      createdAt,
-      updatedAt: createdAt,
-    });
-    mocks.messageRepository.listByConversation.mockResolvedValue([
-      {
-        id: 'msg-assistant-1',
-        conversationId: 'conv-1',
-        role: 'assistant',
-        content: 'First answer',
-        metadata: null,
-        createdAt,
-      },
-    ]);
-
-    await expect(
-      conversationService.fork('user-1', 'conv-1', { beforeMessageId: 'missing-msg' })
-    ).rejects.toMatchObject({
-      code: CHAT_ERROR_CODES.MESSAGE_NOT_FOUND,
-      statusCode: 404,
-    });
-
-    await expect(
-      conversationService.fork('user-1', 'conv-1', { beforeMessageId: 'msg-assistant-1' })
-    ).rejects.toMatchObject({
-      code: 'VALIDATION_ERROR',
-      statusCode: 400,
-    });
   });
 
   it('should generate readable title with truncation and fallback', () => {

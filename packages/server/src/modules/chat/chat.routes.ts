@@ -13,7 +13,6 @@ router.post('/conversations', conversationController.create);
 router.get('/conversations', conversationController.list);
 router.get('/conversations/search', conversationController.search);
 router.get('/conversations/:id', conversationController.getById);
-router.post('/conversations/:id/fork', conversationController.fork);
 router.patch('/conversations/:id', conversationController.update);
 router.delete('/conversations/:id', conversationController.delete);
 

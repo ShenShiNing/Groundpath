@@ -26,7 +26,6 @@ const {
       list: vi.fn(),
       search: vi.fn(),
       getById: vi.fn(),
-      fork: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
@@ -79,10 +78,6 @@ describe('chat.routes', () => {
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/conversations/:id',
       conversationControllerMock.getById
-    );
-    expect(mockRouter.post).toHaveBeenCalledWith(
-      '/conversations/:id/fork',
-      conversationControllerMock.fork
     );
     expect(mockRouter.patch).toHaveBeenCalledWith(
       '/conversations/:id',

@@ -60,14 +60,6 @@ const {
         title: 'chat title',
         knowledgeBaseId: null,
       })),
-      fork: vi.fn(
-        async (_userId: string, _conversationId: string, payload: Record<string, unknown>) => ({
-          id: 'conv-branch-1',
-          title: 'chat title',
-          knowledgeBaseId: null,
-          messages: [{ id: payload.beforeMessageId ?? 'msg-1', role: 'user', content: 'hello' }],
-        })
-      ),
       updateTitle: vi.fn(async (_userId: string, id: string, title: string) => ({ id, title })),
       delete: vi.fn(async () => undefined),
       validateOwnership: vi.fn(async () => undefined),
@@ -217,24 +209,6 @@ describe('chat.routes http behavior', () => {
     expect(body.success).toBe(true);
     expect(conversationServiceMock.getById).toHaveBeenCalledWith('user-1', 'conv-1');
     expect(messageServiceMock.getByConversation).toHaveBeenCalledWith('conv-1');
-  });
-
-  it('should fork a conversation with a valid request', async () => {
-    const response = await fetch(`${baseUrl}/chat/conversations/conv-1/fork`, {
-      method: 'POST',
-      headers: {
-        authorization: 'Bearer valid-access',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ beforeMessageId: 'msg-user-2' }),
-    });
-    const body = (await response.json()) as HttpTestBody;
-
-    expect(response.status).toBe(201);
-    expect(body.success).toBe(true);
-    expect(conversationServiceMock.fork).toHaveBeenCalledWith('user-1', 'conv-1', {
-      beforeMessageId: 'msg-user-2',
-    });
   });
 
   it('should validate update title payload', async () => {
