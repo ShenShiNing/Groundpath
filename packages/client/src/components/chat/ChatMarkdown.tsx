@@ -1,13 +1,12 @@
 import {
-  Fragment,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useState,
   type ComponentPropsWithoutRef,
   type ComponentType,
   type MouseEvent,
-  type ReactNode,
 } from 'react';
 import MDEditor from '@uiw/react-md-editor/nohighlight';
 import { Link } from '@tanstack/react-router';
@@ -35,7 +34,6 @@ type MarkdownRendererProps = {
 const CITATION_PATTERN = /\[(\d+)\](?!\()/g;
 const FENCED_CODE_PATTERN = /(```[\s\S]*?```)/g;
 const INLINE_CODE_PATTERN = /(`[^`\n]+`)/g;
-const STREAMING_TOKEN_PATTERN = /(`[^`\n]+`|\[\d+\])/g;
 
 function replaceCitationTokensOutsideCode(text: string): string {
   return text
@@ -67,57 +65,6 @@ function getCitationIndex(href?: string): number | null {
   return Number.isFinite(index) && index > 0 ? index : null;
 }
 
-function renderStreamingContent(
-  content: string,
-  citationMap: Map<number, Citation>,
-  onCitationClick: (citation: Citation) => void
-): ReactNode {
-  const lines = content.split('\n');
-
-  return lines.map((line, lineIndex) => {
-    const segments = line.split(STREAMING_TOKEN_PATTERN);
-
-    return (
-      <Fragment key={`line-${lineIndex}`}>
-        {segments.map((segment, segmentIndex) => {
-          if (!segment) return null;
-
-          const inlineCodeMatch = segment.match(/^`([^`\n]+)`$/);
-          if (inlineCodeMatch) {
-            return (
-              <code
-                key={`code-${lineIndex}-${segmentIndex}`}
-                className="rounded border px-1 py-0.5 font-mono text-[0.9em]"
-              >
-                {inlineCodeMatch[1]}
-              </code>
-            );
-          }
-
-          const citationMatch = segment.match(/^\[(\d+)\]$/);
-          if (citationMatch) {
-            const citationIndex = Number.parseInt(citationMatch[1], 10);
-            const citation = citationMap.get(citationIndex);
-            if (citation) {
-              return (
-                <CitationInline
-                  key={`citation-${lineIndex}-${segmentIndex}`}
-                  index={citationIndex}
-                  citation={citation}
-                  onClick={() => onCitationClick(citation)}
-                />
-              );
-            }
-          }
-
-          return <Fragment key={`text-${lineIndex}-${segmentIndex}`}>{segment}</Fragment>;
-        })}
-        {lineIndex < lines.length - 1 ? <br /> : null}
-      </Fragment>
-    );
-  });
-}
-
 export function ChatMarkdown({
   content,
   citations,
@@ -125,14 +72,10 @@ export function ChatMarkdown({
   isStreaming = false,
 }: ChatMarkdownProps) {
   const { t } = useTranslation('chat');
-  const source = useMemo(
-    () => (isStreaming ? '' : injectCitationLinks(content)),
-    [content, isStreaming]
-  );
-  const hasFencedCodeBlock = useMemo(
-    () => !isStreaming && /```|~~~/.test(content),
-    [content, isStreaming]
-  );
+  const deferredContent = useDeferredValue(content);
+  const markdownContent = isStreaming ? deferredContent : content;
+  const source = useMemo(() => injectCitationLinks(markdownContent), [markdownContent]);
+  const hasFencedCodeBlock = useMemo(() => /```|~~~/.test(markdownContent), [markdownContent]);
   const [highlightRenderer, setHighlightRenderer] =
     useState<ComponentType<MarkdownRendererProps> | null>(null);
 
@@ -175,64 +118,60 @@ export function ChatMarkdown({
 
   return (
     <div className="min-w-0" onClickCapture={handleCopyToast}>
-      {isStreaming ? (
-        <div className="text-sm leading-6 whitespace-pre-wrap break-words">
-          {renderStreamingContent(content, citationMap, onCitationClick)}
-          <span
-            aria-hidden="true"
-            className="ml-1 inline-block h-4 w-px translate-y-0.5 animate-pulse bg-current align-middle"
-          />
-        </div>
-      ) : (
-        <MarkdownRenderer
-          source={source}
-          className="bg-transparent! p-0! text-sm leading-6 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1.5 [&_hr]:my-4"
-          components={{
-            a: ({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) => {
-              const citationIndex = getCitationIndex(href);
-              if (citationIndex) {
-                const citation = citationMap.get(citationIndex);
-                if (citation) {
-                  return (
-                    <CitationInline
-                      index={citationIndex}
-                      citation={citation}
-                      onClick={() => onCitationClick(citation)}
-                    />
-                  );
-                }
-                return <span>[{citationIndex}]</span>;
-              }
-
-              if (href?.startsWith('/')) {
+      <MarkdownRenderer
+        source={source}
+        className="bg-transparent! p-0! text-sm leading-6 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1.5 [&_hr]:my-4"
+        components={{
+          a: ({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) => {
+            const citationIndex = getCitationIndex(href);
+            if (citationIndex) {
+              const citation = citationMap.get(citationIndex);
+              if (citation) {
                 return (
-                  <Link to={href as string} className="underline break-all">
-                    {children}
-                  </Link>
+                  <CitationInline
+                    index={citationIndex}
+                    citation={citation}
+                    onClick={() => onCitationClick(citation)}
+                  />
                 );
               }
+              return <span>[{citationIndex}]</span>;
+            }
 
+            if (href?.startsWith('/')) {
               return (
-                <a
-                  {...props}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline break-all"
-                >
+                <Link to={href as string} className="underline break-all">
                   {children}
-                </a>
+                </Link>
               );
-            },
-            code: ({ inline, className, ...props }: CodeRendererProps) => {
-              if (inline) {
-                return (
-                  <code {...props} className="rounded border px-1 py-0.5 font-mono text-[0.9em]" />
-                );
-              }
-              return <code {...props} className={className} />;
-            },
-          }}
+            }
+
+            return (
+              <a
+                {...props}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline break-all"
+              >
+                {children}
+              </a>
+            );
+          },
+          code: ({ inline, className, ...props }: CodeRendererProps) => {
+            if (inline) {
+              return (
+                <code {...props} className="rounded border px-1 py-0.5 font-mono text-[0.9em]" />
+              );
+            }
+            return <code {...props} className={className} />;
+          },
+        }}
+      />
+      {isStreaming && (
+        <span
+          aria-hidden="true"
+          className="ml-1 inline-block h-4 w-px translate-y-0.5 animate-pulse bg-current align-middle"
         />
       )}
     </div>

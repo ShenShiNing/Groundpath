@@ -20,6 +20,7 @@ export function useChatPageController() {
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const skipNextAutoScrollRef = useRef(false);
+  const shouldAutoScrollRef = useRef(true);
   const knowledgeBaseId = useChatPanelStore((state) => state.knowledgeBaseId);
   const conversationId = useChatPanelStore((state) => state.conversationId);
   const messages = useChatPanelStore((state) => state.messages);
@@ -80,6 +81,20 @@ export function useChatPageController() {
     ) as HTMLDivElement | null;
   }, []);
 
+  const updateAutoScrollState = useCallback(() => {
+    const viewport = getMessagesViewport();
+    if (!viewport) {
+      shouldAutoScrollRef.current = true;
+      return;
+    }
+
+    const isNearBottom =
+      viewport.scrollTop + viewport.clientHeight >=
+      viewport.scrollHeight - AUTO_SCROLL_THRESHOLD_PX;
+
+    shouldAutoScrollRef.current = isNearBottom;
+  }, [getMessagesViewport]);
+
   useEffect(() => {
     if (knowledgeBases.length === 0) {
       setSelectedKnowledgeBaseId(undefined);
@@ -128,6 +143,22 @@ export function useChatPageController() {
   }, [searchableDocuments, selectedDocumentIds, setDocumentScope]);
 
   useEffect(() => {
+    const viewport = getMessagesViewport();
+    if (!viewport) return;
+
+    const handleViewportScroll = () => {
+      updateAutoScrollState();
+    };
+
+    updateAutoScrollState();
+    viewport.addEventListener('scroll', handleViewportScroll, { passive: true });
+
+    return () => {
+      viewport.removeEventListener('scroll', handleViewportScroll);
+    };
+  }, [getMessagesViewport, messages.length, updateAutoScrollState]);
+
+  useEffect(() => {
     if (focusMessageId || skipNextAutoScrollRef.current) {
       if (skipNextAutoScrollRef.current) {
         skipNextAutoScrollRef.current = false;
@@ -135,13 +166,7 @@ export function useChatPageController() {
       return;
     }
 
-    const viewport = getMessagesViewport();
-    const isNearBottom =
-      !viewport ||
-      viewport.scrollTop + viewport.clientHeight >=
-        viewport.scrollHeight - AUTO_SCROLL_THRESHOLD_PX;
-
-    if (!isNearBottom) {
+    if (!shouldAutoScrollRef.current) {
       return;
     }
 
@@ -171,6 +196,7 @@ export function useChatPageController() {
     }
 
     setHighlightedMessageId(focusMessageId);
+    shouldAutoScrollRef.current = false;
     skipNextAutoScrollRef.current = true;
     clearFocusMessageId();
   }, [clearFocusMessageId, focusKeyword, focusMessageId, messages]);
@@ -205,6 +231,7 @@ export function useChatPageController() {
       if (knowledgeBaseId !== targetKnowledgeBaseId) {
         open(targetKnowledgeBaseId);
       }
+      shouldAutoScrollRef.current = true;
       void sendMessage(content, getAccessTokenSnapshot, streamBuffer);
     },
     [knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage, streamBuffer]
@@ -212,6 +239,7 @@ export function useChatPageController() {
 
   const handleRetry = useCallback(
     (messageId: string) => {
+      shouldAutoScrollRef.current = true;
       void retryMessage(messageId, getAccessTokenSnapshot, streamBuffer);
     },
     [retryMessage, streamBuffer]
@@ -219,6 +247,7 @@ export function useChatPageController() {
 
   const handleEditMessage = useCallback(
     (messageId: string, content: string) => {
+      shouldAutoScrollRef.current = true;
       void editMessage(messageId, content, getAccessTokenSnapshot, streamBuffer);
     },
     [editMessage, streamBuffer]

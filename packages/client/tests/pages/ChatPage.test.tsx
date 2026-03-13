@@ -560,4 +560,147 @@ describe('ChatPage', () => {
 
     await view.unmount();
   });
+
+  it('keeps auto-scrolling while streaming when the user stays near the bottom', async () => {
+    resetChatStore({
+      knowledgeBaseId: 'kb-ready',
+      isLoading: true,
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: 'First streamed answer',
+          timestamp: new Date('2026-03-13T10:00:00.000Z'),
+          isLoading: true,
+        },
+      ],
+    });
+
+    mocks.useKnowledgeBases.mockReturnValue({
+      data: [createKnowledgeBase('kb-ready', 1, '2026-03-13T09:00:00.000Z')],
+      isLoading: false,
+      isError: false,
+    });
+
+    const view = await render(<ChatPage />);
+    await flushPromises();
+
+    const viewport = view.container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLDivElement | null;
+
+    expect(viewport).not.toBeNull();
+
+    Object.defineProperty(viewport!, 'scrollTop', {
+      configurable: true,
+      value: 160,
+      writable: true,
+    });
+    Object.defineProperty(viewport!, 'clientHeight', {
+      configurable: true,
+      value: 200,
+    });
+    Object.defineProperty(viewport!, 'scrollHeight', {
+      configurable: true,
+      value: 400,
+    });
+
+    await act(async () => {
+      viewport!.dispatchEvent(new Event('scroll'));
+    });
+
+    mocks.scrollIntoView.mockClear();
+
+    await act(async () => {
+      useChatPanelStore.setState({
+        messages: [
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: 'First streamed answer with more content',
+            timestamp: new Date('2026-03-13T10:00:00.000Z'),
+            isLoading: true,
+          },
+        ],
+      });
+    });
+    await flushPromises();
+
+    expect(mocks.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'auto',
+      block: 'end',
+    });
+
+    await view.unmount();
+  });
+
+  it('stops auto-scrolling after the user scrolls away from the bottom', async () => {
+    resetChatStore({
+      knowledgeBaseId: 'kb-ready',
+      isLoading: true,
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: 'First streamed answer',
+          timestamp: new Date('2026-03-13T10:00:00.000Z'),
+          isLoading: true,
+        },
+      ],
+    });
+
+    mocks.useKnowledgeBases.mockReturnValue({
+      data: [createKnowledgeBase('kb-ready', 1, '2026-03-13T09:00:00.000Z')],
+      isLoading: false,
+      isError: false,
+    });
+
+    const view = await render(<ChatPage />);
+    await flushPromises();
+
+    const viewport = view.container.querySelector(
+      '[data-slot="scroll-area-viewport"]'
+    ) as HTMLDivElement | null;
+
+    expect(viewport).not.toBeNull();
+
+    Object.defineProperty(viewport!, 'scrollTop', {
+      configurable: true,
+      value: 0,
+      writable: true,
+    });
+    Object.defineProperty(viewport!, 'clientHeight', {
+      configurable: true,
+      value: 200,
+    });
+    Object.defineProperty(viewport!, 'scrollHeight', {
+      configurable: true,
+      value: 400,
+    });
+
+    await act(async () => {
+      viewport!.dispatchEvent(new Event('scroll'));
+    });
+
+    mocks.scrollIntoView.mockClear();
+
+    await act(async () => {
+      useChatPanelStore.setState({
+        messages: [
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: 'First streamed answer with more content',
+            timestamp: new Date('2026-03-13T10:00:00.000Z'),
+            isLoading: true,
+          },
+        ],
+      });
+    });
+    await flushPromises();
+
+    expect(mocks.scrollIntoView).not.toHaveBeenCalled();
+
+    await view.unmount();
+  });
 });

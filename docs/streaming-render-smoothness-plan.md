@@ -83,6 +83,7 @@
 
 滚动逻辑调整：
 
+- 使用滚动监听持续维护“用户是否仍位于底部附近”的状态。
 - 自动定位仅在用户仍位于底部附近时触发。
 - 流式阶段使用 `behavior: 'auto'`。
 - 非流式新增消息时保留 `behavior: 'smooth'`。
@@ -104,18 +105,17 @@
 
 本轮不引入自定义 comparator，先依赖浅比较。
 
-### 6. 流式阶段使用轻量文本渲染
+### 6. 流式阶段使用渐进式 Markdown 渲染
 
 在 `ChatMarkdown.tsx` 中新增 `isStreaming`：
 
 - `false`：沿用现有 Markdown 渲染逻辑。
-- `true`：走轻量文本模式，仅保留：
-  - 换行显示
-  - inline code
-  - citation token 映射
-  - 光标动画
+- `true`：仍走 Markdown 渲染链路，但通过 deferred 内容降低流式阶段更新优先级，并保留光标动画。
 
-流结束后切回完整 Markdown 渲染。
+这样可以兼顾：
+
+- 流式过程中即时看到标题、列表、代码块等 Markdown 结构。
+- 避免回退到“全文完成后才一次性格式化”的体验。
 
 ## 测试与验证
 
@@ -148,10 +148,10 @@ pnpm -F @knowledge-agent/client build
 - 已落地内容：
   - 新增 `useStreamBuffer`，以 `requestAnimationFrame` 合并流式 chunk。
   - `chatPanelStore` 支持 request-scoped `StreamControls`，并在 `done` / `error` / 编辑中断前显式 `flush`。
-  - `useChatPageController` 已统一接入 buffer，并改为“仅在底部附近时自动滚动；流式阶段使用 `auto`”。
+  - `useChatPageController` 已统一接入 buffer，并改为“通过滚动监听维护底部状态；仅在底部附近时自动滚动；流式阶段使用 `auto`”。
   - `ChatPageConversation` 已移除传给 `ChatMessage` 的内联回调。
   - `ChatMessage` 已改为稳定 props API，并使用 `React.memo` 包裹导出。
-  - `ChatMarkdown` 已在流式阶段切换到轻量文本渲染，保留 inline code、citation token 与光标动画。
+  - `ChatMarkdown` 已改为流式阶段渐进式 Markdown 渲染，保留实时格式化与光标动画。
 - 已补测试：
   - `packages/client/tests/hooks/useStreamBuffer.test.tsx`
   - `packages/client/tests/components/chat/ChatMarkdown.test.tsx`

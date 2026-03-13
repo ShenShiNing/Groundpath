@@ -1,6 +1,6 @@
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireClick, render } from '../../utils/render';
+import { render } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({
   markdownRenderer: vi.fn(),
@@ -65,30 +65,20 @@ describe('ChatMarkdown', () => {
     vi.clearAllMocks();
   });
 
-  it('uses lightweight rendering while streaming and keeps inline code plus citations interactive', async () => {
-    const onCitationClick = vi.fn();
-
+  it('renders markdown progressively while streaming and keeps the cursor visible', async () => {
     const view = await render(
       <ChatMarkdown
-        content={'Streaming `code` answer [1]'}
+        content={'# Streaming answer\n\nWith citation [1]'}
         citations={[citation]}
-        onCitationClick={onCitationClick}
+        onCitationClick={vi.fn()}
         isStreaming
       />
     );
 
-    expect(mocks.markdownRenderer).not.toHaveBeenCalled();
-    expect(view.container.textContent).toContain('Streaming');
-
-    const code = view.container.querySelector('code');
-    expect(code?.textContent).toBe('code');
-
-    const citationButton = Array.from(view.container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('1')
+    expect(mocks.markdownRenderer).toHaveBeenCalledWith(
+      '# Streaming answer\n\nWith citation [1](#citation-1)'
     );
-    await fireClick(citationButton ?? null);
-
-    expect(onCitationClick).toHaveBeenCalledWith(citation);
+    expect(view.container.querySelector('[data-testid="markdown-renderer"]')).not.toBeNull();
     expect(view.container.querySelector('[aria-hidden="true"]')).not.toBeNull();
 
     await view.unmount();
