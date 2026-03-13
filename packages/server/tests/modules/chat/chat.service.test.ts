@@ -83,13 +83,16 @@ import { chatService } from '@modules/chat/services/chat.service';
 function createMockRes() {
   const written: string[] = [];
   const listeners = new Map<string, Set<() => void>>();
+  let writableEnded = false;
   const socket = {
     setTimeout: vi.fn(),
   };
   const res = {
     setHeader: vi.fn(),
     write: vi.fn((data: string) => written.push(data)),
-    end: vi.fn(),
+    end: vi.fn(() => {
+      writableEnded = true;
+    }),
     on: vi.fn((event: string, listener: () => void) => {
       const eventListeners = listeners.get(event) ?? new Set<() => void>();
       eventListeners.add(listener);
@@ -102,6 +105,9 @@ function createMockRes() {
     }),
     headersSent: false,
     socket,
+    get writableEnded() {
+      return writableEnded;
+    },
   };
   return {
     res: res as unknown as import('express').Response,
@@ -169,6 +175,7 @@ describe('chatService.sendMessageWithSSE', () => {
     const errorEvent = written.find((w) => w.includes('STREAMING_FAILED'));
     expect(errorEvent).toBeDefined();
     expect(errorEvent).toContain('empty response');
+    expect(written.find((w) => w.includes('"type":"done"'))).toBeUndefined();
     expect(res.end).toHaveBeenCalled();
   });
 
@@ -436,6 +443,187 @@ describe('chatService.sendMessageWithSSE', () => {
     expect(loopArgs.toolContext.signal).toBe(loopArgs.genOptions.signal);
   });
 
+  it('streams the final agent answer after tool rounds and persists streamed content', async () => {
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
+    const streamedCitation = {
+      sourceType: 'chunk',
+      documentId: 'doc-1',
+      documentTitle: 'Test',
+      chunkIndex: 0,
+      content: 'evidence',
+      score: 0.9,
+    };
+    const streamGenerate = vi.fn().mockImplementation(async function* () {
+      yield 'Streamed ';
+      yield 'answer';
+    });
+    mocks.resolveTools.mockReturnValue([webTool]);
+    mocks.executeAgentLoop.mockResolvedValue({
+      content: 'Non-streamed answer',
+      citations: [streamedCitation],
+      retrievedCitations: [streamedCitation],
+      agentTrace: [{ step: 0 }],
+      stopReason: 'answered',
+      agentMessages: [
+        { role: 'system', content: 'agent-system' },
+        { role: 'user', content: 'Question' },
+        {
+          role: 'assistant',
+          content: 'Looking up evidence',
+          toolCalls: [{ id: 'tool-1', name: 'web_search', arguments: { query: 'Question' } }],
+        },
+        { role: 'tool', content: 'tool evidence', toolCallId: 'tool-1' },
+      ],
+    });
+    const provider = {
+      name: 'test-provider',
+      generateWithTools: vi.fn(),
+      streamGenerate,
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res, written } = createMockRes();
+
+    await chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Hello',
+    });
+
+    expect(streamGenerate).toHaveBeenCalledTimes(1);
+    const [messagesArg, optionsArg] = streamGenerate.mock.calls[0]!;
+    expect(messagesArg).toEqual([
+      { role: 'system', content: 'agent-system' },
+      { role: 'user', content: 'Question' },
+      { role: 'assistant', content: 'Looking up evidence' },
+      { role: 'user', content: 'tool evidence' },
+    ]);
+    expect(optionsArg).toEqual(expect.objectContaining({ signal: expect.any(AbortSignal) }));
+
+    const sourceIndex = written.findIndex((entry) => entry.includes('"type":"sources"'));
+    const chunkIndexes = written
+      .map((entry, index) => (entry.includes('"type":"chunk"') ? index : -1))
+      .filter((index) => index >= 0);
+    expect(sourceIndex).toBeGreaterThanOrEqual(0);
+    expect(chunkIndexes).toHaveLength(2);
+    expect(sourceIndex).toBeLessThan(chunkIndexes[0]!);
+
+    const createCalls = mocks.messageService.create.mock.calls;
+    const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
+    expect(assistantCalls).toHaveLength(1);
+    expect(assistantCalls[0]![0]).toMatchObject({
+      role: 'assistant',
+      content: 'Streamed answer',
+    });
+  });
+
+  it('sends error without done when streamed final agent answer is empty', async () => {
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
+    const streamGenerate = vi.fn().mockImplementation(async function* () {
+      if (Date.now() < 0) {
+        yield 'unreachable';
+      }
+      return;
+    });
+    mocks.resolveTools.mockReturnValue([webTool]);
+    mocks.executeAgentLoop.mockResolvedValue({
+      content: 'Non-streamed answer',
+      citations: [],
+      retrievedCitations: [],
+      agentTrace: [{ step: 0 }],
+      stopReason: 'answered',
+      agentMessages: [
+        { role: 'system', content: 'agent-system' },
+        { role: 'user', content: 'Question' },
+        { role: 'assistant', content: 'Looking up evidence', toolCalls: [] },
+        { role: 'tool', content: 'tool evidence', toolCallId: 'tool-1' },
+      ],
+    });
+    const provider = {
+      name: 'test-provider',
+      generateWithTools: vi.fn(),
+      streamGenerate,
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res, written } = createMockRes();
+
+    await chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Hello',
+    });
+
+    const errorEvent = written.find((w) => w.includes('STREAMING_FAILED'));
+    expect(errorEvent).toBeDefined();
+    expect(written.find((w) => w.includes('"type":"done"'))).toBeUndefined();
+
+    const createCalls = mocks.messageService.create.mock.calls;
+    const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
+    expect(assistantCalls).toHaveLength(0);
+    expect(res.end).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborts the final streamed agent answer when the client disconnects', async () => {
+    vi.useFakeTimers();
+
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
+    let observedSignal: AbortSignal | undefined;
+    const streamGenerate = vi.fn().mockImplementation(async function* (_messages, options) {
+      observedSignal = options?.signal;
+      yield 'partial';
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      if (options?.signal?.aborted) {
+        return;
+      }
+      yield 'tail';
+    });
+    mocks.resolveTools.mockReturnValue([webTool]);
+    mocks.executeAgentLoop.mockResolvedValue({
+      content: 'Non-streamed answer',
+      citations: [],
+      retrievedCitations: [],
+      agentTrace: [{ step: 0 }],
+      stopReason: 'answered',
+      agentMessages: [
+        { role: 'system', content: 'agent-system' },
+        { role: 'user', content: 'Question' },
+        {
+          role: 'assistant',
+          content: 'Looking up evidence',
+          toolCalls: [{ id: 'tool-1', name: 'web_search', arguments: { query: 'Question' } }],
+        },
+        { role: 'tool', content: 'tool evidence', toolCallId: 'tool-1' },
+      ],
+    });
+    const provider = {
+      name: 'test-provider',
+      generateWithTools: vi.fn(),
+      streamGenerate,
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res, written, emit } = createMockRes();
+
+    const requestPromise = chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Hello',
+    });
+
+    await flushMicrotasks();
+    emit('close');
+    await vi.advanceTimersByTimeAsync(1_000);
+    await requestPromise;
+
+    expect(observedSignal?.aborted).toBe(true);
+    expect(written.find((w) => w.includes('"type":"done"'))).toBeUndefined();
+
+    const createCalls = mocks.messageService.create.mock.calls;
+    const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
+    expect(assistantCalls).toHaveLength(0);
+  });
+
   it('sends heartbeat comments during long-running multi-step agent execution and clears them after completion', async () => {
     vi.useFakeTimers();
 
@@ -618,6 +806,7 @@ describe('chatService.sendMessageWithSSE', () => {
     const errorEvent = written.find((w) => w.includes('STREAMING_FAILED'));
     expect(errorEvent).toBeDefined();
     expect(errorEvent).toContain('empty response');
+    expect(written.find((w) => w.includes('"type":"done"'))).toBeUndefined();
 
     const createCalls = mocks.messageService.create.mock.calls;
     const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');

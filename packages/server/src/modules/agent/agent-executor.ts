@@ -129,6 +129,7 @@ export async function executeAgentLoop(
           content: result.content ?? '',
           citations: allCitations,
           agentTrace,
+          agentMessages: step > 0 ? [...agentMessages] : undefined,
           stopReason: 'answered',
           tools,
         })

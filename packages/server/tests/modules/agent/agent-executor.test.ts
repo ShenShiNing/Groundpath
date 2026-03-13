@@ -154,6 +154,7 @@ describe('executeAgentLoop', () => {
     expect(result.content).toBe('Final answer');
     expect(result.agentTrace).toEqual([]);
     expect(result.stopReason).toBe('answered');
+    expect(result.agentMessages).toBeUndefined();
     expect(result.retrievedCitations).toEqual([]);
   });
 
@@ -199,6 +200,15 @@ describe('executeAgentLoop', () => {
     expect(tool.execute).toHaveBeenCalledWith({ query: 'test' }, options.toolContext);
     expect(result.content).toBe('Here is the answer based on search');
     expect(result.agentTrace).toHaveLength(1);
+    expect(result.agentMessages).toEqual([
+      { role: 'user', content: 'Hello' },
+      {
+        role: 'assistant',
+        content: '',
+        toolCalls: [{ id: 'tc-1', name: 'search', arguments: { query: 'test' } }],
+      },
+      { role: 'tool', content: 'found relevant info', toolCallId: 'tc-1' },
+    ]);
     expect(result.agentTrace[0]!.toolCalls).toHaveLength(1);
     expect(result.agentTrace[0]!.toolResults).toHaveLength(1);
     expect(result.agentTrace[0]!.toolResults[0]!.content).toBe('found relevant info');

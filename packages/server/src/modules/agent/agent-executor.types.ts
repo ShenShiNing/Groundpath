@@ -25,6 +25,7 @@ export interface AgentExecutorResult {
   retrievedCitations: Citation[];
   agentTrace: AgentStep[];
   stopReason?: AgentStopReason;
+  agentMessages?: AgentMessage[];
 }
 
 export interface TaggedCitation {
@@ -39,6 +40,7 @@ export interface BuildAgentExecutorResultInput {
   citations: TaggedCitation[];
   agentTrace: AgentStep[];
   tools: AgentTool[];
+  agentMessages?: AgentMessage[];
 }
 
 export interface GenerateWithoutToolsInput {

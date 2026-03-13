@@ -187,6 +187,7 @@ export function buildAgentExecutorResult(
     citations: finalCitations,
     retrievedCitations: input.citations.map((tc) => tc.citation),
     agentTrace: input.agentTrace,
+    agentMessages: input.agentMessages,
     stopReason: finalizeStopReason({
       stopReason: input.stopReason,
       tools: input.tools,

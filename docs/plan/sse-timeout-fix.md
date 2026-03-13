@@ -273,7 +273,7 @@ export async function executeAgentMode(
 ### Phase 2：最终回答流式输出
 
 > 目标：Agent 最终回答逐 token 输出，提升用户体验
-> 改动：3 个文件，约 60 行
+> 改动：6 个文件，约 120 行
 
 #### 2.1 — Agent executor 透传消息上下文
 
@@ -330,12 +330,16 @@ if (agentResult.citations.length > 0) {
 
 // 流式输出最终回答（替换原来的 sendChunkedSSE）
 if (agentResult.agentMessages && !ctx.isDisconnected()) {
-  // 有工具上下文，用流式重新生成
+  // 复用 generateWithoutTools 的消息降格策略：
+  // tool -> user，assistant toolCalls -> assistant.content
   let fullContent = '';
-  for await (const chunk of provider.streamGenerate(agentResult.agentMessages, {
-    ...genOptions,
-    signal: abortController.signal,
-  })) {
+  for await (const chunk of provider.streamGenerate(
+    toPlainChatMessages(agentResult.agentMessages),
+    {
+      ...genOptions,
+      signal: abortController.signal,
+    }
+  )) {
     if (ctx.isDisconnected()) break;
     fullContent += chunk;
     sendSSE(res, { type: 'chunk', data: chunk });
@@ -345,6 +349,17 @@ if (agentResult.agentMessages && !ctx.isDisconnected()) {
   // 无工具调用（第一轮就回答），直接 chunk 发送
   sendChunkedSSE(res, agentResult.content);
 }
+```
+
+补充一个收口修复：
+
+**文件**：`packages/server/src/modules/chat/services/chat.service.ts`
+
+当子流程已经发送 `error` 并 `res.end()`（例如二次流式生成得到空内容）时，外层
+`sendMessageWithSSE` 不应再补发 `done`。因此增加：
+
+```ts
+if (clientDisconnected || res.writableEnded) return;
 ```
 
 #### 2.3 — 方案取舍说明
@@ -358,11 +373,22 @@ if (agentResult.agentMessages && !ctx.isDisconnected()) {
 
 #### Phase 2 测试验证
 
-- [ ] Agent 模式：最终回答逐 token 出现在前端
-- [ ] 中途取消：流式生成过程中 `stopGeneration()` 正常中止
-- [ ] 空回答处理：`streamGenerate` 生成空内容时的错误提示
-- [ ] Citation 先于 chunk 到达前端
-- [ ] 消息持久化内容与流式输出一致
+- [x] Agent 模式：最终回答逐 token 出现在前端（`chat.service.test.ts` 流式 chunk + client SSE/store 回归）
+- [x] 中途取消：流式生成过程中 `stopGeneration()` 正常中止（server 断连 abort + client `stopGeneration` 回归）
+- [x] 空回答处理：`streamGenerate` 生成空内容时的错误提示
+- [x] Citation 先于 chunk 到达前端
+- [x] 消息持久化内容与流式输出一致
+
+#### Phase 2 完成结果（2026-03-13）
+
+- 已在 `packages/server/src/modules/agent/agent-executor.ts` / `agent-executor.types.ts` / `agent-executor.citations.ts` 透传工具轮次后的 `agentMessages`，仅在实际经历 tool round 时返回
+- 已在 `packages/server/src/modules/agent/agent-executor.runtime.ts` 抽出 `toPlainChatMessages()`，复用现有 `generateWithoutTools` 的消息降格策略，将 tool 上下文转换为 `streamGenerate()` 可消费的普通 chat messages
+- 已在 `packages/server/src/modules/chat/services/chat-agent-stream.service.ts` 将 Agent 最终回答改为二次 `streamGenerate()` 流式输出；无工具轮次时仍保持原有 `sendChunkedSSE` 快路径
+- 已在 `packages/server/src/modules/chat/services/chat-agent-stream.service.ts` 增加最终流式阶段的 provider_error 回退与空回答错误处理
+- 已在 `packages/server/src/modules/chat/services/chat.service.ts` 增加 `res.writableEnded` 守卫，避免子流程提前 `res.end()` 后外层继续补发 `done`
+- 已完成服务端定向验证：`pnpm -F @knowledge-agent/server test -- tests/modules/chat/chat.service.test.ts tests/modules/agent/agent-executor.test.ts`
+- 已完成客户端兼容性验证：`pnpm -F @knowledge-agent/client test -- tests/lib/http/sse.test.ts tests/stores/chatPanelStore.test.ts tests/stores/chatPanelStore.onDone.test.ts`
+- 已完成类型构建验证：`pnpm -F @knowledge-agent/server build`
 
 ---
 
@@ -403,7 +429,9 @@ if (agentResult.agentMessages && !ctx.isDisconnected()) {
 | `server/src/modules/agent/agent-executor.ts`                    | 透传 `agentMessages`                          |
 | `server/src/modules/agent/agent-executor.types.ts`              | `AgentExecutorResult.agentMessages`           |
 | `server/src/modules/agent/agent-executor.citations.ts`          | `BuildAgentExecutorResultInput.agentMessages` |
+| `server/src/modules/agent/agent-executor.runtime.ts`            | `toPlainChatMessages()` 复用消息降格策略      |
 | `server/src/modules/chat/services/chat-agent-stream.service.ts` | `streamGenerate` 替换 `sendChunkedSSE`        |
+| `server/src/modules/chat/services/chat.service.ts`              | `res.writableEnded` 防止重复发送终止事件      |
 
 ### 不需要变更
 

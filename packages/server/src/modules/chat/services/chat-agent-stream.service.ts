@@ -1,11 +1,17 @@
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
 import { resolveTools, executeAgentLoop } from '@modules/agent';
+import { toPlainChatMessages } from '@modules/agent/agent-executor.runtime';
 import { agentConfig } from '@core/config/env';
 import { structuredRagMetrics } from '@core/observability';
 import { createLogger } from '@core/logger';
 import { messageService } from './message.service';
 import { promptService } from './prompt.service';
-import { persistAssistantMessage, sendChunkedSSE, sendSSE } from './chat.helpers';
+import {
+  persistAssistantMessage,
+  PROVIDER_ERROR_FALLBACK_CONTENT,
+  sendChunkedSSE,
+  sendSSE,
+} from './chat.helpers';
 import type { AgentExecutionCallbacks, AgentExecutionContext, StreamContext } from './chat.types';
 
 const logger = createLogger('chat.service');
@@ -116,9 +122,68 @@ export async function executeAgentMode(
     if (agentResult.citations.length > 0) {
       sendSSE(res, { type: 'sources', data: agentResult.citations });
     }
-    if (agentResult.content) {
-      sendChunkedSSE(res, agentResult.content);
+
+    let streamedContent = '';
+    try {
+      if (agentResult.agentMessages) {
+        for await (const chunk of provider.streamGenerate(
+          toPlainChatMessages(agentResult.agentMessages),
+          {
+            ...genOptions,
+            signal: abortController.signal,
+          }
+        )) {
+          if (ctx.isDisconnected()) break;
+          streamedContent += chunk;
+          sendSSE(res, { type: 'chunk', data: chunk });
+        }
+        agentResult.content = streamedContent;
+      }
+    } catch (error) {
+      if (ctx.isDisconnected() || (error instanceof Error && error.name === 'AbortError')) {
+        logger.info({ conversationId }, 'Agent final stream aborted due to client disconnect');
+        return;
+      }
+
+      logger.error({ err: error, conversationId }, 'Agent final streaming error');
+      const fallbackContent = streamedContent.trim()
+        ? streamedContent
+        : agentResult.content.trim()
+          ? agentResult.content
+          : PROVIDER_ERROR_FALLBACK_CONTENT;
+
+      if (!streamedContent.trim()) {
+        sendChunkedSSE(res, fallbackContent);
+      }
+
+      await persistAssistantMessage({
+        messageId: ctx.assistantMessageId,
+        conversationId,
+        content: fallbackContent,
+        citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
+        retrievedSources:
+          agentResult.retrievedCitations.length > 0 ? agentResult.retrievedCitations : undefined,
+        agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
+        stopReason: 'provider_error',
+      });
+      ctx.completionStopReason = 'provider_error';
+      structuredRagMetrics.recordChatCompletion({
+        conversationId,
+        userId,
+        knowledgeBaseId: ctx.knowledgeBaseId,
+        provider: provider.name,
+        transport: 'streaming',
+        orchestration: 'agent',
+        stopReason: 'provider_error',
+        hasKnowledgeBase: !!ctx.knowledgeBaseId,
+        structuredToolsAvailable: tools.some((tool) => tool.definition.name === 'outline_search'),
+        retrievedCitationCount: agentResult.retrievedCitations.length,
+        finalCitationCount: agentResult.citations.length,
+      });
+      return;
     }
+
+    if (ctx.isDisconnected()) return;
 
     if (!agentResult.content.trim()) {
       logger.warn({ conversationId, userId }, 'Agent returned empty content');
@@ -131,6 +196,10 @@ export async function executeAgentMode(
       });
       res.end();
       return;
+    }
+
+    if (!agentResult.agentMessages && agentResult.content) {
+      sendChunkedSSE(res, agentResult.content);
     }
 
     await persistAssistantMessage({

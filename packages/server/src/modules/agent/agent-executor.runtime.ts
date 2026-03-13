@@ -64,10 +64,7 @@ async function withToolTimeout<T>(promise: Promise<T>, toolName: string): Promis
 export async function generateWithoutTools(
   input: GenerateWithoutToolsInput
 ): Promise<AgentExecutorResult> {
-  const plainMessages: ChatMessage[] = input.agentMessages.map((message) => ({
-    role: message.role === 'tool' ? 'user' : message.role,
-    content: message.content,
-  }));
+  const plainMessages = toPlainChatMessages(input.agentMessages);
 
   try {
     const finalContent = await input.provider.generate(plainMessages, input.genOptions);
@@ -90,6 +87,13 @@ export async function generateWithoutTools(
       tools: input.tools,
     });
   }
+}
+
+export function toPlainChatMessages(agentMessages: AgentMessage[]): ChatMessage[] {
+  return agentMessages.map((message) => ({
+    role: message.role === 'tool' ? 'user' : message.role,
+    content: message.content,
+  }));
 }
 
 export function getToolCategoryCounts(

@@ -96,7 +96,7 @@ export const chatService = {
         res.off('close', onClose);
       }
 
-      if (clientDisconnected) return;
+      if (clientDisconnected || res.writableEnded) return;
 
       await conversationRepository.touch(conversationId, userId);
       sendSSE(res, {
