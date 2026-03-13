@@ -1,10 +1,15 @@
 import type { Express } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import './paths';
+import { ensureOpenApiRoutesRegistered } from './route-discovery';
 import { generateDocument } from './registry';
 
+export function buildOpenApiDocument() {
+  ensureOpenApiRoutesRegistered();
+  return generateDocument();
+}
+
 export function setupOpenApi(app: Express) {
-  const document = generateDocument();
+  const document = buildOpenApiDocument();
   app.use(
     '/api-docs',
     swaggerUi.serve,

@@ -1,17 +1,8 @@
 import path from 'path';
 import type { Request, Response } from 'express';
 import express from 'express';
-import { authRoutes, emailRoutes, oauthRoutes } from './modules/auth';
-import { userRoutes } from './modules/user';
-import { documentRoutes } from './modules/document';
-import { knowledgeBaseRoutes } from './modules/knowledge-base';
-import { logsRoutes } from './modules/logs';
-import { ragRoutes } from './modules/rag';
-import { llmRoutes } from './modules/llm';
-import { chatRoutes } from './modules/chat';
-import { storageRoutes } from './modules/storage';
-import { documentAiRoutes } from './modules/document-ai';
 import { serverConfig, storageConfig } from '@config/env';
+import { apiRouteModules } from './api-route-modules';
 
 const router = express.Router();
 
@@ -25,46 +16,16 @@ if (
   router.use('/api/uploads', express.static(path.resolve(storageConfig.localPath)));
 }
 
-// Signed file access route (handles /api/files/*)
-router.use('/api', storageRoutes);
-
 // Health check
 router.get('/api/hello', (_req: Request, res: Response) => {
   res.json({ message: 'Hello World!' });
 });
 
-// Auth routes
-router.use('/api/auth', authRoutes);
-
-// Email verification routes (under /api/auth/email)
-router.use('/api/auth/email', emailRoutes);
-
-// OAuth routes (under /api/auth/oauth)
-router.use('/api/auth/oauth', oauthRoutes);
-
-// User routes
-router.use('/api/user', userRoutes);
-
-// Document routes
-router.use('/api/documents', documentRoutes);
-
-// Knowledge base routes
-router.use('/api/knowledge-bases', knowledgeBaseRoutes);
-
-// Logs routes
-router.use('/api/logs', logsRoutes);
-
-// RAG routes
-router.use('/api/rag', ragRoutes);
-
-// LLM configuration routes
-router.use('/api/llm', llmRoutes);
-
-// Chat routes
-router.use('/api/chat', chatRoutes);
-
-// Document AI routes
-router.use('/api/document-ai', documentAiRoutes);
+// Business routes must be mounted through src/api-route-modules.ts
+// so the OpenAPI document can auto-discover them from the live router tree.
+for (const routeModule of apiRouteModules) {
+  router.use(routeModule.basePath, routeModule.router);
+}
 
 // 404 handler for undefined routes (must be last)
 router.use('/api/{*path}', (req, res) => {
