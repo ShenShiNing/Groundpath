@@ -148,16 +148,20 @@ pnpm -F @knowledge-agent/client build
 - 已落地内容：
   - 新增 `useStreamBuffer`，以 `requestAnimationFrame` 合并流式 chunk。
   - `chatPanelStore` 支持 request-scoped `StreamControls`，并在 `done` / `error` / 编辑中断前显式 `flush`。
-  - `useChatPageController` 已统一接入 buffer，并改为“通过滚动监听维护底部状态；仅在底部附近时自动滚动；流式阶段使用 `auto`”。
-  - `ChatPageConversation` 已移除传给 `ChatMessage` 的内联回调。
-  - `ChatMessage` 已改为稳定 props API，并使用 `React.memo` 包裹导出。
-  - `ChatMarkdown` 已改为流式阶段渐进式 Markdown 渲染，保留实时格式化与光标动画。
+- `useChatPageController` 已统一接入 buffer，并改为“通过滚动监听维护底部状态；仅在底部附近时自动滚动；流式阶段使用 `auto`”。
+- `ChatPageConversation` 已移除传给 `ChatMessage` 的内联回调。
+- `ChatMessage` 已改为稳定 props API，并使用 `React.memo` 包裹导出。
+- `ChatMarkdown` 已改为流式阶段渐进式 Markdown 渲染，保留实时格式化与光标动画。
+  - `sendMessage` 已改为先乐观插入用户消息与 assistant 占位，再异步创建会话，避免首条消息被建会话请求阻塞。
+  - `useChatPageController` 已在新一轮问答开始时优先将最新用户消息滚动到可视区域，再进入流式跟随。
+  - `ChatMessage` 已在 assistant 首段内容出现时增加淡入位移动画，并在编辑重发未真正启动时给出错误提示。
 - 已补测试：
   - `packages/client/tests/hooks/useStreamBuffer.test.tsx`
   - `packages/client/tests/components/chat/ChatMarkdown.test.tsx`
   - `packages/client/tests/stores/chatPanelStore.onDone.test.ts`
   - `packages/client/tests/stores/chatPanelStore.onError.test.ts`
   - `packages/client/tests/pages/ChatPage.test.tsx`
+  - `packages/client/tests/stores/chatPanelStore.test.ts`
 - 验证结果：
   - `pnpm test -- packages/client/tests/hooks/useStreamBuffer.test.tsx packages/client/tests/stores/chatPanelStore.onDone.test.ts packages/client/tests/stores/chatPanelStore.onError.test.ts packages/client/tests/components/chat/ChatMarkdown.test.tsx packages/client/tests/pages/ChatPage.test.tsx` 通过。
   - `pnpm -F @knowledge-agent/client build` 通过。

@@ -16,7 +16,7 @@ export interface ChatPageConversationProps {
   onCitationClick: (citation: Citation) => void;
   onCopyMessage: (content: string, format: CopyFormat) => void;
   onRetry: (messageId: string) => void;
-  onEditMessage: (messageId: string, content: string) => void;
+  onEditMessage: (messageId: string, content: string) => void | Promise<void>;
 }
 
 export function ChatPageConversation({

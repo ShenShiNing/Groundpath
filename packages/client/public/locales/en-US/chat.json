@@ -40,6 +40,7 @@
     "edit": "Edit",
     "cancelEdit": "Cancel",
     "saveEdit": "Save and resend",
+    "editFailed": "Failed to resend the edited message. Please try again.",
     "regenerate": "Regenerate",
     "stopReason": {
       "budgetExhausted": "The response was finalized after the tool budget was exhausted.",

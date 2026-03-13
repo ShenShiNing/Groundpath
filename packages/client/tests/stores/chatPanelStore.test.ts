@@ -56,9 +56,45 @@ describe('chatPanelStore sendMessage', () => {
     const state = useChatPanelStore.getState();
     expect(state.conversationId).toBeNull();
     expect(state.isLoading).toBe(false);
-    expect(state.messages).toHaveLength(1);
-    expect(state.messages[0]?.role).toBe('assistant');
-    expect(state.messages[0]?.content).toContain('error.conversationFailed');
+    expect(state.messages).toHaveLength(2);
+    expect(state.messages[0]).toMatchObject({
+      role: 'user',
+      content: 'How are you?',
+    });
+    expect(state.messages[1]).toMatchObject({
+      role: 'assistant',
+      isLoading: false,
+    });
+    expect(state.messages[1]?.content).toContain('error.conversationFailed');
+  });
+
+  it('shows the user message and placeholder assistant before conversation creation resolves', async () => {
+    let resolveConversation: ((value: { id: string }) => void) | null = null;
+
+    chatApiMocks.createConversation.mockReturnValue(
+      new Promise((resolve) => {
+        resolveConversation = resolve as (value: { id: string }) => void;
+      })
+    );
+    chatApiMocks.sendMessageWithSSE.mockImplementation(() => new AbortController());
+
+    const sendPromise = useChatPanelStore.getState().sendMessage('Hello', () => 'token');
+
+    const pendingState = useChatPanelStore.getState();
+    expect(pendingState.isLoading).toBe(true);
+    expect(pendingState.messages).toHaveLength(2);
+    expect(pendingState.messages[0]).toMatchObject({
+      role: 'user',
+      content: 'Hello',
+    });
+    expect(pendingState.messages[1]).toMatchObject({
+      role: 'assistant',
+      isLoading: true,
+      content: '',
+    });
+
+    resolveConversation?.({ id: 'conv-created' });
+    await sendPromise;
   });
 
   it('marks the last assistant message as user_aborted when generation is stopped locally', () => {

@@ -181,7 +181,7 @@ vi.mock('@/components/chat', () => ({
     canRegenerate?: boolean;
     onCitationClick: (citation: Citation) => void;
     onCopyMessage: (content: string, format: 'plain' | 'markdown') => void;
-    onEditMessage?: (messageId: string, content: string) => void;
+    onEditMessage?: (messageId: string, content: string) => void | Promise<void>;
     onRegenerateMessage?: (messageId: string) => void;
   }) => (
     <article>
@@ -518,7 +518,26 @@ describe('ChatPage', () => {
   });
 
   it('routes user message edits through the chat store controller', async () => {
-    const editMessage = vi.fn().mockResolvedValue(undefined);
+    const editMessage = vi.fn().mockImplementation(async (_messageId: string, content: string) => {
+      useChatPanelStore.setState({
+        isLoading: true,
+        messages: [
+          {
+            id: 'user-1',
+            role: 'user',
+            content,
+            timestamp: new Date('2026-03-13T10:00:00.000Z'),
+          },
+          {
+            id: 'assistant-regenerated',
+            role: 'assistant',
+            content: '',
+            timestamp: new Date('2026-03-13T10:00:01.000Z'),
+            isLoading: true,
+          },
+        ],
+      });
+    });
 
     resetChatStore({
       knowledgeBaseId: 'kb-ready',
@@ -557,6 +576,66 @@ describe('ChatPage', () => {
         reset: expect.any(Function),
       })
     );
+
+    await view.unmount();
+  });
+
+  it('scrolls the newest user message into view before the assistant starts filling the reply area', async () => {
+    resetChatStore({
+      knowledgeBaseId: 'kb-ready',
+      messages: [
+        {
+          id: 'assistant-old',
+          role: 'assistant',
+          content: 'Earlier answer',
+          timestamp: new Date('2026-03-13T09:58:00.000Z'),
+        },
+      ],
+    });
+
+    mocks.useKnowledgeBases.mockReturnValue({
+      data: [createKnowledgeBase('kb-ready', 1, '2026-03-13T09:00:00.000Z')],
+      isLoading: false,
+      isError: false,
+    });
+
+    const view = await render(<ChatPage />);
+    await flushPromises();
+
+    mocks.scrollIntoView.mockClear();
+
+    await act(async () => {
+      useChatPanelStore.setState({
+        isLoading: true,
+        messages: [
+          {
+            id: 'assistant-old',
+            role: 'assistant',
+            content: 'Earlier answer',
+            timestamp: new Date('2026-03-13T09:58:00.000Z'),
+          },
+          {
+            id: 'user-new',
+            role: 'user',
+            content: 'Fresh question',
+            timestamp: new Date('2026-03-13T10:00:00.000Z'),
+          },
+          {
+            id: 'assistant-new',
+            role: 'assistant',
+            content: '',
+            timestamp: new Date('2026-03-13T10:00:01.000Z'),
+            isLoading: true,
+          },
+        ],
+      });
+    });
+    await flushPromises();
+
+    expect(mocks.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'end',
+    });
 
     await view.unmount();
   });

@@ -123,6 +123,29 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     if (!trimmedContent) return;
     stream?.reset();
 
+    // Add user message immediately so the viewport can react before network round-trips.
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: trimmedContent,
+      timestamp: new Date(),
+    };
+    addMessage(userMessage);
+
+    // Add a placeholder assistant message right away and fill it as the stream arrives.
+    const assistantId = `assistant-${Date.now()}`;
+    const loadingMessage: ChatMessage = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      isLoading: true,
+    };
+    addMessage(loadingMessage);
+
+    set({ isLoading: true });
+    invalidateConversationQueries();
+
     // Create conversation if needed
     let convId = conversationId;
     if (!convId) {
@@ -144,38 +167,14 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         logClientError('chatPanelStore.sendMessage.createConversation', error, {
           knowledgeBaseId,
         });
-        addMessage({
-          id: `error-${Date.now()}`,
-          role: 'assistant',
+        updateLastMessage({
           content: i18n.t('error.conversationFailed', { ns: 'chat' }),
-          timestamp: new Date(),
+          isLoading: false,
         });
+        set({ isLoading: false, abortController: null });
         return;
       }
     }
-
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: trimmedContent,
-      timestamp: new Date(),
-    };
-    addMessage(userMessage);
-
-    // Add loading assistant message
-    const assistantId = `assistant-${Date.now()}`;
-    const loadingMessage: ChatMessage = {
-      id: assistantId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date(),
-      isLoading: true,
-    };
-    addMessage(loadingMessage);
-
-    set({ isLoading: true });
-    invalidateConversationQueries();
 
     // Start SSE streaming
     const abortController = sendMessageWithSSE(

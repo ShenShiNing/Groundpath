@@ -40,6 +40,7 @@
     "edit": "编辑",
     "cancelEdit": "取消",
     "saveEdit": "保存并重发",
+    "editFailed": "编辑后的问题未能重新发送，请重试。",
     "regenerate": "重新生成",
     "stopReason": {
       "budgetExhausted": "本次回答在工具预算耗尽后提前收口。",

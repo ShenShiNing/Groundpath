@@ -70,11 +70,23 @@ function ChatMessageBase({
   const [draft, setDraft] = useState(message.content);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const copyTimerRef = useRef<number | null>(null);
+  const revealFrameRef = useRef<number | null>(null);
+  const revealTimerRef = useRef<number | null>(null);
+  const previousHasAssistantContentRef = useRef(!isUser && message.content.trim().length > 0);
+  const [assistantRevealState, setAssistantRevealState] = useState<'idle' | 'prepare' | 'active'>(
+    'idle'
+  );
 
   useEffect(() => {
     return () => {
       if (copyTimerRef.current !== null) {
         window.clearTimeout(copyTimerRef.current);
+      }
+      if (revealFrameRef.current !== null) {
+        window.cancelAnimationFrame(revealFrameRef.current);
+      }
+      if (revealTimerRef.current !== null) {
+        window.clearTimeout(revealTimerRef.current);
       }
     };
   }, []);
@@ -84,6 +96,41 @@ function ChatMessageBase({
       setDraft(message.content);
     }
   }, [isEditing, message.content]);
+
+  useEffect(() => {
+    const hasAssistantContent = !isUser && message.content.trim().length > 0;
+    const isFirstVisibleChunk = hasAssistantContent && !previousHasAssistantContentRef.current;
+
+    if (!isFirstVisibleChunk) {
+      previousHasAssistantContentRef.current = hasAssistantContent;
+      return;
+    }
+
+    previousHasAssistantContentRef.current = true;
+
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    setAssistantRevealState('prepare');
+
+    if (revealFrameRef.current !== null) {
+      window.cancelAnimationFrame(revealFrameRef.current);
+    }
+    if (revealTimerRef.current !== null) {
+      window.clearTimeout(revealTimerRef.current);
+    }
+
+    revealFrameRef.current = window.requestAnimationFrame(() => {
+      revealFrameRef.current = window.requestAnimationFrame(() => {
+        setAssistantRevealState('active');
+        revealTimerRef.current = window.setTimeout(() => {
+          setAssistantRevealState('idle');
+          revealTimerRef.current = null;
+        }, 240);
+      });
+    });
+  }, [isUser, message.content]);
 
   const handleCopy = useCallback(
     async (format: CopyFormat) => {
@@ -229,7 +276,15 @@ function ChatMessageBase({
 
   // Assistant message (streaming or complete)
   return (
-    <div className="mb-6">
+    <div
+      className={[
+        'mb-6 transition-[opacity,transform] duration-240 ease-out motion-reduce:transition-none motion-reduce:transform-none',
+        assistantRevealState === 'prepare' ? 'opacity-0 translate-y-2' : '',
+        assistantRevealState === 'active' ? 'opacity-100 translate-y-0' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className="flex-1 min-w-0">
         {/* Tool execution steps */}
         {message.toolSteps && message.toolSteps.length > 0 && (

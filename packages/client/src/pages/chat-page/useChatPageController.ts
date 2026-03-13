@@ -21,6 +21,7 @@ export function useChatPageController() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const skipNextAutoScrollRef = useRef(false);
   const shouldAutoScrollRef = useRef(true);
+  const primedTurnAssistantIdRef = useRef<string | null>(null);
   const knowledgeBaseId = useChatPanelStore((state) => state.knowledgeBaseId);
   const conversationId = useChatPanelStore((state) => state.conversationId);
   const messages = useChatPanelStore((state) => state.messages);
@@ -166,6 +167,27 @@ export function useChatPageController() {
       return;
     }
 
+    const lastMessage = messages[messages.length - 1];
+    const previousMessage = messages[messages.length - 2];
+    const isNewTurnWithEmptyAssistant =
+      lastMessage?.role === 'assistant' &&
+      lastMessage.isLoading &&
+      !lastMessage.content &&
+      previousMessage?.role === 'user' &&
+      primedTurnAssistantIdRef.current !== lastMessage.id;
+
+    if (isNewTurnWithEmptyAssistant) {
+      primedTurnAssistantIdRef.current = lastMessage.id;
+      const latestUserMessageElement = document.getElementById(
+        `chat-message-${previousMessage.id}`
+      );
+      latestUserMessageElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+      });
+      return;
+    }
+
     if (!shouldAutoScrollRef.current) {
       return;
     }
@@ -232,6 +254,7 @@ export function useChatPageController() {
         open(targetKnowledgeBaseId);
       }
       shouldAutoScrollRef.current = true;
+      primedTurnAssistantIdRef.current = null;
       void sendMessage(content, getAccessTokenSnapshot, streamBuffer);
     },
     [knowledgeBaseId, open, selectedKnowledgeBaseId, sendMessage, streamBuffer]
@@ -240,17 +263,37 @@ export function useChatPageController() {
   const handleRetry = useCallback(
     (messageId: string) => {
       shouldAutoScrollRef.current = true;
+      primedTurnAssistantIdRef.current = null;
       void retryMessage(messageId, getAccessTokenSnapshot, streamBuffer);
     },
     [retryMessage, streamBuffer]
   );
 
   const handleEditMessage = useCallback(
-    (messageId: string, content: string) => {
+    async (messageId: string, content: string) => {
+      const trimmedContent = content.trim();
+      if (!trimmedContent) return;
+
       shouldAutoScrollRef.current = true;
-      void editMessage(messageId, content, getAccessTokenSnapshot, streamBuffer);
+      primedTurnAssistantIdRef.current = null;
+      await editMessage(messageId, trimmedContent, getAccessTokenSnapshot, streamBuffer);
+
+      const state = useChatPanelStore.getState();
+      const lastMessage = state.messages[state.messages.length - 1];
+      const previousMessage = state.messages[state.messages.length - 2];
+      const didQueueEditedReply =
+        state.isLoading &&
+        lastMessage?.role === 'assistant' &&
+        lastMessage.isLoading &&
+        previousMessage?.role === 'user' &&
+        previousMessage.content === trimmedContent;
+
+      if (!didQueueEditedReply) {
+        toast.error(t('message.editFailed'));
+        throw new Error('EDIT_FAILED');
+      }
     },
-    [editMessage, streamBuffer]
+    [editMessage, streamBuffer, t]
   );
 
   const handleStopGeneration = useCallback(() => {
