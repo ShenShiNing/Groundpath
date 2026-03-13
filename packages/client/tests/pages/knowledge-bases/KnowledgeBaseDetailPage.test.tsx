@@ -141,9 +141,6 @@ vi.mock('@/components/ui/table', () => ({
 vi.mock('@/components/knowledge-bases', () => ({
   KnowledgeBaseDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="knowledge-base-dialog" /> : null,
-  ChatPanel: ({ documents }: { documents: DocumentListItem[] }) => (
-    <div data-testid="chat-panel">{documents.length}</div>
-  ),
 }));
 
 vi.mock('@/components/documents/DocumentUpload', () => ({

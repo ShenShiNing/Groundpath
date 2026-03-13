@@ -3,6 +3,7 @@ import i18n from '@/i18n/i18n';
 import { conversationApi, sendMessageWithSSE } from '@/api';
 import { logClientError } from '@/lib/logger';
 import { queryClient } from '@/lib/query';
+import type { ConversationWithMessages, MessageInfo } from '@knowledge-agent/shared/types';
 import type { ChatMessage, ChatPanelState, ToolStep } from './chatPanelStore.types';
 import { toStoreCitation, agentTraceToToolSteps } from './chatPanelStore.types';
 
@@ -26,6 +27,32 @@ function getChatErrorMessage(error: { code: string; message: string }): string {
     default:
       return `Error: ${error.message}`;
   }
+}
+
+function toStoreMessage(message: MessageInfo): ChatMessage {
+  return {
+    id: message.id,
+    role: message.role as 'user' | 'assistant',
+    content: message.content,
+    timestamp: new Date(message.createdAt),
+    citations:
+      message.metadata?.finalCitations?.map(toStoreCitation) ??
+      message.metadata?.citations?.map(toStoreCitation) ??
+      message.metadata?.retrievedSources?.map(toStoreCitation),
+    retrievedSources: message.metadata?.retrievedSources?.map(toStoreCitation),
+    stopReason: message.metadata?.stopReason,
+    toolSteps: agentTraceToToolSteps(message.metadata?.agentTrace),
+  };
+}
+
+function toConversationState(
+  conversation: ConversationWithMessages
+): Pick<ChatPanelState, 'conversationId' | 'knowledgeBaseId' | 'messages'> {
+  return {
+    conversationId: conversation.id,
+    knowledgeBaseId: conversation.knowledgeBaseId,
+    messages: conversation.messages.map(toStoreMessage),
+  };
 }
 
 // ============================================================================
@@ -209,6 +236,54 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     set({ abortController });
   },
 
+  editMessage: async (messageId: string, content: string, getAccessToken: () => string | null) => {
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return;
+
+    const { conversationId, messages, isLoading, stopGeneration } = get();
+    if (!conversationId) return;
+
+    const userIdx = messages.findIndex((message) => message.id === messageId);
+    if (userIdx < 0) return;
+
+    const targetMessage = messages[userIdx];
+    if (!targetMessage || targetMessage.role !== 'user') return;
+
+    const nextMessage = messages[userIdx + 1];
+    const isPendingLatestUser =
+      isLoading &&
+      userIdx === messages.length - 2 &&
+      nextMessage?.role === 'assistant' &&
+      nextMessage.isLoading;
+
+    if (isLoading && !isPendingLatestUser) {
+      return;
+    }
+
+    if (isPendingLatestUser) {
+      stopGeneration();
+    }
+
+    try {
+      const forkedConversation = await conversationApi.fork(conversationId, {
+        beforeMessageId: messageId,
+      });
+      set({
+        ...toConversationState(forkedConversation),
+        focusMessageId: null,
+        focusKeyword: null,
+      });
+    } catch (error) {
+      logClientError('chatPanelStore.editMessage.forkConversation', error, {
+        conversationId,
+        messageId,
+      });
+      return;
+    }
+
+    await get().sendMessage(trimmedContent, getAccessToken);
+  },
+
   stopGeneration: () => {
     const { abortController, updateLastMessage } = get();
     if (abortController) {
@@ -222,7 +297,9 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
   retryMessage: async (messageId: string, getAccessToken: () => string | null) => {
     if (get().isLoading) return;
 
-    const { messages } = get();
+    const { conversationId, messages } = get();
+    if (!conversationId) return;
+
     const assistantIdx = messages.findIndex((m) => m.id === messageId);
     if (assistantIdx < 0) return;
 
@@ -233,10 +310,23 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
 
     const userContent = userMsg.content;
 
-    // Remove the old user + assistant pair from local messages
-    set({ messages: messages.filter((_, i) => i !== userIdx && i !== assistantIdx) });
+    try {
+      const forkedConversation = await conversationApi.fork(conversationId, {
+        beforeMessageId: userMsg.id,
+      });
+      set({
+        ...toConversationState(forkedConversation),
+        focusMessageId: null,
+        focusKeyword: null,
+      });
+    } catch (error) {
+      logClientError('chatPanelStore.retryMessage.forkConversation', error, {
+        conversationId,
+        messageId,
+      });
+      return;
+    }
 
-    // Re-send (adds new user message + loading assistant, starts SSE)
     await get().sendMessage(userContent, getAccessToken);
   },
 
@@ -251,23 +341,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
   loadConversation: async (conversationId: string) => {
     try {
       const conversation = await conversationApi.getById(conversationId);
-      const messages: ChatMessage[] = conversation.messages.map((msg) => ({
-        id: msg.id,
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-        timestamp: new Date(msg.createdAt),
-        citations:
-          msg.metadata?.finalCitations?.map(toStoreCitation) ??
-          msg.metadata?.citations?.map(toStoreCitation) ??
-          msg.metadata?.retrievedSources?.map(toStoreCitation),
-        retrievedSources: msg.metadata?.retrievedSources?.map(toStoreCitation),
-        stopReason: msg.metadata?.stopReason,
-        toolSteps: agentTraceToToolSteps(msg.metadata?.agentTrace),
-      }));
       set({
-        conversationId,
-        knowledgeBaseId: conversation.knowledgeBaseId,
-        messages,
+        ...toConversationState(conversation),
       });
     } catch (error) {
       logClientError('chatPanelStore.loadConversation', error, { conversationId });

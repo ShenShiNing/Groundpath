@@ -1,5 +1,6 @@
 import { eq, and, isNull, desc, sql } from 'drizzle-orm';
 import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import { now } from '@core/db/db.utils';
 import {
   conversations,
@@ -11,9 +12,10 @@ export const conversationRepository = {
   /**
    * Create a new conversation
    */
-  async create(data: NewConversation): Promise<Conversation> {
-    await db.insert(conversations).values(data);
-    const result = await db
+  async create(data: NewConversation, tx?: Transaction): Promise<Conversation> {
+    const ctx = getDbContext(tx);
+    await ctx.insert(conversations).values(data);
+    const result = await ctx
       .select()
       .from(conversations)
       .where(eq(conversations.id, data.id))

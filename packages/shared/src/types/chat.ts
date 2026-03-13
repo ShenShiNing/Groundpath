@@ -140,6 +140,10 @@ export interface UpdateConversationRequest {
   title: string;
 }
 
+export interface ForkConversationRequest {
+  beforeMessageId: string;
+}
+
 // Send message request
 export interface SendMessageRequest {
   content: string;

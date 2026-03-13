@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import {
   createConversationSchema,
+  forkConversationSchema,
   updateConversationSchema,
   listConversationsSchema,
   searchConversationsSchema,
@@ -68,6 +69,21 @@ export const conversationController = {
       sendSuccessResponse(res, { ...conversation, messages });
     } catch (error) {
       handleError(error, res, 'Get conversation');
+    }
+  },
+
+  /**
+   * POST /api/chat/conversations/:id/fork - Fork a conversation before a message
+   */
+  async fork(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.sub;
+      const id = paramAsString(req.params.id);
+      const parsed = forkConversationSchema.parse(req.body);
+      const conversation = await conversationService.fork(userId, id, parsed);
+      sendSuccessResponse(res, conversation, 201);
+    } catch (error) {
+      handleError(error, res, 'Fork conversation');
     }
   },
 

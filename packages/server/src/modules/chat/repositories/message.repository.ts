@@ -1,5 +1,6 @@
 import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import { messages, type Message, type NewMessage } from '@core/db/schema/ai/messages.schema';
 import { conversations } from '@core/db/schema/ai/conversations.schema';
 import type { ConversationSearchItem } from '@knowledge-agent/shared/types';
@@ -60,10 +61,31 @@ export const messageRepository = {
   /**
    * Create a new message
    */
-  async create(data: NewMessage): Promise<Message> {
-    await db.insert(messages).values(data);
-    const result = await db.select().from(messages).where(eq(messages.id, data.id)).limit(1);
+  async create(data: NewMessage, tx?: Transaction): Promise<Message> {
+    const ctx = getDbContext(tx);
+    await ctx.insert(messages).values(data);
+    const result = await ctx.select().from(messages).where(eq(messages.id, data.id)).limit(1);
     return result[0]!;
+  },
+
+  /**
+   * Create multiple messages and preserve the caller's requested order.
+   */
+  async createMany(data: NewMessage[], tx?: Transaction): Promise<Message[]> {
+    if (data.length === 0) {
+      return [];
+    }
+
+    const ctx = getDbContext(tx);
+    await ctx.insert(messages).values(data);
+
+    const ids = data.map((message) => message.id);
+    const result = await ctx.select().from(messages).where(inArray(messages.id, ids));
+    const messagesById = new Map(result.map((message) => [message.id, message]));
+
+    return ids
+      .map((id) => messagesById.get(id)!)
+      .filter((message): message is Message => !!message);
   },
 
   /**

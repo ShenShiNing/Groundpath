@@ -88,6 +88,10 @@ export const updateConversationSchema = z
     message: 'At least one field must be provided',
   });
 
+export const forkConversationSchema = z.object({
+  beforeMessageId: z.string().min(1, 'Message id is required'),
+});
+
 export const sendMessageSchema = z.object({
   content: z
     .string()
@@ -116,6 +120,7 @@ export const searchConversationsSchema = z.object({
 
 export type CreateConversationInput = z.infer<typeof createConversationSchema>;
 export type UpdateConversationInput = z.infer<typeof updateConversationSchema>;
+export type ForkConversationInput = z.infer<typeof forkConversationSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export type ListConversationsInput = z.infer<typeof listConversationsSchema>;
 export type ListMessagesInput = z.infer<typeof listMessagesSchema>;

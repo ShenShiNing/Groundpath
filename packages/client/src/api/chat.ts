@@ -13,6 +13,7 @@ import type {
 } from '@knowledge-agent/shared/types';
 import type {
   CreateConversationInput,
+  ForkConversationInput,
   SearchConversationsInput,
   UpdateConversationInput,
   SendMessageInput,
@@ -83,6 +84,17 @@ export const conversationApi = {
   async getById(id: string): Promise<ConversationWithMessages> {
     const response = await apiClient.get<ApiResponse<ConversationWithMessages>>(
       `/api/chat/conversations/${id}`
+    );
+    return unwrapResponse(response.data);
+  },
+
+  /**
+   * Fork a conversation before the specified message.
+   */
+  async fork(id: string, data: ForkConversationInput): Promise<ConversationWithMessages> {
+    const response = await apiClient.post<ApiResponse<ConversationWithMessages>>(
+      `/api/chat/conversations/${id}/fork`,
+      data
     );
     return unwrapResponse(response.data);
   },

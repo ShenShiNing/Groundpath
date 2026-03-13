@@ -51,6 +51,11 @@ export interface ChatPanelState {
   close: () => void;
   toggle: () => void;
   sendMessage: (content: string, getAccessToken: () => string | null) => Promise<void>;
+  editMessage: (
+    messageId: string,
+    content: string,
+    getAccessToken: () => string | null
+  ) => Promise<void>;
   retryMessage: (messageId: string, getAccessToken: () => string | null) => Promise<void>;
   stopGeneration: () => void;
   setDocumentScope: (ids: string[]) => void;
@@ -131,7 +136,13 @@ export function toStoreCitation(citation: APICitation, index: number): Citation 
 
 export function toStopReasonLabelKey(
   stopReason?: AgentStopReason
-): `message.stopReason.${string}` | null {
+):
+  | 'message.stopReason.budgetExhausted'
+  | 'message.stopReason.insufficientEvidence'
+  | 'message.stopReason.toolTimeout'
+  | 'message.stopReason.userAborted'
+  | 'message.stopReason.providerError'
+  | null {
   if (!stopReason || stopReason === 'answered') return null;
 
   switch (stopReason) {

@@ -37,6 +37,9 @@
     "copy": "复制",
     "copyPlain": "复制纯文本",
     "copyMarkdown": "复制 Markdown",
+    "edit": "编辑",
+    "cancelEdit": "取消",
+    "saveEdit": "保存并重发",
     "regenerate": "重新生成",
     "stopReason": {
       "budgetExhausted": "本次回答在工具预算耗尽后提前收口。",

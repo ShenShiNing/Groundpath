@@ -12,9 +12,11 @@ export interface ChatPageConversationProps {
   selectedKnowledgeBaseId: string | undefined;
   highlightedMessageId: string | null;
   messagesEndRef: RefObject<HTMLDivElement | null>;
+  isLoading: boolean;
   onCitationClick: (citation: Citation) => void;
   onCopyMessage: (content: string, format: CopyFormat) => void;
   onRetry: (messageId: string) => void;
+  onEditMessage: (messageId: string, content: string) => void;
 }
 
 export function ChatPageConversation({
@@ -22,9 +24,11 @@ export function ChatPageConversation({
   selectedKnowledgeBaseId,
   highlightedMessageId,
   messagesEndRef,
+  isLoading,
   onCitationClick,
   onCopyMessage,
   onRetry,
+  onEditMessage,
 }: ChatPageConversationProps) {
   const { t } = useTranslation('chat');
 
@@ -45,29 +49,40 @@ export function ChatPageConversation({
       ) : (
         <ScrollArea className="h-full">
           <div className="mx-auto w-full max-w-3xl px-4 py-6 md:px-6">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                id={`chat-message-${message.id}`}
-                className={cn(
-                  'scroll-mt-24 rounded-lg transition-colors duration-700',
-                  highlightedMessageId === message.id
-                    ? 'bg-transparent ring-2 ring-primary/45 ring-offset-2 ring-offset-background'
-                    : 'bg-transparent'
-                )}
-              >
-                <ChatMessage
-                  message={message}
-                  onCitationClick={onCitationClick}
-                  onCopy={(format) => onCopyMessage(message.content, format)}
-                  onRegenerate={
-                    message.role === 'assistant' && !message.isLoading
-                      ? () => onRetry(message.id)
-                      : undefined
-                  }
-                />
-              </div>
-            ))}
+            {messages.map((message, index) => {
+              const nextMessage = messages[index + 1];
+              const canEdit =
+                message.role === 'user' &&
+                (!isLoading ||
+                  (index === messages.length - 2 &&
+                    nextMessage?.role === 'assistant' &&
+                    nextMessage.isLoading));
+
+              return (
+                <div
+                  key={message.id}
+                  id={`chat-message-${message.id}`}
+                  className={cn(
+                    'scroll-mt-24 rounded-lg transition-colors duration-700',
+                    highlightedMessageId === message.id
+                      ? 'bg-transparent ring-2 ring-primary/45 ring-offset-2 ring-offset-background'
+                      : 'bg-transparent'
+                  )}
+                >
+                  <ChatMessage
+                    message={message}
+                    onCitationClick={onCitationClick}
+                    onCopy={(format) => onCopyMessage(message.content, format)}
+                    onEdit={canEdit ? (content) => onEditMessage(message.id, content) : undefined}
+                    onRegenerate={
+                      message.role === 'assistant' && !message.isLoading
+                        ? () => onRetry(message.id)
+                        : undefined
+                    }
+                  />
+                </div>
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>

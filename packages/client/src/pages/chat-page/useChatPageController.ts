@@ -26,6 +26,7 @@ export function useChatPageController() {
   const isLoading = useChatPanelStore((state) => state.isLoading);
   const open = useChatPanelStore((state) => state.open);
   const sendMessage = useChatPanelStore((state) => state.sendMessage);
+  const editMessage = useChatPanelStore((state) => state.editMessage);
   const retryMessage = useChatPanelStore((state) => state.retryMessage);
   const stopGeneration = useChatPanelStore((state) => state.stopGeneration);
   const setDocumentScope = useChatPanelStore((state) => state.setDocumentScope);
@@ -192,6 +193,13 @@ export function useChatPageController() {
     [retryMessage]
   );
 
+  const handleEditMessage = useCallback(
+    (messageId: string, content: string) => {
+      void editMessage(messageId, content, getAccessTokenSnapshot);
+    },
+    [editMessage]
+  );
+
   const handleCitationClick = useCallback((citation: Citation) => {
     setPreviewCitation(citation);
     setPreviewOpen(true);
@@ -270,6 +278,7 @@ export function useChatPageController() {
     clearMessages,
     handleSendMessage,
     handleRetry,
+    handleEditMessage,
     handleCitationClick,
     handleCopyMessage,
     handleOpenDocumentFromCitation,

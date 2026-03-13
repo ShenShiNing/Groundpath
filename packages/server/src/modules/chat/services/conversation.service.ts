@@ -4,13 +4,19 @@ import type {
   ConversationListItem,
   ConversationListResponse,
   ConversationSearchResponse,
+  ConversationWithMessages,
+  MessageInfo,
+  MessageMetadata,
+  MessageRole,
 } from '@knowledge-agent/shared/types';
 import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import { withTransaction } from '@core/db/db.utils';
 import { conversationRepository } from '../repositories/conversation.repository';
 import { messageRepository } from '../repositories/message.repository';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 import { Errors } from '@core/errors';
 import type { Conversation } from '@core/db/schema/ai/conversations.schema';
+import type { Message } from '@core/db/schema/ai/messages.schema';
 
 function toConversationInfo(conv: Conversation): ConversationInfo {
   return {
@@ -20,6 +26,17 @@ function toConversationInfo(conv: Conversation): ConversationInfo {
     title: conv.title,
     createdAt: conv.createdAt,
     updatedAt: conv.updatedAt,
+  };
+}
+
+function toMessageInfo(message: Message): MessageInfo {
+  return {
+    id: message.id,
+    conversationId: message.conversationId,
+    role: message.role as MessageRole,
+    content: message.content,
+    metadata: message.metadata as MessageMetadata | null,
+    createdAt: message.createdAt,
   };
 }
 
@@ -231,5 +248,63 @@ export const conversationService = {
       title = title.substring(0, maxLength - 3) + '...';
     }
     return title || 'New Conversation';
+  },
+
+  /**
+   * Fork a conversation before a specific user message so the caller can branch and resend.
+   */
+  async fork(
+    userId: string,
+    conversationId: string,
+    data: { beforeMessageId: string }
+  ): Promise<ConversationWithMessages> {
+    const sourceConversation = await this.validateOwnership(userId, conversationId);
+    const sourceMessages = await messageRepository.listByConversation(conversationId);
+    const targetIndex = sourceMessages.findIndex((message) => message.id === data.beforeMessageId);
+
+    if (targetIndex < 0) {
+      throw Errors.auth(CHAT_ERROR_CODES.MESSAGE_NOT_FOUND, 'Message not found', 404, {
+        conversationId,
+        messageId: data.beforeMessageId,
+      });
+    }
+
+    const targetMessage = sourceMessages[targetIndex]!;
+    if (targetMessage.role !== 'user') {
+      throw Errors.validation('Only user messages can be edited');
+    }
+
+    const prefixMessages = sourceMessages.slice(0, targetIndex);
+
+    return withTransaction(async (tx) => {
+      const forkedConversationId = uuidv4();
+      const forkedConversation = await conversationRepository.create(
+        {
+          id: forkedConversationId,
+          userId,
+          knowledgeBaseId: sourceConversation.knowledgeBaseId,
+          title: prefixMessages.length > 0 ? sourceConversation.title : 'New Conversation',
+          createdBy: userId,
+        },
+        tx
+      );
+
+      const forkedMessages = await messageRepository.createMany(
+        prefixMessages.map((message) => ({
+          id: uuidv4(),
+          conversationId: forkedConversationId,
+          role: message.role,
+          content: message.content,
+          metadata: message.metadata ?? null,
+          createdAt: message.createdAt,
+        })),
+        tx
+      );
+
+      return {
+        ...toConversationInfo(forkedConversation),
+        messages: forkedMessages.map(toMessageInfo),
+      };
+    });
   },
 };

@@ -167,11 +167,13 @@ vi.mock('@/components/chat', () => ({
     message,
     onCitationClick,
     onCopy,
+    onEdit,
     onRegenerate,
   }: {
     message: StoreChatMessage;
     onCitationClick: (citation: Citation) => void;
     onCopy: (format: 'plain' | 'markdown') => void;
+    onEdit?: (content: string) => void;
     onRegenerate?: () => void;
   }) => (
     <article>
@@ -179,6 +181,11 @@ vi.mock('@/components/chat', () => ({
       <button type="button" onClick={() => onCopy('plain')}>
         copy-message
       </button>
+      {onEdit ? (
+        <button type="button" onClick={() => onEdit(`edited:${message.id}`)}>
+          edit-message
+        </button>
+      ) : null}
       {message.citations?.[0] ? (
         <button type="button" onClick={() => onCitationClick(message.citations![0]!)}>
           open-citation
@@ -490,6 +497,41 @@ describe('ChatPage', () => {
       '#chat-message-assistant-1'
     );
     expect(highlightedMessageAfterTimeout?.className).not.toContain('ring-2');
+
+    await view.unmount();
+  });
+
+  it('routes user message edits through the chat store controller', async () => {
+    const editMessage = vi.fn().mockResolvedValue(undefined);
+
+    resetChatStore({
+      knowledgeBaseId: 'kb-ready',
+      editMessage,
+      messages: [
+        {
+          id: 'user-1',
+          role: 'user',
+          content: 'Original question',
+          timestamp: new Date('2026-03-13T10:00:00.000Z'),
+        },
+      ],
+    });
+
+    mocks.useKnowledgeBases.mockReturnValue({
+      data: [createKnowledgeBase('kb-ready', 1, '2026-03-13T09:00:00.000Z')],
+      isLoading: false,
+      isError: false,
+    });
+
+    const view = await render(<ChatPage />);
+    await flushPromises();
+
+    const editButton = Array.from(view.container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('edit-message')
+    );
+    await fireClick(editButton ?? null);
+
+    expect(editMessage).toHaveBeenCalledWith('user-1', 'edited:user-1', expect.any(Function));
 
     await view.unmount();
   });

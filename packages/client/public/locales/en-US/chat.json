@@ -37,6 +37,9 @@
     "copy": "Copy",
     "copyPlain": "Copy plain text",
     "copyMarkdown": "Copy Markdown",
+    "edit": "Edit",
+    "cancelEdit": "Cancel",
+    "saveEdit": "Save and resend",
     "regenerate": "Regenerate",
     "stopReason": {
       "budgetExhausted": "The response was finalized after the tool budget was exhausted.",

@@ -35,6 +35,7 @@ export function ChatPage() {
     clearMessages,
     handleSendMessage,
     handleRetry,
+    handleEditMessage,
     handleCitationClick,
     handleCopyMessage,
     handleOpenDocumentFromCitation,
@@ -81,9 +82,11 @@ export function ChatPage() {
                 selectedKnowledgeBaseId={selectedKnowledgeBaseId}
                 highlightedMessageId={highlightedMessageId}
                 messagesEndRef={messagesEndRef}
+                isLoading={isLoading}
                 onCitationClick={handleCitationClick}
                 onCopyMessage={handleCopyMessage}
                 onRetry={handleRetry}
+                onEditMessage={handleEditMessage}
               />
 
               <div className="shrink-0 bg-background pb-4 pt-2 md:pb-6">

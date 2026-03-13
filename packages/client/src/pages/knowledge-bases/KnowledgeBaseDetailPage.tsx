@@ -3,7 +3,7 @@ import { useNavigate, useParams } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { KnowledgeBaseDialog, ChatPanel } from '@/components/knowledge-bases';
+import { KnowledgeBaseDialog } from '@/components/knowledge-bases';
 import { useDeleteDocument, useKBDocuments, useKnowledgeBase } from '@/hooks';
 import { openInNewTab } from '@/lib/utils';
 import { queryKeys } from '@/lib/query';
@@ -126,16 +126,6 @@ export default function KnowledgeBaseDetailPage() {
     openInNewTab(`/api/documents/${document.id}/download`);
   }, []);
 
-  const handleOpenDocumentFromChat = useCallback(
-    (documentId: string) => {
-      void navigate({
-        to: '/documents/$id',
-        params: { id: documentId },
-      });
-    },
-    [navigate]
-  );
-
   if (!knowledgeBaseId) {
     return <KnowledgeBaseDetailMissingIdState />;
   }
@@ -179,12 +169,6 @@ export default function KnowledgeBaseDetailPage() {
           onOpenUpload={() => setUploadOpen(true)}
         />
       </div>
-
-      <ChatPanel
-        knowledgeBaseId={knowledgeBaseId}
-        documents={documents}
-        onOpenDocument={handleOpenDocumentFromChat}
-      />
 
       <KnowledgeBaseUploadDialog
         open={uploadOpen}

@@ -1,6 +1,7 @@
 import { z } from '@knowledge-agent/shared/schemas';
 import {
   createConversationSchema,
+  forkConversationSchema,
   updateConversationSchema,
   sendMessageSchema,
   listConversationsSchema,
@@ -46,6 +47,14 @@ export const chatOpenApiOperations = defineOpenApiOperations({
     summary: '获取会话详情',
     request: { params: z.object({ id: z.string() }) },
     responses: { 200: successResponse(conversationItem, '会话详情'), 404: errorResponse },
+  },
+  'POST /api/chat/conversations/{id}/fork': {
+    summary: '在指定消息之前分支会话',
+    request: {
+      params: z.object({ id: z.string() }),
+      body: { content: { 'application/json': { schema: forkConversationSchema } } },
+    },
+    responses: { 201: successResponse(conversationItem, '会话分支创建成功'), 404: errorResponse },
   },
   'PATCH /api/chat/conversations/{id}': {
     summary: '更新会话',
