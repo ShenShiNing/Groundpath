@@ -132,6 +132,9 @@ export const documentUploadService = {
     let document: Document;
     try {
       document = await withTransaction(async (tx) => {
+        // Lock the parent KB row first to avoid concurrent upload deadlocks.
+        await knowledgeBaseService.lockOwnership(knowledgeBaseId, userId, tx);
+
         // Create document first so the initial version insert satisfies the FK.
         const doc = await documentRepository.create(
           {

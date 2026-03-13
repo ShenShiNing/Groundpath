@@ -351,6 +351,20 @@ export const knowledgeBaseService = {
   },
 
   /**
+   * Lock a knowledge base row for update within an existing transaction.
+   */
+  async lockOwnership(kbId: string, userId: string, tx: Transaction): Promise<void> {
+    const locked = await knowledgeBaseRepository.lockByIdAndUser(kbId, userId, tx);
+    if (!locked) {
+      throw Errors.auth(
+        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
+        'Knowledge base not found or access denied',
+        404
+      );
+    }
+  },
+
+  /**
    * Increment document count
    */
   async incrementDocumentCount(kbId: string, delta: number, tx?: Transaction): Promise<void> {

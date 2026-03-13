@@ -65,6 +65,7 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
 vi.mock('@modules/knowledge-base', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
+    lockOwnership: vi.fn(),
     getEmbeddingConfig: vi.fn(),
     incrementDocumentCount: vi.fn(),
     incrementTotalChunks: vi.fn(),
@@ -103,6 +104,7 @@ describe('documentService > upload', () => {
     vi.clearAllMocks();
     // Default mock for knowledgeBaseService.validateOwnership
     vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(mockKnowledgeBase);
+    vi.mocked(knowledgeBaseService.lockOwnership).mockResolvedValue(undefined);
   });
 
   // 场景 1：成功上传 PDF 文档
@@ -140,6 +142,11 @@ describe('documentService > upload', () => {
       mockKnowledgeBaseId,
       mockUserId
     );
+    expect(knowledgeBaseService.lockOwnership).toHaveBeenCalledWith(
+      mockKnowledgeBaseId,
+      mockUserId,
+      expect.anything()
+    );
     expect(documentStorageService.validateFile).toHaveBeenCalledWith(mockFile);
     expect(documentStorageService.uploadDocument).toHaveBeenCalledWith(mockUserId, mockFile);
     expect(documentRepository.create).toHaveBeenCalledWith(
@@ -160,6 +167,9 @@ describe('documentService > upload', () => {
         storageKey: mockStorageResult.storageKey,
       }),
       expect.anything()
+    );
+    expect(vi.mocked(knowledgeBaseService.lockOwnership).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(documentRepository.create).mock.invocationCallOrder[0]!
     );
     expect(vi.mocked(documentRepository.create).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(documentVersionRepository.create).mock.invocationCallOrder[0]!

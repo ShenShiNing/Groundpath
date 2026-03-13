@@ -7,6 +7,10 @@ import {
   type NewKnowledgeBase,
 } from '@shared/db/schema/document/knowledge-bases.schema';
 
+function extractRows<T>(result: unknown): T[] {
+  return (result as [T[]])[0] ?? [];
+}
+
 /**
  * Knowledge base repository for database operations
  */
@@ -52,6 +56,26 @@ export const knowledgeBaseRepository = {
       )
       .limit(1);
     return result[0];
+  },
+
+  /**
+   * Lock an active knowledge base row within an existing transaction.
+   */
+  async lockByIdAndUser(id: string, userId: string, tx: Transaction): Promise<boolean> {
+    const ctx = getDbContext(tx);
+    const rows = extractRows<{ id: string }>(
+      await ctx.execute(sql`
+      SELECT id
+      FROM knowledge_bases
+      WHERE id = ${id}
+        AND user_id = ${userId}
+        AND deleted_at IS NULL
+      LIMIT 1
+      FOR UPDATE
+    `)
+    );
+
+    return rows.length > 0;
   },
 
   /**

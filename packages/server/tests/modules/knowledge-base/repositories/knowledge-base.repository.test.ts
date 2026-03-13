@@ -10,6 +10,7 @@ const {
   selectOffsetMock,
   updateSetMock,
   updateWhereMock,
+  executeMock,
   eqMock,
   andMock,
   isNullMock,
@@ -37,6 +38,7 @@ const {
     update: vi.fn(() => ({
       set: updateSet,
     })),
+    execute: vi.fn(),
   };
 
   return {
@@ -49,6 +51,7 @@ const {
     selectOffsetMock: selectOffset,
     updateSetMock: updateSet,
     updateWhereMock: updateWhere,
+    executeMock: db.execute,
     eqMock: vi.fn((left: unknown, right: unknown) => ({ type: 'eq', left, right })),
     andMock: vi.fn((...conditions: unknown[]) => ({ type: 'and', conditions })),
     isNullMock: vi.fn((value: unknown) => ({ type: 'isNull', value })),
@@ -123,6 +126,7 @@ describe('knowledgeBaseRepository', () => {
     selectOffsetMock.mockReset();
     updateSetMock.mockReset();
     updateWhereMock.mockReset();
+    executeMock.mockReset();
   });
 
   it('should create knowledge base and return inserted record', async () => {
@@ -188,6 +192,17 @@ describe('knowledgeBaseRepository', () => {
     expect(isNullMock).toHaveBeenCalledWith(knowledgeBasesMock.deletedAt);
     expect(andMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual(mockKnowledgeBase);
+  });
+
+  it('should lock knowledge base row by id and user inside a transaction', async () => {
+    const tx = {
+      execute: vi.fn().mockResolvedValueOnce([[{ id: 'kb-1' }]]),
+    };
+
+    const result = await knowledgeBaseRepository.lockByIdAndUser('kb-1', 'user-1', tx as never);
+
+    expect(result).toBe(true);
+    expect(tx.execute).toHaveBeenCalledWith(expect.objectContaining({ type: 'sql' }));
   });
 
   it('should list knowledge bases by user ordered by creation time', async () => {

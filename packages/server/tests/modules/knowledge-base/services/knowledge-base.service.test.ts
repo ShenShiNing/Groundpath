@@ -42,6 +42,7 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
   knowledgeBaseRepository: {
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
+    lockByIdAndUser: vi.fn(),
     listByUser: vi.fn(),
     countByUser: vi.fn(),
     update: vi.fn(),
@@ -284,10 +285,15 @@ describe('knowledgeBaseService', () => {
 
   it('should validate ownership and proxy counter increment operations', async () => {
     const owned = await knowledgeBaseService.validateOwnership(mockKbId, mockUserId);
+    vi.mocked(knowledgeBaseRepository.lockByIdAndUser).mockResolvedValue(true);
+    await knowledgeBaseService.lockOwnership(mockKbId, mockUserId, { id: 'tx-1' } as never);
     await knowledgeBaseService.incrementDocumentCount(mockKbId, 2);
     await knowledgeBaseService.incrementTotalChunks(mockKbId, 6);
 
     expect(owned.id).toBe(mockKbId);
+    expect(knowledgeBaseRepository.lockByIdAndUser).toHaveBeenCalledWith(mockKbId, mockUserId, {
+      id: 'tx-1',
+    });
     expect(knowledgeBaseRepository.incrementDocumentCount).toHaveBeenCalledWith(
       mockKbId,
       2,
@@ -308,6 +314,17 @@ describe('knowledgeBaseService', () => {
     ).rejects.toBeInstanceOf(AppError);
     await expect(
       knowledgeBaseService.validateOwnership(mockKbId, mockUserId)
+    ).rejects.toMatchObject({
+      code: 'KNOWLEDGE_BASE_NOT_FOUND',
+      statusCode: 404,
+    });
+  });
+
+  it('should throw access error when row lock cannot be acquired', async () => {
+    vi.mocked(knowledgeBaseRepository.lockByIdAndUser).mockResolvedValue(false);
+
+    await expect(
+      knowledgeBaseService.lockOwnership(mockKbId, mockUserId, { id: 'tx-1' } as never)
     ).rejects.toMatchObject({
       code: 'KNOWLEDGE_BASE_NOT_FOUND',
       statusCode: 404,
