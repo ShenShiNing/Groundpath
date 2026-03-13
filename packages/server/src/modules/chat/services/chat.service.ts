@@ -27,10 +27,13 @@ async function prepareChatRequest(options: SendMessageOptions) {
 
   const conversation = await conversationService.validateOwnership(userId, conversationId);
 
+  let userMessageId: string;
   if (editedMessageId) {
     await messageService.editContent(conversationId, editedMessageId, content);
+    userMessageId = editedMessageId;
   } else {
-    await messageService.create({ conversationId, role: 'user', content });
+    const userMessage = await messageService.create({ conversationId, role: 'user', content });
+    userMessageId = userMessage.id;
   }
 
   const messageCount = await messageService.count(conversationId);
@@ -48,7 +51,7 @@ async function prepareChatRequest(options: SendMessageOptions) {
   const provider = await llmService.getProviderForUser(userId);
   const genOptions = await llmService.getOptionsForUser(userId);
 
-  return { conversation, tools, provider, genOptions };
+  return { conversation, tools, provider, genOptions, userMessageId };
 }
 
 export const chatService = {
@@ -62,7 +65,8 @@ export const chatService = {
     res.socket?.setTimeout(0);
 
     try {
-      const { conversation, tools, provider, genOptions } = await prepareChatRequest(options);
+      const { conversation, tools, provider, genOptions, userMessageId } =
+        await prepareChatRequest(options);
       const assistantMessageId = uuidv4();
       const abortController = new AbortController();
       let clientDisconnected = false;
@@ -105,7 +109,11 @@ export const chatService = {
       await conversationRepository.touch(conversationId, userId);
       sendSSE(res, {
         type: 'done',
-        data: { messageId: assistantMessageId, stopReason: ctx.completionStopReason },
+        data: {
+          messageId: assistantMessageId,
+          userMessageId,
+          stopReason: ctx.completionStopReason,
+        },
       });
       res.end();
     } catch (error) {

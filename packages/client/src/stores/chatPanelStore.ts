@@ -217,6 +217,17 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         },
         onDone: (data) => {
           stream?.flush();
+          // Update user message with the real DB id
+          if (data.userMessageId) {
+            set((state) => {
+              const msgs = [...state.messages];
+              const userIdx = msgs.length - 2;
+              if (userIdx >= 0 && msgs[userIdx]?.role === 'user') {
+                msgs[userIdx] = { ...msgs[userIdx], id: data.userMessageId! };
+              }
+              return { messages: msgs };
+            });
+          }
           const lastMsg = get().messages[get().messages.length - 1];
           if (lastMsg && !lastMsg.content.trim()) {
             updateLastMessage({
@@ -296,9 +307,14 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
           { ...targetMessage, content: trimmedContent },
         ],
       }));
-      await get().sendMessage(trimmedContent, getAccessToken, stream, {
-        editedMessageId: messageId,
-      });
+      // Only use editedMessageId when we have the real DB id
+      const hasRealId = !messageId.startsWith('user-');
+      await get().sendMessage(
+        trimmedContent,
+        getAccessToken,
+        stream,
+        hasRealId ? { editedMessageId: messageId } : undefined
+      );
     } else {
       // Historical: send the edited content as a new message
       await get().sendMessage(trimmedContent, getAccessToken, stream);
@@ -338,12 +354,16 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       userIdx === messages.length - 2 && messages[userIdx + 1]?.role === 'assistant';
 
     if (isLatestPair) {
+      const hasRealId = !userMsg.id.startsWith('user-');
       set((state) => ({
         messages: state.messages.slice(0, assistantIdx),
       }));
-      await get().sendMessage(userMsg.content, getAccessToken, stream, {
-        editedMessageId: userMsg.id,
-      });
+      await get().sendMessage(
+        userMsg.content,
+        getAccessToken,
+        stream,
+        hasRealId ? { editedMessageId: userMsg.id } : undefined
+      );
     } else {
       // Historical: send user content as a new message
       await get().sendMessage(userMsg.content, getAccessToken, stream);

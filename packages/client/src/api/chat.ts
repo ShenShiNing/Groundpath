@@ -138,6 +138,7 @@ export interface SSEHandlers {
   onSources: (citations: Citation[]) => void;
   onDone: (data: {
     messageId: string;
+    userMessageId?: string;
     stopReason?: import('@knowledge-agent/shared/types').AgentStopReason;
   }) => void;
   onError: (error: { code: string; message: string }) => void;

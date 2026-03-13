@@ -188,6 +188,7 @@ export interface SSEDoneEvent {
   type: 'done';
   data: {
     messageId: string;
+    userMessageId?: string;
     tokenUsage?: TokenUsage;
     stopReason?: AgentStopReason;
   };
