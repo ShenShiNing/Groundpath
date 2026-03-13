@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Hoisted mocks
 const mocks = vi.hoisted(() => ({
@@ -82,6 +82,7 @@ import { chatService } from '@modules/chat/services/chat.service';
 
 function createMockRes() {
   const written: string[] = [];
+  const listeners = new Map<string, Set<() => void>>();
   const socket = {
     setTimeout: vi.fn(),
   };
@@ -89,12 +90,35 @@ function createMockRes() {
     setHeader: vi.fn(),
     write: vi.fn((data: string) => written.push(data)),
     end: vi.fn(),
-    on: vi.fn(),
-    off: vi.fn(),
+    on: vi.fn((event: string, listener: () => void) => {
+      const eventListeners = listeners.get(event) ?? new Set<() => void>();
+      eventListeners.add(listener);
+      listeners.set(event, eventListeners);
+      return res;
+    }),
+    off: vi.fn((event: string, listener: () => void) => {
+      listeners.get(event)?.delete(listener);
+      return res;
+    }),
     headersSent: false,
     socket,
   };
-  return { res: res as unknown as import('express').Response, written, socket };
+  return {
+    res: res as unknown as import('express').Response,
+    written,
+    socket,
+    emit: (event: string) => {
+      for (const listener of listeners.get(event) ?? []) {
+        listener();
+      }
+    },
+  };
+}
+
+async function flushMicrotasks(turns: number = 10) {
+  for (let index = 0; index < turns; index++) {
+    await Promise.resolve();
+  }
 }
 
 describe('chatService.sendMessageWithSSE', () => {
@@ -114,6 +138,10 @@ describe('chatService.sendMessageWithSSE', () => {
     mocks.promptService.truncateHistory.mockReturnValue([]);
     mocks.llmService.getOptionsForUser.mockResolvedValue({});
     mocks.resolveTools.mockReturnValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   // --- Legacy streaming mode ---
@@ -408,6 +436,135 @@ describe('chatService.sendMessageWithSSE', () => {
     expect(loopArgs.toolContext.signal).toBe(loopArgs.genOptions.signal);
   });
 
+  it('sends heartbeat comments during long-running multi-step agent execution and clears them after completion', async () => {
+    vi.useFakeTimers();
+
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
+    mocks.resolveTools.mockReturnValue([webTool]);
+    mocks.executeAgentLoop.mockImplementation(async (args) => {
+      args.onToolStart?.(0, [{ id: 'tool-1', name: 'web_search', arguments: '{}' }]);
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
+      args.onToolEnd?.(
+        0,
+        [{ toolCallId: 'tool-1', toolName: 'web_search', result: '{"ok":true}' }],
+        10_000
+      );
+
+      args.onToolStart?.(1, [{ id: 'tool-2', name: 'web_search', arguments: '{}' }]);
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
+      args.onToolEnd?.(
+        1,
+        [{ toolCallId: 'tool-2', toolName: 'web_search', result: '{"ok":true}' }],
+        10_000
+      );
+
+      args.onToolStart?.(2, [{ id: 'tool-3', name: 'web_search', arguments: '{}' }]);
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
+      args.onToolEnd?.(
+        2,
+        [{ toolCallId: 'tool-3', toolName: 'web_search', result: '{"ok":true}' }],
+        10_000
+      );
+
+      return {
+        content: 'Agent answer',
+        citations: [],
+        retrievedCitations: [],
+        agentTrace: [],
+        stopReason: 'answered',
+      };
+    });
+    const provider = {
+      name: 'test-provider',
+      generateWithTools: vi.fn(),
+      async *streamGenerate() {
+        yield 'fallback';
+      },
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res, written } = createMockRes();
+
+    const requestPromise = chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Keep the stream alive',
+    });
+
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(30_000);
+    await requestPromise;
+
+    const heartbeatLine = ': heartbeat\n\n';
+    const heartbeatIndexes = written
+      .map((entry, index) => (entry === heartbeatLine ? index : -1))
+      .filter((index) => index >= 0);
+    const toolStartIndexes = written
+      .map((entry, index) => (entry.includes('"type":"tool_start"') ? index : -1))
+      .filter((index) => index >= 0);
+    const toolEndIndexes = written
+      .map((entry, index) => (entry.includes('"type":"tool_end"') ? index : -1))
+      .filter((index) => index >= 0);
+
+    expect(toolStartIndexes).toHaveLength(3);
+    expect(toolEndIndexes).toHaveLength(3);
+    expect(heartbeatIndexes).toHaveLength(2);
+    expect(toolEndIndexes.some((index) => index < heartbeatIndexes[0]!)).toBe(true);
+    expect(toolEndIndexes.some((index) => index > heartbeatIndexes[0]!)).toBe(true);
+
+    const heartbeatCountAfterCompletion = heartbeatIndexes.length;
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(written.filter((entry) => entry === heartbeatLine)).toHaveLength(
+      heartbeatCountAfterCompletion
+    );
+  });
+
+  it('stops writing heartbeat comments after client disconnects in agent mode', async () => {
+    vi.useFakeTimers();
+
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
+    mocks.resolveTools.mockReturnValue([webTool]);
+    mocks.executeAgentLoop.mockImplementation(
+      async () =>
+        new Promise((resolve) => {
+          setTimeout(
+            () =>
+              resolve({
+                content: 'Agent answer',
+                citations: [],
+                retrievedCitations: [],
+                agentTrace: [],
+                stopReason: 'answered',
+              }),
+            40_000
+          );
+        })
+    );
+    const provider = {
+      name: 'test-provider',
+      generateWithTools: vi.fn(),
+      async *streamGenerate() {
+        yield 'fallback';
+      },
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res, written, emit } = createMockRes();
+
+    const requestPromise = chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Disconnect me',
+    });
+
+    await flushMicrotasks();
+    emit('close');
+    await vi.advanceTimersByTimeAsync(45_000);
+    await requestPromise;
+
+    expect(written.filter((entry) => entry === ': heartbeat\n\n')).toHaveLength(0);
+  });
+
   it('falls back to legacy streaming when provider lacks generateWithTools', async () => {
     const kbTool = { definition: { name: 'knowledge_base_search', category: 'fallback' } };
     mocks.resolveTools.mockReturnValue([kbTool]);
@@ -486,6 +643,10 @@ describe('chatService.sendMessage', () => {
     mocks.llmService.getOptionsForUser.mockResolvedValue({});
     mocks.conversationRepository.touch.mockResolvedValue(undefined);
     mocks.resolveTools.mockReturnValue([]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('uses agent orchestration for non-streaming when structured tools are available', async () => {

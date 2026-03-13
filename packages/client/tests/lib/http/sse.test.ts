@@ -48,6 +48,22 @@ describe('parseSSEStream', () => {
     expect(handlers.onError).not.toHaveBeenCalled();
   });
 
+  it('ignores SSE heartbeat comment lines', async () => {
+    const events: unknown[] = [];
+    const handlers: SSEEventHandlers<{ type: string }> = {
+      onEvent: (event) => events.push(event),
+      onError: vi.fn(),
+    };
+
+    const reader = createReader([': heartbeat\n\ndata: {"type":"chunk"}\n\n']);
+
+    await parseSSEStream(reader, handlers);
+
+    expect(events).toEqual([{ type: 'chunk' }]);
+    expect(handlers.onError).not.toHaveBeenCalled();
+    expect(sseLogMocks.logClientWarning).not.toHaveBeenCalled();
+  });
+
   it('skips malformed JSON without affecting subsequent events', async () => {
     const events: unknown[] = [];
     const handlers: SSEEventHandlers<{ type: string }> = {

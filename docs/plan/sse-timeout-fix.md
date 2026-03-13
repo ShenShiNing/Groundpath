@@ -256,9 +256,17 @@ export async function executeAgentMode(
 
 #### Phase 1 兼容性验证
 
-- [ ] 前端 `sse.ts` 的 `processLine` 确认忽略 `: heartbeat\n\n`
-- [ ] Agent 模式 3+ 轮工具调用：心跳正常发送、工具事件正常穿插
-- [ ] Nginx 配置文档（见部署注意事项）
+- [x] 前端 `sse.ts` 的 `processLine` 确认忽略 `: heartbeat\n\n`（`packages/client/tests/lib/http/sse.test.ts` 新增覆盖）
+- [x] Agent 模式 3+ 轮工具调用：心跳正常发送、工具事件正常穿插（`packages/server/tests/modules/chat/chat.service.test.ts` 假定时器覆盖）
+- [x] Nginx 配置文档（见部署注意事项）
+
+#### Phase 1 完成结果（2026-03-13）
+
+- 已在 `packages/server/src/modules/chat/services/chat-agent-stream.service.ts` 为 Agent SSE 路径增加 heartbeat 注释写入，间隔复用 `agentConfig.sseHeartbeatIntervalMs`
+- 已确保心跳在客户端断连后不再继续写入，并在 `finally` 中清理定时器，避免请求结束后遗留后台 interval
+- 已完成服务端定向验证：`pnpm -F @knowledge-agent/server test -- tests/modules/chat/chat.service.test.ts tests/modules/agent/agent-executor.test.ts`
+- 已完成客户端兼容性验证：`pnpm -F @knowledge-agent/client test -- tests/lib/http/sse.test.ts`
+- 已完成类型构建验证：`pnpm -F @knowledge-agent/server build`
 
 ---
 
