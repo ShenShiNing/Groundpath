@@ -114,6 +114,11 @@ describe('documentService > upload', () => {
       text: 'Extracted PDF text',
       truncated: false,
     });
+    vi.mocked(documentVersionRepository.create).mockResolvedValue({
+      ...mockDocumentVersion,
+      id: 'version-1',
+      documentId: 'generated-uuid-123',
+    });
     vi.mocked(documentRepository.create).mockResolvedValue({
       ...mockDocument,
       id: 'generated-uuid-123',
@@ -147,6 +152,17 @@ describe('documentService > upload', () => {
         currentVersion: 1,
       }),
       expect.anything() // transaction
+    );
+    expect(documentVersionRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: 'generated-uuid-123',
+        version: 1,
+        storageKey: mockStorageResult.storageKey,
+      }),
+      expect.anything()
+    );
+    expect(vi.mocked(documentRepository.create).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(documentVersionRepository.create).mock.invocationCallOrder[0]!
     );
     expect(result.id).toBe('generated-uuid-123');
   });
@@ -363,5 +379,32 @@ describe('documentService > upload', () => {
 
     expect(createCall?.currentVersion).toBe(1);
     expect(createCall?.createdBy).toBe(mockUserId);
+  });
+
+  it('should delete uploaded storage when first version insert fails', async () => {
+    const dbError = new Error('document_versions_document_id_fk');
+
+    vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
+    vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: 'Extracted PDF text',
+      truncated: false,
+    });
+    vi.mocked(documentRepository.create).mockResolvedValue({
+      ...mockDocument,
+      id: 'generated-uuid-123',
+    });
+    vi.mocked(documentVersionRepository.create).mockRejectedValue(dbError);
+
+    await expect(
+      documentService.upload(mockUserId, mockFile, {
+        knowledgeBaseId: mockKnowledgeBaseId,
+      })
+    ).rejects.toThrow('document_versions_document_id_fk');
+
+    expect(documentStorageService.deleteDocument).toHaveBeenCalledWith(
+      mockStorageResult.storageKey
+    );
+    expect(knowledgeBaseService.incrementDocumentCount).not.toHaveBeenCalled();
   });
 });

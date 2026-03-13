@@ -132,26 +132,7 @@ export const documentUploadService = {
     let document: Document;
     try {
       document = await withTransaction(async (tx) => {
-        // Create first version
-        await documentVersionRepository.create(
-          {
-            id: uuidv4(),
-            documentId: docId,
-            version: 1,
-            fileName: file.originalname,
-            mimeType: resolvedMimeType,
-            fileSize: file.size,
-            fileExtension,
-            documentType,
-            storageKey,
-            textContent,
-            source: 'upload',
-            createdBy: userId,
-          },
-          tx
-        );
-
-        // Create document with cached fields
+        // Create document first so the initial version insert satisfies the FK.
         const doc = await documentRepository.create(
           {
             id: docId,
@@ -166,6 +147,25 @@ export const documentUploadService = {
             fileExtension,
             documentType,
             processingStatus: 'pending',
+            createdBy: userId,
+          },
+          tx
+        );
+
+        // Create first version
+        await documentVersionRepository.create(
+          {
+            id: uuidv4(),
+            documentId: docId,
+            version: 1,
+            fileName: file.originalname,
+            mimeType: resolvedMimeType,
+            fileSize: file.size,
+            fileExtension,
+            documentType,
+            storageKey,
+            textContent,
+            source: 'upload',
             createdBy: userId,
           },
           tx
