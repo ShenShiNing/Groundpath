@@ -2,6 +2,8 @@
 
 English version: [README.en.md](./README.en.md)
 
+最后更新：2026-03-14
+
 Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieval-Augmented Generation）应用。它支持从文档入库、分块向量化、语义检索到多轮对话与引用回溯的完整闭环，并提供文档 AI（摘要/分析/生成）能力。
 
 仓库采用 `pnpm` monorepo：
@@ -41,10 +43,13 @@ Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieva
 ### 1.3 RAG 检索与对话
 
 - 文档异步处理流水线：分块 -> 向量化 -> 写入 Qdrant
+- 支持结构化文档索引（Document Index）：提取大纲、节点内容、引用关系，供 Structured RAG 使用
 - 检索过滤：按 `userId / knowledgeBaseId / documentIds / scoreThreshold` 过滤
 - **Agentic RAG**：当 LLM 支持 tool calling 时，自动进入 Agent 模式
   - LLM 自主决定调用工具的时机与次数
-  - 内置工具：知识库检索（`kb_search`）、网络搜索（`web_search`，基于 Tavily）
+  - 传统工具：知识库检索（`kb_search`）
+  - Structured RAG rollout 启用后可使用结构化工具：`outline_search`、`node_read`、`ref_follow`、`vector_fallback_search`
+  - 网络搜索工具：`web_search`（基于 Tavily）
   - 实时展示工具调用过程（tool steps），支持展开查看结果
   - 不支持 tool calling 的模型自动回退到传统流式 RAG
 - 多轮对话：
@@ -61,6 +66,7 @@ Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieva
 - 文档分析：关键词、实体、主题、结构化信息
 - 文档生成：按 prompt/template/style 生成
 - 文档扩写：基于已有文档内容进行 before/after/replace 扩展
+- 可选 VLM 图像描述：为 PDF 中提取的图片生成描述，增强结构化检索与回答上下文
 
 ### 1.5 模型与存储扩展
 
@@ -78,11 +84,16 @@ Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieva
 ### 1.7 日志与运维能力
 
 - 登录日志、操作日志、系统日志
+- OpenAPI / Swagger 文档：`/api-docs`
 - 定时任务（UTC）：
   - 日志清理
   - 刷新 token 清理
   - 向量软删除清理
   - 可选计数器同步
+  - 可选结构化 RAG 告警检查
+  - 可选文档索引回填（document-index backfill）
+  - 卡住的文档处理任务恢复
+  - 不可变文档构建产物清理
 - 服务优雅停机（关闭 HTTP、MySQL、Redis 连接）
 
 ## 2. 部署流程（详细）
@@ -145,6 +156,9 @@ Copy-Item packages/server/.env.example packages/server/.env
 - `EMBEDDING_PROVIDER=zhipu|openai|ollama`
 - `ZHIPU_API_KEY` / `OPENAI_API_KEY`（对应 provider 时需要）
 - `TAVILY_API_KEY`（启用 Agent 网络搜索功能时需要）
+- `STRUCTURED_RAG_ENABLED` / `STRUCTURED_RAG_ROLLOUT_MODE`（启用结构化 RAG 路由与灰度）
+- `IMAGE_DESCRIPTION_ENABLED`、`VLM_PROVIDER`、`VLM_MODEL`、`VLM_API_KEY`（启用图片描述时需要）
+- `DOCUMENT_PROCESSING_RECOVERY_*`、`DOCUMENT_BUILD_CLEANUP_*`、`BACKFILL_SCHEDULE_*`（处理恢复、构建清理、索引回填计划任务）
 
 ### 2.4 初始化数据库
 
@@ -234,6 +248,7 @@ server {
 ### 2.8 部署后验证清单
 
 - `GET /api/hello` 可返回成功
+- `GET /api-docs` 可正常打开 Swagger UI
 - 登录后能创建知识库
 - 上传文档后 `processingStatus` 最终变为 `completed`
 - 对话页面可以收到 SSE 流式响应
@@ -263,7 +278,7 @@ server {
 1. 用户上传文档（`/api/documents` 或 `/api/knowledge-bases/:id/documents`）。
 2. 后端完成类型校验、存储写入、`document + document_version` 事务落库。
 3. 文档状态置为 `pending`，异步触发 RAG 处理。
-4. RAG 服务读取当前版本文本，执行分块和向量化。
+4. RAG 服务读取当前版本文本，执行分块、向量化，并按需构建结构化 Document Index（大纲/节点/引用边）。
 5. 采用“先写新向量，再删旧向量”策略，降低处理窗口内检索中断风险。
 6. 同步更新 chunk 与知识库计数器，最终状态变更为 `completed`。
 
@@ -271,7 +286,7 @@ server {
 
 1. 客户端发送消息到 `/api/chat/conversations/:id/messages`。
 2. 服务端根据 LLM 能力选择模式：
-   - **Agent 模式**（LLM 支持 tool calling）：LLM 自主编排工具调用，按需检索知识库或搜索网络
+   - **Agent 模式**（LLM 支持 tool calling）：LLM 自主编排工具调用，按需执行传统检索、结构化节点检索或网络搜索
    - **传统模式**（fallback）：先执行硬编码 RAG 检索，再流式调用 LLM
 3. SSE 事件流：
    - `tool_start`：工具调用开始（Agent 模式）
@@ -297,23 +312,29 @@ server {
 
 ## 4. 常用命令
 
-| 命令                                               | 说明                             |
-| -------------------------------------------------- | -------------------------------- |
-| `pnpm dev`                                         | 同时启动前后端开发服务           |
-| `pnpm dev:client`                                  | 仅启动前端                       |
-| `pnpm dev:server`                                  | 仅启动后端                       |
-| `pnpm build`                                       | 构建全部包                       |
-| `pnpm lint`                                        | ESLint 检查                      |
-| `pnpm lint:fix`                                    | ESLint 自动修复                  |
-| `pnpm format`                                      | Prettier 格式化                  |
-| `pnpm test`                                        | 运行测试                         |
-| `pnpm test:coverage`                               | 测试覆盖率                       |
-| `pnpm -F @knowledge-agent/server db:push`          | 开发环境同步数据库结构           |
-| `pnpm -F @knowledge-agent/server db:drift-check`   | 检查 schema/migration 漂移       |
-| `pnpm -F @knowledge-agent/server db:migrate`       | 执行迁移                         |
-| `pnpm -F @knowledge-agent/server db:verify`        | 依次执行漂移检查与 DB 一致性校验 |
-| `pnpm -F @knowledge-agent/server db:studio`        | 打开 Drizzle Studio GUI          |
-| `pnpm -F @knowledge-agent/server db:sync-counters` | 手动同步知识库计数器             |
+| 命令                                                      | 说明                             |
+| --------------------------------------------------------- | -------------------------------- |
+| `pnpm dev`                                                | 同时启动前后端开发服务           |
+| `pnpm dev:client`                                         | 仅启动前端                       |
+| `pnpm dev:server`                                         | 仅启动后端                       |
+| `pnpm build`                                              | 构建全部包                       |
+| `pnpm lint`                                               | ESLint 检查                      |
+| `pnpm lint:fix`                                           | ESLint 自动修复                  |
+| `pnpm format`                                             | Prettier 格式化                  |
+| `pnpm test`                                               | 运行测试                         |
+| `pnpm test:coverage`                                      | 测试覆盖率                       |
+| `pnpm test:server`                                        | 仅运行后端测试                   |
+| `pnpm test:shared`                                        | 仅运行共享包测试                 |
+| `pnpm -F @knowledge-agent/server db:push`                 | 开发环境同步数据库结构           |
+| `pnpm -F @knowledge-agent/server db:drift-check`          | 检查 schema/migration 漂移       |
+| `pnpm -F @knowledge-agent/server db:check`                | 执行数据库一致性检查             |
+| `pnpm -F @knowledge-agent/server db:migrate`              | 执行迁移                         |
+| `pnpm -F @knowledge-agent/server db:verify`               | 依次执行漂移检查与 DB 一致性校验 |
+| `pnpm -F @knowledge-agent/server db:studio`               | 打开 Drizzle Studio GUI          |
+| `pnpm -F @knowledge-agent/server db:sync-counters`        | 手动同步知识库计数器             |
+| `pnpm -F @knowledge-agent/server document-index:backfill` | 手动触发文档索引回填             |
+| `pnpm -F @knowledge-agent/client preview`                 | 本地预览前端构建产物             |
+| `pnpm architecture:check`                                 | 检查服务端依赖架构约束           |
 
 ## 5. 开源协议
 

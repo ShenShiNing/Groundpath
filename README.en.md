@@ -2,6 +2,8 @@
 
 English version of README. Chinese version: [README.md](./README.md)
 
+Last updated: March 14, 2026
+
 Knowledge Agent is a RAG (Retrieval-Augmented Generation) application for personal and team knowledge management. It provides an end-to-end workflow from document ingestion, chunking and embedding, semantic retrieval, and multi-turn chat with citations, plus Document AI features (summary, analysis, generation).
 
 This repository is a `pnpm` monorepo:
@@ -41,10 +43,13 @@ This repository is a `pnpm` monorepo:
 ### 1.3 RAG Retrieval and Chat
 
 - Async document processing pipeline: chunking -> embedding -> Qdrant write
+- Structured document index (Document Index): extracts outlines, node content, and references for Structured RAG
 - Retrieval filters by `userId / knowledgeBaseId / documentIds / scoreThreshold`
 - **Agentic RAG**: automatically enters agent mode when LLM supports tool calling
   - LLM autonomously decides when and how many times to invoke tools
-  - Built-in tools: knowledge base search (`kb_search`), web search (`web_search`, powered by Tavily)
+  - Legacy tool: knowledge base search (`kb_search`)
+  - Structured RAG rollout tools: `outline_search`, `node_read`, `ref_follow`, `vector_fallback_search`
+  - Web search tool: `web_search` (powered by Tavily)
   - Real-time tool step display with expandable results
   - Graceful fallback to legacy streaming RAG for models without tool calling support
 - Multi-turn conversation:
@@ -61,6 +66,7 @@ This repository is a `pnpm` monorepo:
 - Document analysis: keywords, entities, topics, structure
 - Content generation by prompt/template/style
 - Expansion of existing content with `before/after/replace`
+- Optional VLM-based image descriptions for extracted PDF images to improve structured retrieval context
 
 ### 1.5 Model and Storage Extensibility
 
@@ -78,11 +84,16 @@ This repository is a `pnpm` monorepo:
 ### 1.7 Logging and Operations
 
 - Login logs, operation logs, system logs
+- OpenAPI / Swagger docs: `/api-docs`
 - Scheduled tasks (UTC):
   - Log cleanup
   - Refresh token cleanup
   - Soft-deleted vector cleanup
   - Optional counter synchronization
+  - Optional structured RAG alert checks
+  - Optional document-index backfill
+  - Recovery for stuck document-processing jobs
+  - Immutable document build artifact cleanup
 - Graceful shutdown for HTTP, MySQL, and Redis connections
 
 ## 2. Deployment Guide (Detailed)
@@ -145,6 +156,9 @@ Common important settings:
 - `EMBEDDING_PROVIDER=zhipu|openai|ollama`
 - `ZHIPU_API_KEY` / `OPENAI_API_KEY` (required by selected provider)
 - `TAVILY_API_KEY` (required for agent web search feature)
+- `STRUCTURED_RAG_ENABLED` / `STRUCTURED_RAG_ROLLOUT_MODE` (enable structured RAG routing and gradual rollout)
+- `IMAGE_DESCRIPTION_ENABLED`, `VLM_PROVIDER`, `VLM_MODEL`, `VLM_API_KEY` (required when image descriptions are enabled)
+- `DOCUMENT_PROCESSING_RECOVERY_*`, `DOCUMENT_BUILD_CLEANUP_*`, `BACKFILL_SCHEDULE_*` (recovery, build cleanup, and index backfill schedules)
 
 ### 2.4 Initialize Database
 
@@ -234,6 +248,7 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 ### 2.8 Post-Deployment Checklist
 
 - `GET /api/hello` returns success
+- `GET /api-docs` opens Swagger UI successfully
 - You can create a knowledge base after login
 - Uploaded documents eventually reach `processingStatus=completed`
 - Chat page receives SSE streaming responses
@@ -263,7 +278,7 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 1. User uploads a document (`/api/documents` or `/api/knowledge-bases/:id/documents`).
 2. Backend validates type, writes file storage, and persists `document + document_version` in a transaction.
 3. Document status is set to `pending`, and async RAG processing is triggered.
-4. RAG service loads current-version text, then performs chunking and embedding.
+4. RAG service loads current-version text, then performs chunking, embedding, and optional structured Document Index builds (outline/nodes/reference edges).
 5. It uses an "insert new vectors first, then delete old vectors" strategy to reduce retrieval gaps during updates.
 6. Chunk and knowledge-base counters are updated, and status is finalized as `completed`.
 
@@ -271,7 +286,7 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 
 1. Client sends message to `/api/chat/conversations/:id/messages`.
 2. Server selects mode based on LLM capabilities:
-   - **Agent mode** (LLM supports tool calling): LLM autonomously orchestrates tool calls, searching knowledge base or web as needed
+   - **Agent mode** (LLM supports tool calling): LLM autonomously orchestrates legacy retrieval, structured node retrieval, or web search as needed
    - **Legacy mode** (fallback): hardcoded RAG retrieval first, then streaming LLM call
 3. SSE event stream:
    - `tool_start`: tool call initiated (agent mode)
@@ -297,23 +312,29 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 
 ## 4. Common Commands
 
-| Command                                            | Description                                   |
-| -------------------------------------------------- | --------------------------------------------- |
-| `pnpm dev`                                         | Start frontend and backend in parallel        |
-| `pnpm dev:client`                                  | Start frontend only                           |
-| `pnpm dev:server`                                  | Start backend only                            |
-| `pnpm build`                                       | Build all packages                            |
-| `pnpm lint`                                        | Run ESLint                                    |
-| `pnpm lint:fix`                                    | Auto-fix ESLint issues                        |
-| `pnpm format`                                      | Format code with Prettier                     |
-| `pnpm test`                                        | Run tests                                     |
-| `pnpm test:coverage`                               | Run tests with coverage                       |
-| `pnpm -F @knowledge-agent/server db:push`          | Sync schema in development                    |
-| `pnpm -F @knowledge-agent/server db:drift-check`   | Check schema/migration drift                  |
-| `pnpm -F @knowledge-agent/server db:migrate`       | Run database migrations                       |
-| `pnpm -F @knowledge-agent/server db:verify`        | Run drift check and DB consistency validation |
-| `pnpm -F @knowledge-agent/server db:studio`        | Open Drizzle Studio GUI                       |
-| `pnpm -F @knowledge-agent/server db:sync-counters` | Manually sync knowledge base counters         |
+| Command                                                   | Description                                   |
+| --------------------------------------------------------- | --------------------------------------------- |
+| `pnpm dev`                                                | Start frontend and backend in parallel        |
+| `pnpm dev:client`                                         | Start frontend only                           |
+| `pnpm dev:server`                                         | Start backend only                            |
+| `pnpm build`                                              | Build all packages                            |
+| `pnpm lint`                                               | Run ESLint                                    |
+| `pnpm lint:fix`                                           | Auto-fix ESLint issues                        |
+| `pnpm format`                                             | Format code with Prettier                     |
+| `pnpm test`                                               | Run tests                                     |
+| `pnpm test:coverage`                                      | Run tests with coverage                       |
+| `pnpm test:server`                                        | Run backend tests only                        |
+| `pnpm test:shared`                                        | Run shared-package tests only                 |
+| `pnpm -F @knowledge-agent/server db:push`                 | Sync schema in development                    |
+| `pnpm -F @knowledge-agent/server db:drift-check`          | Check schema/migration drift                  |
+| `pnpm -F @knowledge-agent/server db:check`                | Run database consistency checks               |
+| `pnpm -F @knowledge-agent/server db:migrate`              | Run database migrations                       |
+| `pnpm -F @knowledge-agent/server db:verify`               | Run drift check and DB consistency validation |
+| `pnpm -F @knowledge-agent/server db:studio`               | Open Drizzle Studio GUI                       |
+| `pnpm -F @knowledge-agent/server db:sync-counters`        | Manually sync knowledge base counters         |
+| `pnpm -F @knowledge-agent/server document-index:backfill` | Manually enqueue document-index backfill      |
+| `pnpm -F @knowledge-agent/client preview`                 | Preview the built frontend locally            |
+| `pnpm architecture:check`                                 | Validate backend dependency architecture      |
 
 ## 5. Open Source License
 
