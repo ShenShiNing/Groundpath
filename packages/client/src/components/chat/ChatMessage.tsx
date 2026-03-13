@@ -229,6 +229,20 @@ function ChatMessageBase({
               </div>
               <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
                 <span>{formatTime(message.timestamp)}</span>
+                {onCopyMessage && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 cursor-pointer gap-1 px-1.5 text-[10px] text-muted-foreground"
+                    onClick={() => {
+                      void handleCopy('plain');
+                    }}
+                    aria-label={copiedFormat ? t('message.copyAriaDone') : t('message.copyAria')}
+                  >
+                    {copiedFormat ? <Check className="size-3" /> : <Copy className="size-3" />}
+                    {copiedFormat ? t('message.copied') : t('message.copy')}
+                  </Button>
+                )}
                 {canEdit && onEditMessage && (
                   <Button
                     variant="ghost"
