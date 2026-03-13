@@ -4,8 +4,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { ConversationItem } from './ConversationItem';
 import { useConversations, useDeleteConversation } from '@/hooks';
-import { queryKeys } from '@/lib/query';
-import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { ConversationListItem as ConversationListItemType } from '@knowledge-agent/shared/types';
@@ -43,7 +41,6 @@ export function ConversationList({
   showNewButton = true,
 }: ConversationListProps) {
   const { t } = useTranslation('chat');
-  const queryClient = useQueryClient();
   const { data: conversationList, isLoading } = useConversations(knowledgeBaseId);
   const deleteConversation = useDeleteConversation();
 
@@ -68,10 +65,6 @@ export function ConversationList({
           onNewConversation();
         }
       }
-      // Invalidate the query to refetch
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.knowledgeBases.conversations(knowledgeBaseId ?? '__global__'),
-      });
     } catch {
       toast.error(t('conversation.deleteFailed'));
     }

@@ -5,7 +5,6 @@ import { render, fireClick, flushPromises } from '../../utils/render';
 const mocks = vi.hoisted(() => ({
   useConversations: vi.fn(),
   mutateAsync: vi.fn(),
-  invalidateQueries: vi.fn(),
   toastError: vi.fn(),
 }));
 
@@ -16,25 +15,15 @@ vi.mock('@/hooks', () => ({
   }),
 }));
 
-vi.mock('@tanstack/react-query', () => ({
-  useQueryClient: () => ({
-    invalidateQueries: mocks.invalidateQueries,
-  }),
-}));
-
-vi.mock('@/lib/query', () => ({
-  queryKeys: {
-    knowledgeBases: {
-      conversations: (kbId: string) => ['knowledgeBases', 'detail', kbId, 'conversations'],
-    },
-  },
-}));
-
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => key,
+    }),
+  };
+});
 
 vi.mock('sonner', () => ({
   toast: {
@@ -123,7 +112,7 @@ describe('ConversationList', () => {
     await view.unmount();
   });
 
-  it('should delete current conversation and trigger invalidation callback flow', async () => {
+  it('should delete current conversation and trigger callback flow', async () => {
     const onCurrentConversationDeleted = vi.fn();
     const onNewConversation = vi.fn();
 
@@ -164,9 +153,6 @@ describe('ConversationList', () => {
     expect(mocks.mutateAsync).toHaveBeenCalledWith('conv-1');
     expect(onCurrentConversationDeleted).toHaveBeenCalledTimes(1);
     expect(onNewConversation).not.toHaveBeenCalled();
-    expect(mocks.invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ['knowledgeBases', 'detail', 'kb-1', 'conversations'],
-    });
 
     await view.unmount();
   });

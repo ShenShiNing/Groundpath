@@ -224,26 +224,36 @@ pnpm monorepo 全栈项目，三个包：
 
 ---
 
-### P3 — 客户端优化
+### ~~P3 — 客户端优化~~ ✅ 已部分修复
 
-#### 4.13 React Query hooks 缺少 `staleTime` 配置
+> 修复分支：`fix/p3-react-query-cache`
 
-**涉及文件**: `useDocuments.ts`、`useConversations.ts`
-
-**问题**: 大多数查询使用默认 `staleTime`（0），导致每次组件挂载都重新请求。
-
-**建议**: 为常用查询添加合理的 `staleTime`（如列表查询 30s，详情查询 60s）。
-
-#### 4.14 缓存失效策略过于宽泛
+#### ~~4.13 React Query hooks 缺少 `staleTime` 配置~~ ✅
 
 **涉及文件**: `useDocuments.ts`、`useConversations.ts`
 
-**问题**:
+**已修复**:
 
-- 多个 mutation 失效整个 `documents.lists()`，可能导致不必要的重新请求
-- `useConversations.ts` 使用 `predicate` 进行缓存失效，性能不如精确 queryKey
+- 为文档列表 / 回收站列表查询显式设置 `staleTime = 30s`
+- 为文档详情 / 内容 / 版本查询显式设置 `staleTime = 60s`
+- 为会话列表 / 会话搜索查询显式设置 `staleTime = 30s`
+- 新增 hooks 单测，断言 query options 上的 `staleTime` 已按查询类型生效
 
-**建议**: 使用精确的 queryKey 失效，或使用 `setQueryData` 进行乐观更新。
+#### ~~4.14 缓存失效策略过于宽泛~~ ✅
+
+**涉及文件**: `useDocuments.ts`、`useConversations.ts`
+
+**已修复**:
+
+- `useDocuments.ts` 为可确定结果的 mutation 改用 `setQueriesData` / `setQueryData` 更新缓存：
+  - 元数据更新直接同步 detail / content / list 缓存
+  - 删除直接从已缓存的文档列表移除，并仅精确失效回收站列表
+  - 永久删除 / 清空回收站改为本地更新回收站缓存，避免整组重新请求
+  - 新版本上传 / 版本恢复仅精确失效对应文档的 `content` / `versions`
+- `useConversations.ts` 新增独立的会话 query key 家族，移除 `predicate` 失效
+- 会话更新/删除改为只操作 `conversations.list(...)` / `conversations.search(...)` 相关缓存
+- 删除 `ConversationList.tsx` 中对会话列表的重复手动失效，避免 hook 已更新缓存后组件再触发一次重请求
+- 新增 hooks 与组件测试，覆盖精确失效和缓存同步行为
 
 #### 4.15 错误处理静默失败
 
@@ -335,8 +345,8 @@ pnpm monorepo 全栈项目，三个包：
 | P2     | 4.10 | vector.repository.ts 去重          | 可维护性   | ✅   |
 | P2     | 4.11 | activation.service.ts 去重         | 可维护性   | ✅   |
 | P2     | 4.12 | 硬编码常量集中化                   | 配置规范   | ✅   |
-| P3     | 4.13 | React Query staleTime              | 性能       |      |
-| P3     | 4.14 | 缓存失效策略优化                   | 性能       |      |
+| P3     | 4.13 | React Query staleTime              | 性能       | ✅   |
+| P3     | 4.14 | 缓存失效策略优化                   | 性能       | ✅   |
 | P3     | 4.15 | 客户端错误处理                     | 可调试性   |      |
 | P3     | 4.16 | 大型组件拆分                       | 代码规范   |      |
 | P3     | 4.17 | 客户端测试补充                     | 质量保障   |      |

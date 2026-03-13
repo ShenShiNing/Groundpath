@@ -30,6 +30,16 @@ export const queryKeys = {
       [...queryKeys.knowledgeBases.detail(kbId), 'conversations'] as const,
   },
 
+  // Conversations
+  conversations: {
+    all: ['conversations'] as const,
+    lists: () => [...queryKeys.conversations.all, 'list'] as const,
+    list: (scopeKey: string) => [...queryKeys.conversations.lists(), scopeKey] as const,
+    searches: () => [...queryKeys.conversations.all, 'search'] as const,
+    search: (params: Record<string, unknown>) =>
+      [...queryKeys.conversations.searches(), params] as const,
+  },
+
   // User
   user: {
     sessions: ['user', 'sessions'] as const,
