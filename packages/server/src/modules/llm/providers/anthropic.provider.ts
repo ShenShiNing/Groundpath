@@ -3,6 +3,7 @@ import type {
   LLMProvider,
   ChatMessage,
   GenerateOptions,
+  StreamChunk,
   AgentMessage,
   GenerateWithToolsOptions,
   ToolGenerateResult,
@@ -50,7 +51,7 @@ export class AnthropicProvider implements LLMProvider {
   async *streamGenerate(
     messages: ChatMessage[],
     options?: GenerateOptions
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<StreamChunk, void, unknown> {
     const systemMessage = messages.find((m) => m.role === 'system');
     const chatMessages = messages
       .filter((m) => m.role !== 'system')
@@ -78,7 +79,7 @@ export class AnthropicProvider implements LLMProvider {
         return;
       }
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        yield event.delta.text;
+        yield { type: 'content', text: event.delta.text };
       }
     }
   }

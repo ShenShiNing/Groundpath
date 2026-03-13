@@ -173,6 +173,10 @@
   "agent": {
     "kbSearch": "知识库搜索",
     "webSearch": "网络搜索",
+    "outlineSearch": "大纲搜索",
+    "nodeRead": "节点阅读",
+    "refFollow": "引用追踪",
+    "vectorSearch": "向量搜索",
     "searching": "正在搜索...",
     "searchComplete": "搜索完成",
     "query": "查询",
@@ -181,7 +185,7 @@
     "error": "执行失败",
     "showDetails": "展开详情",
     "hideDetails": "收起详情",
-    "thinking": "正在分析并调用工具...",
+    "thinking": "深度思考",
     "generating": "正在生成回答...",
     "showMore": "展开全部",
     "showLess": "收起"

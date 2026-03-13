@@ -173,6 +173,10 @@
   "agent": {
     "kbSearch": "Knowledge Base Search",
     "webSearch": "Web Search",
+    "outlineSearch": "Outline Search",
+    "nodeRead": "Node Read",
+    "refFollow": "Ref Follow",
+    "vectorSearch": "Vector Search",
     "searching": "Searching...",
     "searchComplete": "Search complete",
     "query": "Query",
@@ -181,7 +185,7 @@
     "error": "Execution failed",
     "showDetails": "Show details",
     "hideDetails": "Hide details",
-    "thinking": "Analyzing and calling tools...",
+    "thinking": "Deep Thinking",
     "generating": "Generating response...",
     "showMore": "Show more",
     "showLess": "Show less"

@@ -38,6 +38,10 @@ export interface GenerateWithToolsOptions extends GenerateOptions {
   tools: ToolDefinition[];
 }
 
+// --- Stream chunk types ---
+
+export type StreamChunk = { type: 'content'; text: string } | { type: 'reasoning'; text: string };
+
 // --- Provider interfaces ---
 
 export interface LLMProvider {
@@ -55,7 +59,7 @@ export interface LLMProvider {
   streamGenerate(
     messages: ChatMessage[],
     options?: GenerateOptions
-  ): AsyncGenerator<string, void, unknown>;
+  ): AsyncGenerator<StreamChunk, void, unknown>;
 
   /**
    * Check if the provider is reachable with current credentials.

@@ -1,4 +1,9 @@
-import type { LLMProvider, ChatMessage, GenerateOptions } from './llm-provider.interface';
+import type {
+  LLMProvider,
+  ChatMessage,
+  GenerateOptions,
+  StreamChunk,
+} from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
@@ -46,7 +51,7 @@ export class OllamaProvider implements LLMProvider {
   async *streamGenerate(
     messages: ChatMessage[],
     options?: GenerateOptions
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<StreamChunk, void, unknown> {
     const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -92,7 +97,7 @@ export class OllamaProvider implements LLMProvider {
           try {
             const chunk = JSON.parse(line) as OllamaChatResponse;
             if (chunk.message?.content) {
-              yield chunk.message.content;
+              yield { type: 'content', text: chunk.message.content };
             }
             if (chunk.done) return;
           } catch {

@@ -134,8 +134,12 @@ export async function executeAgentMode(
           }
         )) {
           if (ctx.isDisconnected()) break;
-          streamedContent += chunk;
-          sendSSE(res, { type: 'chunk', data: chunk });
+          if (chunk.type === 'reasoning') {
+            sendSSE(res, { type: 'thinking', data: chunk.text });
+          } else {
+            streamedContent += chunk.text;
+            sendSSE(res, { type: 'chunk', data: chunk.text });
+          }
         }
         agentResult.content = streamedContent;
       }

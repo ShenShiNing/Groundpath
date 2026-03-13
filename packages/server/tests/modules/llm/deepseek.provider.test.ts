@@ -6,6 +6,8 @@ vi.mock('@core/logger', () => ({
 
 import { DeepSeekProvider } from '@modules/llm/providers/deepseek.provider';
 
+import type { StreamChunk } from '@modules/llm/providers/llm-provider.interface';
+
 // Helper: encode SSE stream chunks
 function encodeSSE(events: Array<{ data: string }>): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -97,14 +99,17 @@ describe('DeepSeekProvider', () => {
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(stream, { status: 200 }));
 
-      const chunks: string[] = [];
+      const chunks: StreamChunk[] = [];
       for await (const chunk of provider.streamGenerate([{ role: 'user', content: 'Hi' }])) {
         chunks.push(chunk);
       }
-      expect(chunks).toEqual(['Hello', ' world']);
+      expect(chunks).toEqual([
+        { type: 'content', text: 'Hello' },
+        { type: 'content', text: ' world' },
+      ]);
     });
 
-    it('ignores reasoning_content during streaming', async () => {
+    it('yields reasoning_content as reasoning chunks', async () => {
       const stream = encodeSSE([
         { data: JSON.stringify({ choices: [{ delta: { reasoning_content: 'step 1' } }] }) },
         { data: JSON.stringify({ choices: [{ delta: { reasoning_content: ' step 2' } }] }) },
@@ -114,12 +119,15 @@ describe('DeepSeekProvider', () => {
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(stream, { status: 200 }));
 
-      const chunks: string[] = [];
+      const chunks: StreamChunk[] = [];
       for await (const chunk of provider.streamGenerate([{ role: 'user', content: 'Hi' }])) {
         chunks.push(chunk);
       }
-      // Only content chunks are yielded; reasoning_content is filtered out
-      expect(chunks).toEqual(['final answer']);
+      expect(chunks).toEqual([
+        { type: 'reasoning', text: 'step 1' },
+        { type: 'reasoning', text: ' step 2' },
+        { type: 'content', text: 'final answer' },
+      ]);
     });
 
     it('yields nothing for empty deltas', async () => {
@@ -130,7 +138,7 @@ describe('DeepSeekProvider', () => {
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(stream, { status: 200 }));
 
-      const chunks: string[] = [];
+      const chunks: StreamChunk[] = [];
       for await (const chunk of provider.streamGenerate([{ role: 'user', content: 'Hi' }])) {
         chunks.push(chunk);
       }

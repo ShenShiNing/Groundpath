@@ -20,6 +20,7 @@ import {
 import { CitationSources } from './CitationSources';
 import { ChatMarkdown } from './ChatMarkdown';
 import { ToolStepsDisplay } from './ToolStepsDisplay';
+import { ThinkingStepCard } from './ThinkingStepCard';
 import type { ChatMessage as ChatMessageType, Citation } from '@/stores';
 import { toStopReasonLabelKey } from '@/stores/chatPanelStore.types';
 import type { CopyFormat } from '@/lib/chat';
@@ -249,12 +250,21 @@ function ChatMessageBase({
 
   // Assistant message (loading with no content yet)
   if (message.isLoading && !message.content) {
-    // If we have tool steps, show them instead of generic thinking
-    if (message.toolSteps && message.toolSteps.length > 0) {
-      const allToolsDone = message.toolSteps.every((s) => s.status !== 'running');
+    // If we have tool steps or thinking content, show them instead of generic thinking
+    if ((message.toolSteps && message.toolSteps.length > 0) || message.thinkingContent) {
+      const allToolsDone =
+        !message.toolSteps?.length || message.toolSteps.every((s) => s.status !== 'running');
       return (
-        <div className="mb-6">
-          <ToolStepsDisplay steps={message.toolSteps} />
+        <div className="mb-6 space-y-2">
+          {message.thinkingContent && (
+            <ThinkingStepCard
+              content={message.thinkingContent}
+              isStreaming={!allToolsDone || !message.toolSteps?.length}
+            />
+          )}
+          {message.toolSteps && message.toolSteps.length > 0 && (
+            <ToolStepsDisplay steps={message.toolSteps} />
+          )}
           {allToolsDone && (
             <div className="flex items-center gap-2 py-2">
               <Loader2 className="size-4 text-muted-foreground animate-spin" />
@@ -286,6 +296,13 @@ function ChatMessageBase({
         .join(' ')}
     >
       <div className="flex-1 min-w-0">
+        {/* Thinking content */}
+        {message.thinkingContent && (
+          <div className="mb-3">
+            <ThinkingStepCard content={message.thinkingContent} />
+          </div>
+        )}
+
         {/* Tool execution steps */}
         {message.toolSteps && message.toolSteps.length > 0 && (
           <ToolStepsDisplay steps={message.toolSteps} />

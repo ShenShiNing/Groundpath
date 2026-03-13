@@ -69,8 +69,9 @@ export async function streamLLMToSSE(
     signal: opts.signal,
   })) {
     if (opts.isDisconnected()) break;
-    fullContent += chunk;
-    sendSSE(res, { type: 'chunk', data: chunk });
+    if (chunk.type !== 'content') continue;
+    fullContent += chunk.text;
+    sendSSE(res, { type: 'chunk', data: chunk.text });
   }
 
   if (!opts.isDisconnected()) {

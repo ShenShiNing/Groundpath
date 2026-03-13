@@ -2,6 +2,7 @@ import type {
   LLMProvider,
   ChatMessage,
   GenerateOptions,
+  StreamChunk,
   AgentMessage,
   GenerateWithToolsOptions,
   ToolGenerateResult,
@@ -60,7 +61,7 @@ export class DeepSeekProvider implements LLMProvider {
   async *streamGenerate(
     messages: ChatMessage[],
     options?: GenerateOptions
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<StreamChunk, void, unknown> {
     const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
@@ -109,9 +110,9 @@ export class DeepSeekProvider implements LLMProvider {
             try {
               const chunk = JSON.parse(data) as DeepSeekStreamChunk;
               const delta = chunk.choices[0]?.delta;
-              // Only yield content; ignore reasoning_content during streaming
-              // to avoid exposing thinking process from reasoning models.
-              if (delta?.content) yield delta.content;
+              if (delta?.reasoning_content)
+                yield { type: 'reasoning', text: delta.reasoning_content };
+              if (delta?.content) yield { type: 'content', text: delta.content };
             } catch {
               // Skip malformed chunks
             }

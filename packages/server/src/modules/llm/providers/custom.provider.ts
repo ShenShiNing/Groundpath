@@ -1,4 +1,9 @@
-import type { LLMProvider, ChatMessage, GenerateOptions } from './llm-provider.interface';
+import type {
+  LLMProvider,
+  ChatMessage,
+  GenerateOptions,
+  StreamChunk,
+} from './llm-provider.interface';
 import type { LLMProviderType } from '@knowledge-agent/shared/types';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
@@ -57,7 +62,7 @@ export class CustomProvider implements LLMProvider {
   async *streamGenerate(
     messages: ChatMessage[],
     options?: GenerateOptions
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<StreamChunk, void, unknown> {
     const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
       method: 'POST',
       headers: {
@@ -107,9 +112,9 @@ export class CustomProvider implements LLMProvider {
             try {
               const chunk = JSON.parse(data) as CustomStreamChunk;
               const delta = chunk.choices[0]?.delta;
-              // Only yield content; ignore reasoning_content during streaming
-              // to avoid exposing thinking process from reasoning models.
-              if (delta?.content) yield delta.content;
+              if (delta?.reasoning_content)
+                yield { type: 'reasoning', text: delta.reasoning_content };
+              if (delta?.content) yield { type: 'content', text: delta.content };
             } catch {
               // Skip malformed chunks
             }

@@ -172,7 +172,14 @@ export interface AgentStep {
 }
 
 // SSE event types for streaming
-export type SSEEventType = 'chunk' | 'sources' | 'done' | 'error' | 'tool_start' | 'tool_end';
+export type SSEEventType =
+  | 'chunk'
+  | 'thinking'
+  | 'sources'
+  | 'done'
+  | 'error'
+  | 'tool_start'
+  | 'tool_end';
 
 export interface SSEChunkEvent {
   type: 'chunk';
@@ -212,8 +219,14 @@ export interface SSEToolEndEvent {
   data: { stepIndex: number; toolResults: ToolResultInfo[]; durationMs: number };
 }
 
+export interface SSEThinkingEvent {
+  type: 'thinking';
+  data: string;
+}
+
 export type SSEEvent =
   | SSEChunkEvent
+  | SSEThinkingEvent
   | SSESourcesEvent
   | SSEDoneEvent
   | SSEErrorEvent

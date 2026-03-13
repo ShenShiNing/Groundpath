@@ -2,6 +2,7 @@ import type {
   LLMProvider,
   ChatMessage,
   GenerateOptions,
+  StreamChunk,
   AgentMessage,
   GenerateWithToolsOptions,
   ToolGenerateResult,
@@ -69,7 +70,7 @@ export class ZhipuProvider implements LLMProvider {
   async *streamGenerate(
     messages: ChatMessage[],
     options?: GenerateOptions
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<StreamChunk, void, unknown> {
     const response = await fetch(ZHIPU_API_URL, {
       method: 'POST',
       headers: {
@@ -118,9 +119,9 @@ export class ZhipuProvider implements LLMProvider {
             try {
               const chunk = JSON.parse(data) as ZhipuStreamChunk;
               const delta = chunk.choices[0]?.delta;
-              // Only yield content; ignore reasoning_content during streaming
-              // to avoid exposing thinking process from reasoning models.
-              if (delta?.content) yield delta.content;
+              if (delta?.reasoning_content)
+                yield { type: 'reasoning', text: delta.reasoning_content };
+              if (delta?.content) yield { type: 'content', text: delta.content };
             } catch {
               // Skip malformed chunks
             }

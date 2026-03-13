@@ -182,8 +182,8 @@ describe('chatService.sendMessageWithSSE', () => {
   it('saves and sends done when LLM returns non-empty content', async () => {
     const provider = {
       async *streamGenerate() {
-        yield 'Hello';
-        yield ' world';
+        yield { type: 'content', text: 'Hello' };
+        yield { type: 'content', text: ' world' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -211,7 +211,7 @@ describe('chatService.sendMessageWithSSE', () => {
   it('disables socket idle timeout for SSE responses', async () => {
     const provider = {
       async *streamGenerate() {
-        yield 'Hello';
+        yield { type: 'content', text: 'Hello' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -265,7 +265,7 @@ describe('chatService.sendMessageWithSSE', () => {
     const provider = {
       generateWithTools: vi.fn(),
       async *streamGenerate() {
-        yield 'answer';
+        yield { type: 'content', text: 'answer' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -301,7 +301,7 @@ describe('chatService.sendMessageWithSSE', () => {
       name: 'test-provider',
       generateWithTools: vi.fn(),
       async *streamGenerate() {
-        yield 'fallback';
+        yield { type: 'content', text: 'fallback' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -372,7 +372,7 @@ describe('chatService.sendMessageWithSSE', () => {
       name: 'test-provider',
       generateWithTools: vi.fn(),
       async *streamGenerate() {
-        yield 'fallback';
+        yield { type: 'content', text: 'fallback' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -425,7 +425,7 @@ describe('chatService.sendMessageWithSSE', () => {
       name: 'test-provider',
       generateWithTools: vi.fn(),
       async *streamGenerate() {
-        yield 'fallback';
+        yield { type: 'content', text: 'fallback' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -454,8 +454,8 @@ describe('chatService.sendMessageWithSSE', () => {
       score: 0.9,
     };
     const streamGenerate = vi.fn().mockImplementation(async function* () {
-      yield 'Streamed ';
-      yield 'answer';
+      yield { type: 'content', text: 'Streamed ' };
+      yield { type: 'content', text: 'answer' };
     });
     mocks.resolveTools.mockReturnValue([webTool]);
     mocks.executeAgentLoop.mockResolvedValue({
@@ -521,7 +521,7 @@ describe('chatService.sendMessageWithSSE', () => {
     const webTool = { definition: { name: 'web_search', category: 'external' } };
     const streamGenerate = vi.fn().mockImplementation(async function* () {
       if (Date.now() < 0) {
-        yield 'unreachable';
+        yield { type: 'content', text: 'unreachable' };
       }
       return;
     });
@@ -571,12 +571,12 @@ describe('chatService.sendMessageWithSSE', () => {
     let observedSignal: AbortSignal | undefined;
     const streamGenerate = vi.fn().mockImplementation(async function* (_messages, options) {
       observedSignal = options?.signal;
-      yield 'partial';
+      yield { type: 'content', text: 'partial' };
       await new Promise((resolve) => setTimeout(resolve, 1_000));
       if (options?.signal?.aborted) {
         return;
       }
-      yield 'tail';
+      yield { type: 'content', text: 'tail' };
     });
     mocks.resolveTools.mockReturnValue([webTool]);
     mocks.executeAgentLoop.mockResolvedValue({
@@ -666,7 +666,7 @@ describe('chatService.sendMessageWithSSE', () => {
       name: 'test-provider',
       generateWithTools: vi.fn(),
       async *streamGenerate() {
-        yield 'fallback';
+        yield { type: 'content', text: 'fallback' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -732,7 +732,7 @@ describe('chatService.sendMessageWithSSE', () => {
       name: 'test-provider',
       generateWithTools: vi.fn(),
       async *streamGenerate() {
-        yield 'fallback';
+        yield { type: 'content', text: 'fallback' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -759,7 +759,7 @@ describe('chatService.sendMessageWithSSE', () => {
     // Provider WITHOUT generateWithTools
     const provider = {
       async *streamGenerate() {
-        yield 'streaming answer';
+        yield { type: 'content', text: 'streaming answer' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);
@@ -790,7 +790,7 @@ describe('chatService.sendMessageWithSSE', () => {
       name: 'test-provider',
       generateWithTools: vi.fn(),
       async *streamGenerate() {
-        yield 'fallback';
+        yield { type: 'content', text: 'fallback' };
       },
     };
     mocks.llmService.getProviderForUser.mockResolvedValue(provider);

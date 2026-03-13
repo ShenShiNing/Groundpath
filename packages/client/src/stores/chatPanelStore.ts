@@ -115,6 +115,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       addMessage,
       updateLastMessage,
       appendToLastMessage,
+      appendThinkingToLastMessage,
       addToolStep,
       updateToolStep,
       selectedDocumentIds,
@@ -196,6 +197,9 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
             return;
           }
           appendToLastMessage(text);
+        },
+        onThinking: (text) => {
+          appendThinkingToLastMessage(text);
         },
         onSources: (citations) => {
           const storeCitations = citations.map(toStoreCitation);
@@ -414,6 +418,20 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
         messages[lastIndex] = {
           ...messages[lastIndex],
           content: messages[lastIndex].content + text,
+        };
+      }
+      return { messages };
+    });
+  },
+
+  appendThinkingToLastMessage: (text: string) => {
+    set((state) => {
+      const messages = [...state.messages];
+      const lastIndex = messages.length - 1;
+      if (lastIndex >= 0 && messages[lastIndex]) {
+        messages[lastIndex] = {
+          ...messages[lastIndex],
+          thinkingContent: (messages[lastIndex].thinkingContent ?? '') + text,
         };
       }
       return { messages };

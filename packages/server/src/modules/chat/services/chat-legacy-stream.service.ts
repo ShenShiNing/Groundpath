@@ -53,8 +53,12 @@ export async function executeLegacyStreamMode(ctx: StreamContext): Promise<void>
       signal: abortController.signal,
     })) {
       if (ctx.isDisconnected()) break;
-      fullContent += chunk;
-      sendSSE(res, { type: 'chunk', data: chunk });
+      if (chunk.type === 'reasoning') {
+        sendSSE(res, { type: 'thinking', data: chunk.text });
+      } else {
+        fullContent += chunk.text;
+        sendSSE(res, { type: 'chunk', data: chunk.text });
+      }
     }
   } catch (error) {
     if (ctx.isDisconnected() || (error instanceof Error && error.name === 'AbortError')) {

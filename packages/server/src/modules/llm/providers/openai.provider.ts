@@ -3,6 +3,7 @@ import type {
   LLMProvider,
   ChatMessage,
   GenerateOptions,
+  StreamChunk,
   AgentMessage,
   GenerateWithToolsOptions,
   ToolGenerateResult,
@@ -39,7 +40,7 @@ export class OpenAIProvider implements LLMProvider {
   async *streamGenerate(
     messages: ChatMessage[],
     options?: GenerateOptions
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<StreamChunk, void, unknown> {
     const stream = await this.client.chat.completions.create(
       {
         model: this.model,
@@ -59,7 +60,7 @@ export class OpenAIProvider implements LLMProvider {
       }
       const content = chunk.choices[0]?.delta?.content;
       if (content) {
-        yield content;
+        yield { type: 'content', text: content };
       }
     }
   }

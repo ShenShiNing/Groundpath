@@ -135,6 +135,7 @@ export const messageApi = {
 
 export interface SSEHandlers {
   onChunk: (text: string) => void;
+  onThinking?: (text: string) => void;
   onSources: (citations: Citation[]) => void;
   onDone: (data: {
     messageId: string;
@@ -187,6 +188,7 @@ export function sendMessageWithSSE(
     const dispatcher = createSSEDispatcher<SSEEvent>(
       {
         chunk: handlers.onChunk,
+        thinking: handlers.onThinking,
         sources: handlers.onSources,
         done: wrapTerminal(handlers.onDone),
         error: wrapTerminal(handlers.onError),

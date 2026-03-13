@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
-import { Loader2, Search, Globe, ChevronDown, ChevronRight, XCircle } from 'lucide-react';
+import {
+  Loader2,
+  Search,
+  Globe,
+  ChevronDown,
+  ChevronRight,
+  XCircle,
+  ListTree,
+  FileText,
+  Link,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ToolStep } from '@/stores';
 import { useTranslation } from 'react-i18next';
@@ -9,9 +19,13 @@ export interface ToolStepCardProps {
   step: ToolStep;
 }
 
-const TOOL_ICONS: Record<string, typeof Search> = {
-  knowledge_base_search: Search,
-  web_search: Globe,
+const TOOL_META: Record<string, { icon: typeof Search; label: string }> = {
+  knowledge_base_search: { icon: Search, label: 'agent.kbSearch' },
+  web_search: { icon: Globe, label: 'agent.webSearch' },
+  outline_search: { icon: ListTree, label: 'agent.outlineSearch' },
+  node_read: { icon: FileText, label: 'agent.nodeRead' },
+  ref_follow: { icon: Link, label: 'agent.refFollow' },
+  vector_fallback_search: { icon: Search, label: 'agent.vectorSearch' },
 };
 
 function getToolQueryDisplay(argumentsValue: Record<string, unknown>): string {
@@ -96,17 +110,12 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
 
         <div className="flex flex-1 items-center gap-1.5 min-w-0">
           {uniqueToolCalls.map((toolCall) => {
-            const Icon = TOOL_ICONS[toolCall.name] ?? Search;
+            const meta = TOOL_META[toolCall.name];
+            const Icon = meta?.icon ?? Search;
             return (
               <span key={toolCall.id} className="flex items-center gap-1 text-muted-foreground">
                 <Icon className="size-3 shrink-0" />
-                <span className="truncate">
-                  {toolCall.name === 'knowledge_base_search'
-                    ? t('agent.kbSearch')
-                    : toolCall.name === 'web_search'
-                      ? t('agent.webSearch')
-                      : toolCall.name}
-                </span>
+                <span className="truncate">{meta ? t(meta.label) : toolCall.name}</span>
               </span>
             );
           })}

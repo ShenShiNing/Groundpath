@@ -32,6 +32,7 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  thinkingContent?: string;
   timestamp: Date;
   citations?: Citation[];
   retrievedSources?: Citation[];
@@ -80,6 +81,7 @@ export interface ChatPanelState {
   addMessage: (message: ChatMessage) => void;
   updateLastMessage: (update: Partial<ChatMessage>) => void;
   appendToLastMessage: (text: string) => void;
+  appendThinkingToLastMessage: (text: string) => void;
   addToolStep: (step: ToolStep) => void;
   updateToolStep: (stepIndex: number, update: Partial<ToolStep>) => void;
 

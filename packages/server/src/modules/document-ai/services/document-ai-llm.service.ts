@@ -154,9 +154,10 @@ export const documentAiLlmService = {
         ...genOptions,
         signal,
       })) {
+        if (chunk.type !== 'content') continue;
         chunkCount++;
-        totalLength += chunk.length;
-        yield chunk;
+        totalLength += chunk.text.length;
+        yield chunk.text;
       }
 
       logger.info(
