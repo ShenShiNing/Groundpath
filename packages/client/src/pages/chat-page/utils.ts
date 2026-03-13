@@ -1,4 +1,4 @@
-import type { DocumentListItem, KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem } from '@knowledge-agent/shared/types';
 
 export function findFirstMatchingTextElement(
   container: HTMLElement,
@@ -19,18 +19,6 @@ export function findFirstMatchingTextElement(
 
   const firstMatch = walker.nextNode();
   return firstMatch instanceof Text ? firstMatch.parentElement : null;
-}
-
-export function getPreferredKnowledgeBaseId(
-  knowledgeBases: KnowledgeBaseListItem[]
-): string | undefined {
-  if (knowledgeBases.length === 0) return undefined;
-
-  const sortedByUpdated = [...knowledgeBases].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
-
-  return sortedByUpdated.find((kb) => kb.documentCount > 0)?.id ?? sortedByUpdated[0]?.id;
 }
 
 export function getSearchableDocuments(documents: DocumentListItem[]): DocumentListItem[] {

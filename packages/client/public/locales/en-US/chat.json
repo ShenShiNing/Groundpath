@@ -27,7 +27,17 @@
     "selectedDocuments": "{{count}} documents",
     "label": "Document scope",
     "noDocuments": "No documents available",
-    "clearSelection": "Clear selection"
+    "clearSelection": "Clear selection",
+    "searchPlaceholder": "Search knowledge bases or switch to general mode",
+    "generalDescription": "Chat without limiting retrieval to a specific knowledge base",
+    "knowledgeBaseDocumentCount": "{{count}} documents",
+    "noKnowledgeBaseMatch": "No matching chat scope found",
+    "switchConfirm": {
+      "title": "Switch chat scope",
+      "description": "This chat already has messages. Switching to \"{{scope}}\" will start a new chat and keep the current history unchanged.",
+      "cancel": "Cancel",
+      "confirm": "Start new chat and switch"
+    }
   },
   "message": {
     "thinking": "Thinking...",

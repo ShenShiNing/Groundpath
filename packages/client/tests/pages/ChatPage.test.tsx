@@ -122,6 +122,38 @@ vi.mock('@/components/ui/dialog', () => ({
   DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }));
 
+vi.mock('@/components/ui/alert-dialog', () => ({
+  AlertDialog: ({
+    open,
+    children,
+  }: {
+    open: boolean;
+    children: React.ReactNode;
+    onOpenChange?: (open: boolean) => void;
+  }) => (open ? <div data-testid="alert-dialog">{children}</div> : null),
+  AlertDialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  AlertDialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  AlertDialogCancel: ({
+    children,
+    onClick,
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+  AlertDialogAction: ({
+    children,
+    onClick,
+  }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock('@/components/ui/scroll-area', () => ({
   ScrollArea: ({ children }: { children: React.ReactNode }) => (
     <div>
@@ -243,6 +275,31 @@ vi.mock('@/components/chat', () => ({
       docs:{documents.map((document) => document.title).join('|')} selected:{selectedIds.join('|')}
     </div>
   ),
+  ChatKnowledgeScopeCombobox: ({
+    knowledgeBases,
+    value,
+    onValueChange,
+  }: {
+    knowledgeBases: KnowledgeBaseListItem[];
+    value: string | null;
+    onValueChange: (knowledgeBaseId: string | null) => void;
+  }) => (
+    <div data-testid="knowledge-scope">
+      <span>scope:{value ?? 'general'}</span>
+      <button type="button" onClick={() => onValueChange(null)}>
+        scope-general
+      </button>
+      {knowledgeBases.map((knowledgeBase) => (
+        <button
+          key={knowledgeBase.id}
+          type="button"
+          onClick={() => onValueChange(knowledgeBase.id)}
+        >
+          {`scope-${knowledgeBase.id}`}
+        </button>
+      ))}
+    </div>
+  ),
 }));
 
 vi.mock('@/components/chat/SaveToKBDialog', () => ({
@@ -325,6 +382,7 @@ function createDocument(
 describe('ChatPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     resetChatStore();
     mocks.useKnowledgeBases.mockReturnValue({
       data: [],
@@ -344,11 +402,17 @@ describe('ChatPage', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (vi.isFakeTimers()) {
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+        await Promise.resolve();
+      });
+    }
     vi.useRealTimers();
   });
 
-  it('selects the preferred knowledge base, sends messages, and closes the upload dialog after success', async () => {
+  it('defaults to general mode for multiple knowledge bases, then switches scope and sends messages', async () => {
     const knowledgeBases = [
       createKnowledgeBase('kb-empty', 0, '2026-03-10T00:00:00.000Z'),
       createKnowledgeBase('kb-ready', 2, '2026-03-11T00:00:00.000Z'),
@@ -358,13 +422,13 @@ describe('ChatPage', () => {
       createDocument('doc-processing', 'Processing Guide', 'processing'),
     ];
 
-    const open = vi.fn((kbId?: string | null) => {
-      useChatPanelStore.setState({ knowledgeBaseId: kbId ?? null });
+    const switchKnowledgeBase = vi.fn((kbId?: string | null) => {
+      useChatPanelStore.setState({ knowledgeBaseId: kbId ?? null, selectedDocumentIds: [] });
     });
     const sendMessage = vi.fn().mockResolvedValue(undefined);
 
     resetChatStore({
-      open,
+      switchKnowledgeBase,
       sendMessage,
       selectedDocumentIds: ['doc-ready', 'doc-processing'],
     });
@@ -385,7 +449,19 @@ describe('ChatPage', () => {
     const view = await render(<ChatPage />);
     await flushPromises();
 
-    expect(open).toHaveBeenCalledWith('kb-ready');
+    expect(
+      view.container.querySelector('input[placeholder="input.placeholder.general"]')
+    ).not.toBeNull();
+    expect(view.container.querySelector('[data-testid="document-scope"]')).toBeNull();
+
+    const switchKbButton = Array.from(view.container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('scope-kb-ready')
+    );
+    await fireClick(switchKbButton ?? null);
+    await flushPromises();
+
+    expect(switchKnowledgeBase).toHaveBeenCalledWith('kb-ready');
+    expect(window.localStorage.getItem('knowledge-agent.chat-scope')).toBe('kb-ready');
 
     const scope = view.container.querySelector('[data-testid="document-scope"]');
     expect(scope?.textContent).toContain('Ready Guide');
@@ -425,6 +501,116 @@ describe('ChatPage', () => {
     await flushPromises();
 
     expect(view.container.querySelector('[data-testid="document-upload"]')).toBeNull();
+
+    await view.unmount();
+  });
+
+  it('switches from a selected knowledge base back to general mode', async () => {
+    const knowledgeBases = [createKnowledgeBase('kb-ready', 2, '2026-03-11T00:00:00.000Z')];
+    const documents = [createDocument('doc-ready', 'Ready Guide', 'completed')];
+
+    const switchKnowledgeBase = vi.fn((kbId?: string | null) => {
+      useChatPanelStore.setState({ knowledgeBaseId: kbId ?? null, selectedDocumentIds: [] });
+    });
+
+    resetChatStore({
+      knowledgeBaseId: 'kb-ready',
+      switchKnowledgeBase,
+    });
+
+    mocks.useKnowledgeBases.mockReturnValue({
+      data: knowledgeBases,
+      isLoading: false,
+      isError: false,
+    });
+    mocks.useKBDocuments.mockImplementation((kbId?: string) => ({
+      data: {
+        documents: kbId === 'kb-ready' ? documents : [],
+      },
+      isLoading: false,
+      isError: false,
+    }));
+
+    const view = await render(<ChatPage />);
+    await flushPromises();
+
+    expect(view.container.querySelector('[data-testid="document-scope"]')).not.toBeNull();
+
+    const switchGeneralButton = Array.from(view.container.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('scope-general')
+    );
+    await fireClick(switchGeneralButton ?? null);
+    await flushPromises();
+
+    expect(switchKnowledgeBase).toHaveBeenCalledWith(null);
+    expect(window.localStorage.getItem('knowledge-agent.chat-scope')).toBe('__general__');
+    expect(view.container.querySelector('[data-testid="document-scope"]')).toBeNull();
+    expect(
+      view.container.querySelector('input[placeholder="input.placeholder.general"]')
+    ).not.toBeNull();
+
+    await view.unmount();
+  });
+
+  it('asks for confirmation before switching scope when the current chat already has messages', async () => {
+    const startNewConversation = vi.fn(() => {
+      useChatPanelStore.setState({
+        conversationId: null,
+        focusMessageId: null,
+        focusKeyword: null,
+        messages: [],
+        selectedDocumentIds: [],
+      });
+    });
+    const switchKnowledgeBase = vi.fn((kbId?: string | null) => {
+      useChatPanelStore.setState({ knowledgeBaseId: kbId ?? null, selectedDocumentIds: [] });
+    });
+
+    resetChatStore({
+      knowledgeBaseId: 'kb-ready',
+      conversationId: 'conv-1',
+      startNewConversation,
+      switchKnowledgeBase,
+      messages: [
+        {
+          id: 'user-1',
+          role: 'user',
+          content: 'Existing question',
+          timestamp: new Date('2026-03-13T10:00:00.000Z'),
+        },
+      ],
+    });
+
+    mocks.useKnowledgeBases.mockReturnValue({
+      data: [
+        createKnowledgeBase('kb-ready', 2, '2026-03-11T00:00:00.000Z'),
+        createKnowledgeBase('kb-alt', 1, '2026-03-12T00:00:00.000Z'),
+      ],
+      isLoading: false,
+      isError: false,
+    });
+
+    const view = await render(<ChatPage />);
+    await flushPromises();
+
+    const switchGeneralButton = Array.from(view.container.querySelectorAll('button')).find(
+      (button) => button.textContent?.includes('scope-general')
+    );
+    await fireClick(switchGeneralButton ?? null);
+    await flushPromises();
+
+    expect(switchKnowledgeBase).not.toHaveBeenCalled();
+    expect(view.container.querySelector('[data-testid="alert-dialog"]')).not.toBeNull();
+
+    const confirmButton = Array.from(view.container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('scope.switchConfirm.confirm')
+    );
+    await fireClick(confirmButton ?? null);
+    await flushPromises();
+
+    expect(startNewConversation).toHaveBeenCalledTimes(1);
+    expect(switchKnowledgeBase).toHaveBeenCalledWith(null);
+    expect(window.localStorage.getItem('knowledge-agent.chat-scope')).toBe('__general__');
 
     await view.unmount();
   });
@@ -481,8 +667,8 @@ describe('ChatPage', () => {
 
     expect(setDocumentScope).toHaveBeenLastCalledWith(['doc-ready']);
     expect(mocks.scrollIntoView).toHaveBeenCalled();
-    expect(useChatPanelStore.getState().focusMessageId).toBeNull();
-    expect(useChatPanelStore.getState().focusKeyword).toBeNull();
+    expect(useChatPanelStore.getState().focusMessageId).toBe('assistant-1');
+    expect(useChatPanelStore.getState().focusKeyword).toBe('target keyword');
 
     const highlightedMessage = view.container.querySelector('#chat-message-assistant-1');
     expect(highlightedMessage?.className).toContain('ring-2');
@@ -513,6 +699,8 @@ describe('ChatPage', () => {
       '#chat-message-assistant-1'
     );
     expect(highlightedMessageAfterTimeout?.className).not.toContain('ring-2');
+    expect(useChatPanelStore.getState().focusMessageId).toBeNull();
+    expect(useChatPanelStore.getState().focusKeyword).toBeNull();
 
     await view.unmount();
   });

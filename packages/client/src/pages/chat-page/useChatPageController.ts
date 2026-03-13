@@ -8,10 +8,10 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import {
   findFirstMatchingTextElement,
-  getPreferredKnowledgeBaseId,
   getProcessingDocumentCount,
   getSearchableDocuments,
 } from './utils';
+import { readStoredChatScope, resolveChatScopeValue, writeStoredChatScope } from './chatScope';
 
 const AUTO_SCROLL_THRESHOLD_PX = 48;
 
@@ -22,6 +22,8 @@ export function useChatPageController() {
   const skipNextAutoScrollRef = useRef(false);
   const shouldAutoScrollRef = useRef(true);
   const primedTurnAssistantIdRef = useRef<string | null>(null);
+  const handledFocusMessageIdRef = useRef<string | null>(null);
+  const clearFocusTimeoutRef = useRef<number | null>(null);
   const knowledgeBaseId = useChatPanelStore((state) => state.knowledgeBaseId);
   const conversationId = useChatPanelStore((state) => state.conversationId);
   const messages = useChatPanelStore((state) => state.messages);
@@ -41,35 +43,58 @@ export function useChatPageController() {
   const switchKnowledgeBase = useChatPanelStore((state) => state.switchKnowledgeBase);
   const clearFocusMessageId = useChatPanelStore((state) => state.clearFocusMessageId);
 
-  const [selectedKnowledgeBaseId, setSelectedKnowledgeBaseId] = useState<string | undefined>(
-    knowledgeBaseId ?? undefined
-  );
+  const [preferredKnowledgeBaseId, setPreferredKnowledgeBaseId] = useState<
+    string | null | undefined
+  >(() => readStoredChatScope());
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [previewCitation, setPreviewCitation] = useState<Citation | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [createKbDialogOpen, setCreateKbDialogOpen] = useState(false);
-  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [scopeSwitchDialogOpen, setScopeSwitchDialogOpen] = useState(false);
+  const [pendingKnowledgeBaseId, setPendingKnowledgeBaseId] = useState<string | null | undefined>(
+    undefined
+  );
 
   const { data: knowledgeBases = [], isLoading: kbLoading, isError: kbError } = useKnowledgeBases();
+  const selectedKnowledgeBaseId = useMemo(
+    () =>
+      conversationId
+        ? knowledgeBaseId
+        : resolveChatScopeValue(knowledgeBases, {
+            currentKnowledgeBaseId: knowledgeBaseId,
+            storedScope: preferredKnowledgeBaseId,
+          }),
+    [conversationId, knowledgeBaseId, knowledgeBases, preferredKnowledgeBaseId]
+  );
   const {
     data: documentsResponse,
     isLoading: docsLoading,
     isError: docsError,
-  } = useKBDocuments(selectedKnowledgeBaseId, {
+  } = useKBDocuments(selectedKnowledgeBaseId ?? undefined, {
     pageSize: 100,
   });
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
   const searchableDocuments = useMemo(() => getSearchableDocuments(documents), [documents]);
   const processingDocumentCount = useMemo(() => getProcessingDocumentCount(documents), [documents]);
-  const preferredKnowledgeBaseId = useMemo(
-    () => getPreferredKnowledgeBaseId(knowledgeBases),
-    [knowledgeBases]
-  );
   const selectedKnowledgeBase = useMemo(
     () => knowledgeBases.find((knowledgeBase) => knowledgeBase.id === selectedKnowledgeBaseId),
     [knowledgeBases, selectedKnowledgeBaseId]
   );
+  const pendingKnowledgeBaseName = useMemo(() => {
+    if (pendingKnowledgeBaseId === undefined) {
+      return t('mode.general');
+    }
+
+    if (pendingKnowledgeBaseId === null) {
+      return t('mode.general');
+    }
+
+    return (
+      knowledgeBases.find((knowledgeBase) => knowledgeBase.id === pendingKnowledgeBaseId)?.name ??
+      t('mode.general')
+    );
+  }, [knowledgeBases, pendingKnowledgeBaseId, t]);
   const hasPersistableMessages = useMemo(
     () => messages.some((message) => !message.isLoading && message.content.trim().length > 0),
     [messages]
@@ -95,32 +120,6 @@ export function useChatPageController() {
 
     shouldAutoScrollRef.current = isNearBottom;
   }, [getMessagesViewport]);
-
-  useEffect(() => {
-    if (knowledgeBases.length === 0) {
-      setSelectedKnowledgeBaseId(undefined);
-      return;
-    }
-
-    if (
-      !selectedKnowledgeBaseId ||
-      !knowledgeBases.some((knowledgeBase) => knowledgeBase.id === selectedKnowledgeBaseId)
-    ) {
-      // Preserve an explicitly selected KB until the query cache catches up.
-      if (selectedKnowledgeBaseId && selectedKnowledgeBaseId === knowledgeBaseId) {
-        return;
-      }
-      setSelectedKnowledgeBaseId(preferredKnowledgeBaseId);
-    }
-  }, [knowledgeBases, knowledgeBaseId, preferredKnowledgeBaseId, selectedKnowledgeBaseId]);
-
-  useEffect(() => {
-    if (!conversationId) return;
-    if (knowledgeBaseId !== (selectedKnowledgeBaseId ?? null)) {
-      setSelectedKnowledgeBaseId(knowledgeBaseId ?? undefined);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only sync when store values change, not when local state does
-  }, [conversationId, knowledgeBaseId]);
 
   useEffect(() => {
     const targetKnowledgeBaseId = selectedKnowledgeBaseId ?? null;
@@ -200,9 +199,11 @@ export function useChatPageController() {
 
   useEffect(() => {
     if (!focusMessageId || messages.length === 0) return;
+    if (handledFocusMessageIdRef.current === focusMessageId) return;
 
     const targetElement = document.getElementById(`chat-message-${focusMessageId}`);
     if (!targetElement) {
+      handledFocusMessageIdRef.current = null;
       clearFocusMessageId();
       return;
     }
@@ -217,23 +218,36 @@ export function useChatPageController() {
       targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    setHighlightedMessageId(focusMessageId);
+    handledFocusMessageIdRef.current = focusMessageId;
     shouldAutoScrollRef.current = false;
     skipNextAutoScrollRef.current = true;
-    clearFocusMessageId();
+
+    if (clearFocusTimeoutRef.current !== null) {
+      window.clearTimeout(clearFocusTimeoutRef.current);
+    }
+
+    clearFocusTimeoutRef.current = window.setTimeout(() => {
+      handledFocusMessageIdRef.current = null;
+      clearFocusTimeoutRef.current = null;
+      clearFocusMessageId();
+    }, 2200);
   }, [clearFocusMessageId, focusKeyword, focusMessageId, messages]);
 
   useEffect(() => {
-    if (!highlightedMessageId) return;
-
-    const timer = window.setTimeout(() => {
-      setHighlightedMessageId((current) => (current === highlightedMessageId ? null : current));
-    }, 2200);
-
     return () => {
-      window.clearTimeout(timer);
+      if (clearFocusTimeoutRef.current !== null) {
+        window.clearTimeout(clearFocusTimeoutRef.current);
+      }
     };
-  }, [highlightedMessageId]);
+  }, []);
+
+  useEffect(() => {
+    if (focusMessageId) {
+      return;
+    }
+
+    handledFocusMessageIdRef.current = null;
+  }, [focusMessageId]);
 
   useEffect(() => {
     if (kbError) {
@@ -344,16 +358,64 @@ export function useChatPageController() {
     setCreateKbDialogOpen(true);
   }, [hasPersistableMessages, t]);
 
+  const applyKnowledgeBaseSelection = useCallback(
+    (knowledgeBaseIdToUse: string | null, options?: { startFreshConversation?: boolean }) => {
+      if (options?.startFreshConversation) {
+        startNewConversation();
+      }
+
+      setPreferredKnowledgeBaseId(knowledgeBaseIdToUse);
+      switchKnowledgeBase(knowledgeBaseIdToUse);
+      writeStoredChatScope(knowledgeBaseIdToUse);
+    },
+    [startNewConversation, switchKnowledgeBase]
+  );
+
+  const handleKnowledgeBaseChange = useCallback(
+    (knowledgeBaseIdToUse: string | null) => {
+      if (knowledgeBaseIdToUse === (selectedKnowledgeBaseId ?? null)) {
+        return;
+      }
+
+      if (messages.length > 0) {
+        setPendingKnowledgeBaseId(knowledgeBaseIdToUse);
+        setScopeSwitchDialogOpen(true);
+        return;
+      }
+
+      applyKnowledgeBaseSelection(knowledgeBaseIdToUse);
+    },
+    [applyKnowledgeBaseSelection, messages.length, selectedKnowledgeBaseId]
+  );
+
+  const handleScopeSwitchDialogOpenChange = useCallback((open: boolean) => {
+    setScopeSwitchDialogOpen(open);
+
+    if (!open) {
+      setPendingKnowledgeBaseId(undefined);
+    }
+  }, []);
+
+  const handleConfirmScopeSwitch = useCallback(() => {
+    if (pendingKnowledgeBaseId === undefined) {
+      return;
+    }
+
+    applyKnowledgeBaseSelection(pendingKnowledgeBaseId, { startFreshConversation: true });
+    setPendingKnowledgeBaseId(undefined);
+    setScopeSwitchDialogOpen(false);
+  }, [applyKnowledgeBaseSelection, pendingKnowledgeBaseId]);
+
   const handleKbSwitch = useCallback(
     (knowledgeBaseIdToUse: string) => {
-      setSelectedKnowledgeBaseId(knowledgeBaseIdToUse);
-      switchKnowledgeBase(knowledgeBaseIdToUse);
+      applyKnowledgeBaseSelection(knowledgeBaseIdToUse);
     },
-    [switchKnowledgeBase]
+    [applyKnowledgeBaseSelection]
   );
 
   return {
     kbLoading,
+    knowledgeBases,
     docsLoading,
     conversationId,
     messages,
@@ -371,7 +433,10 @@ export function useChatPageController() {
     setPreviewOpen,
     createKbDialogOpen,
     setCreateKbDialogOpen,
-    highlightedMessageId,
+    highlightedMessageId: focusMessageId,
+    scopeSwitchDialogOpen,
+    setScopeSwitchDialogOpen: handleScopeSwitchDialogOpenChange,
+    pendingKnowledgeBaseName,
     messagesEndRef,
     stopGeneration: handleStopGeneration,
     setDocumentScope,
@@ -386,6 +451,8 @@ export function useChatPageController() {
     handleUploadSuccess,
     handleOpenUploadDialog,
     handleOpenSaveToKbDialog,
+    handleKnowledgeBaseChange,
+    handleConfirmScopeSwitch,
     handleKbSwitch,
   };
 }

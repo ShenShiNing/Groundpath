@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 export interface ChatPageConversationProps {
   messages: ChatStoreMessage[];
-  selectedKnowledgeBaseId: string | undefined;
+  selectedKnowledgeBaseId: string | null;
   highlightedMessageId: string | null;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   isLoading: boolean;

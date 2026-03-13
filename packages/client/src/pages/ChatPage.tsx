@@ -10,6 +10,7 @@ export function ChatPage() {
   const { t } = useTranslation('chat');
   const {
     kbLoading,
+    knowledgeBases,
     docsLoading,
     conversationId,
     messages,
@@ -28,6 +29,9 @@ export function ChatPage() {
     createKbDialogOpen,
     setCreateKbDialogOpen,
     highlightedMessageId,
+    scopeSwitchDialogOpen,
+    setScopeSwitchDialogOpen,
+    pendingKnowledgeBaseName,
     messagesEndRef,
     stopGeneration,
     setDocumentScope,
@@ -42,6 +46,8 @@ export function ChatPage() {
     handleUploadSuccess,
     handleOpenUploadDialog,
     handleOpenSaveToKbDialog,
+    handleKnowledgeBaseChange,
+    handleConfirmScopeSwitch,
     handleKbSwitch,
   } = useChatPageController();
 
@@ -63,6 +69,7 @@ export function ChatPage() {
           <section id="chat-main" className="flex min-h-0 flex-1 flex-col">
             <div className="flex h-full min-h-88 flex-col">
               <ChatPageToolbar
+                knowledgeBases={knowledgeBases}
                 selectedKnowledgeBaseId={selectedKnowledgeBaseId}
                 searchableDocuments={searchableDocuments}
                 selectedDocumentIds={selectedDocumentIds}
@@ -70,6 +77,8 @@ export function ChatPage() {
                 processingDocumentCount={processingDocumentCount}
                 hasPersistableMessages={hasPersistableMessages}
                 messageCount={messages.length}
+                isGenerating={isLoading}
+                onKnowledgeBaseChange={handleKnowledgeBaseChange}
                 onDocumentScopeChange={setDocumentScope}
                 onNewConversation={startNewConversation}
                 onOpenUploadDialog={handleOpenUploadDialog}
@@ -117,6 +126,10 @@ export function ChatPage() {
         selectedKnowledgeBaseId={selectedKnowledgeBaseId}
         selectedKnowledgeBaseName={selectedKnowledgeBaseName}
         onKbSwitch={handleKbSwitch}
+        scopeSwitchDialogOpen={scopeSwitchDialogOpen}
+        onScopeSwitchDialogOpenChange={setScopeSwitchDialogOpen}
+        pendingScopeName={pendingKnowledgeBaseName}
+        onConfirmScopeSwitch={handleConfirmScopeSwitch}
         uploadDialogOpen={uploadDialogOpen}
         onUploadDialogOpenChange={setUploadDialogOpen}
         onUploadSuccess={handleUploadSuccess}

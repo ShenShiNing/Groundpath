@@ -27,7 +27,17 @@
     "selectedDocuments": "{{count}} 份文档",
     "label": "文档范围",
     "noDocuments": "暂无可用文档",
-    "clearSelection": "清空选择"
+    "clearSelection": "清空选择",
+    "searchPlaceholder": "搜索知识库或切换到通用模式",
+    "generalDescription": "不限定知识库，直接进行通用聊天",
+    "knowledgeBaseDocumentCount": "{{count}} 份文档",
+    "noKnowledgeBaseMatch": "没有匹配的聊天范围",
+    "switchConfirm": {
+      "title": "切换聊天范围",
+      "description": "当前聊天已有消息。切换到“{{scope}}”会新建聊天，当前记录会保留不变。",
+      "cancel": "取消",
+      "confirm": "新建聊天并切换"
+    }
   },
   "message": {
     "thinking": "思考中...",

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { Database, Ellipsis, FileText, Sparkles, Trash2, Upload } from 'lucide-react';
-import type { DocumentListItem } from '@knowledge-agent/shared/types';
-import { DocumentScopeSelector } from '@/components/chat';
+import type { DocumentListItem, KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import { ChatKnowledgeScopeCombobox, DocumentScopeSelector } from '@/components/chat';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,13 +12,16 @@ import {
 import { useTranslation } from 'react-i18next';
 
 export interface ChatPageToolbarProps {
-  selectedKnowledgeBaseId: string | undefined;
+  knowledgeBases: KnowledgeBaseListItem[];
+  selectedKnowledgeBaseId: string | null;
   searchableDocuments: DocumentListItem[];
   selectedDocumentIds: string[];
   docsLoading: boolean;
   processingDocumentCount: number;
   hasPersistableMessages: boolean;
   messageCount: number;
+  isGenerating: boolean;
+  onKnowledgeBaseChange: (knowledgeBaseId: string | null) => void;
   onDocumentScopeChange: (ids: string[]) => void;
   onNewConversation: () => void;
   onOpenUploadDialog: () => void;
@@ -27,6 +30,7 @@ export interface ChatPageToolbarProps {
 }
 
 export function ChatPageToolbar({
+  knowledgeBases,
   selectedKnowledgeBaseId,
   searchableDocuments,
   selectedDocumentIds,
@@ -34,6 +38,8 @@ export function ChatPageToolbar({
   processingDocumentCount,
   hasPersistableMessages,
   messageCount,
+  isGenerating,
+  onKnowledgeBaseChange,
   onDocumentScopeChange,
   onNewConversation,
   onOpenUploadDialog,
@@ -44,6 +50,13 @@ export function ChatPageToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 md:px-6">
+      <ChatKnowledgeScopeCombobox
+        knowledgeBases={knowledgeBases}
+        value={selectedKnowledgeBaseId}
+        disabled={isGenerating}
+        onValueChange={onKnowledgeBaseChange}
+      />
+
       {selectedKnowledgeBaseId ? (
         <DocumentScopeSelector
           documents={searchableDocuments}

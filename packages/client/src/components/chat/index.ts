@@ -10,3 +10,7 @@ export { ChatSearchDialog, type ChatSearchDialogProps } from './ChatSearchDialog
 export { ToolStepCard, type ToolStepCardProps } from './ToolStepCard';
 export { ToolStepsDisplay, type ToolStepsDisplayProps } from './ToolStepsDisplay';
 export { SaveToKBDialog, type SaveToKBDialogProps } from './SaveToKBDialog';
+export {
+  ChatKnowledgeScopeCombobox,
+  type ChatKnowledgeScopeComboboxProps,
+} from './ChatKnowledgeScopeCombobox';
