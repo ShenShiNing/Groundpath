@@ -24,7 +24,6 @@ function createUnauthorizedError(config: InternalAxiosRequestConfig): AxiosError
         code: 'UNAUTHORIZED',
         message: 'Unauthorized',
       },
-      timestamp: new Date().toISOString(),
     },
     status: 401,
     statusText: 'Unauthorized',

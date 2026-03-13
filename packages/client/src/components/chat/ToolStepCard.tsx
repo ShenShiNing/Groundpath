@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { Loader2, Search, Globe, ChevronDown, ChevronRight, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ToolStep } from '@/stores';
@@ -13,6 +14,12 @@ const TOOL_ICONS: Record<string, typeof Search> = {
   web_search: Globe,
 };
 
+function getToolQueryDisplay(argumentsValue: Record<string, unknown>): string {
+  return typeof argumentsValue.query === 'string'
+    ? argumentsValue.query
+    : JSON.stringify(argumentsValue);
+}
+
 function ToolResultContent({
   content,
   isError,
@@ -20,7 +27,7 @@ function ToolResultContent({
 }: {
   content: string;
   isError?: boolean;
-  t: (key: string) => string;
+  t: TFunction<'chat'>;
 }) {
   const [resultExpanded, setResultExpanded] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -40,7 +47,7 @@ function ToolResultContent({
       <div
         ref={contentRef}
         className={cn(
-          'text-muted-foreground whitespace-pre-wrap break-words',
+          'text-muted-foreground whitespace-pre-wrap wrap-break-word',
           isError && 'text-destructive',
           !resultExpanded && 'line-clamp-4'
         )}
@@ -64,8 +71,11 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
   const { t } = useTranslation('chat');
   const isRunning = step.status === 'running';
   const [expanded, setExpanded] = useState(isRunning);
+  const uniqueToolCalls = Array.from(
+    new Map(step.toolCalls.map((toolCall) => [toolCall.name, toolCall])).values()
+  );
 
-  const hasError = step.toolResults?.some((r) => r.isError);
+  const hasError = step.toolResults?.some((result) => result.isError);
 
   return (
     <div className="rounded-lg border border-border/50 bg-muted/30 text-xs">
@@ -85,17 +95,17 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
         )}
 
         <div className="flex flex-1 items-center gap-1.5 min-w-0">
-          {[...new Map(step.toolCalls.map((tc) => [tc.name, tc])).values()].map((tc) => {
-            const Icon = TOOL_ICONS[tc.name] ?? Search;
+          {uniqueToolCalls.map((toolCall) => {
+            const Icon = TOOL_ICONS[toolCall.name] ?? Search;
             return (
-              <span key={tc.id} className="flex items-center gap-1 text-muted-foreground">
+              <span key={toolCall.id} className="flex items-center gap-1 text-muted-foreground">
                 <Icon className="size-3 shrink-0" />
                 <span className="truncate">
-                  {tc.name === 'knowledge_base_search'
+                  {toolCall.name === 'knowledge_base_search'
                     ? t('agent.kbSearch')
-                    : tc.name === 'web_search'
+                    : toolCall.name === 'web_search'
                       ? t('agent.webSearch')
-                      : tc.name}
+                      : toolCall.name}
                 </span>
               </span>
             );
@@ -114,26 +124,22 @@ export function ToolStepCard({ step }: ToolStepCardProps) {
 
       {expanded && (
         <div className="border-t border-border/30 px-3 py-2 space-y-2">
-          {step.toolCalls.map((tc) => (
-            <div key={tc.id} className="space-y-1">
+          {step.toolCalls.map((toolCall) => (
+            <div key={toolCall.id} className="space-y-1">
               <div className="text-muted-foreground">
                 {t('agent.query')}:{' '}
-                <span className="text-foreground">
-                  {typeof tc.arguments.query === 'string'
-                    ? tc.arguments.query
-                    : JSON.stringify(tc.arguments)}
-                </span>
+                <span className="text-foreground">{getToolQueryDisplay(toolCall.arguments)}</span>
               </div>
 
               {step.toolResults && (
                 <>
                   {step.toolResults
-                    .filter((r) => r.toolCallId === tc.id)
-                    .map((r) => (
+                    .filter((result) => result.toolCallId === toolCall.id)
+                    .map((result) => (
                       <ToolResultContent
-                        key={r.toolCallId}
-                        content={r.content}
-                        isError={r.isError}
+                        key={result.toolCallId}
+                        content={result.content}
+                        isError={result.isError}
                         t={t}
                       />
                     ))}

@@ -29,7 +29,7 @@ export function DocumentUpload({ knowledgeBaseId, onSuccess, className }: Docume
   const { t } = useTranslation('document');
   const queryClient = useQueryClient();
   const queue = useUploadQueue({ maxConcurrent: 3 });
-  const clearTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {

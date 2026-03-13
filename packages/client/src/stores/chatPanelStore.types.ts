@@ -114,6 +114,14 @@ export function getCitationLocatorText(
 }
 
 export function toStoreCitation(citation: APICitation, index: number): Citation {
+  if (citation.sourceType === 'node') {
+    return {
+      id: `cit-${index}`,
+      ...citation,
+      excerpt: citation.excerpt ?? citation.content ?? '',
+    };
+  }
+
   return {
     id: `cit-${index}`,
     ...citation,

@@ -11,5 +11,6 @@ export {
   type ChatMessage,
   type Citation,
   type ChatPanelState,
+  type ToolStep,
 } from './chatPanelStore';
 export { useAISettingsStore, canFetchModels } from './aiSettingsStore';

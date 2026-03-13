@@ -3,7 +3,7 @@
  * Token 管理委托给 auth.ts，header 构造委托给 headers.ts。
  */
 
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { getAccessToken, getOrRefreshToken, hasRefreshToken } from './auth';
 import { getCsrfTokenFromCookie } from './headers';
@@ -28,7 +28,7 @@ type HeaderCarrier = InternalAxiosRequestConfig | RetryableRequest;
 
 export function setRequestHeader(config: HeaderCarrier, name: string, value: string): void {
   if (!config.headers) {
-    config.headers = {};
+    config.headers = new AxiosHeaders();
   }
 
   if (typeof config.headers.set === 'function') {

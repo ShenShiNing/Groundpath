@@ -70,7 +70,7 @@ vi.mock('@/components/ui/button', () => ({
     asChild?: boolean;
   }) => {
     if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(children, props);
+      return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, props);
     }
 
     return <button {...props}>{children}</button>;
@@ -92,7 +92,7 @@ vi.mock('@/components/ui/dropdown-menu', () => ({
     asChild?: boolean;
   }) => {
     if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(children, {
+      return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
         ...props,
         onClick,
         'aria-disabled': disabled,
@@ -411,10 +411,13 @@ describe('ChatPage', () => {
 
     const setDocumentScope = vi.fn();
     const citation: Citation = {
+      id: 'cit-1',
       documentId: 'doc-ready',
       documentTitle: 'Ready Guide',
       excerpt: 'target keyword excerpt',
       sourceType: 'chunk',
+      chunkIndex: 0,
+      content: 'target keyword excerpt',
     };
 
     resetChatStore({

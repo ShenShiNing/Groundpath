@@ -28,6 +28,17 @@ vi.mock('@/lib/logger', () => ({
 
 import { useAuthStore } from '@/stores/authStore';
 
+const userFixture = {
+  id: 'user-1',
+  email: 'user@example.com',
+  username: 'tester',
+  avatarUrl: null,
+  bio: null,
+  status: 'active' as const,
+  emailVerified: true,
+  createdAt: new Date('2026-03-01T00:00:00.000Z'),
+};
+
 function resetAuthStore() {
   localStorage.clear();
   useAuthStore.setState({
@@ -94,7 +105,7 @@ describe('authStore', () => {
     const error = new Error('logout failed');
     authStoreMocks.logout.mockRejectedValue(error);
     useAuthStore.setState({
-      user: { id: 'user-1', email: 'user@example.com', username: 'tester', avatarUrl: null },
+      user: userFixture,
       accessToken: 'access-token',
       isAuthenticated: true,
       isLoading: false,
@@ -115,7 +126,7 @@ describe('authStore', () => {
     const error = new Error('logout all failed');
     authStoreMocks.logoutAll.mockRejectedValue(error);
     useAuthStore.setState({
-      user: { id: 'user-1', email: 'user@example.com', username: 'tester', avatarUrl: null },
+      user: userFixture,
       accessToken: 'access-token',
       isAuthenticated: true,
       isLoading: false,
