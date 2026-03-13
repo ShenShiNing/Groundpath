@@ -55,6 +55,7 @@ export const chatService = {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
+    res.socket?.setTimeout(0);
 
     try {
       const { conversation, tools, provider, genOptions } = await prepareChatRequest(options);

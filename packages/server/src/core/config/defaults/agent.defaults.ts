@@ -8,6 +8,7 @@ export const agentDefaults = {
   maxStructuredRounds: 3,
   maxFallbackRounds: 1,
   toolTimeout: 15_000,
+  sseHeartbeatIntervalMs: 15_000,
   maxNodeReadTokens: 1_200,
   refFollowMaxDepth: 3,
   refFollowMaxNodes: 20,

@@ -82,6 +82,9 @@ import { chatService } from '@modules/chat/services/chat.service';
 
 function createMockRes() {
   const written: string[] = [];
+  const socket = {
+    setTimeout: vi.fn(),
+  };
   const res = {
     setHeader: vi.fn(),
     write: vi.fn((data: string) => written.push(data)),
@@ -89,8 +92,9 @@ function createMockRes() {
     on: vi.fn(),
     off: vi.fn(),
     headersSent: false,
+    socket,
   };
-  return { res: res as unknown as import('express').Response, written };
+  return { res: res as unknown as import('express').Response, written, socket };
 }
 
 describe('chatService.sendMessageWithSSE', () => {
@@ -167,6 +171,25 @@ describe('chatService.sendMessageWithSSE', () => {
 
     const doneEvent = written.find((w) => w.includes('"type":"done"'));
     expect(doneEvent).toBeDefined();
+  });
+
+  it('disables socket idle timeout for SSE responses', async () => {
+    const provider = {
+      async *streamGenerate() {
+        yield 'Hello';
+      },
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res, socket } = createMockRes();
+
+    await chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Hi',
+    });
+
+    expect(socket.setTimeout).toHaveBeenCalledWith(0);
   });
 
   it('persists provider_error and completes SSE when legacy streaming provider throws', async () => {
@@ -351,6 +374,38 @@ describe('chatService.sendMessageWithSSE', () => {
     const createCalls = mocks.messageService.create.mock.calls;
     const assistantCalls = createCalls.filter((call) => call[0]?.role === 'assistant');
     expect(assistantCalls[0]![0].metadata.agentTrace).toBeDefined();
+  });
+
+  it('passes the abort signal to both provider options and tool context in agent mode', async () => {
+    const webTool = { definition: { name: 'web_search', category: 'external' } };
+    mocks.resolveTools.mockReturnValue([webTool]);
+    mocks.executeAgentLoop.mockResolvedValue({
+      content: 'Agent answer',
+      citations: [],
+      retrievedCitations: [],
+      agentTrace: [],
+      stopReason: 'answered',
+    });
+    const provider = {
+      name: 'test-provider',
+      generateWithTools: vi.fn(),
+      async *streamGenerate() {
+        yield 'fallback';
+      },
+    };
+    mocks.llmService.getProviderForUser.mockResolvedValue(provider);
+
+    const { res } = createMockRes();
+
+    await chatService.sendMessageWithSSE(res, {
+      userId: 'user-1',
+      conversationId: 'conv-1',
+      content: 'Hello',
+    });
+
+    const loopArgs = mocks.executeAgentLoop.mock.calls[0]![0];
+    expect(loopArgs.genOptions.signal).toBeDefined();
+    expect(loopArgs.toolContext.signal).toBe(loopArgs.genOptions.signal);
   });
 
   it('falls back to legacy streaming when provider lacks generateWithTools', async () => {

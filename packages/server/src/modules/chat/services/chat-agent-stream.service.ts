@@ -14,8 +14,16 @@ export async function executeAgentConversation(
   tools: ReturnType<typeof resolveTools>,
   callbacks?: AgentExecutionCallbacks
 ) {
-  const { conversationId, content, userId, provider, genOptions, knowledgeBaseId, documentIds } =
-    ctx;
+  const {
+    conversationId,
+    content,
+    userId,
+    provider,
+    genOptions,
+    knowledgeBaseId,
+    documentIds,
+    signal,
+  } = ctx;
   const hasKnowledgeBase = !!knowledgeBaseId;
   const hasWebSearch = tools.some((t) => t.definition.name === 'web_search');
   const hasStructuredKnowledgeBase = tools.some((t) => t.definition.name === 'outline_search');
@@ -40,6 +48,7 @@ export async function executeAgentConversation(
     hasStructuredKnowledgeBase,
   });
   const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
+  const requestSignal = signal ?? genOptions.signal;
 
   return executeAgentLoop({
     provider,
@@ -50,9 +59,10 @@ export async function executeAgentConversation(
       conversationId,
       knowledgeBaseId: knowledgeBaseId ?? undefined,
       documentIds,
+      signal: requestSignal,
       runtimeState: {},
     },
-    genOptions,
+    genOptions: requestSignal ? { ...genOptions, signal: requestSignal } : genOptions,
     onToolStart: callbacks?.onToolStart,
     onToolEnd: callbacks?.onToolEnd,
   });
@@ -72,6 +82,7 @@ export async function executeAgentMode(
       knowledgeBaseId: ctx.knowledgeBaseId,
       provider,
       genOptions: { ...genOptions, signal: abortController.signal },
+      signal: abortController.signal,
     },
     tools,
     {

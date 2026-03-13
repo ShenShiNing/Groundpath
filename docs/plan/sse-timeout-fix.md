@@ -104,7 +104,7 @@ Agent 模式的 `executeAgentMode`（`chat-agent-stream.service.ts:61-137`）是
 ### Phase 0：止血（路由超时 + signal 修复）
 
 > 目标：立即消除 SSE 连接被服务端杀死的问题
-> 改动：3 个文件，约 10 行
+> 改动：4 个文件，约 20 行
 
 #### 0.1 — SSE 路由禁用 socket 超时
 
@@ -197,10 +197,22 @@ export const agentDefaults = {
 
 #### Phase 0 测试验证
 
-- [ ] Agent 模式对话：最终 LLM 调用 >30s 不再断连
-- [ ] 普通 REST 接口：仍受 `SERVER_TIMEOUT=30000` 保护
-- [ ] 客户端手动取消：`stopGeneration()` -> agent 循环在下一步入口快速退出
-- [ ] 服务端 graceful shutdown：SSE 连接不阻塞关闭
+- [x] 单元测试：`chat.service.test.ts` 覆盖 `res.socket.setTimeout(0)` 生效
+- [x] 单元测试：Agent 模式下 `AbortSignal` 同时传入 `genOptions.signal` 与 `toolContext.signal`
+- [x] 定向回归：`agent-executor.test.ts` 现有 abort 行为用例通过
+- [x] 类型校验：`pnpm -F @knowledge-agent/server build` 通过
+- [ ] Agent 模式对话：最终 LLM 调用 >30s 不再断连（待真实联调验证）
+- [ ] 普通 REST 接口：仍受 `SERVER_TIMEOUT=30000` 保护（待接口联调验证）
+- [ ] 客户端手动取消：`stopGeneration()` -> agent 循环在下一步入口快速退出（待前后端联调验证）
+- [ ] 服务端 graceful shutdown：SSE 连接不阻塞关闭（待集成验证）
+
+#### Phase 0 完成结果（2026-03-13）
+
+- 已在 `packages/server/src/modules/chat/services/chat.service.ts` 为 SSE 响应单独关闭 socket idle timeout，不影响全局 REST 的 `server.timeout`
+- 已在 `packages/server/src/modules/chat/services/chat.types.ts` 与 `packages/server/src/modules/chat/services/chat-agent-stream.service.ts` 打通 `AbortSignal`，确保 agent loop 入口与 tool 执行上下文能感知取消
+- 已在 `packages/server/src/core/config/defaults/agent.defaults.ts` 预留 `sseHeartbeatIntervalMs = 15000`，供 Phase 1 心跳保活直接复用
+- 已完成定向验证：`pnpm -F @knowledge-agent/server test -- tests/modules/chat/chat.service.test.ts tests/modules/agent/agent-executor.test.ts`
+- 已完成类型构建验证：`pnpm -F @knowledge-agent/server build`
 
 ---
 

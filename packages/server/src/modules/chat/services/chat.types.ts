@@ -33,6 +33,7 @@ export interface AgentExecutionContext {
   knowledgeBaseId: string | null;
   provider: LLMProvider;
   genOptions: GenerateOptions;
+  signal?: AbortSignal;
 }
 
 export interface AgentExecutionCallbacks {
