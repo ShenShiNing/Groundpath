@@ -158,6 +158,23 @@ function hasKnowledgeTool(tools: AgentTool[]): boolean {
   );
 }
 
+function hasExecutedKnowledgeTool(tools: AgentTool[], agentTrace: AgentStep[]): boolean {
+  if (agentTrace.length === 0 || !hasKnowledgeTool(tools)) return false;
+
+  const knowledgeToolNames = new Set(
+    tools
+      .filter(
+        (tool) =>
+          tool.definition.category === 'structured' || tool.definition.category === 'fallback'
+      )
+      .map((tool) => tool.definition.name)
+  );
+
+  return agentTrace.some((step) =>
+    step.toolCalls.some((toolCall) => knowledgeToolNames.has(toolCall.name))
+  );
+}
+
 function finalizeStopReason(input: {
   stopReason: AgentStopReason;
   tools: AgentTool[];
@@ -167,8 +184,7 @@ function finalizeStopReason(input: {
   if (input.stopReason !== 'answered') return input.stopReason;
 
   if (
-    hasKnowledgeTool(input.tools) &&
-    input.agentTrace.length > 0 &&
+    hasExecutedKnowledgeTool(input.tools, input.agentTrace) &&
     input.finalCitations.length === 0
   ) {
     return 'insufficient_evidence';

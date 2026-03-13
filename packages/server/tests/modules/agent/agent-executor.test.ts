@@ -619,6 +619,37 @@ describe('executeAgentLoop', () => {
     expect(result.retrievedCitations).toEqual([]);
   });
 
+  it('does not mark insufficient_evidence when only external tools executed', async () => {
+    const knowledgeTool = createMockTool('outline_search', 'kb result', 'structured');
+    const webTool = createMockTool('web_search', 'web result', 'external');
+    const generateWithTools = vi
+      .fn()
+      .mockResolvedValueOnce({
+        finishReason: 'tool_calls',
+        content: '',
+        toolCalls: [{ id: 'tc-1', name: 'web_search', arguments: { query: 'latest news' } }],
+      })
+      .mockResolvedValueOnce({
+        finishReason: 'text',
+        content: 'I answered from web search results.',
+        toolCalls: [],
+      });
+
+    const provider = createMockProvider({ generateWithTools });
+
+    const result = await executeAgentLoop(
+      createBaseOptions({
+        provider,
+        tools: [knowledgeTool, webTool],
+      })
+    );
+
+    expect(webTool.execute).toHaveBeenCalledOnce();
+    expect(knowledgeTool.execute).not.toHaveBeenCalled();
+    expect(result.stopReason).toBe('answered');
+    expect(result.citations).toEqual([]);
+  });
+
   // ============================================================
   // Evidence Selection (5-pass finalizeCitations) Tests
   // ============================================================
