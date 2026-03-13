@@ -1,16 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Copy,
-  RefreshCw,
-  Loader2,
-  Check,
-  ChevronDown,
-  AlignLeft,
-  FileCode2,
-  SquarePen,
-  X,
-} from 'lucide-react';
+import { Copy, RefreshCw, Loader2, Check, AlignLeft, FileCode2, SquarePen, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -230,28 +221,46 @@ function ChatMessageBase({
               <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
                 <span>{formatTime(message.timestamp)}</span>
                 {onCopyMessage && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 cursor-pointer text-muted-foreground"
-                    onClick={() => {
-                      void handleCopy('plain');
-                    }}
-                    aria-label={copiedFormat ? t('message.copyAriaDone') : t('message.copyAria')}
-                  >
-                    {copiedFormat ? <Check className="size-3" /> : <Copy className="size-3" />}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 cursor-pointer text-muted-foreground"
+                        onClick={() => {
+                          void handleCopy('plain');
+                        }}
+                        aria-label={
+                          copiedFormat ? t('message.copyAriaDone') : t('message.copyAria')
+                        }
+                      >
+                        {copiedFormat ? (
+                          <Check className="size-3.5" />
+                        ) : (
+                          <Copy className="size-3.5" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {copiedFormat ? t('message.copied') : t('message.copy')}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
                 {canEdit && onEditMessage && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 cursor-pointer gap-1 px-1.5 text-[10px] text-muted-foreground"
-                    onClick={() => setIsEditing(true)}
-                  >
-                    <SquarePen className="size-3" />
-                    {t('message.edit')}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 cursor-pointer text-muted-foreground"
+                        onClick={() => setIsEditing(true)}
+                        aria-label={t('message.edit')}
+                      >
+                        <SquarePen className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">{t('message.edit')}</TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </>
@@ -350,18 +359,29 @@ function ChatMessageBase({
             </span>
             {onCopyMessage && !isPureCodeBlock && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 cursor-pointer gap-1.5 px-2 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label={copiedFormat ? t('message.copyAriaDone') : t('message.copyAria')}
-                  >
-                    {copiedFormat ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                    <span>{copiedFormat ? t('message.copied') : t('message.copy')}</span>
-                    <ChevronDown className="size-3" />
-                  </Button>
-                </DropdownMenuTrigger>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+                        aria-label={
+                          copiedFormat ? t('message.copyAriaDone') : t('message.copyAria')
+                        }
+                      >
+                        {copiedFormat ? (
+                          <Check className="size-3.5" />
+                        ) : (
+                          <Copy className="size-3.5" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {copiedFormat ? t('message.copied') : t('message.copy')}
+                  </TooltipContent>
+                </Tooltip>
                 <DropdownMenuContent align="start" sideOffset={6} className="w-36">
                   <DropdownMenuItem
                     className="cursor-pointer"
@@ -385,15 +405,20 @@ function ChatMessageBase({
               </DropdownMenu>
             )}
             {canRegenerate && onRegenerateMessage && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-[10px] text-muted-foreground cursor-pointer"
-                onClick={() => onRegenerateMessage(message.id)}
-              >
-                <RefreshCw className="size-3 mr-1" />
-                {t('message.regenerate')}
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 cursor-pointer text-muted-foreground"
+                    onClick={() => onRegenerateMessage(message.id)}
+                    aria-label={t('message.regenerate')}
+                  >
+                    <RefreshCw className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{t('message.regenerate')}</TooltipContent>
+              </Tooltip>
             )}
           </div>
         )}
