@@ -98,6 +98,7 @@ export const sendMessageSchema = z.object({
     .min(1, 'Message cannot be empty')
     .max(32000, 'Message is too long (max 32000 characters)'),
   documentIds: z.array(z.string().uuid()).max(20).optional(),
+  editedMessageId: z.string().uuid().optional(),
 });
 
 export const listConversationsSchema = z.object({

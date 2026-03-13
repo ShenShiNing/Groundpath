@@ -23,11 +23,15 @@ import type { EnrichedSearchResult, SendMessageOptions, StreamContext } from './
 const logger = createLogger('chat.service');
 
 async function prepareChatRequest(options: SendMessageOptions) {
-  const { userId, conversationId, content, documentIds } = options;
+  const { userId, conversationId, content, documentIds, editedMessageId } = options;
 
   const conversation = await conversationService.validateOwnership(userId, conversationId);
 
-  await messageService.create({ conversationId, role: 'user', content });
+  if (editedMessageId) {
+    await messageService.editContent(conversationId, editedMessageId, content);
+  } else {
+    await messageService.create({ conversationId, role: 'user', content });
+  }
 
   const messageCount = await messageService.count(conversationId);
   if (messageCount === 1) {

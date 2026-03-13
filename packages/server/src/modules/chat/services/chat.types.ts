@@ -12,6 +12,7 @@ export interface SendMessageOptions {
   conversationId: string;
   content: string;
   documentIds?: string[];
+  editedMessageId?: string;
 }
 
 export interface EnrichedSearchResult {

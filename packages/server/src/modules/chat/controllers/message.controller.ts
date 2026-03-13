@@ -28,6 +28,7 @@ export const messageController = {
         conversationId,
         content: parsed.content,
         documentIds: parsed.documentIds,
+        editedMessageId: parsed.editedMessageId,
       });
     } catch (error) {
       // If headers haven't been sent, we can still return JSON error

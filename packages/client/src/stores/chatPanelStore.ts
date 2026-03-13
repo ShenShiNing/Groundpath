@@ -106,7 +106,8 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
   sendMessage: async (
     content: string,
     getAccessToken: () => string | null,
-    stream?: StreamControls
+    stream?: StreamControls,
+    options?: { editedMessageId?: string }
   ) => {
     const {
       knowledgeBaseId,
@@ -123,14 +124,18 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     if (!trimmedContent) return;
     stream?.reset();
 
-    // Add user message immediately so the viewport can react before network round-trips.
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content: trimmedContent,
-      timestamp: new Date(),
-    };
-    addMessage(userMessage);
+    const isEdit = !!options?.editedMessageId;
+
+    if (!isEdit) {
+      // Add user message immediately so the viewport can react before network round-trips.
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: trimmedContent,
+        timestamp: new Date(),
+      };
+      addMessage(userMessage);
+    }
 
     // Add a placeholder assistant message right away and fill it as the stream arrives.
     const assistantId = `assistant-${Date.now()}`;
@@ -182,6 +187,7 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       {
         content: trimmedContent,
         documentIds: selectedDocumentIds.length > 0 ? selectedDocumentIds : undefined,
+        editedMessageId: options?.editedMessageId,
       },
       {
         onChunk: (text) => {
@@ -280,24 +286,23 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
       stopGeneration();
     }
 
-    try {
-      const forkedConversation = await conversationApi.fork(conversationId, {
-        beforeMessageId: messageId,
-      });
-      set({
-        ...toConversationState(forkedConversation),
-        focusMessageId: null,
-        focusKeyword: null,
-      });
-    } catch (error) {
-      logClientError('chatPanelStore.editMessage.forkConversation', error, {
-        conversationId,
-        messageId,
-      });
-      return;
-    }
+    // Latest pair: edit in-place, clear the assistant response, and resend
+    const isLatestPair = userIdx === messages.length - 2 && nextMessage?.role === 'assistant';
 
-    await get().sendMessage(trimmedContent, getAccessToken, stream);
+    if (isLatestPair) {
+      set((state) => ({
+        messages: [
+          ...state.messages.slice(0, userIdx),
+          { ...targetMessage, content: trimmedContent },
+        ],
+      }));
+      await get().sendMessage(trimmedContent, getAccessToken, stream, {
+        editedMessageId: messageId,
+      });
+    } else {
+      // Historical: send the edited content as a new message
+      await get().sendMessage(trimmedContent, getAccessToken, stream);
+    }
   },
 
   stopGeneration: () => {
@@ -328,26 +333,21 @@ export const useChatPanelStore = create<ChatPanelState>((set, get) => ({
     const userMsg = messages[userIdx];
     if (!userMsg || userMsg.role !== 'user') return;
 
-    const userContent = userMsg.content;
+    // Latest pair: remove assistant, resend with editedMessageId
+    const isLatestPair =
+      userIdx === messages.length - 2 && messages[userIdx + 1]?.role === 'assistant';
 
-    try {
-      const forkedConversation = await conversationApi.fork(conversationId, {
-        beforeMessageId: userMsg.id,
+    if (isLatestPair) {
+      set((state) => ({
+        messages: state.messages.slice(0, assistantIdx),
+      }));
+      await get().sendMessage(userMsg.content, getAccessToken, stream, {
+        editedMessageId: userMsg.id,
       });
-      set({
-        ...toConversationState(forkedConversation),
-        focusMessageId: null,
-        focusKeyword: null,
-      });
-    } catch (error) {
-      logClientError('chatPanelStore.retryMessage.forkConversation', error, {
-        conversationId,
-        messageId,
-      });
-      return;
+    } else {
+      // Historical: send user content as a new message
+      await get().sendMessage(userMsg.content, getAccessToken, stream);
     }
-
-    await get().sendMessage(userContent, getAccessToken, stream);
   },
 
   setDocumentScope: (ids: string[]) => {

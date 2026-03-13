@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { MessageInfo, MessageRole, MessageMetadata } from '@knowledge-agent/shared/types';
+import { Errors } from '@core/errors';
 import { messageRepository } from '../repositories/message.repository';
 import type { Message } from '@core/db/schema/ai/messages.schema';
 
@@ -60,6 +61,22 @@ export const messageService = {
    */
   async updateMetadata(messageId: string, metadata: MessageMetadata): Promise<void> {
     await messageRepository.updateMetadata(messageId, metadata);
+  },
+
+  /**
+   * Edit a user message's content and delete all messages after it.
+   * Validates that the message exists, belongs to the conversation, and is a user message.
+   */
+  async editContent(conversationId: string, messageId: string, content: string): Promise<void> {
+    const message = await messageRepository.findById(messageId);
+    if (!message || message.conversationId !== conversationId) {
+      throw Errors.validation('Message not found');
+    }
+    if (message.role !== 'user') {
+      throw Errors.validation('Only user messages can be edited');
+    }
+    await messageRepository.updateContent(messageId, content);
+    await messageRepository.deleteAfterMessage(conversationId, messageId);
   },
 
   /**

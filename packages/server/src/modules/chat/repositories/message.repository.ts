@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '@core/db';
 import { getDbContext, type Transaction } from '@core/db/db.utils';
 import { messages, type Message, type NewMessage } from '@core/db/schema/ai/messages.schema';
@@ -158,6 +158,35 @@ export const messageRepository = {
    */
   async deleteByConversation(conversationId: string): Promise<void> {
     await db.delete(messages).where(eq(messages.conversationId, conversationId));
+  },
+
+  /**
+   * Update message content
+   */
+  async updateContent(id: string, content: string): Promise<void> {
+    await db.update(messages).set({ content }).where(eq(messages.id, id));
+  },
+
+  /**
+   * Delete all messages in a conversation created after the given message
+   */
+  async deleteAfterMessage(conversationId: string, afterMessageId: string): Promise<void> {
+    const target = await db
+      .select({ createdAt: messages.createdAt })
+      .from(messages)
+      .where(eq(messages.id, afterMessageId))
+      .limit(1);
+
+    if (!target[0]) return;
+
+    await db
+      .delete(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conversationId),
+          gt(messages.createdAt, target[0].createdAt)
+        )
+      );
   },
 
   /**

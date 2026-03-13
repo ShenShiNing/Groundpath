@@ -59,7 +59,8 @@ export interface ChatPanelState {
   sendMessage: (
     content: string,
     getAccessToken: () => string | null,
-    stream?: StreamControls
+    stream?: StreamControls,
+    options?: { editedMessageId?: string }
   ) => Promise<void>;
   editMessage: (
     messageId: string,
