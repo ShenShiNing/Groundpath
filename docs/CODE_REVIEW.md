@@ -224,7 +224,7 @@ pnpm monorepo 全栈项目，三个包：
 
 ---
 
-### ~~P3 — 客户端优化~~ ✅ 已部分修复
+### ~~P3 — 客户端优化~~ ✅ 已修复
 
 > 修复分支：`fix/p3-react-query-cache`
 
@@ -287,16 +287,23 @@ pnpm monorepo 全栈项目，三个包：
 - 两个主入口文件只保留状态编排和副作用逻辑，避免继续堆叠 UI 细节
 - 对外导出 API 保持不变，现有页面调用方无需调整
 
-#### 4.17 客户端测试覆盖不足
+#### ~~4.17 客户端测试覆盖不足~~ ✅
 
-**缺失测试**:
+**已修复**:
 
-- Hooks：`useDocuments`、`useConversations`、`useKnowledgeBases`、`useLLMConfig`
-- Store：`authStore`
-- 大型组件：`SaveToKBDialog`、`AppLayout`、`AISettingsForm`
-- 工具：`stream-client.ts`、`error.ts`
+- 已补充 hooks 测试：
+  - `useKnowledgeBases.test.tsx` 覆盖知识库列表/详情 query、文档轮询策略、创建/更新/删除/上传/批量删除的精确失效
+  - `useLLMConfig.test.tsx` 覆盖配置/Provider/模型查询、模型缓存选项、更新/清空配置的 toast 与缓存失效、连接测试 mutation
+- 已补充组件测试：
+  - `SaveToKBDialog.test.tsx` 覆盖新建/追加知识库、切换会话知识库、空名称校验
+  - `AppLayout.test.tsx` 覆盖未认证布局、侧边栏折叠持久化、登出失败时的本地清理与跳转
+- 已补充工具测试：
+  - `stream-client.test.ts` 覆盖首请求鉴权、401 刷新重试、无响应体/中止/服务端失败映射
+  - `error.test.ts` 覆盖 `unwrapResponse` 与 `extractResponseError`
+- 现有 `authStore.test.ts`、`AISettingsForm.test.tsx` 与之前补充的 `useDocuments.test.tsx`、`useConversations.test.tsx` 共同构成 4.17 的客户端覆盖基线
+- 补测过程中修复 `AppLayout.handleLogout()` 的未处理 Promise rejection，确保登出 API 失败时仍清理认证状态并导航到登录页
 
-**建议**: 优先补充 hooks 和 authStore 的单元测试。
+**验证**: `pnpm test -- packages/client/tests/hooks/useKnowledgeBases.test.tsx packages/client/tests/hooks/useLLMConfig.test.tsx packages/client/tests/components/chat/SaveToKBDialog.test.tsx packages/client/tests/components/layout/AppLayout.test.tsx packages/client/tests/lib/http/stream-client.test.ts packages/client/tests/lib/http/error.test.ts`
 
 ---
 
@@ -361,7 +368,7 @@ pnpm monorepo 全栈项目，三个包：
 | P3     | 4.14 | 缓存失效策略优化                   | 性能       | ✅   |
 | P3     | 4.15 | 客户端错误处理                     | 可调试性   | ✅   |
 | P3     | 4.16 | 大型组件拆分                       | 代码规范   | ✅   |
-| P3     | 4.17 | 客户端测试补充                     | 质量保障   |      |
+| P3     | 4.17 | 客户端测试补充                     | 质量保障   | ✅   |
 | P4     | 4.18 | chunking 健壮性                    | 稳定性     |      |
 | P4     | 4.19 | token 估算优化                     | 准确性     |      |
 | P4     | 4.20 | vector-cleanup 并发控制            | 稳定性     |      |

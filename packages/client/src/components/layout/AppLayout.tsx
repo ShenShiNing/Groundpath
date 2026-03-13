@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { authApi } from '@/api';
+import { logClientError } from '@/lib/logger';
 import { useAuthStore } from '@/stores';
 import { AppSidebar } from './AppSidebar';
 
@@ -34,6 +35,8 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
       if (storeIsAuthenticated) {
         await authApi.logout();
       }
+    } catch (error) {
+      logClientError('AppLayout.handleLogout', error);
     } finally {
       clearAuth();
       await router.navigate({ to: '/auth/login' });
