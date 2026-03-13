@@ -1,4 +1,4 @@
-import { vlmConfig, llmConfig } from '@config/env';
+import { vlmConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 import type { VLMProvider } from './vlm-provider.interface';
@@ -9,25 +9,12 @@ const logger = createLogger('vlm.factory');
 
 let cachedProvider: VLMProvider | null = null;
 
-function resolveApiKey(): string | undefined {
-  if (vlmConfig.apiKey) return vlmConfig.apiKey;
-
-  switch (vlmConfig.provider) {
-    case 'openai':
-      return llmConfig.openaiApiKey;
-    case 'anthropic':
-      return llmConfig.anthropicApiKey;
-  }
-}
-
 export function getVLMProvider(): VLMProvider {
   if (cachedProvider) return cachedProvider;
 
-  const apiKey = resolveApiKey();
+  const apiKey = vlmConfig.apiKey;
   if (!apiKey) {
-    throw Errors.validation(
-      `VLM API key not configured. Set VLM_API_KEY or the corresponding LLM provider key for "${vlmConfig.provider}".`
-    );
+    throw Errors.validation(`VLM API key not configured. Set VLM_API_KEY in your environment.`);
   }
 
   switch (vlmConfig.provider) {

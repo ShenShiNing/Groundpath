@@ -11,10 +11,6 @@ const mocks = vi.hoisted(() => ({
       apiKey: undefined as string | undefined,
       baseUrl: 'https://vlm.example.com',
     },
-    llmConfig: {
-      openaiApiKey: 'env-openai-key',
-      anthropicApiKey: 'env-anthropic-key',
-    },
   },
 }));
 
@@ -44,8 +40,6 @@ describe('vlm.factory', () => {
     mocks.env.vlmConfig.model = 'gpt-4o-mini';
     mocks.env.vlmConfig.apiKey = undefined;
     mocks.env.vlmConfig.baseUrl = 'https://vlm.example.com';
-    mocks.env.llmConfig.openaiApiKey = 'env-openai-key';
-    mocks.env.llmConfig.anthropicApiKey = 'env-anthropic-key';
 
     mocks.openaiCtor.mockImplementation(function (apiKey: string, model: string, baseUrl?: string) {
       return { provider: 'openai', apiKey, model, baseUrl };
@@ -59,7 +53,7 @@ describe('vlm.factory', () => {
     });
   });
 
-  it('should use explicit VLM api key before llm fallback', () => {
+  it('should use explicit VLM api key', () => {
     mocks.env.vlmConfig.apiKey = 'vlm-direct-key';
 
     const provider = getVLMProvider();
@@ -77,40 +71,29 @@ describe('vlm.factory', () => {
     });
   });
 
-  it('should fallback to provider-specific llm key', () => {
-    const provider = getVLMProvider();
-
-    expect(mocks.openaiCtor).toHaveBeenCalledWith(
-      'env-openai-key',
-      'gpt-4o-mini',
-      'https://vlm.example.com'
-    );
-    expect(provider).toMatchObject({
-      provider: 'openai',
-      apiKey: 'env-openai-key',
-    });
-  });
-
   it('should create anthropic provider when configured', () => {
     mocks.env.vlmConfig.provider = 'anthropic';
     mocks.env.vlmConfig.model = 'claude-3-7-sonnet';
+    mocks.env.vlmConfig.apiKey = 'anthropic-vlm-key';
     mocks.env.vlmConfig.baseUrl = 'https://anthropic.example.com';
 
     const provider = getVLMProvider();
 
     expect(mocks.anthropicCtor).toHaveBeenCalledWith(
-      'env-anthropic-key',
+      'anthropic-vlm-key',
       'claude-3-7-sonnet',
       'https://anthropic.example.com'
     );
     expect(provider).toMatchObject({
       provider: 'anthropic',
-      apiKey: 'env-anthropic-key',
+      apiKey: 'anthropic-vlm-key',
       model: 'claude-3-7-sonnet',
     });
   });
 
   it('should cache provider until reset', () => {
+    mocks.env.vlmConfig.apiKey = 'vlm-cache-key';
+
     const first = getVLMProvider();
     const second = getVLMProvider();
 
@@ -124,9 +107,8 @@ describe('vlm.factory', () => {
     expect(mocks.openaiCtor).toHaveBeenCalledTimes(2);
   });
 
-  it('should throw validation error when no api key can be resolved', () => {
+  it('should throw validation error when VLM_API_KEY is not set', () => {
     mocks.env.vlmConfig.apiKey = undefined;
-    mocks.env.llmConfig.openaiApiKey = undefined as unknown as string;
 
     expect(() => getVLMProvider()).toThrow('VLM API key not configured');
   });

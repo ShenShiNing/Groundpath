@@ -89,12 +89,6 @@ const vectorSchema = z.object({
 });
 
 const llmSchema = z.object({
-  ANTHROPIC_API_KEY: z.string().optional(),
-  OPENAI_LLM_API_KEY: z.string().optional(),
-  ZHIPU_LLM_API_KEY: z.string().optional(),
-  OLLAMA_LLM_BASE_URL: z.string().default('http://localhost:11434'),
-  DEEPSEEK_API_KEY: z.string().optional(),
-  DEEPSEEK_BASE_URL: z.string().default('https://api.deepseek.com'),
   MODEL_FETCH_TIMEOUT: z.coerce.number().default(15000),
 });
 

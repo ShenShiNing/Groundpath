@@ -149,14 +149,6 @@ export const vectorConfig = {
 } as const;
 
 export const llmConfig = {
-  anthropicApiKey: validatedEnv.ANTHROPIC_API_KEY,
-  openaiApiKey: validatedEnv.OPENAI_LLM_API_KEY,
-  zhipuApiKey: validatedEnv.ZHIPU_LLM_API_KEY,
-  ollamaBaseUrl: validatedEnv.OLLAMA_LLM_BASE_URL,
-  deepseek: {
-    apiKey: validatedEnv.DEEPSEEK_API_KEY,
-    baseUrl: validatedEnv.DEEPSEEK_BASE_URL,
-  },
   modelFetchTimeout: validatedEnv.MODEL_FETCH_TIMEOUT,
 } as const;
 

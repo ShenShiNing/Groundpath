@@ -161,17 +161,14 @@
 
 ## 十、LLM Providers (大语言模型)
 
-| 变量                  | 必填 | 默认值                     | 状态 | 说明                                  |
-| --------------------- | :--: | -------------------------- | :--: | ------------------------------------- |
-| `OPENAI_LLM_API_KEY`  |  否  | —                          | 活跃 | OpenAI LLM 专用 Key (与嵌入 Key 分离) |
-| `ZHIPU_LLM_API_KEY`   |  否  | —                          | 活跃 | 智谱 LLM 专用 Key                     |
-| `OLLAMA_LLM_BASE_URL` |  否  | `http://localhost:11434`   | 活跃 | Ollama LLM 服务地址                   |
-| `ANTHROPIC_API_KEY`   |  否  | —                          | 活跃 | Anthropic (Claude) API Key            |
-| `DEEPSEEK_API_KEY`    |  否  | —                          | 活跃 | DeepSeek API Key                      |
-| `DEEPSEEK_BASE_URL`   |  否  | `https://api.deepseek.com` | 活跃 | DeepSeek API Base URL                 |
-| `MODEL_FETCH_TIMEOUT` |  否  | `15000`                    | 活跃 | 获取模型列表的超时时间 (ms)           |
+LLM API Key 和 Base URL 由每个用户在前端 AI 设置页面配置, 加密后存储在数据库中。
+服务端仅保留运维参数。
 
-**引用**: `llmConfig` 被 9 个文件引用 — LLM 工厂、服务、配置管理、路由
+| 变量                  | 必填 | 默认值  | 状态 | 说明                    |
+| --------------------- | :--: | ------- | :--: | ----------------------- |
+| `MODEL_FETCH_TIMEOUT` |  否  | `15000` | 活跃 | 获取模型列表的超时 (ms) |
+
+**引用**: `llmConfig` 被 1 个文件引用 — model-fetcher (超时)
 
 ---
 
@@ -187,12 +184,12 @@
 
 ## 十二、VLM (视觉语言模型)
 
-| 变量           | 必填 | 默认值        | 状态 | 说明                                     |
-| -------------- | :--: | ------------- | :--: | ---------------------------------------- |
-| `VLM_PROVIDER` |  否  | `openai`      | 活跃 | VLM 提供商: `openai` / `anthropic`       |
-| `VLM_MODEL`    |  否  | `gpt-4o-mini` | 活跃 | 视觉模型名称                             |
-| `VLM_API_KEY`  |  否  | —             | 活跃 | VLM 专用 Key, 未设置时降级到对应 LLM Key |
-| `VLM_BASE_URL` |  否  | —             | 活跃 | 自定义 Base URL                          |
+| 变量           | 必填 | 默认值        | 状态 | 说明                                                   |
+| -------------- | :--: | ------------- | :--: | ------------------------------------------------------ |
+| `VLM_PROVIDER` |  否  | `openai`      | 活跃 | VLM 提供商: `openai` / `anthropic`                     |
+| `VLM_MODEL`    |  否  | `gpt-4o-mini` | 活跃 | 视觉模型名称                                           |
+| `VLM_API_KEY`  | 条件 | —             | 活跃 | VLM 专用 Key (`IMAGE_DESCRIPTION_ENABLED=true` 时必填) |
+| `VLM_BASE_URL` |  否  | —             | 活跃 | 自定义 Base URL                                        |
 
 **引用**: `vlmConfig` 被 5 个文件引用 — VLM 工厂、服务、结构化 RAG 处理
 
@@ -267,21 +264,25 @@
 
 ---
 
-## 废弃/合并建议
+## 优化建议
 
-经过全量代码搜索, **所有变量在 `schema.ts` → `configs.ts` → 业务代码中均有完整引用链路, 无真正死代码**。以下是优化建议:
+### 已完成的清理
+
+以下 6 个 LLM Provider 环境变量已移除, 因为 LLM API Key 由用户在前端页面配置并存入数据库:
+
+- ~~`OPENAI_LLM_API_KEY`~~ — 原为 OpenAI LLM fallback key
+- ~~`ZHIPU_LLM_API_KEY`~~ — 原为智谱 LLM fallback key
+- ~~`ANTHROPIC_API_KEY`~~ — 原为 Anthropic fallback key
+- ~~`DEEPSEEK_API_KEY`~~ — 原为 DeepSeek fallback key
+- ~~`DEEPSEEK_BASE_URL`~~ — 原为 DeepSeek Base URL (model-fetcher 已硬编码)
+- ~~`OLLAMA_LLM_BASE_URL`~~ — 原为 Ollama LLM fallback base URL (用户前端可配置, 工厂内硬编码默认值)
+- VLM 不再隐式降级到 LLM Key, 需显式设置 `VLM_API_KEY`
 
 ### 低引用 / 可合并项
 
-| 变量                                                   | 引用数  | 建议                             | 原因                                                                |
-| ------------------------------------------------------ | :-----: | -------------------------------- | ------------------------------------------------------------------- |
-| `OLLAMA_BASE_URL` + `OLLAMA_LLM_BASE_URL`              | 各 1 处 | 考虑合并为单一 `OLLAMA_BASE_URL` | 嵌入和 LLM 通常指向同一 Ollama 实例, 分成两个变量增加了配置心智负担 |
-| `FILE_SIGNING_SECRET`                                  |  1 处   | 保留但可标注为"高级"             | 已有降级逻辑 (`ENCRYPTION_KEY`), 大多数部署不需要单独设置           |
-| `OAUTH_EXCHANGE_CODE_SECRET`                           |  1 处   | 同上                             | 已有降级逻辑 (`ENCRYPTION_KEY`)                                     |
-| `BACKFILL_SCHEDULE_ENABLED` + `BACKFILL_SCHEDULE_CRON` | 各 1 处 | 正常保留                         | 功能完整, 仅使用频率低                                              |
-| `COUNTER_SYNC_ENABLED`                                 |  1 处   | 正常保留                         | 在调度器中使用, 默认关闭合理                                        |
-
-### 结论
-
-> **当前没有可以安全删除的环境变量。** 所有变量均有明确的消费链路和业务用途。
-> 上述"低引用"变量属于设计合理的可选配置, 保留为注释状态即可。
+| 变量                                                   | 引用数  | 建议                 | 原因                                                      |
+| ------------------------------------------------------ | :-----: | -------------------- | --------------------------------------------------------- |
+| `FILE_SIGNING_SECRET`                                  |  1 处   | 保留但可标注为"高级" | 已有降级逻辑 (`ENCRYPTION_KEY`), 大多数部署不需要单独设置 |
+| `OAUTH_EXCHANGE_CODE_SECRET`                           |  1 处   | 同上                 | 已有降级逻辑 (`ENCRYPTION_KEY`)                           |
+| `BACKFILL_SCHEDULE_ENABLED` + `BACKFILL_SCHEDULE_CRON` | 各 1 处 | 正常保留             | 功能完整, 仅使用频率低                                    |
+| `COUNTER_SYNC_ENABLED`                                 |  1 处   | 正常保留             | 在调度器中使用, 默认关闭合理                              |
