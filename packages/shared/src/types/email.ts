@@ -25,6 +25,7 @@ export interface SendVerificationCodeResponse {
 export interface VerifyCodeResponse {
   verified: boolean;
   verificationToken: string;
+  expiresAt: string;
 }
 
 /** Response after password reset */

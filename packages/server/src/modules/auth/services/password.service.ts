@@ -68,6 +68,10 @@ export const passwordService = {
       throw Errors.auth(AUTH_ERROR_CODES.INVALID_PASSWORD, 'Current password is incorrect', 400);
     }
 
+    if (oldPassword === newPassword) {
+      throw Errors.validation('New password must be different from current password');
+    }
+
     // Hash new password (outside transaction - no DB writes)
     const hashedPassword = await hashPassword(newPassword);
 

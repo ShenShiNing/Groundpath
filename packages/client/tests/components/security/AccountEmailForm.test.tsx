@@ -98,6 +98,7 @@ describe('AccountEmailForm', () => {
     mocks.verifyCode.mockResolvedValue({
       verified: true,
       verificationToken: 'verified-change-email-token',
+      expiresAt: '2026-03-14T12:10:00.000Z',
     });
     mocks.changeEmail.mockResolvedValue({
       ...authState.user,
@@ -133,6 +134,12 @@ describe('AccountEmailForm', () => {
       code: '123456',
       type: 'change_email',
     });
+    expect(mocks.verifyCode).toHaveBeenCalledTimes(1);
+    expect(
+      Array.from(view.container.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('email.verifyCode')
+      )
+    ).toHaveProperty('disabled', true);
 
     await fireClick(
       Array.from(view.container.querySelectorAll('button')).find((button) =>
@@ -148,6 +155,37 @@ describe('AccountEmailForm', () => {
     expect(mocks.setUser).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'fresh@example.com' })
     );
+
+    await view.unmount();
+  });
+
+  it('should show localized rate limit message when send code is throttled', async () => {
+    mocks.sendCode.mockRejectedValue({
+      response: {
+        data: {
+          error: {
+            code: 'RATE_LIMITED',
+            message: 'Too many email requests, please try again later',
+            details: { retryAfter: 42 },
+          },
+        },
+      },
+    });
+
+    const view = await render(<AccountEmailForm />);
+
+    await fireInput(
+      view.container.querySelector<HTMLInputElement>('#newEmail'),
+      'Fresh@Example.com'
+    );
+    await fireClick(
+      Array.from(view.container.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('email.sendCode')
+      ) ?? null
+    );
+    await flushPromises();
+
+    expect(view.container.textContent).toContain('email.rateLimitedSend:42');
 
     await view.unmount();
   });

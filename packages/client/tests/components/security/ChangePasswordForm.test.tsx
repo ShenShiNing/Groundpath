@@ -146,6 +146,76 @@ describe('ChangePasswordForm', () => {
     await view.unmount();
   });
 
+  it('should show localized message when current password is incorrect', async () => {
+    mocks.changePassword.mockRejectedValue({
+      response: {
+        data: {
+          error: {
+            code: 'INVALID_PASSWORD',
+            message: 'Current password is incorrect',
+          },
+        },
+      },
+    });
+
+    const view = await render(<ChangePasswordForm />);
+
+    await fireInput(
+      view.container.querySelector<HTMLInputElement>('#currentPassword'),
+      'WrongPassword123'
+    );
+    await fireInput(
+      view.container.querySelector<HTMLInputElement>('#newPassword'),
+      'NewPassword456'
+    );
+    await fireInput(
+      view.container.querySelector<HTMLInputElement>('#confirmPassword'),
+      'NewPassword456'
+    );
+
+    await fireClick(
+      Array.from(view.container.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('password.submit')
+      ) ?? null
+    );
+    await flushPromises();
+
+    expect(view.container.textContent).toContain('password.invalidCurrentPassword');
+
+    await view.unmount();
+  });
+
+  it('should block submitting when new password matches current password', async () => {
+    const view = await render(<ChangePasswordForm />);
+
+    await fireInput(
+      view.container.querySelector<HTMLInputElement>('#currentPassword'),
+      'SamePassword123'
+    );
+    await fireInput(
+      view.container.querySelector<HTMLInputElement>('#newPassword'),
+      'SamePassword123'
+    );
+    await fireInput(
+      view.container.querySelector<HTMLInputElement>('#confirmPassword'),
+      'SamePassword123'
+    );
+    await flushPromises();
+
+    expect(view.container.textContent).toContain('password.sameAsCurrent');
+
+    await fireClick(
+      Array.from(view.container.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('password.submit')
+      ) ?? null
+    );
+    await flushPromises();
+
+    expect(mocks.changePassword).not.toHaveBeenCalled();
+
+    await view.unmount();
+  });
+
   it('should set a local password after verifying email when the account has no password', async () => {
     authState.user.hasPassword = false;
     mocks.sendCode.mockResolvedValue({
@@ -155,6 +225,7 @@ describe('ChangePasswordForm', () => {
     mocks.verifyCode.mockResolvedValue({
       verified: true,
       verificationToken: 'verified-reset-password-token',
+      expiresAt: '2026-03-14T12:10:00.000Z',
     });
 
     const view = await render(<ChangePasswordForm />);
@@ -182,6 +253,12 @@ describe('ChangePasswordForm', () => {
       code: '123456',
       type: 'reset_password',
     });
+    expect(mocks.verifyCode).toHaveBeenCalledTimes(1);
+    expect(
+      Array.from(view.container.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('password.setup.verifyCode')
+      )
+    ).toHaveProperty('disabled', true);
 
     await fireInput(
       view.container.querySelector<HTMLInputElement>('#newPassword'),

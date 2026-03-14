@@ -11,6 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore, useUserStore } from '@/stores';
+import {
+  resolveEmailSendErrorMessage,
+  resolveEmailSubmitErrorMessage,
+  resolveEmailVerifyErrorMessage,
+} from './errorMessage';
+import { useExpiryCountdown } from './useExpiryCountdown';
 
 const RESEND_COOLDOWN = 60;
 
@@ -18,7 +24,11 @@ function normalizeClientEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-export function AccountEmailForm() {
+interface AccountEmailFormProps {
+  onSuccess?: () => void;
+}
+
+export function AccountEmailForm({ onSuccess }: AccountEmailFormProps) {
   const { t } = useTranslation('security');
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
@@ -26,12 +36,31 @@ export function AccountEmailForm() {
   const isChangingEmail = useUserStore((s) => s.isChangingEmail);
   const [newEmail, setNewEmail] = useState('');
   const [code, setCode] = useState('');
+  const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
   const [verificationToken, setVerificationToken] = useState('');
+  const [verificationExpiresAt, setVerificationExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const hasAutoVerified = useRef(false);
+  const codeRemainingSeconds = useExpiryCountdown(
+    codeExpiresAt,
+    useCallback(() => {
+      setCodeExpiresAt(null);
+      setError((current) => current ?? t('email.codeExpired'));
+    }, [t])
+  );
+  const verificationRemainingSeconds = useExpiryCountdown(
+    verificationExpiresAt,
+    useCallback(() => {
+      setVerificationToken('');
+      setVerificationExpiresAt(null);
+      hasAutoVerified.current = false;
+      setError((current) => current ?? t('email.verificationExpired'));
+    }, [t])
+  );
+  const hasActiveVerification = verificationToken.length > 0 && verificationRemainingSeconds > 0;
 
   useEffect(() => {
     if (resendCooldown <= 0) {
@@ -47,7 +76,9 @@ export function AccountEmailForm() {
 
   const resetVerificationState = useCallback(() => {
     setCode('');
+    setCodeExpiresAt(null);
     setVerificationToken('');
+    setVerificationExpiresAt(null);
     hasAutoVerified.current = false;
   }, []);
 
@@ -78,23 +109,31 @@ export function AccountEmailForm() {
     setIsSendingCode(true);
 
     try {
-      await emailApi.sendCode({
+      const result = await emailApi.sendCode({
         email: normalizedEmail,
         type: 'change_email',
       });
-      resetVerificationState();
+      setCode('');
+      setVerificationToken('');
+      setVerificationExpiresAt(null);
+      hasAutoVerified.current = false;
+      setCodeExpiresAt(result.expiresAt);
       setResendCooldown(RESEND_COOLDOWN);
       toast.success(t('email.codeSent'));
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || t('email.sendFailed'));
+      setError(resolveEmailSendErrorMessage(axiosError, t, 'email'));
     } finally {
       setIsSendingCode(false);
     }
-  }, [newEmail, resetVerificationState, t, validateNewEmail]);
+  }, [newEmail, t, validateNewEmail]);
 
   const handleVerifyCode = useCallback(
     async (codeToVerify: string) => {
+      if (hasActiveVerification) {
+        return;
+      }
+
       if (codeToVerify.length !== 6) {
         setError(t('email.codeInvalidLength'));
         return;
@@ -107,6 +146,10 @@ export function AccountEmailForm() {
       }
 
       const normalizedEmail = normalizeClientEmail(newEmail);
+      if (codeRemainingSeconds === 0) {
+        setError(t('email.codeExpired'));
+        return;
+      }
 
       setError(null);
       setIsVerifyingCode(true);
@@ -118,17 +161,20 @@ export function AccountEmailForm() {
           type: 'change_email',
         });
         setVerificationToken(result.verificationToken);
+        setVerificationExpiresAt(result.expiresAt);
+        setCodeExpiresAt(null);
         toast.success(t('email.verified'));
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
         setVerificationToken('');
+        setVerificationExpiresAt(null);
         hasAutoVerified.current = false;
-        setError(axiosError.response?.data?.error?.message || t('email.verifyFailed'));
+        setError(resolveEmailVerifyErrorMessage(axiosError, t, 'email'));
       } finally {
         setIsVerifyingCode(false);
       }
     },
-    [newEmail, t, validateNewEmail]
+    [codeRemainingSeconds, hasActiveVerification, newEmail, t, validateNewEmail]
   );
 
   const handleCodeChange = useCallback(
@@ -136,6 +182,7 @@ export function AccountEmailForm() {
       setCode(nextCode);
       setError(null);
       setVerificationToken('');
+      setVerificationExpiresAt(null);
 
       if (nextCode.length === 6 && !hasAutoVerified.current && !isVerifyingCode) {
         hasAutoVerified.current = true;
@@ -174,16 +221,30 @@ export function AccountEmailForm() {
         resetVerificationState();
         setResendCooldown(0);
         toast.success(t('email.updated'));
+        onSuccess?.();
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || t('email.updateFailed'));
+        setError(resolveEmailSubmitErrorMessage(axiosError, t, 'email'));
       }
     },
-    [changeEmail, newEmail, resetVerificationState, setUser, t, validateNewEmail, verificationToken]
+    [
+      changeEmail,
+      newEmail,
+      onSuccess,
+      resetVerificationState,
+      setUser,
+      t,
+      validateNewEmail,
+      verificationToken,
+    ]
   );
 
   const showVerificationSection =
-    resendCooldown > 0 || code.length > 0 || verificationToken.length > 0;
+    resendCooldown > 0 ||
+    code.length > 0 ||
+    codeExpiresAt !== null ||
+    verificationToken.length > 0 ||
+    verificationExpiresAt !== null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -224,12 +285,22 @@ export function AccountEmailForm() {
           <div className="space-y-1">
             <p className="text-sm font-medium">{t('email.codeLabel')}</p>
             <p className="text-sm text-muted-foreground">{t('email.codeHint')}</p>
+            {codeRemainingSeconds > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {t('email.codeExpiresIn', { seconds: codeRemainingSeconds })}
+              </p>
+            )}
+            {verificationToken && verificationRemainingSeconds > 0 && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                {t('email.verifiedExpiresIn', { seconds: verificationRemainingSeconds })}
+              </p>
+            )}
           </div>
 
           <VerificationCodeInput
             value={code}
             onChange={handleCodeChange}
-            disabled={isVerifyingCode || isChangingEmail}
+            disabled={isVerifyingCode || isChangingEmail || hasActiveVerification}
             autoFocus
             error={!!error}
           />
@@ -240,7 +311,9 @@ export function AccountEmailForm() {
               variant="outline"
               className="cursor-pointer"
               onClick={() => void handleVerifyCode(code)}
-              disabled={code.length !== 6 || isVerifyingCode || isChangingEmail}
+              disabled={
+                code.length !== 6 || isVerifyingCode || isChangingEmail || hasActiveVerification
+              }
             >
               {isVerifyingCode ? t('email.verifyingCode') : t('email.verifyCode')}
             </Button>
@@ -268,7 +341,7 @@ export function AccountEmailForm() {
       <Button
         type="submit"
         className="cursor-pointer"
-        disabled={!verificationToken || isChangingEmail || isVerifyingCode}
+        disabled={!hasActiveVerification || isChangingEmail || isVerifyingCode}
       >
         {isChangingEmail ? t('email.submitting') : t('email.submit')}
       </Button>

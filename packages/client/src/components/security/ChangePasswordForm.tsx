@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import type { AxiosError } from 'axios';
+import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { KeyRound, Lock } from 'lucide-react';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,12 @@ import { FormField } from '@/components/auth/FormField';
 import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
 import { Button } from '@/components/ui/button';
 import { useAuthStore, useUserStore } from '@/stores';
+import {
+  resolveEmailSendErrorMessage,
+  resolveEmailSubmitErrorMessage,
+  resolveEmailVerifyErrorMessage,
+} from './errorMessage';
+import { useExpiryCountdown } from './useExpiryCountdown';
 
 const RESEND_COOLDOWN = 60;
 
@@ -30,7 +37,27 @@ function validateLocalizedPassword(value: string, t: (key: string) => string): s
   return undefined;
 }
 
-export function ChangePasswordForm() {
+function validatePasswordDifference(
+  currentPassword: string,
+  newPassword: string,
+  t: (key: string) => string
+): string | undefined {
+  if (!currentPassword || !newPassword) {
+    return undefined;
+  }
+
+  if (currentPassword === newPassword) {
+    return t('password.sameAsCurrent');
+  }
+
+  return undefined;
+}
+
+interface ChangePasswordFormProps {
+  onSuccess?: () => void;
+}
+
+export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
   const { t } = useTranslation('security');
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -44,11 +71,30 @@ export function ChangePasswordForm() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [code, setCode] = useState('');
+  const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
   const [verificationToken, setVerificationToken] = useState('');
+  const [verificationExpiresAt, setVerificationExpiresAt] = useState<string | null>(null);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const hasAutoVerified = useRef(false);
+  const codeRemainingSeconds = useExpiryCountdown(
+    codeExpiresAt,
+    useCallback(() => {
+      setCodeExpiresAt(null);
+      setError((current) => current ?? t('password.setup.codeExpired'));
+    }, [t])
+  );
+  const verificationRemainingSeconds = useExpiryCountdown(
+    verificationExpiresAt,
+    useCallback(() => {
+      setVerificationToken('');
+      setVerificationExpiresAt(null);
+      hasAutoVerified.current = false;
+      setError((current) => current ?? t('password.setup.verificationExpired'));
+    }, [t])
+  );
+  const hasActiveVerification = verificationToken.length > 0 && verificationRemainingSeconds > 0;
 
   const form = useForm({
     defaultValues: {
@@ -68,6 +114,7 @@ export function ChangePasswordForm() {
           });
           toast.success(t('password.changed'));
           clearAuth();
+          onSuccess?.();
           await router.navigate({ to: '/auth/login' });
           return;
         }
@@ -98,19 +145,25 @@ export function ChangePasswordForm() {
         }
 
         setCode('');
+        setCodeExpiresAt(null);
         setVerificationToken('');
+        setVerificationExpiresAt(null);
         setResendCooldown(0);
         hasAutoVerified.current = false;
-        form.setFieldValue('currentPassword', '');
-        form.setFieldValue('newPassword', '');
-        form.setFieldValue('confirmPassword', '');
         toast.success(t('password.setup.success'));
+        onSuccess?.();
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(
-          axiosError.response?.data?.error?.message ||
-            (hasPassword ? t('password.changeFailed') : t('password.setup.failed'))
-        );
+        if (hasPassword) {
+          const errorCode = axiosError.response?.data?.error?.code;
+          setError(
+            errorCode === AUTH_ERROR_CODES.INVALID_PASSWORD
+              ? t('password.invalidCurrentPassword')
+              : axiosError.response?.data?.error?.message || t('password.changeFailed')
+          );
+        } else {
+          setError(resolveEmailSubmitErrorMessage(axiosError, t, 'password.setup'));
+        }
       }
     },
   });
@@ -137,18 +190,20 @@ export function ChangePasswordForm() {
     setIsSendingCode(true);
 
     try {
-      await emailApi.sendCode({
+      const result = await emailApi.sendCode({
         email: user.email,
         type: 'reset_password',
       });
       setCode('');
+      setCodeExpiresAt(result.expiresAt);
       setVerificationToken('');
+      setVerificationExpiresAt(null);
       hasAutoVerified.current = false;
       setResendCooldown(RESEND_COOLDOWN);
       toast.success(t('password.setup.codeSent'));
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || t('password.setup.sendFailed'));
+      setError(resolveEmailSendErrorMessage(axiosError, t, 'password.setup'));
     } finally {
       setIsSendingCode(false);
     }
@@ -156,6 +211,10 @@ export function ChangePasswordForm() {
 
   const handleVerifyCode = useCallback(
     async (codeToVerify: string) => {
+      if (hasActiveVerification) {
+        return;
+      }
+
       if (!user?.email) {
         setError(t('password.setup.emailMissing'));
         return;
@@ -163,6 +222,11 @@ export function ChangePasswordForm() {
 
       if (codeToVerify.length !== 6) {
         setError(t('password.setup.codeInvalidLength'));
+        return;
+      }
+
+      if (codeRemainingSeconds === 0) {
+        setError(t('password.setup.codeExpired'));
         return;
       }
 
@@ -176,17 +240,20 @@ export function ChangePasswordForm() {
           type: 'reset_password',
         });
         setVerificationToken(result.verificationToken);
+        setVerificationExpiresAt(result.expiresAt);
+        setCodeExpiresAt(null);
         toast.success(t('password.setup.verified'));
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
         setVerificationToken('');
+        setVerificationExpiresAt(null);
         hasAutoVerified.current = false;
-        setError(axiosError.response?.data?.error?.message || t('password.setup.verifyFailed'));
+        setError(resolveEmailVerifyErrorMessage(axiosError, t, 'password.setup'));
       } finally {
         setIsVerifyingCode(false);
       }
     },
-    [t, user?.email]
+    [codeRemainingSeconds, hasActiveVerification, t, user?.email]
   );
 
   const handleCodeChange = useCallback(
@@ -194,6 +261,7 @@ export function ChangePasswordForm() {
       setCode(nextCode);
       setError(null);
       setVerificationToken('');
+      setVerificationExpiresAt(null);
 
       if (nextCode.length === 6 && !hasAutoVerified.current && !isVerifyingCode) {
         hasAutoVerified.current = true;
@@ -206,7 +274,12 @@ export function ChangePasswordForm() {
   );
 
   const showVerificationSection =
-    !hasPassword && (resendCooldown > 0 || code.length > 0 || verificationToken.length > 0);
+    !hasPassword &&
+    (resendCooldown > 0 ||
+      code.length > 0 ||
+      codeExpiresAt !== null ||
+      verificationToken.length > 0 ||
+      verificationExpiresAt !== null);
 
   return (
     <form
@@ -223,6 +296,16 @@ export function ChangePasswordForm() {
             <p className="text-sm text-muted-foreground">
               {t('password.setup.codeHint', { email: user?.email ?? '' })}
             </p>
+            {codeRemainingSeconds > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {t('password.setup.codeExpiresIn', { seconds: codeRemainingSeconds })}
+              </p>
+            )}
+            {verificationToken && verificationRemainingSeconds > 0 && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                {t('password.setup.verifiedExpiresIn', { seconds: verificationRemainingSeconds })}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -247,7 +330,7 @@ export function ChangePasswordForm() {
               <VerificationCodeInput
                 value={code}
                 onChange={handleCodeChange}
-                disabled={isVerifyingCode}
+                disabled={isVerifyingCode || hasActiveVerification}
                 autoFocus
                 error={!!error}
               />
@@ -258,7 +341,7 @@ export function ChangePasswordForm() {
                   variant="outline"
                   className="cursor-pointer"
                   onClick={() => void handleVerifyCode(code)}
-                  disabled={code.length !== 6 || isVerifyingCode}
+                  disabled={code.length !== 6 || isVerifyingCode || hasActiveVerification}
                 >
                   {isVerifyingCode
                     ? t('password.setup.verifyingCode')
@@ -322,7 +405,27 @@ export function ChangePasswordForm() {
       <form.Field
         name="newPassword"
         validators={{
-          onBlur: ({ value }) => validateLocalizedPassword(value, t),
+          onChangeListenTo: hasPassword ? ['currentPassword'] : undefined,
+          onBlur: ({ value, fieldApi }) => {
+            const localizedError = validateLocalizedPassword(value, t);
+            if (localizedError) {
+              return localizedError;
+            }
+
+            if (!hasPassword) {
+              return undefined;
+            }
+
+            return validatePasswordDifference(
+              fieldApi.form.getFieldValue('currentPassword'),
+              value,
+              t
+            );
+          },
+          onChange: hasPassword
+            ? ({ value, fieldApi }) =>
+                validatePasswordDifference(fieldApi.form.getFieldValue('currentPassword'), value, t)
+            : undefined,
         }}
       >
         {(field) => (
@@ -395,7 +498,7 @@ export function ChangePasswordForm() {
               isSubmitting ||
               isChangingPassword ||
               isVerifyingCode ||
-              (!hasPassword && !verificationToken)
+              (!hasPassword && !hasActiveVerification)
             }
           >
             {isSubmitting || isChangingPassword

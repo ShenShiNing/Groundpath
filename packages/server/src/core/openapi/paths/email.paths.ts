@@ -24,7 +24,7 @@ export const emailOpenApiOperations = defineOpenApiOperations({
           'application/json': {
             schema: z.object({
               success: z.literal(true),
-              data: z.object({ verificationToken: z.string(), expiresIn: z.number() }),
+              data: z.object({ verificationToken: z.string(), expiresAt: z.string() }),
             }),
           },
         },

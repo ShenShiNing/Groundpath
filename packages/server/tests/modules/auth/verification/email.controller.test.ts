@@ -269,6 +269,7 @@ describe('emailController > verifyCode', () => {
   it('should return verification token on valid code', async () => {
     vi.mocked(emailVerificationService.verifyCode).mockResolvedValue({
       verificationToken: 'jwt-token-here',
+      expiresAt: new Date('2024-01-15T10:20:00Z'),
     });
 
     const { req, res, next } = createMockReqRes({
@@ -280,7 +281,7 @@ describe('emailController > verifyCode', () => {
 
     const response = getResponseData(res) as {
       success: boolean;
-      data?: { verified: boolean; verificationToken: string };
+      data?: { verified: boolean; verificationToken: string; expiresAt: string };
     };
     logTestInfo(
       { email: 'test@example.com', code: '123456' },
@@ -291,6 +292,7 @@ describe('emailController > verifyCode', () => {
     expect(response?.success).toBe(true);
     expect(response?.data?.verified).toBe(true);
     expect(response?.data?.verificationToken).toBe('jwt-token-here');
+    expect(response?.data?.expiresAt).toBe('2024-01-15T10:20:00.000Z');
   });
 
   // 场景 2：验证码无效

@@ -231,6 +231,27 @@ describe('authService > changePassword', () => {
     expect(actual?.statusCode).toBe(400);
   });
 
+  it('should reject when new password is the same as current password', async () => {
+    vi.mocked(userService.findById).mockResolvedValue(mockUser);
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+    let actual: { code: string; statusCode: number } | null = null;
+    try {
+      await passwordService.changePassword(userId, oldPassword, oldPassword);
+    } catch (error) {
+      actual = {
+        code: (error as AppError).code,
+        statusCode: (error as AppError).statusCode,
+      };
+    }
+
+    const expected = { code: 'VALIDATION_ERROR', statusCode: 400 };
+    logTestInfo({ userId, newPasswordMatchesOld: true }, expected, actual);
+
+    expect(actual).toEqual(expected);
+    expect(userService.updatePassword).not.toHaveBeenCalled();
+  });
+
   // 场景 7：密码更新后应吊销所有 refresh token
   // 安全措施：强制所有设备重新登录
   it('should revoke all refresh tokens after password change', async () => {

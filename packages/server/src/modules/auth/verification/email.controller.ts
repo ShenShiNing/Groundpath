@@ -64,6 +64,7 @@ export const emailController = {
     sendSuccessResponse(res, {
       verified: true,
       verificationToken: result.verificationToken,
+      expiresAt: result.expiresAt.toISOString(),
     });
   }),
 };

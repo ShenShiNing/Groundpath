@@ -185,7 +185,7 @@ export const emailVerificationService = {
     email: string,
     code: string,
     type: EmailVerificationCodeType
-  ): Promise<{ verificationToken: string }> {
+  ): Promise<{ verificationToken: string; expiresAt: Date }> {
     const normalizedEmail = normalizeEmail(email);
 
     // Find the code
@@ -208,8 +208,11 @@ export const emailVerificationService = {
 
     // Generate verification token
     const verificationToken = generateVerificationToken(normalizedEmail, type);
+    const expiresAt = new Date(
+      Date.now() + emailConfig.verification.tokenExpiresInMinutes * 60 * 1000
+    );
 
-    return { verificationToken };
+    return { verificationToken, expiresAt };
   },
 
   /**

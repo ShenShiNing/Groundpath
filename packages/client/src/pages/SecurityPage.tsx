@@ -104,7 +104,7 @@ export function SecurityPage() {
 
               {activePanel === 'email' && (
                 <div className="mt-6 border-t pt-6">
-                  <AccountEmailForm />
+                  <AccountEmailForm onSuccess={() => setActivePanel(null)} />
                 </div>
               )}
             </section>
@@ -146,7 +146,7 @@ export function SecurityPage() {
 
               {activePanel === 'password' && (
                 <div className="mt-6 border-t pt-6">
-                  <ChangePasswordForm />
+                  <ChangePasswordForm onSuccess={() => setActivePanel(null)} />
                 </div>
               )}
             </section>
