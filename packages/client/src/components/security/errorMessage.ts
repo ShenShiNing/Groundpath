@@ -1,6 +1,7 @@
 import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import type { AxiosError } from 'axios';
+import type { TFunction } from 'i18next';
 import { translateApiError } from '@/lib/http/translate-error';
 
 function getRetryAfterSeconds(error: AxiosError<ApiResponse>): number | undefined {
@@ -10,7 +11,8 @@ function getRetryAfterSeconds(error: AxiosError<ApiResponse>): number | undefine
 
 export function resolveEmailSendErrorMessage(
   error: AxiosError<ApiResponse>,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: TFunction<any>,
   scope: 'email' | 'password.setup'
 ): string {
   const code = error.response?.data?.error?.code;
@@ -34,7 +36,8 @@ export function resolveEmailSendErrorMessage(
 
 export function resolveEmailVerifyErrorMessage(
   error: AxiosError<ApiResponse>,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: TFunction<any>,
   scope: 'email' | 'password.setup'
 ): string {
   const code = error.response?.data?.error?.code;
@@ -52,7 +55,8 @@ export function resolveEmailVerifyErrorMessage(
 
 export function resolveEmailSubmitErrorMessage(
   error: AxiosError<ApiResponse>,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: TFunction<any>,
   scope: 'email' | 'password.setup'
 ): string {
   const code = error.response?.data?.error?.code;
