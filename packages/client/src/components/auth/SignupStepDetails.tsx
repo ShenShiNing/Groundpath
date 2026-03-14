@@ -7,6 +7,7 @@ import { usernameSchema, passwordSchema } from '@knowledge-agent/shared/schemas'
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { FormField } from './FormField';
+import { translateApiError } from '@/lib/http/translate-error';
 
 interface SignupStepDetailsProps {
   email: string;
@@ -37,7 +38,7 @@ export function SignupStepDetails({ email, onSubmit, onBack }: SignupStepDetails
         await onSubmit(value);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || t('signup.details.failed'));
+        setError(translateApiError(axiosError));
       }
     },
   });

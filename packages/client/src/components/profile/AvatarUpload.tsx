@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useAuthStore, useUserStore } from '@/stores';
+import { translateApiError } from '@/lib/http/translate-error';
 
 interface AvatarUploadProps {
   onUploadSuccess?: (user: UserPublicInfo) => void;
@@ -62,8 +63,7 @@ export function AvatarUpload({ onUploadSuccess }: AvatarUploadProps) {
       onUploadSuccess?.(updatedUser);
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      const errorMessage = axiosError.response?.data?.error?.message || t('avatar.uploadFailed');
-      setError(errorMessage);
+      setError(translateApiError(axiosError));
       // Revert preview on error
       setPreviewUrl(null);
     } finally {

@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
 import { initiateGitHubLogin, initiateGoogleLogin } from '@/api';
+import { translateApiError } from '@/lib/http/translate-error';
 import { FormField } from './FormField';
 import { GitHubIcon, GoogleIcon } from './SocialIcons';
 
@@ -42,8 +43,7 @@ export function LoginForm() {
         await router.navigate({ to: '/dashboard' });
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        const errorMessage = axiosError.response?.data?.error?.message || t('login.failed');
-        setError(errorMessage);
+        setError(translateApiError(axiosError));
       }
     },
   });

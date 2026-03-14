@@ -11,6 +11,7 @@ import { authApi, emailApi } from '@/api';
 import { FormField } from '@/components/auth/FormField';
 import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
 import { Button } from '@/components/ui/button';
+import { translateApiError } from '@/lib/http/translate-error';
 import { useAuthStore, useUserStore } from '@/stores';
 import {
   resolveEmailSendErrorMessage,
@@ -159,7 +160,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
           setError(
             errorCode === AUTH_ERROR_CODES.INVALID_PASSWORD
               ? t('password.invalidCurrentPassword')
-              : axiosError.response?.data?.error?.message || t('password.changeFailed')
+              : translateApiError(axiosError)
           );
         } else {
           setError(resolveEmailSubmitErrorMessage(axiosError, t, 'password.setup'));

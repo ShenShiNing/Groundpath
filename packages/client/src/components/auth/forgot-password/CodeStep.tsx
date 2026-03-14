@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { emailApi } from '@/api';
 import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
+import { translateApiError } from '@/lib/http/translate-error';
 import { RESEND_COOLDOWN } from './types';
 
 interface CodeStepProps {
@@ -53,7 +54,7 @@ export function CodeStep({ email, onNext, onBack }: CodeStepProps) {
         onNext(result.verificationToken);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || t('forgot.code.invalid'));
+        setError(translateApiError(axiosError));
         hasAutoVerified.current = false;
       } finally {
         setIsVerifying(false);
@@ -87,7 +88,7 @@ export function CodeStep({ email, onNext, onBack }: CodeStepProps) {
       hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || t('forgot.code.resendFailed'));
+      setError(translateApiError(axiosError));
     } finally {
       setIsResending(false);
     }

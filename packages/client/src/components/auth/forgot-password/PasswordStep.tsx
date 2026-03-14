@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { authApi } from '@/api';
 import { FormField } from '@/components/auth/FormField';
+import { translateApiError } from '@/lib/http/translate-error';
 
 interface PasswordStepProps {
   email: string;
@@ -42,7 +43,7 @@ export function PasswordStep({ email, verificationToken, onBack }: PasswordStepP
         await router.navigate({ to: '/auth/login' });
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || t('forgot.password.failed'));
+        setError(translateApiError(axiosError));
       }
     },
   });

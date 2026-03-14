@@ -1,6 +1,7 @@
 import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import type { AxiosError } from 'axios';
+import { translateApiError } from '@/lib/http/translate-error';
 
 function getRetryAfterSeconds(error: AxiosError<ApiResponse>): number | undefined {
   const retryAfter = error.response?.data?.error?.details?.retryAfter;
@@ -27,7 +28,7 @@ export function resolveEmailSendErrorMessage(
     case AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS:
       return t(`${scope}.alreadyExists`);
     default:
-      return error.response?.data?.error?.message || t(`${scope}.sendFailed`);
+      return translateApiError(error);
   }
 }
 
@@ -45,7 +46,7 @@ export function resolveEmailVerifyErrorMessage(
     case EMAIL_ERROR_CODES.CODE_INVALID:
       return t(`${scope}.invalidCode`);
     default:
-      return error.response?.data?.error?.message || t(`${scope}.verifyFailed`);
+      return translateApiError(error);
   }
 }
 
@@ -64,9 +65,6 @@ export function resolveEmailSubmitErrorMessage(
     case AUTH_ERROR_CODES.TOKEN_INVALID:
       return t(`${scope}.verificationExpired`);
     default:
-      return (
-        error.response?.data?.error?.message ||
-        t(scope === 'email' ? 'email.updateFailed' : 'password.setup.failed')
-      );
+      return translateApiError(error);
   }
 }

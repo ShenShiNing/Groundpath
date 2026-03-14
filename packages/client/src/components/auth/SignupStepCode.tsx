@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { VerificationCodeInput } from './VerificationCodeInput';
 import { emailApi } from '@/api';
+import { translateApiError } from '@/lib/http/translate-error';
 
 interface SignupStepCodeProps {
   email: string;
@@ -49,7 +50,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
         onNext(result.verificationToken);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || t('signup.code.invalid'));
+        setError(translateApiError(axiosError));
         // Reset auto-verify flag on error so user can try again
         hasAutoVerified.current = false;
       } finally {
@@ -86,7 +87,7 @@ export function SignupStepCode({ email, onNext, onBack }: SignupStepCodeProps) {
       hasAutoVerified.current = false;
     } catch (err) {
       const axiosError = err as AxiosError<ApiResponse>;
-      setError(axiosError.response?.data?.error?.message || t('signup.code.resendFailed'));
+      setError(translateApiError(axiosError));
     } finally {
       setIsResending(false);
     }

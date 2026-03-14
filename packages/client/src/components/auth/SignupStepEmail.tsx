@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { FormField } from './FormField';
 import { emailApi } from '@/api';
+import { translateApiError } from '@/lib/http/translate-error';
 
 interface SignupStepEmailProps {
   onNext: (email: string) => void;
@@ -36,7 +37,7 @@ export function SignupStepEmail({ onNext, defaultEmail = '' }: SignupStepEmailPr
         onNext(value.email);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        setError(axiosError.response?.data?.error?.message || t('signup.email.sendFailed'));
+        setError(translateApiError(axiosError));
       }
     },
   });

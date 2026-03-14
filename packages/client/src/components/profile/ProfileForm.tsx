@@ -11,6 +11,7 @@ import { FormField } from '@/components/auth/FormField';
 import { useAuthStore, useUserStore } from '@/stores';
 import { AvatarUpload } from './AvatarUpload';
 import { useTranslation } from 'react-i18next';
+import { translateApiError } from '@/lib/http/translate-error';
 
 interface ProfileFormProps {
   onSuccess?: (user: UserPublicInfo) => void;
@@ -40,8 +41,7 @@ export function ProfileForm({ onSuccess }: ProfileFormProps) {
         onSuccess?.(updatedUser);
       } catch (err) {
         const axiosError = err as AxiosError<ApiResponse>;
-        const errorMessage = axiosError.response?.data?.error?.message || t('form.updateFailed');
-        setError(errorMessage);
+        setError(translateApiError(axiosError));
       }
     },
   });

@@ -1,6 +1,5 @@
 import type { Response } from 'express';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
-import { localizeApiError } from '@core/i18n/error-translator';
 
 /**
  * Send a standardized error response
@@ -11,10 +10,9 @@ export function sendErrorResponse(
   code: string,
   message: string
 ): void {
-  const error = localizeApiError({ code, message }, res);
   const response: ApiResponse = {
     success: false,
-    error,
+    error: { code, message },
   };
   res.status(statusCode).json(response);
 }

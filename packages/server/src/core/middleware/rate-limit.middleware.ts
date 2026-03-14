@@ -3,8 +3,6 @@ import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { ApiResponse } from '@knowledge-agent/shared';
 import { featureFlags, serverConfig } from '@config/env';
 import { Errors } from '@core/errors';
-import { localizeApiError } from '@core/i18n/error-translator';
-import type { MessageTemplateValues } from '@core/i18n/error-catalog';
 import { createLogger } from '@core/logger';
 import { buildRedisKey, getRedisClient } from '@core/redis';
 import { getClientIp } from '../utils/request.utils';
@@ -14,8 +12,6 @@ interface RateLimitOptions {
   maxRequests: number;
   keyGenerator?: (req: Request) => string;
   message?: string;
-  messageKey?: string;
-  messageValues?: MessageTemplateValues;
 }
 
 interface AccountRateLimitResult {
@@ -80,8 +76,6 @@ export function createRateLimiter(options: RateLimitOptions) {
 
   const keyGenerator = options.keyGenerator ?? ((req: Request) => getClientIp(req) ?? 'unknown');
   const message = options.message ?? 'Too many requests, please try again later';
-  const messageKey = options.messageKey;
-  const messageValues = options.messageValues;
 
   return async function rateLimitMiddleware(
     req: Request,
@@ -101,16 +95,11 @@ export function createRateLimiter(options: RateLimitOptions) {
 
         const response: ApiResponse = {
           success: false,
-          error: localizeApiError(
-            {
-              code: AUTH_ERROR_CODES.RATE_LIMITED,
-              message,
-              ...(messageKey ? { messageKey } : {}),
-              ...(messageValues ? { messageValues } : {}),
-              details: { retryAfter },
-            },
-            req
-          ),
+          error: {
+            code: AUTH_ERROR_CODES.RATE_LIMITED,
+            message,
+            details: { retryAfter },
+          },
         };
 
         res.status(HTTP_STATUS.TOO_MANY_REQUESTS).json(response);
@@ -134,64 +123,48 @@ export const loginRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 5,
   message: 'Too many login attempts, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'login attempts' },
 });
 
 export const registerRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 3,
   message: 'Too many registration attempts, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'registration attempts' },
 });
 
 export const refreshRateLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
   maxRequests: 10,
   message: 'Too many refresh attempts, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'refresh attempts' },
 });
 
 export const generalRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 100,
   message: 'Too many requests, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'requests' },
 });
 
 export const aiRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 15,
   message: 'Too many AI requests, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'ai requests' },
 });
 
 export const emailSendRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 2,
   message: 'Too many email requests, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'email requests' },
 });
 
 export const emailVerifyRateLimiter = createRateLimiter({
   windowMs: 5 * 60 * 1000,
   maxRequests: 10,
   message: 'Too many verification attempts, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'verification attempts' },
 });
 
 export const passwordResetRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 3,
   message: 'Too many password reset attempts, please try again later',
-  messageKey: 'TOO_MANY_SUBJECT_ATTEMPTS',
-  messageValues: { subject: 'password reset attempts' },
 });
 
 const ACCOUNT_WINDOW_MS = 60 * 60 * 1000;
