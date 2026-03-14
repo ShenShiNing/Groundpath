@@ -33,7 +33,6 @@ export async function fetchStreamWithAuth(
   config: StreamFetchConfig
 ): Promise<StreamFetchResult> {
   const { getAccessToken, signal } = config;
-  const t = (key: string) => i18n.t(key, { ns: 'common' });
 
   const attempt = async (isRetry: boolean): Promise<StreamFetchResult> => {
     // 首次请求前主动刷新
@@ -58,13 +57,19 @@ export async function fetchStreamWithAuth(
         } catch {
           return {
             ok: false,
-            error: { code: 'AUTH_ERROR', message: t('stream.sessionExpired') },
+            error: {
+              code: 'AUTH_ERROR',
+              message: i18n.t('stream.sessionExpired', { ns: 'common' }),
+            },
           };
         }
       }
       return {
         ok: false,
-        error: { code: 'AUTH_ERROR', message: t('stream.sessionExpired') },
+        error: {
+          code: 'AUTH_ERROR',
+          message: i18n.t('stream.sessionExpired', { ns: 'common' }),
+        },
       };
     }
 
@@ -76,7 +81,10 @@ export async function fetchStreamWithAuth(
     // 获取 reader
     const reader = response.body?.getReader();
     if (!reader) {
-      return { ok: false, error: { code: 'NO_BODY', message: t('stream.noBody') } };
+      return {
+        ok: false,
+        error: { code: 'NO_BODY', message: i18n.t('stream.noBody', { ns: 'common' }) },
+      };
     }
 
     return { ok: true, reader };
@@ -88,14 +96,15 @@ export async function fetchStreamWithAuth(
     if (error instanceof Error && error.name === 'AbortError') {
       return {
         ok: false,
-        error: { code: 'ABORTED', message: t('stream.aborted') },
+        error: { code: 'ABORTED', message: i18n.t('stream.aborted', { ns: 'common' }) },
       };
     }
     return {
       ok: false,
       error: {
         code: 'NETWORK_ERROR',
-        message: error instanceof Error ? error.message : t('stream.networkFailed'),
+        message:
+          error instanceof Error ? error.message : i18n.t('stream.networkFailed', { ns: 'common' }),
       },
     };
   }

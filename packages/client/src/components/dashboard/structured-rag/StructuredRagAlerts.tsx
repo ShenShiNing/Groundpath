@@ -7,6 +7,25 @@ interface StructuredRagAlertsProps {
   alerts: StructuredRagDashboardAlert[];
 }
 
+const structuredRagAlertTranslationKeys = {
+  fallback_ratio: {
+    title: 'structuredRag.alerts.fallback_ratio.title',
+    value: 'structuredRag.alerts.fallback_ratio.value',
+  },
+  budget_exhaustion: {
+    title: 'structuredRag.alerts.budget_exhaustion.title',
+    value: 'structuredRag.alerts.budget_exhaustion.value',
+  },
+  provider_error: {
+    title: 'structuredRag.alerts.provider_error.title',
+    value: 'structuredRag.alerts.provider_error.value',
+  },
+  freshness_lag: {
+    title: 'structuredRag.alerts.freshness_lag.title',
+    value: 'structuredRag.alerts.freshness_lag.value',
+  },
+} as const satisfies Record<StructuredRagDashboardAlert['code'], { title: string; value: string }>;
+
 export function StructuredRagAlerts({ alerts }: StructuredRagAlertsProps) {
   const { t } = useTranslation('dashboard');
 
@@ -20,33 +39,37 @@ export function StructuredRagAlerts({ alerts }: StructuredRagAlertsProps) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {alerts.map((alert) => (
-        <div
-          key={alert.code}
-          className="rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-xs"
-        >
-          <div className="flex items-center gap-2">
-            <Badge
-              variant={
-                alert.severity === 'error'
-                  ? 'destructive'
-                  : alert.severity === 'warn'
-                    ? 'secondary'
-                    : 'outline'
-              }
-            >
-              {alert.severity}
-            </Badge>
-            <span className="font-medium">{t(`structuredRag.alerts.${alert.code}.title`)}</span>
-            <span className="text-muted-foreground">
-              {t(`structuredRag.alerts.${alert.code}.value`, {
-                value: getAlertValueLabel(alert),
-                threshold: getAlertThresholdLabel(alert),
-              })}
-            </span>
+      {alerts.map((alert) => {
+        const translationKeys = structuredRagAlertTranslationKeys[alert.code];
+
+        return (
+          <div
+            key={alert.code}
+            className="rounded-full border border-border/60 bg-muted/30 px-3 py-1.5 text-xs"
+          >
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={
+                  alert.severity === 'error'
+                    ? 'destructive'
+                    : alert.severity === 'warn'
+                      ? 'secondary'
+                      : 'outline'
+                }
+              >
+                {alert.severity}
+              </Badge>
+              <span className="font-medium">{t(translationKeys.title)}</span>
+              <span className="text-muted-foreground">
+                {t(translationKeys.value, {
+                  value: getAlertValueLabel(alert),
+                  threshold: getAlertThresholdLabel(alert),
+                })}
+              </span>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

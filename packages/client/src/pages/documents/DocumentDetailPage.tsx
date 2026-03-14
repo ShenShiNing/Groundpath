@@ -47,6 +47,13 @@ const LazyDocumentEditor = lazy(async () => {
   return { default: module.DocumentEditor };
 });
 
+const versionSourceTranslationKeys = {
+  upload: 'versions.source.upload',
+  edit: 'versions.source.edit',
+  ai_generate: 'versions.source.ai_generate',
+  restore: 'versions.source.restore',
+} as const satisfies Record<VersionSource, string>;
+
 export function DocumentDetailPage() {
   const { t } = useTranslation(['document', 'common']);
   const { id } = useParams({ strict: false });
@@ -142,8 +149,7 @@ export function DocumentDetailPage() {
     }
   };
 
-  const getVersionSourceLabel = (source: VersionSource) =>
-    t(`versions.source.${source}`, { defaultValue: source });
+  const getVersionSourceLabel = (source: VersionSource) => t(versionSourceTranslationKeys[source]);
 
   const editorLoadingFallback = (
     <DocumentReader
