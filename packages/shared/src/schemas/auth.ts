@@ -51,6 +51,7 @@ export const registerRequestSchema = z
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Passwords do not match',
+    params: { i18nKey: 'PASSWORDS_DO_NOT_MATCH' },
     path: ['confirmPassword'],
   });
 
@@ -62,10 +63,12 @@ export const changePasswordRequestSchema = z
   })
   .refine((data) => data.newPassword !== data.oldPassword, {
     message: 'New password must be different from current password',
+    params: { i18nKey: 'NEW_PASSWORD_MUST_DIFFER' },
     path: ['newPassword'],
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: 'Passwords do not match',
+    params: { i18nKey: 'PASSWORDS_DO_NOT_MATCH' },
     path: ['confirmPassword'],
   });
 

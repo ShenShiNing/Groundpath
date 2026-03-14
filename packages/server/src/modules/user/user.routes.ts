@@ -33,6 +33,8 @@ function handleMulterError(err: Error, _req: Request, res: Response, next: NextF
           {
             code: 'FILE_TOO_LARGE',
             message: `Avatar file too large. Maximum size is ${maxMB}MB`,
+            messageKey: 'AVATAR_FILE_TOO_LARGE',
+            messageValues: { size: maxMB },
           },
           res
         ),

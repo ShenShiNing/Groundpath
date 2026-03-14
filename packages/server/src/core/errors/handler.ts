@@ -8,6 +8,7 @@ import {
   resolveServerLocale,
   translateErrorMessage,
 } from '@core/i18n/error-translator';
+import { translateZodIssue } from '@core/i18n/zod-error-translator';
 import { AppError } from './app-error';
 import { sendErrorResponse } from './response';
 
@@ -20,7 +21,7 @@ function formatZodErrors(error: ZodError, res: Response): Record<string, string[
   for (const issue of error.issues) {
     const path = issue.path.join('.') || 'root';
     if (!details[path]) details[path] = [];
-    details[path].push(translateErrorMessage(issue.message, locale, ERROR_CODES.VALIDATION_ERROR));
+    details[path].push(translateZodIssue(issue, locale));
   }
   return details;
 }
@@ -33,7 +34,7 @@ export function handleError(error: unknown, res: Response, context: string): voi
   if (error instanceof AppError) {
     const response: ApiResponse = {
       success: false,
-      error: localizeApiError(error.toJSON(), res),
+      error: localizeApiError(error, res),
     };
     res.status(error.statusCode).json(response);
     return;

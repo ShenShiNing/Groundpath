@@ -86,6 +86,7 @@ export const updateConversationSchema = z
   })
   .refine((data) => data.title !== undefined || data.knowledgeBaseId !== undefined, {
     message: 'At least one field must be provided',
+    params: { i18nKey: 'AT_LEAST_ONE_FIELD_REQUIRED' },
   });
 
 export const sendMessageSchema = z.object({

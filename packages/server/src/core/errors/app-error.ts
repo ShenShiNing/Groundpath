@@ -10,7 +10,9 @@ export class AppError extends Error {
     message: string,
     public readonly statusCode: number = 500,
     public readonly details?: Record<string, unknown>,
-    public readonly isOperational: boolean = true
+    public readonly isOperational: boolean = true,
+    public readonly messageKey?: string,
+    public readonly messageValues?: Record<string, string | number | boolean | null | undefined>
   ) {
     super(message);
     this.name = 'AppError';
@@ -31,7 +33,16 @@ export class AppError extends Error {
  */
 export const Errors = {
   // General errors
-  notFound: (resource: string) => new AppError('NOT_FOUND', `${resource} not found`, 404),
+  notFound: (resource: string) =>
+    new AppError(
+      'NOT_FOUND',
+      `${resource} not found`,
+      404,
+      undefined,
+      true,
+      'RESOURCE_NOT_FOUND',
+      { resource }
+    ),
   unauthorized: (msg = 'Authentication required') => new AppError('UNAUTHORIZED', msg, 401),
   forbidden: (msg = 'Access denied') => new AppError('ACCESS_DENIED', msg, 403),
   validation: (msg: string, details?: Record<string, unknown>) =>

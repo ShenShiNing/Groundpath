@@ -5,8 +5,8 @@ import type { ZodError, ZodType } from '@knowledge-agent/shared/schemas';
 import {
   localizeApiError,
   resolveServerLocale,
-  translateErrorMessage,
 } from '@core/i18n/error-translator';
+import { translateZodIssue } from '@core/i18n/zod-error-translator';
 
 /**
  * Format Zod validation errors into a structured object
@@ -17,7 +17,7 @@ function formatZodErrors(error: ZodError, req: Request): Record<string, string[]
   for (const issue of error.issues) {
     const path = issue.path.join('.') || 'root';
     if (!details[path]) details[path] = [];
-    details[path].push(translateErrorMessage(issue.message, locale, ERROR_CODES.VALIDATION_ERROR));
+    details[path].push(translateZodIssue(issue, locale));
   }
   return details;
 }

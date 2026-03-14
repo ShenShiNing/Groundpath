@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '@core/errors/app-error';
+import { localizeApiError } from '@core/i18n/error-translator';
 import { logger } from '@core/logger';
 import { serverConfig } from '@config/env';
 
@@ -27,7 +28,7 @@ export function errorMiddleware(
     res.status(err.statusCode).json({
       success: false,
       error: {
-        ...err.toJSON(),
+        ...localizeApiError(err, req),
         requestId,
       },
     });
