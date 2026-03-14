@@ -5,6 +5,7 @@ import type { AxiosError } from 'axios';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import { KeyRound, Lock } from 'lucide-react';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { authApi, emailApi } from '@/api';
@@ -22,7 +23,7 @@ import { useExpiryCountdown } from './useExpiryCountdown';
 
 const RESEND_COOLDOWN = 60;
 
-function validateLocalizedPassword(value: string, t: (key: string) => string): string | undefined {
+function validateLocalizedPassword(value: string, t: TFunction<'security'>): string | undefined {
   if (value.length < 8) {
     return t('password.validation.minLength');
   }
@@ -41,7 +42,7 @@ function validateLocalizedPassword(value: string, t: (key: string) => string): s
 function validatePasswordDifference(
   currentPassword: string,
   newPassword: string,
-  t: (key: string) => string
+  t: TFunction<'security'>
 ): string | undefined {
   if (!currentPassword || !newPassword) {
     return undefined;
