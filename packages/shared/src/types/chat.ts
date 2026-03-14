@@ -61,6 +61,7 @@ export interface MessageMetadata {
   citations?: Citation[];
   retrievedSources?: Citation[];
   finalCitations?: Citation[];
+  thinkingContent?: string;
   tokenUsage?: TokenUsage;
   agentTrace?: AgentStep[];
   stopReason?: AgentStopReason;

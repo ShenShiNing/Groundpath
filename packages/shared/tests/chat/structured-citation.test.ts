@@ -72,6 +72,7 @@ describe('message metadata schema', () => {
           excerpt: 'final evidence',
         },
       ],
+      thinkingContent: 'step 1\nstep 2',
       stopReason: 'answered',
       tokenUsage: {
         promptTokens: 10,

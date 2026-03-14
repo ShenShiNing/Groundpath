@@ -37,7 +37,7 @@ describe('chatPanelStore loadConversation', () => {
     });
   });
 
-  it('hydrates final and retrieved citations plus stopReason from message metadata', async () => {
+  it('hydrates final and retrieved citations plus thinkingContent and stopReason from message metadata', async () => {
     chatApiMocks.getConversation.mockResolvedValue({
       id: 'conv-1',
       knowledgeBaseId: 'kb-1',
@@ -49,6 +49,7 @@ describe('chatPanelStore loadConversation', () => {
           createdAt: new Date().toISOString(),
           metadata: {
             stopReason: 'budget_exhausted',
+            thinkingContent: 'first step\nsecond step',
             retrievedSources: [
               {
                 sourceType: 'node',
@@ -77,6 +78,7 @@ describe('chatPanelStore loadConversation', () => {
     const state = useChatPanelStore.getState();
     expect(state.messages[0]).toMatchObject({
       id: 'msg-1',
+      thinkingContent: 'first step\nsecond step',
       stopReason: 'budget_exhausted',
     });
     expect(state.messages[0]?.citations?.[0]).toMatchObject({

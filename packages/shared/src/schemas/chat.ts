@@ -69,6 +69,7 @@ export const messageMetadataSchema = z.object({
   citations: z.array(citationSchema).optional(),
   retrievedSources: z.array(citationSchema).optional(),
   finalCitations: z.array(citationSchema).optional(),
+  thinkingContent: z.string().optional(),
   tokenUsage: tokenUsageSchema.optional(),
   agentTrace: z.array(agentStepSchema).optional(),
   stopReason: z.enum(AGENT_STOP_REASONS).optional(),

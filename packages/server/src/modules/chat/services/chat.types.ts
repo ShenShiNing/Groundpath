@@ -48,6 +48,7 @@ export interface PersistAssistantMessageInput {
   content: string;
   citations?: Citation[];
   retrievedSources?: Citation[];
+  thinkingContent?: MessageMetadata['thinkingContent'];
   agentTrace?: MessageMetadata['agentTrace'];
   stopReason?: MessageMetadata['stopReason'];
 }

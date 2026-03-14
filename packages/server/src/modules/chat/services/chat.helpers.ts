@@ -10,13 +10,14 @@ export const PROVIDER_ERROR_FALLBACK_CONTENT =
 
 export function buildCitationMetadata(
   finalCitations?: Citation[],
-  extras?: Pick<MessageMetadata, 'agentTrace' | 'stopReason' | 'tokenUsage'> & {
+  extras?: Pick<MessageMetadata, 'agentTrace' | 'stopReason' | 'thinkingContent' | 'tokenUsage'> & {
     retrievedSources?: Citation[];
   }
 ): MessageMetadata | undefined {
   if (
     !finalCitations?.length &&
     !extras?.retrievedSources?.length &&
+    !extras?.thinkingContent?.trim() &&
     !extras?.agentTrace?.length &&
     !extras?.stopReason &&
     !extras?.tokenUsage
@@ -69,6 +70,7 @@ export async function persistAssistantMessage(input: PersistAssistantMessageInpu
     content: input.content,
     metadata: buildCitationMetadata(input.citations, {
       retrievedSources: input.retrievedSources,
+      thinkingContent: input.thinkingContent,
       agentTrace: input.agentTrace,
       stopReason: input.stopReason,
     }),

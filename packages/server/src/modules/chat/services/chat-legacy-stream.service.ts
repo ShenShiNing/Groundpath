@@ -47,6 +47,7 @@ export async function executeLegacyStreamMode(ctx: StreamContext): Promise<void>
   const messages = promptService.buildChatMessages(systemPrompt, truncatedHistory, content);
 
   let fullContent = '';
+  let thinkingContent = '';
   try {
     for await (const chunk of provider.streamGenerate(messages, {
       ...genOptions,
@@ -54,6 +55,7 @@ export async function executeLegacyStreamMode(ctx: StreamContext): Promise<void>
     })) {
       if (ctx.isDisconnected()) break;
       if (chunk.type === 'reasoning') {
+        thinkingContent += chunk.text;
         sendSSE(res, { type: 'thinking', data: chunk.text });
       } else {
         fullContent += chunk.text;
@@ -77,6 +79,7 @@ export async function executeLegacyStreamMode(ctx: StreamContext): Promise<void>
       conversationId,
       content: fallbackContent,
       citations,
+      thinkingContent: thinkingContent || undefined,
       stopReason: 'provider_error',
     });
     ctx.completionStopReason = 'provider_error';
@@ -117,6 +120,7 @@ export async function executeLegacyStreamMode(ctx: StreamContext): Promise<void>
     conversationId,
     content: fullContent,
     citations,
+    thinkingContent: thinkingContent || undefined,
     stopReason: 'answered',
   });
   ctx.completionStopReason = 'answered';

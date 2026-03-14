@@ -124,6 +124,7 @@ export async function executeAgentMode(
     }
 
     let streamedContent = '';
+    let thinkingContent = '';
     try {
       if (agentResult.agentMessages) {
         for await (const chunk of provider.streamGenerate(
@@ -135,6 +136,7 @@ export async function executeAgentMode(
         )) {
           if (ctx.isDisconnected()) break;
           if (chunk.type === 'reasoning') {
+            thinkingContent += chunk.text;
             sendSSE(res, { type: 'thinking', data: chunk.text });
           } else {
             streamedContent += chunk.text;
@@ -167,6 +169,7 @@ export async function executeAgentMode(
         citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
         retrievedSources:
           agentResult.retrievedCitations.length > 0 ? agentResult.retrievedCitations : undefined,
+        thinkingContent: thinkingContent || undefined,
         agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
         stopReason: 'provider_error',
       });
@@ -213,6 +216,7 @@ export async function executeAgentMode(
       citations: agentResult.citations.length > 0 ? agentResult.citations : undefined,
       retrievedSources:
         agentResult.retrievedCitations.length > 0 ? agentResult.retrievedCitations : undefined,
+      thinkingContent: thinkingContent || undefined,
       agentTrace: agentResult.agentTrace.length > 0 ? agentResult.agentTrace : undefined,
       stopReason: agentResult.stopReason,
     });

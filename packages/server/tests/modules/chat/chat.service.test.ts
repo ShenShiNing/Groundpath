@@ -182,6 +182,8 @@ describe('chatService.sendMessageWithSSE', () => {
   it('saves and sends done when LLM returns non-empty content', async () => {
     const provider = {
       async *streamGenerate() {
+        yield { type: 'reasoning', text: 'step 1' };
+        yield { type: 'reasoning', text: ' -> step 2' };
         yield { type: 'content', text: 'Hello' };
         yield { type: 'content', text: ' world' };
       },
@@ -202,10 +204,15 @@ describe('chatService.sendMessageWithSSE', () => {
     expect(assistantCalls[0]![0]).toMatchObject({
       role: 'assistant',
       content: 'Hello world',
+      metadata: expect.objectContaining({
+        thinkingContent: 'step 1 -> step 2',
+      }),
     });
 
     const doneEvent = written.find((w) => w.includes('"type":"done"'));
     expect(doneEvent).toBeDefined();
+    const thinkingEvents = written.filter((w) => w.includes('"type":"thinking"'));
+    expect(thinkingEvents).toHaveLength(2);
   });
 
   it('disables socket idle timeout for SSE responses', async () => {
@@ -454,6 +461,8 @@ describe('chatService.sendMessageWithSSE', () => {
       score: 0.9,
     };
     const streamGenerate = vi.fn().mockImplementation(async function* () {
+      yield { type: 'reasoning', text: 'inspect' };
+      yield { type: 'reasoning', text: ' -> synthesize' };
       yield { type: 'content', text: 'Streamed ' };
       yield { type: 'content', text: 'answer' };
     });
@@ -514,7 +523,15 @@ describe('chatService.sendMessageWithSSE', () => {
     expect(assistantCalls[0]![0]).toMatchObject({
       role: 'assistant',
       content: 'Streamed answer',
+      metadata: expect.objectContaining({
+        thinkingContent: 'inspect -> synthesize',
+      }),
     });
+
+    const thinkingIndexes = written
+      .map((entry, index) => (entry.includes('"type":"thinking"') ? index : -1))
+      .filter((index) => index >= 0);
+    expect(thinkingIndexes).toHaveLength(2);
   });
 
   it('sends error without done when streamed final agent answer is empty', async () => {

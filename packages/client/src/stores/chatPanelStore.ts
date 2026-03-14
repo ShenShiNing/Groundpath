@@ -37,6 +37,7 @@ function toStoreMessage(message: MessageInfo): ChatMessage {
       message.metadata?.citations?.map(toStoreCitation) ??
       message.metadata?.retrievedSources?.map(toStoreCitation),
     retrievedSources: message.metadata?.retrievedSources?.map(toStoreCitation),
+    thinkingContent: message.metadata?.thinkingContent,
     stopReason: message.metadata?.stopReason,
     toolSteps: agentTraceToToolSteps(message.metadata?.agentTrace),
   };
