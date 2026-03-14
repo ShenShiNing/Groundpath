@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CalendarClock, Loader2, MessageSquare, Plus, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/date';
 import { useConversations, useDebouncedValue, useSearchConversations } from '@/hooks';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,16 +27,7 @@ export interface ChatSearchDialogProps {
 }
 
 function formatConversationTime(value: Date | string | null | undefined): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return date.toLocaleString(undefined, {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDateTime(value);
 }
 
 function escapeRegExp(value: string): string {

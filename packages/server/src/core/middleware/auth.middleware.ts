@@ -15,17 +15,17 @@ import { userRepository } from '@modules/user/repositories/user.repository';
 
 export function isTokenRevokedByTimestamp(
   tokenIatSeconds: number,
-  tokenValidAfter: Date | null
+  tokenValidAfterEpoch: number | null
 ): boolean {
-  if (!tokenValidAfter) {
+  if (tokenValidAfterEpoch == null) {
     return false;
   }
 
-  // JWT iat uses the app server clock while tokenValidAfter comes from the database clock.
+  // JWT iat uses the app server clock while tokenValidAfterEpoch comes from
+  // MySQL UNIX_TIMESTAMP() which is always UTC epoch seconds.
   // Allow a small skew so freshly re-issued tokens after password change/logout-all
-  // are not rejected when the two machines differ by a few seconds.
-  const tokenValidAfterSeconds = Math.floor(tokenValidAfter.getTime() / 1000);
-  return tokenIatSeconds + authConfig.accessToken.revocationClockSkewSeconds < tokenValidAfterSeconds;
+  // are not rejected when the two clocks differ by a few seconds.
+  return tokenIatSeconds + authConfig.accessToken.revocationClockSkewSeconds < tokenValidAfterEpoch;
 }
 
 async function isSessionActiveForUser(sessionId: string, userId: string): Promise<boolean> {
@@ -63,7 +63,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     if (authState.status === 'banned') {
       throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'Your account has been banned', 403);
     }
-    if (isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfter)) {
+    if (isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfterEpoch)) {
       throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Access token has been revoked');
     }
     if (!(await isSessionActiveForUser(payload.sid, payload.sub))) {
@@ -100,7 +100,7 @@ export async function optionalAuthenticate(
         tokenIat &&
         authState &&
         authState.status !== 'banned' &&
-        !isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfter) &&
+        !isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfterEpoch) &&
         (await isSessionActiveForUser(payload.sid, payload.sub))
       ) {
         req.user = payload;

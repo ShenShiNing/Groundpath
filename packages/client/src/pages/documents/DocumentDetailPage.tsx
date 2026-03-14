@@ -39,6 +39,7 @@ import {
   useSaveDocumentContent,
 } from '@/hooks';
 import { formatBytes, openInNewTab } from '@/lib/utils';
+import { formatDateTime } from '@/lib/date';
 import { syncDocumentMode, type ViewMode } from './documentDetailMode';
 
 const LazyDocumentEditor = lazy(async () => {
@@ -239,7 +240,7 @@ export function DocumentDetailPage() {
               )}
 
               <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>{new Date(version.createdAt).toLocaleString()}</span>
+                <span>{formatDateTime(version.createdAt)}</span>
                 <span>{formatBytes(version.fileSize)}</span>
               </div>
             </div>

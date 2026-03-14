@@ -15,6 +15,7 @@ const databaseSchema = z.object({
   DATABASE_URL: z.string(),
   DB_CONNECTION_LIMIT: z.coerce.number().default(10),
   DB_QUEUE_LIMIT: z.coerce.number().default(0),
+  DB_TIMEZONE: z.string().default('+00:00'),
 });
 
 const redisSchema = z.object({

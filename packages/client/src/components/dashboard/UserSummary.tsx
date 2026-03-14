@@ -4,19 +4,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
-
-function formatDate(date: Date | string, locale: string): string {
-  return new Date(date).toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
+import { formatDate } from '@/lib/date';
 
 export function UserSummary() {
-  const { t, i18n } = useTranslation('dashboard');
+  const { t } = useTranslation('dashboard');
   const user = useAuthStore((s) => s.user);
-  const locale = i18n.resolvedLanguage ?? i18n.language;
 
   if (!user) return null;
 
@@ -36,7 +28,7 @@ export function UserSummary() {
         {user.bio && <p className="text-sm">{user.bio}</p>}
         <div className="flex items-center justify-center sm:justify-start gap-1 text-xs text-muted-foreground">
           <Calendar className="size-3" />
-          <span>{t('userSummary.joined', { date: formatDate(user.createdAt, locale) })}</span>
+          <span>{t('userSummary.joined', { date: formatDate(user.createdAt) })}</span>
         </div>
       </div>
       <Button variant="outline" asChild>

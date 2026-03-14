@@ -31,6 +31,7 @@ export const databaseConfig = {
   url: validatedEnv.DATABASE_URL,
   connectionLimit: validatedEnv.DB_CONNECTION_LIMIT,
   queueLimit: validatedEnv.DB_QUEUE_LIMIT,
+  timezone: validatedEnv.DB_TIMEZONE,
 } as const;
 
 export const redisConfig = {

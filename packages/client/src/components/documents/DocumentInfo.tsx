@@ -1,6 +1,7 @@
 import { FileText, Calendar, HardDrive, Tag, History } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { DocumentInfo, DocumentType } from '@knowledge-agent/shared/types';
+import { formatDateTime } from '@/lib/date';
 
 interface DocumentInfoProps {
   document: DocumentInfo;
@@ -20,18 +21,8 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatDate(date: Date, locale: string): string {
-  return new Date(date).toLocaleString(locale, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 export function DocumentInfo({ document }: DocumentInfoProps) {
-  const { t, i18n } = useTranslation('document');
+  const { t } = useTranslation('document');
 
   return (
     <div className="space-y-4">
@@ -62,13 +53,13 @@ export function DocumentInfo({ document }: DocumentInfoProps) {
       <div className="flex items-center gap-2 text-sm">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         <span className="text-muted-foreground">{t('info.created')}</span>
-        <span className="font-medium">{formatDate(document.createdAt, i18n.language)}</span>
+        <span className="font-medium">{formatDateTime(document.createdAt)}</span>
       </div>
 
       <div className="flex items-center gap-2 text-sm">
         <Calendar className="h-4 w-4 text-muted-foreground" />
         <span className="text-muted-foreground">{t('info.modified')}</span>
-        <span className="font-medium">{formatDate(document.updatedAt, i18n.language)}</span>
+        <span className="font-medium">{formatDateTime(document.updatedAt)}</span>
       </div>
 
       {document.description && (

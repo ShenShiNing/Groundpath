@@ -16,6 +16,7 @@ import type { ChatMessage as ChatMessageType, Citation } from '@/stores';
 import { toStopReasonLabelKey } from '@/stores/chatPanelStore.types';
 import type { CopyFormat } from '@/lib/chat';
 import { useTranslation } from 'react-i18next';
+import { formatTime as formatTimeUtil } from '@/lib/date';
 
 // ============================================================================
 // Types
@@ -34,10 +35,7 @@ export interface ChatMessageProps {
 const PURE_CODE_BLOCK_PATTERN = /^\s*(?:```[\s\S]*?```|~~~[\s\S]*?~~~)\s*$/;
 
 function formatTime(date: Date): string {
-  return new Date(date).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatTimeUtil(date);
 }
 
 // ============================================================================

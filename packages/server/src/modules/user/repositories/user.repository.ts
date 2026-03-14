@@ -1,4 +1,4 @@
-import { eq, and, isNull, ne } from 'drizzle-orm';
+import { eq, and, isNull, ne, sql } from 'drizzle-orm';
 import { db } from '@core/db';
 import { now, getDbContext, type Transaction } from '@core/db/db.utils';
 import { userTokenStates } from '@core/db/schema/auth/user-token-states.schema';
@@ -12,13 +12,14 @@ export interface UserAuthState {
 }
 
 export interface UserAccessAuthState extends UserAuthState {
-  tokenValidAfter: Date | null;
+  /** UTC epoch seconds from UNIX_TIMESTAMP(); null when no revocation has occurred. */
+  tokenValidAfterEpoch: number | null;
 }
 
 interface CachedUserAccessAuthState {
   id: string;
   status: User['status'];
-  tokenValidAfter: string | null;
+  tokenValidAfterEpoch: number | null;
 }
 
 const ACCESS_AUTH_STATE_CACHE_PREFIX = 'auth:access-state:';
@@ -32,7 +33,7 @@ function toCachedAccessAuthState(state: UserAccessAuthState): CachedUserAccessAu
   return {
     id: state.id,
     status: state.status,
-    tokenValidAfter: state.tokenValidAfter ? state.tokenValidAfter.toISOString() : null,
+    tokenValidAfterEpoch: state.tokenValidAfterEpoch,
   };
 }
 
@@ -43,15 +44,10 @@ function fromCachedAccessAuthState(
     return undefined;
   }
 
-  const tokenValidAfter = cached.tokenValidAfter ? new Date(cached.tokenValidAfter) : null;
-  if (tokenValidAfter && Number.isNaN(tokenValidAfter.getTime())) {
-    return undefined;
-  }
-
   return {
     id: cached.id,
     status: cached.status,
-    tokenValidAfter,
+    tokenValidAfterEpoch: cached.tokenValidAfterEpoch ?? null,
   };
 }
 
@@ -218,7 +214,9 @@ export const userRepository = {
       .select({
         id: users.id,
         status: users.status,
-        tokenValidAfter: userTokenStates.tokenValidAfter,
+        tokenValidAfterEpoch: sql<
+          number | null
+        >`UNIX_TIMESTAMP(${userTokenStates.tokenValidAfter})`.as('token_valid_after_epoch'),
       })
       .from(users)
       .leftJoin(userTokenStates, eq(userTokenStates.userId, users.id))
@@ -232,7 +230,7 @@ export const userRepository = {
     const accessState: UserAccessAuthState = {
       id: row.id,
       status: row.status,
-      tokenValidAfter: row.tokenValidAfter ?? null,
+      tokenValidAfterEpoch: row.tokenValidAfterEpoch ?? null,
     };
 
     await cacheService.set(

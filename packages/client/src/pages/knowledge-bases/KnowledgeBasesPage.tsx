@@ -35,6 +35,7 @@ import {
 import { useKnowledgeBases, useDeleteKnowledgeBase } from '@/hooks';
 import { KnowledgeBaseDialog } from '@/components/knowledge-bases';
 import { cn } from '@/lib/utils';
+import { formatTimeAgo } from '@/lib/date';
 import { toast } from 'sonner';
 import type { KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
 import type { TFunction } from 'i18next';
@@ -49,19 +50,6 @@ type KnowledgeBasePageT = TFunction<['knowledgeBase', 'common']>;
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function formatTimeAgo(date: Date, t: KnowledgeBasePageT): string {
-  const now = new Date();
-  const dateObj = new Date(date);
-  const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
-
-  if (seconds < 60) return t('time.justNow');
-  if (seconds < 3600) return t('time.minutesAgo', { count: Math.floor(seconds / 60) });
-  if (seconds < 86400) return t('time.hoursAgo', { count: Math.floor(seconds / 3600) });
-  if (seconds < 604800) return t('time.daysAgo', { count: Math.floor(seconds / 86400) });
-  if (seconds < 2592000) return t('time.weeksAgo', { count: Math.floor(seconds / 604800) });
-  return dateObj.toLocaleDateString();
-}
 
 const iconColorVariants = [
   { bg: 'bg-primary/10', text: 'text-primary' },

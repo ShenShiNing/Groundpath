@@ -1,5 +1,6 @@
 import { FileBarChart2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatDateTime } from '@/lib/date';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { StructuredRagDashboardSummary } from '@knowledge-agent/shared/types';
@@ -85,7 +86,7 @@ export function StructuredRagInsightsGrid({
                   {event.stopReason ? <Badge variant="secondary">{event.stopReason}</Badge> : null}
                   {event.routeMode ? <Badge variant="secondary">{event.routeMode}</Badge> : null}
                   <span className="text-xs text-muted-foreground">
-                    {new Date(event.createdAt).toLocaleString()}
+                    {formatDateTime(event.createdAt)}
                   </span>
                 </div>
                 <p className="text-sm">{event.message}</p>

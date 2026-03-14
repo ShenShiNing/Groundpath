@@ -39,6 +39,7 @@ import {
 } from '@/hooks';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { formatBytes } from '@/lib/utils';
+import { formatDateShort } from '@/lib/date';
 
 export function TrashPage() {
   const { t } = useTranslation(['document', 'common']);
@@ -261,7 +262,7 @@ export function TrashPage() {
                       <TableCell className="text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
                           <CalendarClock className="size-3.5" />
-                          {new Date(doc.deletedAt).toLocaleDateString()}
+                          {formatDateShort(doc.deletedAt)}
                         </span>
                       </TableCell>
                       <TableCell>

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { documentsApi } from '@/api';
 import { useTranslation } from 'react-i18next';
+import { formatDateShort } from '@/lib/date';
 
 interface DocumentCardProps {
   document: DocumentListItem;
@@ -41,14 +42,6 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 export function DocumentCard({ document, onEdit, onDelete, className }: DocumentCardProps) {
@@ -87,7 +80,7 @@ export function DocumentCard({ document, onEdit, onDelete, className }: Document
               <span>•</span>
               <span>{document.fileExtension.toUpperCase()}</span>
               <span>•</span>
-              <span>{formatDate(document.updatedAt)}</span>
+              <span>{formatDateShort(document.updatedAt)}</span>
             </div>
           </div>
 

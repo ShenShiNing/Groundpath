@@ -13,6 +13,7 @@ import {
 import { useDeleteKnowledgeBase } from '@/hooks';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { formatTimeAgo } from '@/lib/date';
 
 interface KnowledgeBaseCardProps {
   knowledgeBase: KnowledgeBaseListItem;
@@ -35,28 +36,10 @@ function getIconColors(id: string) {
   return iconColorVariants[hash % iconColorVariants.length]!;
 }
 
-function useFormatTimeAgo() {
-  const { t } = useTranslation('knowledgeBase');
-
-  return (date: Date): string => {
-    const now = new Date();
-    const dateObj = new Date(date);
-    const seconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000);
-
-    if (seconds < 60) return t('time.justNow');
-    if (seconds < 3600) return t('time.minutesAgo', { count: Math.floor(seconds / 60) });
-    if (seconds < 86400) return t('time.hoursAgo', { count: Math.floor(seconds / 3600) });
-    if (seconds < 604800) return t('time.daysAgo', { count: Math.floor(seconds / 86400) });
-    if (seconds < 2592000) return t('time.weeksAgo', { count: Math.floor(seconds / 604800) });
-    return dateObj.toLocaleDateString();
-  };
-}
-
 export function KnowledgeBaseCard({ knowledgeBase, onEdit }: KnowledgeBaseCardProps) {
   const { t } = useTranslation(['knowledgeBase', 'common']);
   const iconColors = getIconColors(knowledgeBase.id);
   const deleteMutation = useDeleteKnowledgeBase();
-  const formatTimeAgo = useFormatTimeAgo();
 
   const handleDelete = async () => {
     try {
@@ -141,7 +124,7 @@ export function KnowledgeBaseCard({ knowledgeBase, onEdit }: KnowledgeBaseCardPr
               <FileText className="size-3" />
               {knowledgeBase.documentCount}
             </span>
-            <span>{formatTimeAgo(knowledgeBase.updatedAt)}</span>
+            <span>{formatTimeAgo(knowledgeBase.updatedAt, t)}</span>
           </div>
         </div>
       </Link>

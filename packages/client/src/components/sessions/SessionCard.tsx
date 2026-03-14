@@ -4,16 +4,13 @@ import type { SessionInfo } from '@knowledge-agent/shared/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { formatDateTime } from '@/lib/date';
 import { DeviceIcon } from './DeviceIcon';
 import { useTranslation } from 'react-i18next';
 
 interface SessionCardProps {
   session: SessionInfo;
   onRevoke: (sessionId: string) => Promise<void>;
-}
-
-function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleString();
 }
 
 export function SessionCard({ session, onRevoke }: SessionCardProps) {
@@ -33,7 +30,7 @@ export function SessionCard({ session, onRevoke }: SessionCardProps) {
   const browserInfo =
     deviceInfo?.browser && deviceInfo?.os
       ? t('card.deviceWithOs', { browser: deviceInfo.browser, os: deviceInfo.os })
-      : deviceInfo?.browser ?? deviceInfo?.os ?? '';
+      : (deviceInfo?.browser ?? deviceInfo?.os ?? '');
 
   return (
     <Card className={cn(session.isCurrent && 'border-primary')}>
@@ -51,9 +48,17 @@ export function SessionCard({ session, onRevoke }: SessionCardProps) {
             )}
           </div>
           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {session.ipAddress && <span>{t('card.ip')} {session.ipAddress}</span>}
-            <span>{t('card.lastActive')} {formatDate(session.lastUsedAt)}</span>
-            <span>{t('card.created')} {formatDate(session.createdAt)}</span>
+            {session.ipAddress && (
+              <span>
+                {t('card.ip')} {session.ipAddress}
+              </span>
+            )}
+            <span>
+              {t('card.lastActive')} {formatDateTime(session.lastUsedAt)}
+            </span>
+            <span>
+              {t('card.created')} {formatDateTime(session.createdAt)}
+            </span>
           </div>
         </div>
         {!session.isCurrent && (
