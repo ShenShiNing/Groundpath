@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   SessionInfo,
   ChangePasswordRequest,
+  ChangeEmailRequest,
   UpdateProfileRequest,
   UserPublicInfo,
 } from '@knowledge-agent/shared/types';
@@ -12,6 +13,7 @@ interface UserState {
   sessions: SessionInfo[];
   isLoadingSessions: boolean;
   isChangingPassword: boolean;
+  isChangingEmail: boolean;
   isUpdatingProfile: boolean;
   isUploadingAvatar: boolean;
 
@@ -19,6 +21,7 @@ interface UserState {
   fetchSessions: () => Promise<void>;
   revokeSession: (sessionId: string) => Promise<void>;
   changePassword: (data: ChangePasswordRequest) => Promise<void>;
+  changeEmail: (data: ChangeEmailRequest) => Promise<UserPublicInfo>;
   updateProfile: (data: UpdateProfileRequest) => Promise<UserPublicInfo>;
   uploadAvatar: (file: File) => Promise<UserPublicInfo>;
   clearSessions: () => void;
@@ -29,6 +32,7 @@ export const useUserStore = create<UserState>()((set, get) => ({
   sessions: [],
   isLoadingSessions: false,
   isChangingPassword: false,
+  isChangingEmail: false,
   isUpdatingProfile: false,
   isUploadingAvatar: false,
 
@@ -62,6 +66,20 @@ export const useUserStore = create<UserState>()((set, get) => ({
       set({ isChangingPassword: false });
     } catch (error) {
       set({ isChangingPassword: false });
+      throw error;
+    }
+  },
+
+  // 修改绑定邮箱
+  changeEmail: async (data: ChangeEmailRequest) => {
+    set({ isChangingEmail: true });
+
+    try {
+      const updatedUser = await userApi.changeEmail(data);
+      set({ isChangingEmail: false });
+      return updatedUser;
+    } catch (error) {
+      set({ isChangingEmail: false });
       throw error;
     }
   },

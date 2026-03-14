@@ -14,7 +14,7 @@ export const emailVerificationCodeTypeSchema = z.enum([
 
 export const sendVerificationCodeRequestSchema = z.object({
   email: emailSchema,
-  type: z.enum(['register', 'reset_password']),
+  type: z.enum(['register', 'reset_password', 'change_email']),
 });
 
 export const verifyCodeRequestSchema = z.object({
@@ -23,7 +23,7 @@ export const verifyCodeRequestSchema = z.object({
     .string()
     .length(6, 'Verification code must be 6 digits')
     .regex(/^\d{6}$/, 'Verification code must be 6 digits'),
-  type: z.enum(['register', 'reset_password']),
+  type: z.enum(['register', 'reset_password', 'change_email']),
 });
 
 export const registerWithCodeRequestSchema = z

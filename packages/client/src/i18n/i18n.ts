@@ -19,6 +19,7 @@ export const allNamespaces = [
   'knowledgeBase',
   'document',
   'profile',
+  'security',
   'session',
   'settings',
   'errors',

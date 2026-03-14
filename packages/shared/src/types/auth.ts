@@ -22,6 +22,7 @@ export interface UserPublicInfo {
   bio: string | null;
   status: 'active' | 'inactive' | 'banned';
   emailVerified: boolean;
+  hasPassword?: boolean;
   createdAt: Date;
 }
 
@@ -43,7 +44,7 @@ export type {
   ChangePasswordRequest,
 } from '../schemas/auth';
 
-export type { UpdateProfileRequest } from '../schemas/user';
+export type { UpdateProfileRequest, ChangeEmailRequest } from '../schemas/user';
 
 // ==================== Session Types ====================
 

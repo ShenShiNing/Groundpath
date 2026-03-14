@@ -1,7 +1,10 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { authenticate, validateBody } from '@core/middleware';
-import { updateProfileRequestSchema } from '@knowledge-agent/shared/schemas';
+import {
+  changeEmailRequestSchema,
+  updateProfileRequestSchema,
+} from '@knowledge-agent/shared/schemas';
 import { userController } from './controllers/user.controller';
 // Direct import to avoid circular dependency through barrels
 import { uploadController } from '@modules/document/controllers/upload.controller';
@@ -64,6 +67,13 @@ router.patch(
   authenticate,
   validateBody(updateProfileRequestSchema),
   userController.updateProfile
+);
+
+router.patch(
+  '/email',
+  authenticate,
+  validateBody(changeEmailRequestSchema),
+  userController.changeEmail
 );
 
 // Avatar upload

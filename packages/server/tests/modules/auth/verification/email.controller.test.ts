@@ -206,6 +206,54 @@ describe('emailController > sendCode', () => {
     expect(error.statusCode).toBe(429);
     expect(error.code).toBe(EMAIL_ERROR_CODES.MAX_CODES_EXCEEDED);
   });
+
+  it('should send verification code for change_email when target email is available', async () => {
+    vi.mocked(userService.existsByEmail).mockResolvedValue(false);
+    vi.mocked(emailVerificationService.sendCode).mockResolvedValue({
+      expiresAt: new Date('2024-01-15T10:10:00Z'),
+    });
+
+    const { req, res, next } = createMockReqRes({
+      email: 'fresh@example.com',
+      type: 'change_email',
+    });
+    await callController(emailController.sendCode, req, res, next);
+
+    const response = getResponseData(res);
+    logTestInfo(
+      { email: 'fresh@example.com', type: 'change_email' },
+      { success: true },
+      { success: response?.success }
+    );
+
+    expect(response?.success).toBe(true);
+    expect(emailVerificationService.sendCode).toHaveBeenCalledWith(
+      'fresh@example.com',
+      'change_email',
+      '192.168.1.1'
+    );
+  });
+
+  it('should return EMAIL_ALREADY_EXISTS when change_email target already exists', async () => {
+    vi.mocked(userService.existsByEmail).mockResolvedValue(true);
+
+    const { req, res, next, getNextError } = createMockReqRes({
+      email: 'existing@example.com',
+      type: 'change_email',
+    });
+    await callController(emailController.sendCode, req, res, next);
+
+    const error = getNextError() as AppError;
+    logTestInfo(
+      { email: 'existing@example.com', type: 'change_email', emailExists: true },
+      { code: AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS },
+      { code: error?.code }
+    );
+
+    expect(error).toBeInstanceOf(AppError);
+    expect(error.statusCode).toBe(400);
+    expect(error.code).toBe(AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS);
+  });
 });
 
 // ==================== verifyCode ====================

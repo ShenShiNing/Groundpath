@@ -16,6 +16,7 @@ const authTokenData = z.object({
     username: z.string(),
     email: z.string(),
     avatarUrl: z.string().nullable(),
+    hasPassword: z.boolean(),
   }),
 });
 
@@ -97,6 +98,7 @@ export const authOpenApiOperations = defineOpenApiOperations({
           bio: z.string().nullable(),
           status: z.string(),
           emailVerified: z.boolean(),
+          hasPassword: z.boolean(),
         }),
         '当前用户信息'
       ),

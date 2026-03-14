@@ -1,10 +1,15 @@
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { UpdateProfileRequest, UserPublicInfo } from '@knowledge-agent/shared/types';
+import type {
+  ChangeEmailRequest,
+  UpdateProfileRequest,
+  UserPublicInfo,
+} from '@knowledge-agent/shared/types';
 import type { User, NewUser } from '@core/db/schema/user/users.schema';
-import type { Transaction } from '@core/db/db.utils';
+import { withTransaction, type Transaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';
 import { userRepository } from '../repositories/user.repository';
-import { toUserPublicInfo } from '@core/utils';
+import { normalizeEmail, toUserPublicInfo } from '@core/utils';
+import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
 
 /**
  * User service for profile management and cross-module user operations
@@ -108,6 +113,51 @@ export const userService = {
       ...(avatarUrl !== undefined && { avatarUrl }),
     });
 
+    if (!updatedUser) {
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
+
+    return toUserPublicInfo(updatedUser);
+  },
+
+  /**
+   * Change user email after verifying ownership of the new address
+   */
+  async changeEmail(userId: string, data: ChangeEmailRequest): Promise<UserPublicInfo> {
+    const existingUser = await userRepository.findById(userId);
+    if (!existingUser) {
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
+
+    const newEmail = normalizeEmail(data.newEmail);
+    if (newEmail === existingUser.email) {
+      throw Errors.validation('New email must be different from the current email');
+    }
+
+    const { email: verifiedEmail } = emailVerificationService.verifyToken(
+      data.verificationToken,
+      'change_email'
+    );
+    if (verifiedEmail !== newEmail) {
+      throw Errors.auth(
+        AUTH_ERROR_CODES.TOKEN_INVALID,
+        'Verification token does not match the provided email',
+        400
+      );
+    }
+
+    const emailExists = await userRepository.existsByEmailExcludingUser(newEmail, userId);
+    if (emailExists) {
+      throw Errors.auth(
+        AUTH_ERROR_CODES.EMAIL_ALREADY_EXISTS,
+        'An account with this email already exists',
+        400
+      );
+    }
+
+    const updatedUser = await withTransaction((tx) =>
+      userRepository.updateEmail(userId, newEmail, tx)
+    );
     if (!updatedUser) {
       throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
     }

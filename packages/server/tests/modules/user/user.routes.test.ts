@@ -6,7 +6,9 @@ const {
   RouterMock,
   authenticateMock,
   validateBodyMock,
+  changeEmailRequestSchemaMock,
   updateProfileRequestSchemaMock,
+  changeEmailValidatorMock,
   profileValidatorMock,
   userControllerMock,
   uploadControllerMock,
@@ -20,7 +22,9 @@ const {
     post: vi.fn(),
   };
 
+  const changeEmailRequestSchema = { type: 'change-email-schema' };
   const updateProfileRequestSchema = { type: 'update-profile-schema' };
+  const changeEmailValidator = vi.fn();
   const profileValidator = vi.fn();
 
   const hoistedMulterSingle = vi.fn();
@@ -48,12 +52,17 @@ const {
     mockRouter: hoistedRouter,
     RouterMock: vi.fn(() => hoistedRouter),
     authenticateMock: vi.fn(),
-    validateBodyMock: vi.fn((schema: unknown) =>
-      schema === updateProfileRequestSchema ? profileValidator : vi.fn()
-    ),
+    validateBodyMock: vi.fn((schema: unknown) => {
+      if (schema === changeEmailRequestSchema) return changeEmailValidator;
+      if (schema === updateProfileRequestSchema) return profileValidator;
+      return vi.fn();
+    }),
+    changeEmailRequestSchemaMock: changeEmailRequestSchema,
     updateProfileRequestSchemaMock: updateProfileRequestSchema,
+    changeEmailValidatorMock: changeEmailValidator,
     profileValidatorMock: profileValidator,
     userControllerMock: {
+      changeEmail: vi.fn(),
       updateProfile: vi.fn(),
     },
     uploadControllerMock: {
@@ -81,6 +90,7 @@ vi.mock('@core/middleware', () => ({
 }));
 
 vi.mock('@knowledge-agent/shared/schemas', () => ({
+  changeEmailRequestSchema: changeEmailRequestSchemaMock,
   updateProfileRequestSchema: updateProfileRequestSchemaMock,
 }));
 
@@ -118,7 +128,15 @@ describe('user.routes', () => {
   });
 
   it('should register profile and avatar endpoints', () => {
+    expect(validateBodyMock).toHaveBeenCalledWith(changeEmailRequestSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(updateProfileRequestSchemaMock);
+
+    expect(mockRouter.patch).toHaveBeenCalledWith(
+      '/email',
+      authenticateMock,
+      changeEmailValidatorMock,
+      userControllerMock.changeEmail
+    );
 
     expect(mockRouter.patch).toHaveBeenCalledWith(
       '/profile',

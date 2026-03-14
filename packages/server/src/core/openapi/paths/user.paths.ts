@@ -1,5 +1,8 @@
 import { z } from '@knowledge-agent/shared/schemas';
-import { updateProfileRequestSchema } from '@knowledge-agent/shared/schemas';
+import {
+  changeEmailRequestSchema,
+  updateProfileRequestSchema,
+} from '@knowledge-agent/shared/schemas';
 import { errorResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 
@@ -14,8 +17,25 @@ export const userOpenApiOperations = defineOpenApiOperations({
           username: z.string(),
           bio: z.string().nullable(),
           avatarUrl: z.string().nullable(),
+          hasPassword: z.boolean(),
         }),
         '资料更新成功'
+      ),
+      400: errorResponse,
+    },
+  },
+  'PATCH /api/user/email': {
+    summary: '修改绑定邮箱',
+    request: { body: { content: { 'application/json': { schema: changeEmailRequestSchema } } } },
+    responses: {
+      200: successResponse(
+        z.object({
+          id: z.string(),
+          email: z.string(),
+          emailVerified: z.boolean(),
+          hasPassword: z.boolean(),
+        }),
+        '绑定邮箱更新成功'
       ),
       400: errorResponse,
     },

@@ -1,5 +1,15 @@
+import type { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
-import { LogOut, User, Settings, Monitor, ChevronDown, Languages, Sun } from 'lucide-react';
+import {
+  LogOut,
+  User,
+  Settings,
+  Monitor,
+  ChevronDown,
+  Languages,
+  Sun,
+  ShieldCheck,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -29,6 +39,15 @@ function getUserInitials(username?: string, email?: string): string {
 export interface UserMenuProps {
   onLogout: () => void;
   isCollapsed: boolean;
+}
+
+function MenuItemContent({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="flex size-4 shrink-0 items-center justify-center">{icon}</span>
+      <span className="truncate">{label}</span>
+    </span>
+  );
 }
 
 export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
@@ -91,28 +110,33 @@ export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
             <Link to="/profile">
-              <User className="size-4 mr-2" />
-              {t('userMenu.profile')}
+              <MenuItemContent icon={<User className="size-4" />} label={t('userMenu.profile')} />
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/security">
+              <MenuItemContent
+                icon={<ShieldCheck className="size-4" />}
+                label={t('userMenu.security')}
+              />
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/sessions">
-              <Monitor className="size-4 mr-2" />
-              {t('userMenu.sessions')}
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link to="/settings/ai">
-              <Settings className="size-4 mr-2" />
-              {t('userMenu.settings')}
+              <MenuItemContent
+                icon={<Monitor className="size-4" />}
+                label={t('userMenu.sessions')}
+              />
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <Sun className="size-4" />
-            {t('theme', { ns: 'common' })}
+            <MenuItemContent
+              icon={<Sun className="size-4" />}
+              label={t('theme', { ns: 'common' })}
+            />
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-40">
             <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
@@ -130,8 +154,10 @@ export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
         </DropdownMenuSub>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <Languages className="size-4" />
-            {t('language', { ns: 'common' })}
+            <MenuItemContent
+              icon={<Languages className="size-4" />}
+              label={t('language', { ns: 'common' })}
+            />
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-40">
             <DropdownMenuRadioGroup value={currentLanguage} onValueChange={handleLanguageChange}>
@@ -144,10 +170,17 @@ export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
+        <DropdownMenuItem asChild>
+          <Link to="/settings/ai">
+            <MenuItemContent
+              icon={<Settings className="size-4" />}
+              label={t('userMenu.settings')}
+            />
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onLogout}>
-          <LogOut className="size-4 mr-2" />
-          {t('userMenu.logOut')}
+          <MenuItemContent icon={<LogOut className="size-4" />} label={t('userMenu.logOut')} />
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

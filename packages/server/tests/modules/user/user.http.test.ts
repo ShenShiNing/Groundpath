@@ -35,6 +35,9 @@ const { authenticateMock, userControllerMock, uploadControllerMock } = vi.hoiste
   return {
     authenticateMock: vi.fn(authenticate),
     userControllerMock: {
+      changeEmail: vi.fn((_req, res) =>
+        res.status(200).json({ success: true, route: 'email-updated' })
+      ),
       updateProfile: vi.fn((_req, res) =>
         res.status(200).json({ success: true, route: 'profile-updated' })
       ),
@@ -112,6 +115,44 @@ describe('user.routes http behavior', () => {
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
     expect(userControllerMock.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('should validate email change body', async () => {
+    const response = await fetch(`${baseUrl}/user/email`, {
+      method: 'PATCH',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        newEmail: 'invalid-email',
+        verificationToken: '',
+      }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(userControllerMock.changeEmail).not.toHaveBeenCalled();
+  });
+
+  it('should pass valid email change to controller', async () => {
+    const response = await fetch(`${baseUrl}/user/email`, {
+      method: 'PATCH',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        newEmail: 'fresh@example.com',
+        verificationToken: 'verified-change-email-token',
+      }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(200);
+    expect(body.route).toBe('email-updated');
+    expect(userControllerMock.changeEmail).toHaveBeenCalledTimes(1);
   });
 
   it('should validate profile update body', async () => {

@@ -10,6 +10,7 @@ import type home from '../../public/locales/zh-CN/home.json';
 import type knowledgeBase from '../../public/locales/zh-CN/knowledgeBase.json';
 import type document from '../../public/locales/zh-CN/document.json';
 import type profile from '../../public/locales/zh-CN/profile.json';
+import type security from '../../public/locales/zh-CN/security.json';
 import type session from '../../public/locales/zh-CN/session.json';
 import type settings from '../../public/locales/zh-CN/settings.json';
 import type errors from '../../public/locales/zh-CN/errors.json';
@@ -28,6 +29,7 @@ declare module 'i18next' {
       knowledgeBase: typeof knowledgeBase;
       document: typeof document;
       profile: typeof profile;
+      security: typeof security;
       session: typeof session;
       settings: typeof settings;
       errors: typeof errors;

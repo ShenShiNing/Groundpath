@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { usernameSchema } from './auth';
+import { emailSchema, usernameSchema } from './auth';
 
 // ==================== Field Schemas ====================
 
@@ -25,6 +25,12 @@ export const updateProfileRequestSchema = z.object({
   avatarUrl: avatarUrlSchema,
 });
 
+export const changeEmailRequestSchema = z.object({
+  newEmail: emailSchema,
+  verificationToken: z.string().min(1, 'Verification token is required'),
+});
+
 // ==================== Inferred Types ====================
 
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
+export type ChangeEmailRequest = z.infer<typeof changeEmailRequestSchema>;

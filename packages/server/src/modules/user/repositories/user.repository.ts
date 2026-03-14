@@ -126,6 +126,25 @@ export const userRepository = {
   },
 
   /**
+   * Check if email exists excluding a specific user
+   */
+  async existsByEmailExcludingUser(email: string, excludeUserId: string): Promise<boolean> {
+    const result = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(
+        and(
+          eq(users.email, normalizeEmail(email)),
+          isNull(users.deletedAt),
+          ne(users.id, excludeUserId)
+        )
+      )
+      .limit(1);
+
+    return result.length > 0;
+  },
+
+  /**
    * Check if user exists by username
    */
   async existsByUsername(username: string): Promise<boolean> {
@@ -245,5 +264,30 @@ export const userRepository = {
     await db.update(users).set(data).where(eq(users.id, userId));
 
     return this.findById(userId);
+  },
+
+  /**
+   * Update user email and mark it verified
+   */
+  async updateEmail(userId: string, email: string, tx?: Transaction): Promise<User | undefined> {
+    const ctx = getDbContext(tx);
+    const normalizedEmail = normalizeEmail(email);
+
+    await ctx
+      .update(users)
+      .set({
+        email: normalizedEmail,
+        emailVerified: true,
+        emailVerifiedAt: now(),
+      })
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)));
+
+    const result = await ctx
+      .select()
+      .from(users)
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .limit(1);
+
+    return result[0];
   },
 };

@@ -40,7 +40,7 @@ export function ProfilePage() {
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-2xl">
+        <div className="mx-auto w-full max-w-2xl">
           <h2 className="text-lg font-semibold">{t('card.title')}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t('card.description')}</p>
           <div className="mt-6">

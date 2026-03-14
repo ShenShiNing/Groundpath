@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowUpRight, Database, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { UserSummary, QuickLinks, StructuredRagOverview } from '@/components/dashboard';
+import { UserSummary, QuickLinks } from '@/components/dashboard';
 import { useKnowledgeBases } from '@/hooks';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores';
@@ -52,10 +52,6 @@ export function DashboardPage() {
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <section>
           <UserSummary />
-        </section>
-
-        <section className="mt-6">
-          <StructuredRagOverview />
         </section>
 
         <section className="mt-6">

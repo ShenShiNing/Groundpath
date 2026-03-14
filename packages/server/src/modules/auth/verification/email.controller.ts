@@ -18,8 +18,8 @@ export const emailController = {
     const email = normalizeEmail(rawEmail);
     const ipAddress = getClientIp(req);
 
-    // For registration, check if email is already registered
-    if (type === 'register') {
+    // For registration and email change, check if email is already registered
+    if (type === 'register' || type === 'change_email') {
       const emailExists = await userService.existsByEmail(email);
       if (emailExists) {
         throw Errors.auth(

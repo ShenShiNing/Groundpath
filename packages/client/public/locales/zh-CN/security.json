@@ -1,0 +1,117 @@
+{
+  "page": {
+    "title": "账号安全",
+    "description": "管理绑定邮箱与登录密码，保持账号访问安全。"
+  },
+  "action": {
+    "backToDashboard": "返回工作台"
+  },
+  "stats": {
+    "email": "绑定邮箱",
+    "emailVerified": "邮箱状态",
+    "emailVerifiedValue": "已验证",
+    "password": "登录密码",
+    "passwordValue": "已设置",
+    "passwordUnsetValue": "未设置"
+  },
+  "panel": {
+    "collapse": "收起"
+  },
+  "email": {
+    "cardTitle": "修改绑定邮箱",
+    "cardDescription": "新邮箱完成验证码验证后会立即替换当前绑定邮箱。",
+    "summary": {
+      "title": "绑定邮箱",
+      "description": "更换邮箱前需要先完成新邮箱验证码验证。",
+      "action": "更换邮箱"
+    },
+    "currentLabel": "当前绑定邮箱",
+    "newLabel": "新邮箱",
+    "newPlaceholder": "name@example.com",
+    "hint": "验证码会发送到新的邮箱地址。",
+    "sendCode": "发送验证码",
+    "sendingCode": "发送中...",
+    "codeLabel": "验证码",
+    "codeHint": "输入 6 位验证码后即可提交邮箱更新。",
+    "verifyCode": "验证验证码",
+    "verifyingCode": "验证中...",
+    "resend": "重新发送",
+    "resendAfter": "{{seconds}} 秒后重发",
+    "submit": "更新绑定邮箱",
+    "submitting": "更新中...",
+    "verifiedBadge": "已验证",
+    "codeSent": "验证码已发送到新邮箱",
+    "verified": "验证码验证成功，可以提交更新",
+    "sameEmail": "新邮箱不能与当前邮箱相同",
+    "verificationRequired": "请先完成新邮箱验证码验证",
+    "codeInvalidLength": "请输入 6 位验证码",
+    "sendFailed": "发送验证码失败",
+    "verifyFailed": "验证码验证失败",
+    "updateFailed": "更新绑定邮箱失败",
+    "updated": "绑定邮箱已更新"
+  },
+  "password": {
+    "cardTitle": "修改密码",
+    "cardDescription": "修改密码后，当前账号会退出登录，需要重新登录。",
+    "summary": {
+      "title": "登录密码",
+      "description": "输入当前密码后可直接更新登录凭据。",
+      "action": "修改密码"
+    },
+    "currentLabel": "当前密码",
+    "currentPlaceholder": "输入当前密码",
+    "currentRequired": "请输入当前密码",
+    "newLabel": "新密码",
+    "newPlaceholder": "至少 8 位，包含字母和数字",
+    "newHint": "密码至少 8 位，且必须包含字母和数字。",
+    "confirmLabel": "确认新密码",
+    "confirmPlaceholder": "再次输入新密码",
+    "confirmRequired": "请再次输入新密码",
+    "mismatch": "两次输入的新密码不一致",
+    "validation": {
+      "minLength": "密码至少需要 8 位",
+      "letter": "密码必须至少包含一个字母",
+      "number": "密码必须至少包含一个数字"
+    },
+    "submit": "修改密码",
+    "submitting": "修改中...",
+    "changeFailed": "修改密码失败",
+    "changed": "密码已修改，请重新登录",
+    "setup": {
+      "summary": {
+        "title": "本地密码",
+        "description": "当前账号通过第三方登录，建议补充一个本地密码。",
+        "action": "设置密码"
+      },
+      "codeLabel": "验证当前邮箱",
+      "codeHint": "验证码会发送到当前绑定邮箱 {{email}}，验证后即可设置本地密码。",
+      "sendCode": "发送验证码",
+      "sendingCode": "发送中...",
+      "resend": "重新发送",
+      "resendAfter": "{{seconds}} 秒后可重发",
+      "verifyCode": "验证验证码",
+      "verifyingCode": "验证中...",
+      "verified": "邮箱验证成功，可以设置密码",
+      "verificationRequired": "请先完成邮箱验证码验证",
+      "codeInvalidLength": "请输入 6 位验证码",
+      "emailMissing": "当前账号缺少绑定邮箱，暂时无法设置密码",
+      "sendFailed": "发送验证码失败",
+      "verifyFailed": "验证码验证失败",
+      "submit": "设置密码",
+      "submitting": "设置中...",
+      "failed": "设置密码失败",
+      "success": "本地密码已设置成功",
+      "codeSent": "验证码已发送到当前绑定邮箱"
+    }
+  },
+  "tips": {
+    "title": "安全提示",
+    "description": "优先通过渐进式操作修改敏感信息，减少误触和误提交。",
+    "items": [
+      "修改邮箱前，系统会向新邮箱发送验证码，验证通过后才会生效。",
+      "已有密码的账号修改密码后，当前会话会失效，旧凭据将不能继续访问。",
+      "第三方登录账号建议补充本地密码，以便在 OAuth 不可用时也能登录。",
+      "如果发现异常设备，请同时前往会话管理页面处理。"
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { UpdateProfileRequest } from '@knowledge-agent/shared/types';
+import type { ChangeEmailRequest, UpdateProfileRequest } from '@knowledge-agent/shared/types';
 import { userService } from '../services/user.service';
 import { sendSuccessResponse } from '@core/errors';
 import { asyncHandler } from '@core/errors/async-handler';
@@ -15,6 +15,17 @@ export const userController = {
     const data = getValidatedBody<UpdateProfileRequest>(res);
 
     const user = await userService.updateProfile(userId, data);
+    sendSuccessResponse(res, user);
+  }),
+
+  /**
+   * PATCH /api/user/email
+   */
+  changeEmail: asyncHandler(async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const data = getValidatedBody<ChangeEmailRequest>(res);
+
+    const user = await userService.changeEmail(userId, data);
     sendSuccessResponse(res, user);
   }),
 };

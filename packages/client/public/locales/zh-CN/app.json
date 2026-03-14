@@ -7,6 +7,7 @@
   "userMenu": {
     "newKnowledgeBase": "新建知识库",
     "profile": "个人资料",
+    "security": "账号安全",
     "settings": "设置",
     "sessions": "会话管理",
     "switchTheme": "切换主题",

@@ -2,6 +2,7 @@ import type {
   ApiResponse,
   UserPublicInfo,
   SessionInfo,
+  ChangeEmailRequest,
   UpdateProfileRequest,
 } from '@knowledge-agent/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
@@ -30,6 +31,12 @@ export const userApi = {
   /** 更新用户资料 */
   async updateProfile(data: UpdateProfileRequest): Promise<UserPublicInfo> {
     const response = await apiClient.patch<ApiResponse<UserPublicInfo>>('/api/user/profile', data);
+    return unwrapResponse(response.data);
+  },
+
+  /** 更新绑定邮箱 */
+  async changeEmail(data: ChangeEmailRequest): Promise<UserPublicInfo> {
+    const response = await apiClient.patch<ApiResponse<UserPublicInfo>>('/api/user/email', data);
     return unwrapResponse(response.data);
   },
 

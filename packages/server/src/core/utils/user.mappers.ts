@@ -54,6 +54,7 @@ export function toUserPublicInfo(user: User): UserPublicInfo {
     bio: user.bio,
     status: user.status,
     emailVerified: user.emailVerified,
+    hasPassword: !!user.password,
     createdAt: user.createdAt,
   };
 }

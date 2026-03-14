@@ -1,0 +1,117 @@
+{
+  "page": {
+    "title": "Account Security",
+    "description": "Manage your bound email and login password to keep the account secure."
+  },
+  "action": {
+    "backToDashboard": "Back to Dashboard"
+  },
+  "stats": {
+    "email": "Bound Email",
+    "emailVerified": "Email Status",
+    "emailVerifiedValue": "Verified",
+    "password": "Login Password",
+    "passwordValue": "Configured",
+    "passwordUnsetValue": "Not set"
+  },
+  "panel": {
+    "collapse": "Collapse"
+  },
+  "email": {
+    "cardTitle": "Change Bound Email",
+    "cardDescription": "The new email replaces the current one immediately after verification succeeds.",
+    "summary": {
+      "title": "Bound Email",
+      "description": "Changing the email requires verification on the new address first.",
+      "action": "Change email"
+    },
+    "currentLabel": "Current email",
+    "newLabel": "New email",
+    "newPlaceholder": "name@example.com",
+    "hint": "The verification code will be sent to the new email address.",
+    "sendCode": "Send code",
+    "sendingCode": "Sending...",
+    "codeLabel": "Verification code",
+    "codeHint": "Enter the 6-digit code before submitting the email update.",
+    "verifyCode": "Verify code",
+    "verifyingCode": "Verifying...",
+    "resend": "Resend",
+    "resendAfter": "Resend in {{seconds}}s",
+    "submit": "Update email",
+    "submitting": "Updating...",
+    "verifiedBadge": "Verified",
+    "codeSent": "Verification code sent to the new email",
+    "verified": "Code verified. You can now submit the update.",
+    "sameEmail": "The new email must be different from the current email",
+    "verificationRequired": "Please verify the new email code before submitting",
+    "codeInvalidLength": "Please enter the 6-digit verification code",
+    "sendFailed": "Failed to send verification code",
+    "verifyFailed": "Failed to verify the code",
+    "updateFailed": "Failed to update the bound email",
+    "updated": "Bound email updated"
+  },
+  "password": {
+    "cardTitle": "Change Password",
+    "cardDescription": "After changing the password, the current account session will be signed out.",
+    "summary": {
+      "title": "Login Password",
+      "description": "Use the current password to update the login credential directly.",
+      "action": "Change password"
+    },
+    "currentLabel": "Current password",
+    "currentPlaceholder": "Enter your current password",
+    "currentRequired": "Please enter your current password",
+    "newLabel": "New password",
+    "newPlaceholder": "At least 8 characters with letters and numbers",
+    "newHint": "Use at least 8 characters and include both letters and numbers.",
+    "confirmLabel": "Confirm new password",
+    "confirmPlaceholder": "Enter the new password again",
+    "confirmRequired": "Please confirm the new password",
+    "mismatch": "The new passwords do not match",
+    "validation": {
+      "minLength": "Password must be at least 8 characters",
+      "letter": "Password must contain at least one letter",
+      "number": "Password must contain at least one number"
+    },
+    "submit": "Change password",
+    "submitting": "Changing...",
+    "changeFailed": "Failed to change password",
+    "changed": "Password changed. Please sign in again.",
+    "setup": {
+      "summary": {
+        "title": "Local Password",
+        "description": "This account currently uses third-party sign-in. Add a local password as a backup.",
+        "action": "Set password"
+      },
+      "codeLabel": "Verify current email",
+      "codeHint": "A verification code will be sent to {{email}} before you can set a local password.",
+      "sendCode": "Send code",
+      "sendingCode": "Sending...",
+      "resend": "Resend",
+      "resendAfter": "Resend in {{seconds}}s",
+      "verifyCode": "Verify code",
+      "verifyingCode": "Verifying...",
+      "verified": "Email verified. You can now set the password.",
+      "verificationRequired": "Please verify the email code first",
+      "codeInvalidLength": "Please enter the 6-digit verification code",
+      "emailMissing": "This account has no bound email, so a local password cannot be set yet",
+      "sendFailed": "Failed to send verification code",
+      "verifyFailed": "Failed to verify the code",
+      "submit": "Set password",
+      "submitting": "Setting...",
+      "failed": "Failed to set password",
+      "success": "Local password set successfully",
+      "codeSent": "Verification code sent to the current email"
+    }
+  },
+  "tips": {
+    "title": "Security Tips",
+    "description": "Use progressive actions for sensitive updates to reduce accidental edits and submissions.",
+    "items": [
+      "A verification code is sent to the new email before the bound email is replaced.",
+      "When an account already has a password, changing it invalidates the current session and old credentials.",
+      "For third-party sign-in accounts, adding a local password is recommended as a fallback.",
+      "If you spot an unfamiliar device, review it from the sessions management page as well."
+    ]
+  }
+}
