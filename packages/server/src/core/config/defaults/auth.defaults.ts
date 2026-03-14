@@ -4,7 +4,10 @@
 
 /** JWT / session token lifetimes and bcrypt cost */
 export const authDefaults = {
-  accessToken: { expiresInSeconds: 900 },
+  accessToken: {
+    expiresInSeconds: 900,
+    revocationClockSkewSeconds: 10,
+  },
   refreshToken: { expiresInSeconds: 604_800 },
   bcrypt: { saltRounds: 12 },
 } as const;

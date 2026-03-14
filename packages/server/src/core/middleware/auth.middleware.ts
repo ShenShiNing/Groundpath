@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { authConfig } from '@config/env';
 import { Errors, handleError } from '../errors';
 import {
   extractBearerToken,
@@ -12,14 +13,19 @@ import { isStoredRefreshTokenMatch } from '../utils/refresh-token.utils';
 import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
 import { userRepository } from '@modules/user/repositories/user.repository';
 
-function isTokenRevokedByTimestamp(tokenIatSeconds: number, tokenValidAfter: Date | null): boolean {
+export function isTokenRevokedByTimestamp(
+  tokenIatSeconds: number,
+  tokenValidAfter: Date | null
+): boolean {
   if (!tokenValidAfter) {
     return false;
   }
-  // JWT iat has second precision. Floor tokenValidAfter to the same precision to avoid
-  // rejecting tokens issued in the same second immediately after a revoke-all event.
+
+  // JWT iat uses the app server clock while tokenValidAfter comes from the database clock.
+  // Allow a small skew so freshly re-issued tokens after password change/logout-all
+  // are not rejected when the two machines differ by a few seconds.
   const tokenValidAfterSeconds = Math.floor(tokenValidAfter.getTime() / 1000);
-  return tokenIatSeconds < tokenValidAfterSeconds;
+  return tokenIatSeconds + authConfig.accessToken.revocationClockSkewSeconds < tokenValidAfterSeconds;
 }
 
 async function isSessionActiveForUser(sessionId: string, userId: string): Promise<boolean> {
