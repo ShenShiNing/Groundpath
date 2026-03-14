@@ -3,18 +3,24 @@ import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { HTTP_STATUS, ERROR_CODES } from '@knowledge-agent/shared';
 import { ZodError } from '@knowledge-agent/shared/schemas';
 import { logger } from '@core/logger';
+import {
+  localizeApiError,
+  resolveServerLocale,
+  translateErrorMessage,
+} from '@core/i18n/error-translator';
 import { AppError } from './app-error';
 import { sendErrorResponse } from './response';
 
 /**
  * Format Zod validation errors into a structured object
  */
-function formatZodErrors(error: ZodError): Record<string, string[]> {
+function formatZodErrors(error: ZodError, res: Response): Record<string, string[]> {
+  const locale = resolveServerLocale(res);
   const details: Record<string, string[]> = {};
   for (const issue of error.issues) {
     const path = issue.path.join('.') || 'root';
     if (!details[path]) details[path] = [];
-    details[path].push(issue.message);
+    details[path].push(translateErrorMessage(issue.message, locale, ERROR_CODES.VALIDATION_ERROR));
   }
   return details;
 }
@@ -27,7 +33,7 @@ export function handleError(error: unknown, res: Response, context: string): voi
   if (error instanceof AppError) {
     const response: ApiResponse = {
       success: false,
-      error: error.toJSON(),
+      error: localizeApiError(error.toJSON(), res),
     };
     res.status(error.statusCode).json(response);
     return;
@@ -39,8 +45,12 @@ export function handleError(error: unknown, res: Response, context: string): voi
       success: false,
       error: {
         code: ERROR_CODES.VALIDATION_ERROR,
-        message: 'Validation failed',
-        details: formatZodErrors(error),
+        message: translateErrorMessage(
+          'Validation failed',
+          resolveServerLocale(res),
+          ERROR_CODES.VALIDATION_ERROR
+        ),
+        details: formatZodErrors(error, res),
       },
     };
     res.status(HTTP_STATUS.BAD_REQUEST).json(response);

@@ -1,6 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { authenticate, validateBody } from '@core/middleware';
+import { localizeApiError } from '@core/i18n/error-translator';
 import {
   changeEmailRequestSchema,
   updateProfileRequestSchema,
@@ -28,19 +29,25 @@ function handleMulterError(err: Error, _req: Request, res: Response, next: NextF
       const maxMB = Math.round(MAX_AVATAR_SIZE / (1024 * 1024));
       res.status(400).json({
         success: false,
-        error: {
-          code: 'FILE_TOO_LARGE',
-          message: `Avatar file too large. Maximum size is ${maxMB}MB`,
-        },
+        error: localizeApiError(
+          {
+            code: 'FILE_TOO_LARGE',
+            message: `Avatar file too large. Maximum size is ${maxMB}MB`,
+          },
+          res
+        ),
       });
       return;
     }
     res.status(400).json({
       success: false,
-      error: {
-        code: 'UPLOAD_ERROR',
-        message: err.message,
-      },
+      error: localizeApiError(
+        {
+          code: 'UPLOAD_ERROR',
+          message: err.message,
+        },
+        res
+      ),
     });
     return;
   }

@@ -5,6 +5,7 @@
 
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
+const LANGUAGE_HEADER_NAME = 'X-Language';
 
 export interface BuildHeadersOptions {
   includeCsrfToken?: boolean;
@@ -32,6 +33,20 @@ export function getCsrfTokenFromCookie(): string | null {
   return value ? decodeURIComponent(value) : null;
 }
 
+export function getPreferredLanguageHeader(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const fromStorage = window.localStorage.getItem('knowledge-agent.language');
+  if (fromStorage) {
+    return fromStorage;
+  }
+
+  const fromDocument = document.documentElement.lang;
+  return fromDocument || null;
+}
+
 /** 构建 JSON 请求 header，可选附带 Authorization 与 CSRF token */
 export function buildHeaders(
   token?: string | null,
@@ -51,6 +66,11 @@ export function buildHeaders(
     if (csrfToken) {
       headers[CSRF_HEADER_NAME] = csrfToken;
     }
+  }
+
+  const preferredLanguage = getPreferredLanguageHeader();
+  if (preferredLanguage) {
+    headers[LANGUAGE_HEADER_NAME] = preferredLanguage;
   }
 
   return headers;

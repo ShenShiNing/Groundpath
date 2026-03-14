@@ -191,6 +191,7 @@ export const corsMiddleware = cors({
     'Accept',
     'Origin',
     'X-CSRF-Token',
+    'X-Language',
   ],
   exposedHeaders: [
     'X-RateLimit-Limit',

@@ -6,7 +6,7 @@
 import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiResponse } from '@knowledge-agent/shared/types';
 import { getAccessToken, getOrRefreshToken, hasRefreshToken } from './auth';
-import { getCsrfTokenFromCookie } from './headers';
+import { getCsrfTokenFromCookie, getPreferredLanguageHeader } from './headers';
 
 type RetryableRequest = InternalAxiosRequestConfig & { _retry?: boolean };
 const CSRF_PROTECTED_PATHS = new Set([
@@ -72,6 +72,11 @@ apiClient.interceptors.request.use(
     const token = getAccessToken();
     if (token) {
       setRequestHeader(config, 'Authorization', `Bearer ${token}`);
+    }
+
+    const preferredLanguage = getPreferredLanguageHeader();
+    if (preferredLanguage) {
+      setRequestHeader(config, 'X-Language', preferredLanguage);
     }
 
     if (shouldAttachCsrfToken(config)) {
