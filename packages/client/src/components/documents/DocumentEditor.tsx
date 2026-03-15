@@ -147,7 +147,7 @@ export function DocumentEditor({
 
       {documentType === 'markdown' ? (
         <div data-color-mode={colorMode}>
-          <Suspense fallback={<Skeleton className="h-[480px] rounded-md" />}>
+          <Suspense fallback={<Skeleton className="h-120 rounded-md" />}>
             <LazyMDEditor
               value={content}
               onChange={(value) => updateContent(value ?? '')}
