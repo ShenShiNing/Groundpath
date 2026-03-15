@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DocumentType } from '@knowledge-agent/shared/types';
-import MDEditor from '@uiw/react-md-editor/nohighlight';
 import { Save, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/components/theme/theme-provider';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import '@uiw/react-md-editor/markdown-editor.css';
+
+const LazyMDEditor = lazy(() => import('./LazyMDEditor'));
 
 interface DocumentEditorProps {
   documentId: string;
@@ -146,7 +147,13 @@ export function DocumentEditor({
 
       {documentType === 'markdown' ? (
         <div data-color-mode={colorMode}>
-          <MDEditor value={content} onChange={(value) => updateContent(value ?? '')} height={480} />
+          <Suspense fallback={<Skeleton className="h-[480px] rounded-md" />}>
+            <LazyMDEditor
+              value={content}
+              onChange={(value) => updateContent(value ?? '')}
+              height={480}
+            />
+          </Suspense>
         </div>
       ) : (
         <Textarea
