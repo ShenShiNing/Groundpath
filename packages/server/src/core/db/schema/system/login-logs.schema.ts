@@ -7,8 +7,6 @@ import {
   mysqlEnum,
   text,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
-import { users } from '../user/users.schema';
 
 export const loginLogs = mysqlTable(
   'login_logs',
@@ -54,14 +52,6 @@ export const loginLogs = mysqlTable(
     index('created_at_idx').on(table.createdAt),
   ]
 );
-
-// ==================== Relations ====================
-export const loginLogsRelations = relations(loginLogs, ({ one }) => ({
-  user: one(users, {
-    fields: [loginLogs.userId],
-    references: [users.id],
-  }),
-}));
 
 export type LoginLog = typeof loginLogs.$inferSelect;
 export type NewLoginLog = typeof loginLogs.$inferInsert;

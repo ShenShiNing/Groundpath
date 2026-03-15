@@ -10,7 +10,6 @@ import {
   int,
   foreignKey,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
 
 export const documentVersions = mysqlTable(
@@ -60,14 +59,6 @@ export const documentVersions = mysqlTable(
     }).onDelete('cascade'),
   ]
 );
-
-// ==================== Relations ====================
-export const documentVersionsRelations = relations(documentVersions, ({ one }) => ({
-  document: one(documents, {
-    fields: [documentVersions.documentId],
-    references: [documents.id],
-  }),
-}));
 
 export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type NewDocumentVersion = typeof documentVersions.$inferInsert;

@@ -1,5 +1,6 @@
 // User schemas
 export * from './user/users.schema';
+export * from './user/user.relations';
 
 // Auth schemas
 export * from './auth/user-auths.schema';
@@ -24,8 +25,10 @@ export * from './document/document-index-backfill-items.schema';
 export * from './document/document-nodes.schema';
 export * from './document/document-node-contents.schema';
 export * from './document/document-edges.schema';
+export * from './document/document.relations';
 
 // AI schemas
 export * from './ai/llm-configs.schema';
 export * from './ai/conversations.schema';
 export * from './ai/messages.schema';
+export * from './ai/ai.relations';

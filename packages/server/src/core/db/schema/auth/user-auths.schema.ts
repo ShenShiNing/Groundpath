@@ -7,8 +7,6 @@ import {
   uniqueIndex,
   json,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
-import { users } from '../user/users.schema';
 
 // ==================== 用户认证方式表 ====================
 export const userAuths = mysqlTable(
@@ -41,14 +39,6 @@ export const userAuths = mysqlTable(
     uniqueIndex('auth_type_id_idx').on(table.authType, table.authId),
   ]
 );
-
-// ==================== Relations ====================
-export const userAuthsRelations = relations(userAuths, ({ one }) => ({
-  user: one(users, {
-    fields: [userAuths.userId],
-    references: [users.id],
-  }),
-}));
 
 export type UserAuth = typeof userAuths.$inferSelect;
 export type NewUserAuth = typeof userAuths.$inferInsert;

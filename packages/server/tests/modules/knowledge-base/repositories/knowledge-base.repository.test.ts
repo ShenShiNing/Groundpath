@@ -78,6 +78,7 @@ vi.mock('drizzle-orm', () => ({
   and: andMock,
   isNull: isNullMock,
   sql: sqlMock,
+  relations: vi.fn(() => ({})),
 }));
 
 vi.mock('@core/db', () => ({
