@@ -22,6 +22,12 @@ const configState = vi.hoisted(() => ({
     batchSize: 100,
     enqueueDelayMs: 0,
   },
+  ragConfig: {
+    searchDefaultLimit: 5,
+    searchDefaultScoreThreshold: 0.5,
+    searchOverfetchFactor: 5,
+    searchMaxCandidates: 200,
+  },
 }));
 
 function addBuildArtifacts(input: {
@@ -140,11 +146,15 @@ function resetState() {
 vi.mock('@core/db/db.utils', () => ({
   withTransaction: async (callback: (tx: unknown) => Promise<unknown>, tx?: unknown) =>
     callback(tx ?? {}),
+  afterTransactionCommit: async (callback: () => Promise<void> | void) => {
+    await callback();
+  },
 }));
 
 vi.mock('@config/env', () => ({
   documentConfig: configState.documentConfig,
   backfillConfig: configState.backfillConfig,
+  ragConfig: configState.ragConfig,
 }));
 
 vi.mock('@core/logger', () => ({

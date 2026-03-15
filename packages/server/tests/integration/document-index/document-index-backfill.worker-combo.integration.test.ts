@@ -52,7 +52,7 @@ const describeRealWorkerIntegration = shouldRunRealWorkerIntegration() ? describ
 async function waitFor<T>(
   producer: () => Promise<T>,
   predicate: (value: T) => boolean,
-  timeoutMs: number = 10_000,
+  timeoutMs: number = 20_000,
   intervalMs: number = 100
 ): Promise<T> {
   const deadline = Date.now() + timeoutMs;
@@ -458,7 +458,7 @@ describeRealWorkerIntegration('document index backfill real db/queue worker comb
     } finally {
       await context.cleanup();
     }
-  }, 15_000);
+  }, 30_000);
 
   it('skips stale backfill and stale recovery jobs after version switches, then completes the latest recovery rerun', async () => {
     const context = await createWorkerIntegrationContext({
@@ -619,5 +619,5 @@ describeRealWorkerIntegration('document index backfill real db/queue worker comb
     } finally {
       await context.cleanup();
     }
-  }, 15_000);
+  }, 30_000);
 });

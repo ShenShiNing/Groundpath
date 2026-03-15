@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireClick, fireInput, flushPromises, render } from '../../utils/render';
+
+const FROZEN_TIME = new Date('2026-03-15T12:00:00.000Z');
 
 const mocks = vi.hoisted(() => ({
   sendCode: vi.fn(),
@@ -85,20 +87,26 @@ import { AccountEmailForm } from '../../../src/components/security/AccountEmailF
 
 describe('AccountEmailForm', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FROZEN_TIME);
     vi.clearAllMocks();
     authState.user.email = 'current@example.com';
     userState.isChangingEmail = false;
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('should send, verify, and submit a new email', async () => {
     mocks.sendCode.mockResolvedValue({
       message: 'sent',
-      expiresAt: '2026-03-14T12:00:00.000Z',
+      expiresAt: '2026-03-15T12:05:00.000Z',
     });
     mocks.verifyCode.mockResolvedValue({
       verified: true,
       verificationToken: 'verified-change-email-token',
-      expiresAt: '2026-03-14T12:10:00.000Z',
+      expiresAt: '2026-03-15T12:10:00.000Z',
     });
     mocks.changeEmail.mockResolvedValue({
       ...authState.user,
