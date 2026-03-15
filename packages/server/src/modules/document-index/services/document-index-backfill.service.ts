@@ -1,8 +1,5 @@
 import { backfillConfig } from '@config/env';
-import {
-  documentRepository,
-  type DocumentBackfillCandidate,
-} from '@modules/document/repositories/document.repository';
+import { documentRepository, type DocumentBackfillCandidate } from '@modules/document/repositories';
 import { enqueueDocumentProcessing } from '@modules/rag/queue/document-processing.queue';
 import type { DocumentType } from '@knowledge-agent/shared/types';
 import { Errors } from '@core/errors';

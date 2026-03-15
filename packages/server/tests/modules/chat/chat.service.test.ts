@@ -56,11 +56,11 @@ vi.mock('@modules/llm', () => ({
   llmService: mocks.llmService,
 }));
 
-vi.mock('@modules/rag', () => ({
+vi.mock('@modules/rag/services', () => ({
   searchService: mocks.searchService,
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/repositories', () => ({
   documentRepository: mocks.documentRepository,
 }));
 

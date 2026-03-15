@@ -1,7 +1,7 @@
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
-import { documentRepository } from '@modules/document/repositories/document.repository';
+import { documentRepository } from '@modules/document/repositories';
 
 const logger = createLogger('counter-sync.service');
 

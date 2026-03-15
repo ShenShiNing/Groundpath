@@ -1,5 +1,5 @@
 import mammoth from 'mammoth';
-import { documentStorageService } from '@modules/document/services/document-storage.service';
+import { documentStorageService } from '@modules/document/services';
 import { parseHeuristicStructuredText } from './heuristic-structure.parser';
 
 export const docxStructureParser = {

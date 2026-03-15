@@ -1,6 +1,6 @@
 import { documentConfig } from '@config/env';
 import { createLogger } from '@core/logger';
-import { documentRepository } from '@modules/document/repositories/document.repository';
+import { documentRepository } from '@modules/document/repositories';
 import { enqueueDocumentProcessing } from '../queue/document-processing.queue';
 import { processingService } from './processing.service';
 

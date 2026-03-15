@@ -13,6 +13,7 @@ export * from './services/document-index-cache.service';
 export * from './services/document-index-artifact-cleanup.service';
 export * from './services/document-parse-router.service';
 export * from './services/structured-rag-rollout.service';
+export * from './services/image-description';
 export * from './services/parsers/docx-structure.parser';
 export * from './services/parsers/pdf-structure.parser';
 export * from './services/parsers/markdown-structure.parser';

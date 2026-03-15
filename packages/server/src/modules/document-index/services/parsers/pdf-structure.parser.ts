@@ -1,5 +1,5 @@
 import { featureFlags } from '@config/env';
-import { documentStorageService } from '@modules/document/services/document-storage.service';
+import { documentStorageService } from '@modules/document/services';
 import { markdownStructureParser } from './markdown-structure.parser';
 import { normalizeDoclingMarkdown } from './docling-markdown-normalizer';
 import { extractStructuredPdfText, extractStructuredPdfWithImages } from './pdf-parser.runtime';

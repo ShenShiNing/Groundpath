@@ -1,11 +1,9 @@
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 import { structuredRagMetrics } from '@core/observability';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
-import { documentIndexService } from '@modules/document-index/services/document-index.service';
-import { documentParseRouterService } from '@modules/document-index/services/document-parse-router.service';
-import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { documentRepository, documentVersionRepository } from '@modules/document/repositories';
+import { documentIndexService, documentParseRouterService } from '@modules/document-index/services';
+import { knowledgeBaseService } from '@modules/knowledge-base/services';
 import { ensureCollection } from '@modules/vector';
 import type { EmbeddingProviderType } from '@modules/embedding';
 import { chunkingService } from './chunking.service';

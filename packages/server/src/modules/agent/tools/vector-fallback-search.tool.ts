@@ -1,7 +1,7 @@
 import type { AgentTool, ToolContext, ToolExecutionResult, ToolDefinition } from './tool.interface';
 import type { Citation } from '@knowledge-agent/shared/types';
-import { searchService } from '@modules/rag';
-import { documentRepository } from '@modules/document';
+import { documentRepository } from '@modules/document/repositories';
+import { searchService } from '@modules/rag/services';
 import { createLogger } from '@core/logger';
 
 const logger = createLogger('vector-fallback-search.tool');

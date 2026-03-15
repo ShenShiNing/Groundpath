@@ -1,10 +1,7 @@
 import type { LoginLog } from '@core/db/schema/system/login-logs.schema';
 import type { PaginationMeta } from '@core/utils';
 import { buildPagination } from '@core/utils';
-import {
-  loginLogRepository,
-  type LoginLogListParams,
-} from '../../auth/repositories/login-log.repository';
+import { loginLogRepository, type LoginLogListParams } from '@modules/auth/repositories';
 
 export interface LoginLogListItem {
   id: string;

@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Citation, MessageMetadata } from '@knowledge-agent/shared/types';
 import { resolveTools } from '@modules/agent';
 import { llmService, type LLMProvider } from '@modules/llm';
-import { searchService } from '@modules/rag';
+import { searchService } from '@modules/rag/services';
 import { chatConfig } from '@core/config/env/configs';
 import { createLogger } from '@core/logger';
 import { structuredRagMetrics } from '@core/observability';

@@ -1,3 +1,24 @@
+const fs = require('node:fs');
+const path = require('node:path');
+
+const modulesRoot = path.join(__dirname, 'packages', 'server', 'src', 'modules');
+const moduleNames = fs
+  .readdirSync(modulesRoot, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function modulePathPattern(moduleName) {
+  return `(^|.*/)src/modules/${escapeRegex(moduleName)}/`;
+}
+
+function crossModulePathPattern(moduleName, segmentPattern) {
+  return `(^|.*/)src/modules/(?!${escapeRegex(moduleName)}/)[^/]+/${segmentPattern}/.+\\.ts$`;
+}
+
 /** @type {import('dependency-cruiser').IConfiguration} */
 module.exports = {
   forbidden: [
@@ -21,16 +42,16 @@ module.exports = {
     },
 
     // ── Rule 3: Routes must not cross-module import controllers ──
-    {
-      name: 'no-cross-module-controller-import',
+    ...moduleNames.map((moduleName) => ({
+      name: `no-cross-module-controller-import:${moduleName}`,
       severity: 'error',
       comment:
         'Routes should only import controllers from their own module. Cross-module access should go through the module barrel or services.',
-      from: { path: 'src/modules/(?<module>[^/]+)/.+\\.routes\\.ts$' },
+      from: { path: `${modulePathPattern(moduleName)}.+\\.routes\\.ts$` },
       to: {
-        path: 'src/modules/(?!\\k<module>/).+/controllers/.+\\.ts$',
+        path: crossModulePathPattern(moduleName, 'controllers'),
       },
-    },
+    })),
 
     // ── Rule 4: No orphan modules (files not reachable from entrypoints) ──
     {
@@ -62,17 +83,17 @@ module.exports = {
     },
 
     // ── Rule 6: No cross-module deep imports (bypass barrel) ──
-    {
-      name: 'no-cross-module-deep-import',
+    ...moduleNames.map((moduleName) => ({
+      name: `no-cross-module-deep-import:${moduleName}`,
       severity: 'warn',
       comment:
-        'Cross-module imports should go through the barrel (index.ts), not deep into services/repositories.',
-      from: { path: 'src/modules/(?<fromModule>[^/]+)/' },
+        'Cross-module imports should go through the barrel (index.ts), not deep into services/repositories/controllers.',
+      from: { path: modulePathPattern(moduleName) },
       to: {
-        path: 'src/modules/(?!\\k<fromModule>/)[^/]+/(services|repositories|controllers)/.+\\.ts$',
-        pathNot: ['src/modules/[^/]+/index\\.ts$'],
+        path: crossModulePathPattern(moduleName, '(services|repositories|controllers)'),
+        pathNot: ['(^|.*/)src/modules/.+/index\\.ts$'],
       },
-    },
+    })),
   ],
   options: {
     doNotFollow: {

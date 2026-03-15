@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@core/db';
 import { getDbContext, now, type Transaction } from '@core/db/db.utils';
 import { userTokenStates } from '@core/db/schema/auth/user-token-states.schema';
-import { userRepository } from '@modules/user/repositories/user.repository';
+import { userRepository } from '@modules/user/repositories';
 
 export const userTokenStateRepository = {
   async getTokenValidAfter(userId: string): Promise<Date | null> {

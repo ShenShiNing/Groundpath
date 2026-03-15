@@ -15,11 +15,11 @@ vi.mock('@core/logger', () => ({
   }),
 }));
 
-vi.mock('@modules/rag', () => ({
+vi.mock('@modules/rag/services', () => ({
   searchService: { searchInKnowledgeBase: searchInKnowledgeBaseMock },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/repositories', () => ({
   documentRepository: { getTitlesByIds: getTitlesByIdsMock },
 }));
 

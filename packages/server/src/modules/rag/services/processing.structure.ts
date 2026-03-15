@@ -1,9 +1,11 @@
 import { featureFlags, vlmConfig } from '@config/env';
+import {
+  docxStructureParser,
+  markdownStructureParser,
+  pdfStructureParser,
+} from '@modules/document-index/services/parsers';
 import { imageDescriptionService } from '@modules/document-index/services/image-description';
-import { docxStructureParser } from '@modules/document-index/services/parsers/docx-structure.parser';
-import { markdownStructureParser } from '@modules/document-index/services/parsers/markdown-structure.parser';
-import { pdfStructureParser } from '@modules/document-index/services/parsers/pdf-structure.parser';
-import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
+import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/public-types';
 import { storageProvider } from '@modules/storage';
 import { createLogger } from '@core/logger';
 import { structuredRagMetrics } from '@core/observability';

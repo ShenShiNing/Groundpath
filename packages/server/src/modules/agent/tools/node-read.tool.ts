@@ -1,5 +1,5 @@
 import type { AgentTool, ToolContext, ToolDefinition, ToolExecutionResult } from './tool.interface';
-import { nodeReadService } from '@modules/document-index/services/search/node-read.service';
+import { nodeReadService } from '@modules/document-index/services/search';
 
 function compactContent(content: string): string {
   return content

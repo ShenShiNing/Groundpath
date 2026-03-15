@@ -19,8 +19,7 @@ import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from './token.service';
 import { emailVerificationService } from '../verification/email-verification.service';
 import { checkAccountRateLimit, resetAccountRateLimit } from '@core/middleware';
-import { detectDevice } from '../../logs/services/device-detection.service';
-import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
+import { detectDevice, getGeoLocationAsync } from '@modules/logs/services';
 import { createLogger } from '@core/logger';
 
 const logger = createLogger('auth.service');

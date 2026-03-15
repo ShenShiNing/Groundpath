@@ -23,7 +23,7 @@ vi.mock('@core/logger', () => ({
   })),
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/services/content', () => ({
   documentContentService: {
     getContent: vi.fn(),
   },
@@ -38,7 +38,7 @@ vi.mock('@modules/llm', () => ({
 
 // Import after mocks
 import { analysisService } from '@modules/document-ai/services/analysis.service';
-import { documentContentService } from '@modules/document';
+import { documentContentService } from '@modules/document/services/content';
 import { llmService } from '@modules/llm';
 
 // Mock LLM provider

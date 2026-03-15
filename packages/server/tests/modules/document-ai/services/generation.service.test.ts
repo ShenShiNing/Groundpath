@@ -24,7 +24,7 @@ vi.mock('@core/logger', () => ({
   })),
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/services/content', () => ({
   documentContentService: {
     getContent: vi.fn(),
   },
@@ -37,7 +37,7 @@ vi.mock('@modules/llm', () => ({
   },
 }));
 
-vi.mock('@modules/rag', () => ({
+vi.mock('@modules/rag/services', () => ({
   searchService: {
     searchInKnowledgeBase: vi.fn(),
   },
@@ -45,9 +45,9 @@ vi.mock('@modules/rag', () => ({
 
 // Import after mocks
 import { generationService } from '@modules/document-ai/services/generation.service';
-import { documentContentService } from '@modules/document';
+import { documentContentService } from '@modules/document/services/content';
 import { llmService } from '@modules/llm';
-import { searchService } from '@modules/rag';
+import { searchService } from '@modules/rag/services';
 
 // Mock LLM provider
 const mockLLMProvider = {

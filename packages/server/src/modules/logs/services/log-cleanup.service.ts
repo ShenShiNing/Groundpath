@@ -1,7 +1,7 @@
 import { loggingConfig } from '@core/config/env';
 import { createLogger } from '@core/logger';
 import { systemLogger } from '@core/logger/system-logger';
-import { loginLogRepository } from '../../auth/repositories/login-log.repository';
+import { loginLogRepository } from '@modules/auth/repositories';
 import { operationLogRepository } from '../repositories/operation-log.repository';
 import { systemLogRepository } from '../repositories/system-log.repository';
 

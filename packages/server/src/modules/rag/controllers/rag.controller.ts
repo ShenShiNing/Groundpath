@@ -2,8 +2,8 @@ import type { Request, Response } from 'express';
 import { ragSearchRequestSchema } from '@knowledge-agent/shared/schemas';
 import { sendSuccessResponse, handleError, Errors } from '@core/errors';
 import { getParamId } from '@core/utils';
-import { documentService } from '@modules/document/services/document.service';
-import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { documentService } from '@modules/document/services/document';
+import { knowledgeBaseService } from '@modules/knowledge-base/services';
 import { searchService } from '../services/search.service';
 import { enqueueDocumentProcessing } from '../queue';
 

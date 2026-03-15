@@ -1,8 +1,8 @@
 import { afterTransactionCommit, withTransaction, type Transaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { documentRepository } from '@modules/document/repositories';
+import { knowledgeBaseService } from '@modules/knowledge-base/services';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';
 import { documentIndexCacheService } from './document-index-cache.service';
 

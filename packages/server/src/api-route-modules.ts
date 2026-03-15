@@ -2,11 +2,11 @@ import type { Router } from 'express';
 import { authRoutes, emailRoutes, oauthRoutes } from './modules/auth';
 import { chatRoutes } from './modules/chat';
 import { documentAiRoutes } from './modules/document-ai';
-import { documentRoutes } from './modules/document';
-import { knowledgeBaseRoutes } from './modules/knowledge-base';
+import documentRoutes from './modules/document/document.routes';
+import knowledgeBaseRoutes from './modules/knowledge-base/knowledge-base.routes';
 import { llmRoutes } from './modules/llm';
-import { logsRoutes } from './modules/logs';
-import { ragRoutes } from './modules/rag';
+import logsRoutes from './modules/logs/logs.routes';
+import ragRoutes from './modules/rag/rag.routes';
 import { storageRoutes } from './modules/storage';
 import { userRoutes } from './modules/user';
 

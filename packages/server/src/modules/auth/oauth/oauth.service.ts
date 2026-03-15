@@ -13,8 +13,7 @@ import { tokenService } from '../services/token.service';
 import { oauthExchangeCodeRepository } from '../repositories/oauth-exchange-code.repository';
 import type { OAuthExchangeCodeContext } from '../repositories/oauth-exchange-code.repository';
 import type { OAuthProviderType, OAuthUserData } from './oauth.types';
-import { detectDevice } from '../../logs/services/device-detection.service';
-import { getGeoLocationAsync } from '../../logs/services/geo-location.service';
+import { detectDevice, getGeoLocationAsync } from '@modules/logs/services';
 import { createLogger } from '@core/logger';
 
 const logger = createLogger('oauth.service');

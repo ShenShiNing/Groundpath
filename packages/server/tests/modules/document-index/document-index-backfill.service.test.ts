@@ -34,12 +34,16 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@config/env', () => mocks.env);
 
-vi.mock('@modules/document/repositories/document.repository', () => ({
+vi.mock('@modules/document/repositories', () => ({
   documentRepository: mocks.documentRepository,
 }));
 
 vi.mock('@modules/rag/queue/document-processing.queue', () => ({
   enqueueDocumentProcessing: mocks.enqueueDocumentProcessing,
+}));
+
+vi.mock('@modules/document-index/services/backfill', () => ({
+  documentIndexBackfillProgressService: mocks.backfillProgress,
 }));
 
 vi.mock('@modules/document-index/services/document-index-backfill-progress.service', () => ({

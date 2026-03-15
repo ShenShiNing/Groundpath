@@ -4,8 +4,8 @@ import { getEmbeddingProviderByType } from '@modules/embedding';
 import { vectorRepository, ensureCollection } from '@modules/vector';
 import type { SearchResult } from '@modules/vector';
 import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { documentRepository } from '@modules/document/repositories';
+import { knowledgeBaseService } from '@modules/knowledge-base/services';
 
 const logger = createLogger('search.service');
 

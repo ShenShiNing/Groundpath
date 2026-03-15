@@ -2,9 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { documentConfig } from '@config/env';
 import type { EmbeddingProviderType } from '@modules/embedding';
 import { getEmbeddingProviderByType } from '@modules/embedding';
-import { documentChunkRepository } from '@modules/document/repositories/document-chunk.repository';
-import { documentRepository } from '@modules/document/repositories/document.repository';
-import { documentIndexService } from '@modules/document-index/services/document-index.service';
+import { documentChunkRepository, documentRepository } from '@modules/document/repositories';
+import { documentIndexService } from '@modules/document-index/services';
 import { chunkingService } from './chunking.service';
 import { vectorRepository } from '@modules/vector';
 import type { NewDocumentChunk } from '@core/db/schema/document/document-chunks.schema';
@@ -17,7 +16,7 @@ import type {
   DocumentProcessingResult,
   ProcessingDocument,
 } from './processing.types';
-import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
+import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/public-types';
 
 const logger = createLogger('processing.service');
 

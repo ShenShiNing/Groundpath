@@ -15,9 +15,9 @@ import { documentChunkRepository } from '../repositories/document-chunk.reposito
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { enqueueDocumentProcessing } from '@modules/rag/queue/document-processing.queue';
+import { enqueueDocumentProcessing } from '@modules/rag/queue';
 import { vectorRepository } from '@modules/vector';
-import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { knowledgeBaseService } from '@modules/knowledge-base/services';
 
 const logger = createLogger('document-trash.service');
 
