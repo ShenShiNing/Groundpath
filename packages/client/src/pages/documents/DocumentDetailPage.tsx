@@ -58,10 +58,11 @@ export function DocumentDetailPage() {
   const { t } = useTranslation(['document', 'common']);
   const navigate = useNavigate();
   const { id } = useParams({ strict: false });
-  const search = useSearch({ from: '/documents/$id' });
+  const search = useSearch({ strict: false });
   const documentId = typeof id === 'string' ? id : undefined;
   const safeDocumentId = documentId ?? '';
-  const fromKnowledgeBaseId = search.fromKnowledgeBaseId;
+  const fromKnowledgeBaseId =
+    typeof search.fromKnowledgeBaseId === 'string' ? search.fromKnowledgeBaseId : undefined;
   const { data: document, isLoading, isError: docError } = useDocument(documentId);
   const {
     data: content,
