@@ -62,6 +62,7 @@ const mocks = vi.hoisted(() => {
 vi.mock('@core/db/db.utils', () => ({
   withTransaction: mocks.withTransaction,
   afterTransactionCommit: mocks.afterTransactionCommit,
+  getDbContext: vi.fn((tx) => tx ?? {}),
 }));
 
 vi.mock('@core/logger', () => ({
@@ -77,11 +78,11 @@ vi.mock('@modules/document-index/repositories/document-index-version.repository'
   documentIndexVersionRepository: mocks.documentIndexVersionRepository,
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: mocks.documentRepository,
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: mocks.knowledgeBaseService,
 }));
 

@@ -21,7 +21,7 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
   },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     countByKnowledgeBaseId: vi.fn(),
     sumChunksByKnowledgeBaseId: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock('@modules/document', () => ({
 
 import { counterSyncService } from '@modules/knowledge-base/services/counter-sync.service';
 import { knowledgeBaseRepository } from '@modules/knowledge-base/repositories/knowledge-base.repository';
-import { documentRepository } from '@modules/document';
+import { documentRepository } from '@modules/document/repositories/document.repository';
 
 const now = new Date('2026-02-17T00:00:00.000Z');
 

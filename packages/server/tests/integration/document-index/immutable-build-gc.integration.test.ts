@@ -309,6 +309,82 @@ vi.mock('@modules/document', () => ({
 
 vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
+    findById: vi.fn(async (id: string) => state.documents.get(id)),
+    update: vi.fn(async (id: string, data: Record<string, unknown>) => {
+      const current = state.documents.get(id);
+      if (!current) return undefined;
+      const next = { ...current, ...data };
+      state.documents.set(id, next);
+      return next;
+    }),
+    publishBuild: vi.fn(
+      async (input: {
+        documentId: string;
+        activeIndexVersionId: string;
+        expectedPublishGeneration: number;
+        chunkCount: number;
+      }) => {
+        const current = state.documents.get(input.documentId);
+        if (!current) return false;
+        if ((current.publishGeneration as number) !== input.expectedPublishGeneration) {
+          return false;
+        }
+        state.documents.set(input.documentId, {
+          ...current,
+          activeIndexVersionId: input.activeIndexVersionId,
+          processingStatus: 'completed',
+          processingError: null,
+          processingStartedAt: null,
+          chunkCount: input.chunkCount,
+        });
+        return true;
+      }
+    ),
+    listStaleProcessingDocuments: vi.fn(async (staleBefore: Date) =>
+      [...state.documents.values()]
+        .filter(
+          (doc) =>
+            doc.processingStatus === 'processing' &&
+            doc.processingStartedAt instanceof Date &&
+            (doc.processingStartedAt as Date) < staleBefore
+        )
+        .map((doc) => ({
+          id: doc.id as string,
+          userId: doc.userId as string,
+          knowledgeBaseId: doc.knowledgeBaseId as string,
+          title: 'Fixture Document',
+          currentVersion: doc.currentVersion as number,
+          publishGeneration: doc.publishGeneration as number,
+          processingStartedAt: doc.processingStartedAt as Date,
+        }))
+    ),
+    resetStaleProcessingDocument: vi.fn(async (id: string, staleBefore: Date) => {
+      const current = state.documents.get(id);
+      if (
+        !current ||
+        current.processingStatus !== 'processing' ||
+        !(current.processingStartedAt instanceof Date) ||
+        !((current.processingStartedAt as Date) < staleBefore)
+      ) {
+        return false;
+      }
+      state.documents.set(id, {
+        ...current,
+        processingStatus: 'pending',
+        processingError: null,
+        processingStartedAt: null,
+        publishGeneration: (current.publishGeneration as number) + 1,
+      });
+      return true;
+    }),
+    getActiveIndexVersionMap: vi.fn(async (ids: string[]) => {
+      return new Map(
+        ids.map((id) => [
+          id,
+          (state.documents.get(id)?.activeIndexVersionId as string | null) ?? null,
+        ])
+      );
+    }),
     listBackfillCandidates: vi.fn(
       async (options?: {
         knowledgeBaseId?: string;
@@ -378,6 +454,15 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
   },
 }));
 
+vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
+  documentChunkRepository: {
+    countByIndexVersionId: vi.fn(
+      async (indexVersionId: string) =>
+        state.chunks.filter((chunk) => chunk.indexVersionId === indexVersionId).length
+    ),
+  },
+}));
+
 vi.mock('@modules/rag/services/processing.service', () => ({
   processingService: {
     releaseProcessingLock: vi.fn(),
@@ -392,6 +477,16 @@ vi.mock('@modules/document-index/services/document-index-cache.service', () => (
 }));
 
 vi.mock('@modules/knowledge-base', () => ({
+  knowledgeBaseService: {
+    getEmbeddingConfig: vi.fn(async () => ({
+      provider: 'openai',
+      dimensions: 1536,
+      collectionName: 'collection-1',
+    })),
+  },
+}));
+
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: {
     getEmbeddingConfig: vi.fn(async () => ({
       provider: 'openai',

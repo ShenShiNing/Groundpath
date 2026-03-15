@@ -9,10 +9,10 @@ const {
   searchServiceMock,
   processingServiceMock,
   enqueueDocumentProcessingMock,
-  documentRepositoryMock,
+  documentServiceMock,
   knowledgeBaseServiceMock,
 } = vi.hoisted(() => {
-  type DocumentLookupResult = {
+  type DocumentProcessingState = {
     id: string;
     currentVersion: number;
     processingStatus: string;
@@ -62,16 +62,16 @@ const {
       processDocument: vi.fn(async () => undefined),
     },
     enqueueDocumentProcessingMock: vi.fn(async () => 'job-1'),
-    documentRepositoryMock: {
-      findByIdAndUser: vi.fn<(documentId: string, userId: string) => Promise<DocumentLookupResult>>(
-        async () => ({
-          id: 'doc-1',
-          currentVersion: 4,
-          processingStatus: 'completed',
-          processingError: null,
-          chunkCount: 3,
-        })
-      ),
+    documentServiceMock: {
+      getProcessingState: vi.fn<
+        (documentId: string, userId: string) => Promise<DocumentProcessingState>
+      >(async () => ({
+        id: 'doc-1',
+        currentVersion: 4,
+        processingStatus: 'completed',
+        processingError: null,
+        chunkCount: 3,
+      })),
     },
     knowledgeBaseServiceMock: {
       validateOwnership: vi.fn(async () => undefined),
@@ -99,11 +99,11 @@ vi.mock('@modules/rag/queue', () => ({
   enqueueDocumentProcessing: enqueueDocumentProcessingMock,
 }));
 
-vi.mock('@modules/document', () => ({
-  documentRepository: documentRepositoryMock,
+vi.mock('@modules/document/services/document.service', () => ({
+  documentService: documentServiceMock,
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 
@@ -245,7 +245,7 @@ describe('rag.routes http behavior', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data.status).toBe('processing');
-    expect(documentRepositoryMock.findByIdAndUser).toHaveBeenCalledWith('doc-1', 'user-1');
+    expect(documentServiceMock.getProcessingState).toHaveBeenCalledWith('doc-1', 'user-1');
     expect(enqueueDocumentProcessingMock).toHaveBeenCalledWith('doc-1', 'user-1', {
       targetDocumentVersion: 4,
       reason: 'retry',
@@ -253,7 +253,8 @@ describe('rag.routes http behavior', () => {
   });
 
   it('should return NOT_FOUND when processing missing document', async () => {
-    documentRepositoryMock.findByIdAndUser.mockResolvedValueOnce(null);
+    const { Errors } = await import('@core/errors');
+    documentServiceMock.getProcessingState.mockRejectedValueOnce(Errors.notFound('Document'));
 
     const response = await fetch(`${baseUrl}/rag/process/missing-doc`, {
       method: 'POST',
@@ -276,11 +277,12 @@ describe('rag.routes http behavior', () => {
     expect(body.success).toBe(true);
     expect(body.data.documentId).toBe('doc-1');
     expect(body.data.processingStatus).toBe('completed');
-    expect(documentRepositoryMock.findByIdAndUser).toHaveBeenCalledWith('doc-1', 'user-1');
+    expect(documentServiceMock.getProcessingState).toHaveBeenCalledWith('doc-1', 'user-1');
   });
 
   it('should return NOT_FOUND for missing document status', async () => {
-    documentRepositoryMock.findByIdAndUser.mockResolvedValueOnce(null);
+    const { Errors } = await import('@core/errors');
+    documentServiceMock.getProcessingState.mockRejectedValueOnce(Errors.notFound('Document'));
 
     const response = await fetch(`${baseUrl}/rag/status/missing-doc`, {
       headers: { authorization: 'Bearer valid-access' },

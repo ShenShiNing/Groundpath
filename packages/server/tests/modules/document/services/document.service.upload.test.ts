@@ -62,7 +62,7 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
   },
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
     lockOwnership: vi.fn(),
@@ -94,7 +94,7 @@ import { documentService } from '@modules/document';
 import { documentRepository } from '@modules/document';
 import { documentVersionRepository } from '@modules/document';
 import { documentStorageService } from '@modules/document';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
 
 // ==================== upload ====================
 // 场景：用户上传新文档

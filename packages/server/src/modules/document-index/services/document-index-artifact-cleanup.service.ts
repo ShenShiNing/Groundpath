@@ -1,6 +1,6 @@
 import { documentConfig } from '@config/env';
-import { documentChunkRepository } from '@modules/document';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { documentChunkRepository } from '@modules/document/repositories/document-chunk.repository';
+import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
 import { vectorRepository } from '@modules/vector';
 import { createLogger } from '@core/logger';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';

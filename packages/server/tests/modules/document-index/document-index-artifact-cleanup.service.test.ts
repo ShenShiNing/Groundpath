@@ -42,13 +42,13 @@ vi.mock('@modules/document-index/repositories/document-index-version.repository'
   },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
   documentChunkRepository: {
     countByIndexVersionId: countByIndexVersionIdMock,
   },
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: {
     getEmbeddingConfig: getEmbeddingConfigMock,
   },

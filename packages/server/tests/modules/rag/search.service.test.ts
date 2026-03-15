@@ -30,7 +30,7 @@ vi.mock('@core/logger', () => ({
   createLogger: () => loggerMock,
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 
@@ -43,7 +43,7 @@ vi.mock('@modules/embedding', () => ({
   getEmbeddingProviderByType: getEmbeddingProviderByTypeMock,
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: documentRepositoryMock,
 }));
 

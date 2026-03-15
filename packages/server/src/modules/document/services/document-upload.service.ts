@@ -10,8 +10,8 @@ import { documentVersionRepository } from '../repositories/document-version.repo
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { enqueueDocumentProcessing } from '@modules/rag';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { enqueueDocumentProcessing } from '@modules/rag/queue/document-processing.queue';
 
 const logger = createLogger('document-upload.service');
 

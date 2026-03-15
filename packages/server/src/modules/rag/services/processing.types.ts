@@ -1,5 +1,6 @@
 import type { EmbeddingProvider } from '@modules/embedding';
-import { documentRepository, documentVersionRepository } from '@modules/document';
+import { documentRepository } from '@modules/document/repositories/document.repository';
+import { documentVersionRepository } from '@modules/document/repositories/document-version.repository';
 import type { DocumentProcessingEnqueueOptions } from '../queue/document-processing.types';
 import type {
   DocumentRouteMode,

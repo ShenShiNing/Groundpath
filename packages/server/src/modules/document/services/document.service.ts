@@ -20,7 +20,7 @@ import { documentChunkRepository } from '../repositories/document-chunk.reposito
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
 import { vectorRepository } from '@modules/vector';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
 import { documentTrashService } from './document-trash.service';
 import { documentVersionService } from './document-version.service';
 import { documentUploadService } from './document-upload.service';
@@ -88,6 +88,37 @@ export const documentService = {
       );
     }
     return toDocumentInfo(document);
+  },
+
+  /**
+   * Get processing state for a document (with ownership check)
+   */
+  async getProcessingState(
+    documentId: string,
+    userId: string
+  ): Promise<{
+    id: string;
+    currentVersion: number;
+    processingStatus: Document['processingStatus'];
+    processingError: Document['processingError'];
+    chunkCount: number;
+  }> {
+    const document = await documentRepository.findByIdAndUser(documentId, userId);
+    if (!document) {
+      throw Errors.auth(
+        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
+        'Document not found',
+        404
+      );
+    }
+
+    return {
+      id: document.id,
+      currentVersion: document.currentVersion,
+      processingStatus: document.processingStatus,
+      processingError: document.processingError,
+      chunkCount: document.chunkCount,
+    };
   },
 
   /**

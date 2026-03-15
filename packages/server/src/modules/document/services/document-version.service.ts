@@ -10,7 +10,7 @@ import { documentVersionRepository } from '../repositories/document-version.repo
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { enqueueDocumentProcessing } from '@modules/rag';
+import { enqueueDocumentProcessing } from '@modules/rag/queue/document-processing.queue';
 
 const logger = createLogger('document-version.service');
 

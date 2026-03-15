@@ -2,10 +2,10 @@ import type { Request, Response } from 'express';
 import { ragSearchRequestSchema } from '@knowledge-agent/shared/schemas';
 import { sendSuccessResponse, handleError, Errors } from '@core/errors';
 import { getParamId } from '@core/utils';
+import { documentService } from '@modules/document/services/document.service';
+import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
 import { searchService } from '../services/search.service';
 import { enqueueDocumentProcessing } from '../queue';
-import { documentRepository } from '@modules/document';
-import { knowledgeBaseService } from '@modules/knowledge-base';
 
 export const ragController = {
   async search(req: Request, res: Response): Promise<void> {
@@ -44,10 +44,7 @@ export const ragController = {
         throw Errors.validation('Document ID required');
       }
 
-      const document = await documentRepository.findByIdAndUser(documentId, userId);
-      if (!document) {
-        throw Errors.notFound('Document');
-      }
+      const document = await documentService.getProcessingState(documentId, userId);
 
       // Enqueue processing job (non-blocking, deduped by documentId)
       await enqueueDocumentProcessing(documentId, userId, {
@@ -74,10 +71,7 @@ export const ragController = {
         throw Errors.validation('Document ID required');
       }
 
-      const document = await documentRepository.findByIdAndUser(documentId, userId);
-      if (!document) {
-        throw Errors.notFound('Document');
-      }
+      const document = await documentService.getProcessingState(documentId, userId);
 
       sendSuccessResponse(res, {
         documentId: document.id,
