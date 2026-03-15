@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { Link, useParams } from '@tanstack/react-router';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import type {
   DocumentType,
@@ -56,9 +56,12 @@ const versionSourceTranslationKeys = {
 
 export function DocumentDetailPage() {
   const { t } = useTranslation(['document', 'common']);
+  const navigate = useNavigate();
   const { id } = useParams({ strict: false });
+  const search = useSearch({ from: '/documents/$id' });
   const documentId = typeof id === 'string' ? id : undefined;
   const safeDocumentId = documentId ?? '';
+  const fromKnowledgeBaseId = search.fromKnowledgeBaseId;
   const { data: document, isLoading, isError: docError } = useDocument(documentId);
   const {
     data: content,
@@ -128,6 +131,23 @@ export function DocumentDetailPage() {
 
   const handleModeChange = (nextMode: ViewMode) => {
     setModeOverride({ documentId: safeDocumentId, mode: nextMode });
+  };
+
+  const handleBackToList = () => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    if (fromKnowledgeBaseId) {
+      void navigate({
+        to: '/knowledge-bases/$id',
+        params: { id: fromKnowledgeBaseId },
+      });
+      return;
+    }
+
+    void navigate({ to: '/knowledge-bases' });
   };
 
   const openRestoreDialog = (version: DocumentVersionListItem) => {
@@ -261,11 +281,9 @@ export function DocumentDetailPage() {
       <div className="flex-1 flex items-center justify-center">
         <div className="py-14 text-center">
           <p className="text-destructive">{t('error.loadFailed')}</p>
-          <Link to="/knowledge-bases" className="mt-4 inline-block">
-            <Button variant="outline" className="cursor-pointer">
-              {t('action.backToList')}
-            </Button>
-          </Link>
+          <Button variant="outline" className="mt-4 cursor-pointer" onClick={handleBackToList}>
+            {t('action.backToList')}
+          </Button>
         </div>
       </div>
     );
@@ -276,10 +294,14 @@ export function DocumentDetailPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="shrink-0 border-b px-6 py-5">
           <div className="flex flex-wrap items-start gap-3">
-            <Button variant="ghost" size="icon" className="size-8 cursor-pointer" asChild>
-              <Link to="/knowledge-bases">
-                <ArrowLeft className="size-4" />
-              </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 cursor-pointer"
+              aria-label={t('action.backToList')}
+              onClick={handleBackToList}
+            >
+              <ArrowLeft className="size-4" />
             </Button>
 
             <div className="min-w-0 flex-1">
@@ -379,11 +401,9 @@ export function DocumentDetailPage() {
           <div className="flex-1 flex items-center justify-center">
             <div className="py-14 text-center">
               <p className="text-muted-foreground">{t('notFound')}</p>
-              <Link to="/knowledge-bases" className="mt-4 inline-block">
-                <Button variant="outline" className="cursor-pointer">
-                  {t('action.backToList')}
-                </Button>
-              </Link>
+              <Button variant="outline" className="mt-4 cursor-pointer" onClick={handleBackToList}>
+                {t('action.backToList')}
+              </Button>
             </div>
           </div>
         )}

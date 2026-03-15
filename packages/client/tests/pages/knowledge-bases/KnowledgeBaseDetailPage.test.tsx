@@ -327,4 +327,21 @@ describe('KnowledgeBaseDetailPage', () => {
 
     await view.unmount();
   });
+
+  it('should navigate to document detail with knowledge base return context', async () => {
+    const view = await render(<KnowledgeBaseDetailPage />);
+
+    const documentButton = Array.from(view.container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('grid:Alpha Guide')
+    );
+    await fireClick(documentButton ?? null);
+
+    expect(mocks.navigate).toHaveBeenCalledWith({
+      to: '/documents/$id',
+      params: { id: 'doc-1' },
+      search: { fromKnowledgeBaseId: 'kb-1' },
+    });
+
+    await view.unmount();
+  });
 });
