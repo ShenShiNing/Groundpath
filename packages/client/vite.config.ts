@@ -45,13 +45,6 @@ export default defineConfig({
             return 'ui';
           }
           if (normalizedId.includes('/node_modules/pdfjs-dist/')) return 'pdfjs';
-          if (
-            normalizedId.includes('/node_modules/@uiw/') ||
-            normalizedId.includes('/node_modules/rehype') ||
-            normalizedId.includes('/node_modules/remark')
-          ) {
-            return 'md-editor';
-          }
 
           // React core only (avoid matching packages like @base-ui/react)
           if (

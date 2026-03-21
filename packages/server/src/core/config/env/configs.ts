@@ -7,6 +7,7 @@ import {
   documentDefaults,
   documentIndexDefaults,
   emailVerificationDefaults,
+  healthDefaults,
   loggingDefaults,
   queueDefaults,
   ragDefaults,
@@ -172,6 +173,10 @@ export const vlmConfig = {
 export const queueConfig = {
   ...queueDefaults,
   concurrency: validatedEnv.QUEUE_CONCURRENCY,
+} as const;
+
+export const healthConfig = {
+  ...healthDefaults,
 } as const;
 
 export const backfillConfig = { ...backfillDefaults } as const;

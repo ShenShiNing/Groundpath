@@ -13,6 +13,11 @@ export function requestLoggerMiddleware(req: Request, res: Response, next: NextF
   res.on('finish', () => {
     const durationMs = Date.now() - startTime;
     const url = req.originalUrl || req.url;
+
+    if (url === '/api/hello' || url === '/health' || url.startsWith('/health/')) {
+      return;
+    }
+
     const logData = {
       method: req.method,
       url,

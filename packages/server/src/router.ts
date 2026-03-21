@@ -1,5 +1,4 @@
 import path from 'path';
-import type { Request, Response } from 'express';
 import express from 'express';
 import { serverConfig, storageConfig } from '@config/env';
 import { apiRouteModules } from './api-route-modules';
@@ -15,11 +14,6 @@ if (
 ) {
   router.use('/api/uploads', express.static(path.resolve(storageConfig.localPath)));
 }
-
-// Health check
-router.get('/api/hello', (_req: Request, res: Response) => {
-  res.json({ message: 'Hello World!' });
-});
 
 // Business routes must be mounted through src/api-route-modules.ts
 // so the OpenAPI document can auto-discover them from the live router tree.

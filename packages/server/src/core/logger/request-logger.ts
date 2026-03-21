@@ -9,7 +9,7 @@ export const requestLogger = pinoHttp({
   autoLogging: {
     ignore: (req) => {
       const url = req.url ?? '';
-      if (url === '/api/hello' || url === '/health') return true;
+      if (url === '/api/hello' || url === '/health' || url.startsWith('/health/')) return true;
       // Skip non-API paths — browser extensions, frontend routes, etc.
       if (!url.startsWith('/api/')) return true;
       return false;

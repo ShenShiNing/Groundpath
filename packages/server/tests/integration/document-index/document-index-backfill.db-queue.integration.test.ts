@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type { Queue } from 'bullmq';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 function readEnvFile(filePath: string): Record<string, string> {
@@ -59,7 +60,8 @@ describeRealIntegration('document index backfill real db/queue integration', () 
   let db: typeof import('@core/db').db;
   let closeDatabase: typeof import('@core/db').closeDatabase;
   let documentIndexBackfillService: typeof import('@modules/document-index/services/document-index-backfill.service').documentIndexBackfillService;
-  let documentProcessingQueue: typeof import('@modules/rag/queue/document-processing.queue').documentProcessingQueue;
+  let documentProcessingQueue: Queue | null = null;
+  let getDocumentProcessingQueue: typeof import('@modules/rag/queue/document-processing.queue').getDocumentProcessingQueue;
   let schema: typeof import('@core/db/schema');
   let drizzle: typeof import('drizzle-orm');
 
@@ -92,7 +94,8 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     ({ db, closeDatabase } = await import('@core/db'));
     ({ documentIndexBackfillService } =
       await import('@modules/document-index/services/document-index-backfill.service'));
-    ({ documentProcessingQueue } = await import('@modules/rag/queue/document-processing.queue'));
+    ({ getDocumentProcessingQueue } = await import('@modules/rag/queue/document-processing.queue'));
+    documentProcessingQueue = getDocumentProcessingQueue();
     schema = await import('@core/db/schema');
     drizzle = await import('drizzle-orm');
 
@@ -223,7 +226,7 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     expect(firstBatch.hasMore).toBe(true);
 
     const firstRunId = firstBatch.runId!;
-    const firstJob = await documentProcessingQueue.getJob(
+    const firstJob = await documentProcessingQueue!.getJob(
       `doc-${secondDocumentId}-v1-bf-${firstRunId}`
     );
     expect(firstJob?.data).toMatchObject({
@@ -245,7 +248,7 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     expect(secondBatch.offset).toBe(1);
     expect(secondBatch.hasMore).toBe(false);
 
-    const secondJob = await documentProcessingQueue.getJob(
+    const secondJob = await documentProcessingQueue!.getJob(
       `doc-${firstDocumentId}-v1-bf-${firstRunId}`
     );
     expect(secondJob?.data).toMatchObject({

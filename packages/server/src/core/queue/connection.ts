@@ -15,6 +15,7 @@ export function getQueueConnection(): ConnectionOptions {
     password: parsed.password || undefined,
     username: parsed.username || undefined,
     db: parsed.pathname ? parseInt(parsed.pathname.slice(1), 10) || 0 : 0,
+    lazyConnect: true,
   };
 }
 

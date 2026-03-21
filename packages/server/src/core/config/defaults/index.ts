@@ -16,6 +16,9 @@ export { chatDefaults } from './chat.defaults';
 // Auth, email verification, storage signing
 export { authDefaults, emailVerificationDefaults, storageSigningDefaults } from './auth.defaults';
 
+// Health checks
+export { healthDefaults } from './health.defaults';
+
 // Queue, backfill, logging, observability
 export {
   queueDefaults,
