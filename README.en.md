@@ -1,8 +1,10 @@
-# Knowledge Agent
+# Suzhi / Knowledge Agent
 
 English version of README. Chinese version: [README.md](./README.md)
 
-Last updated: March 14, 2026
+Last updated: March 22, 2026
+
+> Product brand is now `Suzhi / Groundpath`. Repository name and internal package scope still use `KnowledgeAgent` / `@knowledge-agent/*` during the migration window.
 
 Knowledge Agent is a RAG (Retrieval-Augmented Generation) application for personal and team knowledge management. It provides an end-to-end workflow from document ingestion, chunking and embedding, semantic retrieval, and multi-turn chat with citations, plus Document AI features (summary, analysis, generation).
 
