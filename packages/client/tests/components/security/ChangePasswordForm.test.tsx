@@ -220,12 +220,12 @@ describe('ChangePasswordForm', () => {
     authState.user.hasPassword = false;
     mocks.sendCode.mockResolvedValue({
       message: 'sent',
-      expiresAt: '2026-03-14T12:00:00.000Z',
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
     });
     mocks.verifyCode.mockResolvedValue({
       verified: true,
       verificationToken: 'verified-reset-password-token',
-      expiresAt: '2026-03-14T12:10:00.000Z',
+      expiresAt: new Date(Date.now() + 20 * 60 * 1000).toISOString(),
     });
 
     const view = await render(<ChangePasswordForm />);

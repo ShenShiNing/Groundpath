@@ -140,11 +140,16 @@ function resetState() {
 vi.mock('@core/db/db.utils', () => ({
   withTransaction: async (callback: (tx: unknown) => Promise<unknown>, tx?: unknown) =>
     callback(tx ?? {}),
+  afterTransactionCommit: async (callback: () => Promise<void>) => callback(),
 }));
 
 vi.mock('@config/env', () => ({
   documentConfig: configState.documentConfig,
   backfillConfig: configState.backfillConfig,
+  ragConfig: {
+    searchOverfetchFactor: 2,
+    searchMaxCandidates: 100,
+  },
 }));
 
 vi.mock('@core/logger', () => ({
