@@ -336,6 +336,12 @@ server {
 | `pnpm -F @knowledge-agent/client preview`                 | 本地预览前端构建产物             |
 | `pnpm architecture:check`                                 | 检查服务端依赖架构约束           |
 
+## 4.1 架构门禁
+
+- 提向主干的 Pull Request 和推送到 `main` 时，GitHub Actions 会自动执行 `pnpm architecture:check`。
+- 新增后端跨模块复用时，默认通过拥有方模块的 `public/*` 出口暴露，不直接新增 deep import。
+- 具体守则见 [docs/architecture-guardrails.md](./docs/architecture-guardrails.md)。
+
 ## 5. 开源协议
 
 本项目采用 **MIT License**。

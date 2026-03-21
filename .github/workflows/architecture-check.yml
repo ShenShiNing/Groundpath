@@ -1,0 +1,51 @@
+name: Architecture Guardrails
+
+on:
+  pull_request:
+    paths:
+      - '.dependency-cruiser.cjs'
+      - '.dependency-cruiser-known-violations.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.depcruise.json'
+      - 'packages/server/**'
+      - '.github/workflows/architecture-check.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - '.dependency-cruiser.cjs'
+      - '.dependency-cruiser-known-violations.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.depcruise.json'
+      - 'packages/server/**'
+      - '.github/workflows/architecture-check.yml'
+
+jobs:
+  architecture-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run dependency-cruiser architecture gate
+        run: pnpm architecture:check
