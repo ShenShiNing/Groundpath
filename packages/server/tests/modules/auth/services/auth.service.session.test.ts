@@ -70,7 +70,9 @@ vi.mock('@core/middleware/rate-limit.middleware', () => ({
 }));
 
 // Import after mocks
-import { authService, tokenService, sessionService } from '@modules/auth';
+import { authService } from '@modules/auth/services/auth.service';
+import { tokenService } from '@modules/auth/services/token.service';
+import { sessionService } from '@modules/auth/services/session.service';
 import { userRepository } from '@modules/user';
 
 // ==================== Session Management ====================

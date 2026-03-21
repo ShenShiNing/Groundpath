@@ -8,4 +8,3 @@ export {
   startDocumentProcessingWorker,
   stopDocumentProcessingWorker,
 } from './queue';
-export { default as ragRoutes } from './rag.routes';

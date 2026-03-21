@@ -30,7 +30,7 @@ vi.mock('@core/utils/request.utils', () => ({
 }));
 
 // Import after mocks
-import { emailController } from '@modules/auth';
+import { emailController } from '@modules/auth/verification/email.controller';
 import { emailVerificationService } from '@modules/auth';
 import { userService } from '@modules/user';
 

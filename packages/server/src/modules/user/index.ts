@@ -1,4 +1,5 @@
-export * from './controllers/user.controller';
-export * from './services/user.service';
-export * from './repositories/user.repository';
-export { default as userRoutes } from './user.routes';
+// Services (public API)
+export { userService } from './services/user.service';
+
+// Repositories (consumed cross-module)
+export { userRepository } from './repositories/user.repository';

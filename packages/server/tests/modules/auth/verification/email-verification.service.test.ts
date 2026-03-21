@@ -63,7 +63,7 @@ vi.mock('@config/env', async (importOriginal) => {
 
 // Import after mocks
 import { emailVerificationService } from '@modules/auth';
-import { emailVerificationRepository } from '@modules/auth';
+import { emailVerificationRepository } from '@modules/auth/verification/email-verification.repository';
 import { emailService } from '@modules/auth';
 
 // ==================== sendCode ====================

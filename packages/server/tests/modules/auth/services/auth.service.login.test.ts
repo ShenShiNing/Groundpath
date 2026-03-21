@@ -71,10 +71,10 @@ vi.mock('@core/middleware/rate-limit.middleware', () => ({
 }));
 
 // Import after mocks
-import { authService } from '@modules/auth';
+import { authService } from '@modules/auth/services/auth.service';
 import { userRepository } from '@modules/user';
 import { loginLogRepository } from '@modules/auth';
-import { tokenService } from '@modules/auth';
+import { tokenService } from '@modules/auth/services/token.service';
 import {
   checkAccountRateLimit,
   resetAccountRateLimit,

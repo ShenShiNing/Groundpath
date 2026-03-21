@@ -17,6 +17,3 @@ export * from './controllers/login-log.controller';
 export * from './controllers/operation-log.controller';
 export * from './controllers/structured-rag-dashboard.controller';
 export * from './controllers/structured-rag-report.controller';
-
-// Routes
-export { default as logsRoutes } from './logs.routes';

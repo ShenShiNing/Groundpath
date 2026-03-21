@@ -8,6 +8,3 @@ export * from './services/counter-sync.service';
 
 // Repositories
 export * from './repositories/knowledge-base.repository';
-
-// Routes
-export { default as knowledgeBaseRoutes } from './knowledge-base.routes';

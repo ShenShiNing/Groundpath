@@ -1,18 +1,11 @@
-// Controllers
-export * from './controllers/document.controller';
-// Note: upload.controller is not exported here to avoid circular dependency
-// (it imports from @modules/user, which imports from @modules/document)
+// Services (public API)
+export { documentService, documentContentService } from './services/document.service';
+export { documentTrashService } from './services/document-trash.service';
+export { documentVersionService } from './services/document-version.service';
+export { documentStorageService, storageService } from './services/document-storage.service';
 
-// Services
-export * from './services/document.service';
-export * from './services/document-trash.service';
-export * from './services/document-version.service';
-export * from './services/document-storage.service';
-
-// Repositories
-export * from './repositories/document.repository';
-export * from './repositories/document-chunk.repository';
-export * from './repositories/document-version.repository';
-
-// Routes
-export { default as documentRoutes } from './document.routes';
+// Repositories (consumed cross-module)
+export { documentRepository } from './repositories/document.repository';
+export type { DocumentBackfillCandidate } from './repositories/document.repository';
+export { documentChunkRepository } from './repositories/document-chunk.repository';
+export { documentVersionRepository } from './repositories/document-version.repository';
