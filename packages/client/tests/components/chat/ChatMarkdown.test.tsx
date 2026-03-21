@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '../../utils/render';
 
@@ -74,6 +74,9 @@ describe('ChatMarkdown', () => {
         isStreaming
       />
     );
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
 
     expect(mocks.markdownRenderer).toHaveBeenCalledWith(
       '# Streaming answer\n\nWith citation [1](#citation-1)'
@@ -88,6 +91,9 @@ describe('ChatMarkdown', () => {
     const view = await render(
       <ChatMarkdown content="Final answer [1]" citations={[citation]} onCitationClick={vi.fn()} />
     );
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
 
     expect(mocks.markdownRenderer).toHaveBeenCalledWith('Final answer [1](#citation-1)');
     expect(

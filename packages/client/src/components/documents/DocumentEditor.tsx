@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DocumentType } from '@knowledge-agent/shared/types';
-import MDEditor from '@uiw/react-md-editor/nohighlight';
 import { Save, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/components/theme/theme-provider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import '@uiw/react-md-editor/markdown-editor.css';
+
+const MDEditor = lazy(async () => {
+  const [mod] = await Promise.all([
+    import('@uiw/react-md-editor/nohighlight'),
+    import('@uiw/react-md-editor/markdown-editor.css'),
+  ]);
+  return mod;
+});
 
 interface DocumentEditorProps {
   documentId: string;
@@ -145,9 +151,15 @@ export function DocumentEditor({
       </div>
 
       {documentType === 'markdown' ? (
-        <div data-color-mode={colorMode}>
-          <MDEditor value={content} onChange={(value) => updateContent(value ?? '')} height={480} />
-        </div>
+        <Suspense fallback={<div className="h-120 animate-pulse rounded-md bg-muted" />}>
+          <div data-color-mode={colorMode}>
+            <MDEditor
+              value={content}
+              onChange={(value) => updateContent(value ?? '')}
+              height={480}
+            />
+          </div>
+        </Suspense>
       ) : (
         <Textarea
           value={content}

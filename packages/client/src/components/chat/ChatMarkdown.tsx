@@ -8,7 +8,6 @@ import {
   type ComponentType,
   type MouseEvent,
 } from 'react';
-import MDEditor from '@uiw/react-md-editor/nohighlight';
 import { Link } from '@tanstack/react-router';
 import type { Citation } from '@/stores';
 import { CitationInline } from './CitationInline';
@@ -78,6 +77,21 @@ export function ChatMarkdown({
   const hasFencedCodeBlock = useMemo(() => /```|~~~/.test(markdownContent), [markdownContent]);
   const [highlightRenderer, setHighlightRenderer] =
     useState<ComponentType<MarkdownRendererProps> | null>(null);
+  const [baseRenderer, setBaseRenderer] = useState<ComponentType<MarkdownRendererProps> | null>(
+    null
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void import('@uiw/react-md-editor/nohighlight').then((mod) => {
+      if (!cancelled) {
+        setBaseRenderer(() => mod.default.Markdown as ComponentType<MarkdownRendererProps>);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!hasFencedCodeBlock || highlightRenderer) return;
@@ -105,7 +119,7 @@ export function ChatMarkdown({
     [citations]
   );
   const MarkdownRenderer =
-    hasFencedCodeBlock && highlightRenderer ? highlightRenderer : MDEditor.Markdown;
+    hasFencedCodeBlock && highlightRenderer ? highlightRenderer : baseRenderer;
   const handleCopyToast = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement | null;
@@ -118,56 +132,60 @@ export function ChatMarkdown({
 
   return (
     <div className="min-w-0" onClickCapture={handleCopyToast}>
-      <MarkdownRenderer
-        source={source}
-        className="bg-transparent! p-0! text-sm leading-6 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1.5 [&_hr]:my-4"
-        components={{
-          a: ({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) => {
-            const citationIndex = getCitationIndex(href);
-            if (citationIndex) {
-              const citation = citationMap.get(citationIndex);
-              if (citation) {
+      {MarkdownRenderer ? (
+        <MarkdownRenderer
+          source={source}
+          className="bg-transparent! p-0! text-sm leading-6 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1.5 [&_hr]:my-4"
+          components={{
+            a: ({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) => {
+              const citationIndex = getCitationIndex(href);
+              if (citationIndex) {
+                const citation = citationMap.get(citationIndex);
+                if (citation) {
+                  return (
+                    <CitationInline
+                      index={citationIndex}
+                      citation={citation}
+                      onClick={() => onCitationClick(citation)}
+                    />
+                  );
+                }
+                return <span>[{citationIndex}]</span>;
+              }
+
+              if (href?.startsWith('/')) {
                 return (
-                  <CitationInline
-                    index={citationIndex}
-                    citation={citation}
-                    onClick={() => onCitationClick(citation)}
-                  />
+                  <Link to={href as string} className="underline break-all">
+                    {children}
+                  </Link>
                 );
               }
-              return <span>[{citationIndex}]</span>;
-            }
 
-            if (href?.startsWith('/')) {
               return (
-                <Link to={href as string} className="underline break-all">
+                <a
+                  {...props}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline break-all"
+                >
                   {children}
-                </Link>
+                </a>
               );
-            }
-
-            return (
-              <a
-                {...props}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline break-all"
-              >
-                {children}
-              </a>
-            );
-          },
-          code: ({ inline, className, ...props }: CodeRendererProps) => {
-            if (inline) {
-              return (
-                <code {...props} className="rounded border px-1 py-0.5 font-mono text-[0.9em]" />
-              );
-            }
-            return <code {...props} className={className} />;
-          },
-        }}
-      />
+            },
+            code: ({ inline, className, ...props }: CodeRendererProps) => {
+              if (inline) {
+                return (
+                  <code {...props} className="rounded border px-1 py-0.5 font-mono text-[0.9em]" />
+                );
+              }
+              return <code {...props} className={className} />;
+            },
+          }}
+        />
+      ) : (
+        <div className="text-sm whitespace-pre-wrap">{content}</div>
+      )}
       {isStreaming && (
         <span
           aria-hidden="true"
