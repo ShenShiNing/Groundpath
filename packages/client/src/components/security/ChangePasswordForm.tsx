@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
 import { useForm } from '@tanstack/react-form';
 import type { AxiosError } from 'axios';
@@ -8,34 +8,19 @@ import type { ApiResponse } from '@knowledge-agent/shared/types';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { authApi, emailApi } from '@/api';
+import { authApi } from '@/api';
 import { FormField } from '@/components/auth/FormField';
 import { VerificationCodeInput } from '@/components/auth/VerificationCodeInput';
 import { Button } from '@/components/ui/button';
 import { translateApiError } from '@/lib/http/translate-error';
 import { useAuthStore, useUserStore } from '@/stores';
-import {
-  resolveEmailSendErrorMessage,
-  resolveEmailSubmitErrorMessage,
-  resolveEmailVerifyErrorMessage,
-} from './errorMessage';
-import { useExpiryCountdown } from './useExpiryCountdown';
-
-const RESEND_COOLDOWN = 60;
+import { resolveEmailSubmitErrorMessage } from './errorMessage';
+import { useEmailVerification } from './useEmailVerification';
 
 function validateLocalizedPassword(value: string, t: TFunction<'security'>): string | undefined {
-  if (value.length < 8) {
-    return t('password.validation.minLength');
-  }
-
-  if (!/[a-zA-Z]/.test(value)) {
-    return t('password.validation.letter');
-  }
-
-  if (!/[0-9]/.test(value)) {
-    return t('password.validation.number');
-  }
-
+  if (value.length < 8) return t('password.validation.minLength');
+  if (!/[a-zA-Z]/.test(value)) return t('password.validation.letter');
+  if (!/[0-9]/.test(value)) return t('password.validation.number');
   return undefined;
 }
 
@@ -44,14 +29,8 @@ function validatePasswordDifference(
   newPassword: string,
   t: TFunction<'security'>
 ): string | undefined {
-  if (!currentPassword || !newPassword) {
-    return undefined;
-  }
-
-  if (currentPassword === newPassword) {
-    return t('password.sameAsCurrent');
-  }
-
+  if (!currentPassword || !newPassword) return undefined;
+  if (currentPassword === newPassword) return t('password.sameAsCurrent');
   return undefined;
 }
 
@@ -72,31 +51,13 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [code, setCode] = useState('');
-  const [codeExpiresAt, setCodeExpiresAt] = useState<string | null>(null);
-  const [verificationToken, setVerificationToken] = useState('');
-  const [verificationExpiresAt, setVerificationExpiresAt] = useState<string | null>(null);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const hasAutoVerified = useRef(false);
-  const codeRemainingSeconds = useExpiryCountdown(
-    codeExpiresAt,
-    useCallback(() => {
-      setCodeExpiresAt(null);
-      setError((current) => current ?? t('password.setup.codeExpired'));
-    }, [t])
-  );
-  const verificationRemainingSeconds = useExpiryCountdown(
-    verificationExpiresAt,
-    useCallback(() => {
-      setVerificationToken('');
-      setVerificationExpiresAt(null);
-      hasAutoVerified.current = false;
-      setError((current) => current ?? t('password.setup.verificationExpired'));
-    }, [t])
-  );
-  const hasActiveVerification = verificationToken.length > 0 && verificationRemainingSeconds > 0;
+
+  const verification = useEmailVerification({
+    email: user?.email,
+    flow: 'passwordSetup',
+    t,
+    setError,
+  });
 
   const form = useForm({
     defaultValues: {
@@ -126,7 +87,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
           return;
         }
 
-        if (!verificationToken) {
+        if (!verification.verificationToken) {
           setError(t('password.setup.verificationRequired'));
           return;
         }
@@ -135,23 +96,15 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
           email: user.email,
           newPassword: value.newPassword,
           confirmPassword: value.confirmPassword,
-          verificationToken,
+          verificationToken: verification.verificationToken,
           logoutAllDevices: false,
         });
 
         if (user) {
-          setUser({
-            ...user,
-            hasPassword: true,
-          });
+          setUser({ ...user, hasPassword: true });
         }
 
-        setCode('');
-        setCodeExpiresAt(null);
-        setVerificationToken('');
-        setVerificationExpiresAt(null);
-        setResendCooldown(0);
-        hasAutoVerified.current = false;
+        verification.reset();
         toast.success(t('password.setup.success'));
         onSuccess?.();
       } catch (err) {
@@ -170,119 +123,6 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
     },
   });
 
-  useEffect(() => {
-    if (resendCooldown <= 0) {
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setResendCooldown((previous) => Math.max(0, previous - 1));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [resendCooldown]);
-
-  const handleSendCode = useCallback(async () => {
-    if (!user?.email) {
-      setError(t('password.setup.emailMissing'));
-      return;
-    }
-
-    setError(null);
-    setIsSendingCode(true);
-
-    try {
-      const result = await emailApi.sendCode({
-        email: user.email,
-        type: 'reset_password',
-      });
-      setCode('');
-      setCodeExpiresAt(result.expiresAt);
-      setVerificationToken('');
-      setVerificationExpiresAt(null);
-      hasAutoVerified.current = false;
-      setResendCooldown(RESEND_COOLDOWN);
-      toast.success(t('password.setup.codeSent'));
-    } catch (err) {
-      const axiosError = err as AxiosError<ApiResponse>;
-      setError(resolveEmailSendErrorMessage(axiosError, t, 'password.setup'));
-    } finally {
-      setIsSendingCode(false);
-    }
-  }, [t, user?.email]);
-
-  const handleVerifyCode = useCallback(
-    async (codeToVerify: string) => {
-      if (hasActiveVerification) {
-        return;
-      }
-
-      if (!user?.email) {
-        setError(t('password.setup.emailMissing'));
-        return;
-      }
-
-      if (codeToVerify.length !== 6) {
-        setError(t('password.setup.codeInvalidLength'));
-        return;
-      }
-
-      if (codeRemainingSeconds === 0) {
-        setError(t('password.setup.codeExpired'));
-        return;
-      }
-
-      setError(null);
-      setIsVerifyingCode(true);
-
-      try {
-        const result = await emailApi.verifyCode({
-          email: user.email,
-          code: codeToVerify,
-          type: 'reset_password',
-        });
-        setVerificationToken(result.verificationToken);
-        setVerificationExpiresAt(result.expiresAt);
-        setCodeExpiresAt(null);
-        toast.success(t('password.setup.verified'));
-      } catch (err) {
-        const axiosError = err as AxiosError<ApiResponse>;
-        setVerificationToken('');
-        setVerificationExpiresAt(null);
-        hasAutoVerified.current = false;
-        setError(resolveEmailVerifyErrorMessage(axiosError, t, 'password.setup'));
-      } finally {
-        setIsVerifyingCode(false);
-      }
-    },
-    [codeRemainingSeconds, hasActiveVerification, t, user?.email]
-  );
-
-  const handleCodeChange = useCallback(
-    (nextCode: string) => {
-      setCode(nextCode);
-      setError(null);
-      setVerificationToken('');
-      setVerificationExpiresAt(null);
-
-      if (nextCode.length === 6 && !hasAutoVerified.current && !isVerifyingCode) {
-        hasAutoVerified.current = true;
-        void handleVerifyCode(nextCode);
-      } else if (nextCode.length < 6) {
-        hasAutoVerified.current = false;
-      }
-    },
-    [handleVerifyCode, isVerifyingCode]
-  );
-
-  const showVerificationSection =
-    !hasPassword &&
-    (resendCooldown > 0 ||
-      code.length > 0 ||
-      codeExpiresAt !== null ||
-      verificationToken.length > 0 ||
-      verificationExpiresAt !== null);
-
   return (
     <form
       onSubmit={(event) => {
@@ -298,14 +138,18 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
             <p className="text-sm text-muted-foreground">
               {t('password.setup.codeHint', { email: user?.email ?? '' })}
             </p>
-            {codeRemainingSeconds > 0 && (
+            {verification.codeRemainingSeconds > 0 && (
               <p className="text-xs text-muted-foreground">
-                {t('password.setup.codeExpiresIn', { seconds: codeRemainingSeconds })}
+                {t('password.setup.codeExpiresIn', {
+                  seconds: verification.codeRemainingSeconds,
+                })}
               </p>
             )}
-            {verificationToken && verificationRemainingSeconds > 0 && (
+            {verification.verificationToken && verification.verificationRemainingSeconds > 0 && (
               <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                {t('password.setup.verifiedExpiresIn', { seconds: verificationRemainingSeconds })}
+                {t('password.setup.verifiedExpiresIn', {
+                  seconds: verification.verificationRemainingSeconds,
+                })}
               </p>
             )}
           </div>
@@ -314,25 +158,27 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
             <Button
               type="button"
               className="cursor-pointer"
-              onClick={() => void handleSendCode()}
-              disabled={isSendingCode || isVerifyingCode}
+              onClick={() => void verification.handleSendCode()}
+              disabled={verification.isSendingCode || verification.isVerifyingCode}
             >
               <KeyRound className="mr-1 size-4" />
-              {isSendingCode ? t('password.setup.sendingCode') : t('password.setup.sendCode')}
+              {verification.isSendingCode
+                ? t('password.setup.sendingCode')
+                : t('password.setup.sendCode')}
             </Button>
-            {resendCooldown > 0 && (
+            {verification.resendCooldown > 0 && (
               <span className="text-xs text-muted-foreground">
-                {t('password.setup.resendAfter', { seconds: resendCooldown })}
+                {t('password.setup.resendAfter', { seconds: verification.resendCooldown })}
               </span>
             )}
           </div>
 
-          {showVerificationSection && (
+          {verification.showVerificationSection && (
             <div className="space-y-4">
               <VerificationCodeInput
-                value={code}
-                onChange={handleCodeChange}
-                disabled={isVerifyingCode || hasActiveVerification}
+                value={verification.code}
+                onChange={verification.handleCodeChange}
+                disabled={verification.isVerifyingCode || verification.hasActiveVerification}
                 autoFocus
                 error={!!error}
               />
@@ -342,10 +188,14 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
                   type="button"
                   variant="outline"
                   className="cursor-pointer"
-                  onClick={() => void handleVerifyCode(code)}
-                  disabled={code.length !== 6 || isVerifyingCode || hasActiveVerification}
+                  onClick={() => void verification.handleVerifyCode(verification.code)}
+                  disabled={
+                    verification.code.length !== 6 ||
+                    verification.isVerifyingCode ||
+                    verification.hasActiveVerification
+                  }
                 >
-                  {isVerifyingCode
+                  {verification.isVerifyingCode
                     ? t('password.setup.verifyingCode')
                     : t('password.setup.verifyCode')}
                 </Button>
@@ -353,14 +203,14 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
                   type="button"
                   variant="ghost"
                   className="cursor-pointer"
-                  onClick={() => void handleSendCode()}
-                  disabled={resendCooldown > 0 || isSendingCode}
+                  onClick={() => void verification.handleSendCode()}
+                  disabled={verification.resendCooldown > 0 || verification.isSendingCode}
                 >
                   {t('password.setup.resend')}
                 </Button>
               </div>
 
-              {verificationToken && (
+              {verification.verificationToken && (
                 <p className="text-sm text-emerald-600 dark:text-emerald-400">
                   {t('password.setup.verified')}
                 </p>
@@ -375,10 +225,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
           name="currentPassword"
           validators={{
             onBlur: ({ value }) => {
-              if (!value.trim()) {
-                return t('password.currentRequired');
-              }
-
+              if (!value.trim()) return t('password.currentRequired');
               return undefined;
             },
           }}
@@ -410,14 +257,8 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
           onChangeListenTo: hasPassword ? ['currentPassword'] : undefined,
           onBlur: ({ value, fieldApi }) => {
             const localizedError = validateLocalizedPassword(value, t);
-            if (localizedError) {
-              return localizedError;
-            }
-
-            if (!hasPassword) {
-              return undefined;
-            }
-
+            if (localizedError) return localizedError;
+            if (!hasPassword) return undefined;
             return validatePasswordDifference(
               fieldApi.form.getFieldValue('currentPassword'),
               value,
@@ -440,7 +281,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
             value={field.state.value}
             onChange={field.handleChange}
             onBlur={field.handleBlur}
-            disabled={isChangingPassword || isVerifyingCode}
+            disabled={isChangingPassword || verification.isVerifyingCode}
             required
             errors={field.state.meta.errors as string[]}
             hint={t('password.newHint')}
@@ -456,15 +297,9 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
         validators={{
           onChangeListenTo: ['newPassword'],
           onChange: ({ value, fieldApi }) => {
-            if (!value) {
-              return t('password.confirmRequired');
-            }
-
+            if (!value) return t('password.confirmRequired');
             const password = fieldApi.form.getFieldValue('newPassword');
-            if (value !== password) {
-              return t('password.mismatch');
-            }
-
+            if (value !== password) return t('password.mismatch');
             return undefined;
           },
         }}
@@ -479,7 +314,7 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
             value={field.state.value}
             onChange={field.handleChange}
             onBlur={field.handleBlur}
-            disabled={isChangingPassword || isVerifyingCode}
+            disabled={isChangingPassword || verification.isVerifyingCode}
             required
             errors={field.state.meta.errors as string[]}
             showPasswordToggle
@@ -499,8 +334,8 @@ export function ChangePasswordForm({ onSuccess }: ChangePasswordFormProps) {
             disabled={
               isSubmitting ||
               isChangingPassword ||
-              isVerifyingCode ||
-              (!hasPassword && !hasActiveVerification)
+              verification.isVerifyingCode ||
+              (!hasPassword && !verification.hasActiveVerification)
             }
           >
             {isSubmitting || isChangingPassword
