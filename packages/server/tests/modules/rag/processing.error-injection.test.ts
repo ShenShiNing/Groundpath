@@ -110,23 +110,17 @@ vi.mock('@modules/rag/services/chunking.service', () => ({
   chunkingService: chunkingServiceMock,
 }));
 
-vi.mock('@modules/document-index/services/document-parse-router.service', () => ({
+vi.mock('@modules/document-index/public/routing', () => ({
   documentParseRouterService: documentParseRouterServiceMock,
 }));
 
-vi.mock('@modules/document-index/services/document-index.service', () => ({
+vi.mock('@modules/document-index/public/indexing', () => ({
   documentIndexService: documentIndexServiceMock,
 }));
 
-vi.mock('@modules/document-index/services/parsers/markdown-structure.parser', () => ({
+vi.mock('@modules/document-index/public/parsers', () => ({
   markdownStructureParser: markdownStructureParserMock,
-}));
-
-vi.mock('@modules/document-index/services/parsers/docx-structure.parser', () => ({
   docxStructureParser: docxStructureParserMock,
-}));
-
-vi.mock('@modules/document-index/services/parsers/pdf-structure.parser', () => ({
   pdfStructureParser: pdfStructureParserMock,
 }));
 

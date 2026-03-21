@@ -7,7 +7,7 @@ import type {
   DocumentProcessingEnqueueOptions,
   DocumentProcessingJobData,
 } from './document-processing.types';
-import { documentIndexBackfillProgressService } from '@modules/document-index/services/document-index-backfill-progress.service';
+import { documentIndexBackfillProgressService } from '@modules/document-index/public/backfill-progress';
 
 const logger = createLogger('document-processing.queue');
 

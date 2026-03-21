@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@modules/document-index/services/search/ref-follow.service', () => ({
+vi.mock('@modules/document-index/public/search', () => ({
   refFollowService: mocks.service,
 }));
 

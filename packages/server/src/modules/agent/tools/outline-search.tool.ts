@@ -1,5 +1,5 @@
 import type { AgentTool, ToolContext, ToolDefinition, ToolExecutionResult } from './tool.interface';
-import { outlineSearchService } from '@modules/document-index/services/search/outline-search.service';
+import { outlineSearchService } from '@modules/document-index/public/search';
 
 function truncatePreview(preview?: string): string | undefined {
   if (!preview) return undefined;

@@ -34,7 +34,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@config/env', () => mocks.env);
 
-vi.mock('@modules/document/repositories/document.repository', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: mocks.documentRepository,
 }));
 

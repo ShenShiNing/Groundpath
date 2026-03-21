@@ -62,7 +62,7 @@ vi.mock('@core/logger', () => ({
   }),
 }));
 
-vi.mock('@modules/document/services/document-storage.service', () => ({
+vi.mock('@modules/document/public/storage', () => ({
   documentStorageService: {
     getDocumentContent: vi.fn(),
   },
