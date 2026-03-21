@@ -68,10 +68,10 @@ vi.mock('@modules/document-index/public/backfill-progress', () => ({
 }));
 
 import {
+  getDocumentProcessingQueue,
   enqueueDocumentProcessing,
   startDocumentProcessingWorker,
   stopDocumentProcessingWorker,
-  documentProcessingQueue,
 } from '@modules/rag/queue/document-processing.queue';
 
 // ==================== Tests ====================
@@ -177,9 +177,15 @@ describe('document-processing.queue', () => {
       await expect(stopDocumentProcessingWorker()).resolves.not.toThrow();
     });
 
-    it('should close queue even if no worker was started', async () => {
+    it('should no-op when neither worker nor queue was created', async () => {
       await expect(stopDocumentProcessingWorker()).resolves.not.toThrow();
-      expect(documentProcessingQueue.close).toHaveBeenCalled();
+    });
+
+    it('should close queue if it was created without starting worker', async () => {
+      const queue = getDocumentProcessingQueue();
+
+      await expect(stopDocumentProcessingWorker()).resolves.not.toThrow();
+      expect(queue.close).toHaveBeenCalled();
     });
   });
 });

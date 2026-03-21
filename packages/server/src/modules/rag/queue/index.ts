@@ -1,8 +1,8 @@
 export {
+  getDocumentProcessingQueue,
   enqueueDocumentProcessing,
   startDocumentProcessingWorker,
   stopDocumentProcessingWorker,
-  documentProcessingQueue,
 } from './document-processing.queue';
 export type {
   DocumentProcessingEnqueueOptions,

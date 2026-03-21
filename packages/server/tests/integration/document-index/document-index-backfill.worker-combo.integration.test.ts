@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type { Queue } from 'bullmq';
 import { describe, expect, it, vi } from 'vitest';
 
 function readEnvFile(filePath: string): Record<string, string> {
@@ -127,7 +128,7 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
   const { processingRecoveryService } =
     await import('@modules/rag/services/processing-recovery.service');
   const {
-    documentProcessingQueue,
+    getDocumentProcessingQueue,
     enqueueDocumentProcessing,
     startDocumentProcessingWorker,
     stopDocumentProcessingWorker,
@@ -195,7 +196,7 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
     closeDatabase,
     documentIndexBackfillService,
     processingRecoveryService,
-    documentProcessingQueue,
+    documentProcessingQueue: getDocumentProcessingQueue() as Queue,
     enqueueDocumentProcessing,
     startDocumentProcessingWorker,
     stopDocumentProcessingWorker,

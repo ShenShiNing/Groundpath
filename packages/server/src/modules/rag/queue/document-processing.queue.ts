@@ -18,19 +18,47 @@ const QUEUE_NAME = 'document-processing';
 const connectionOpts = getQueueConnection();
 const prefix = getQueuePrefix();
 
-export const documentProcessingQueue = new Queue<DocumentProcessingJobData>(QUEUE_NAME, {
-  connection: connectionOpts,
-  prefix,
-  defaultJobOptions: {
-    attempts: queueConfig.maxRetries + 1,
-    backoff: {
-      type: queueConfig.backoffType,
-      delay: queueConfig.backoffDelay,
+let documentProcessingQueue: Queue<DocumentProcessingJobData> | null = null;
+
+function createDocumentProcessingQueue(): Queue<DocumentProcessingJobData> {
+  return new Queue<DocumentProcessingJobData>(QUEUE_NAME, {
+    connection: connectionOpts,
+    prefix,
+    defaultJobOptions: {
+      attempts: queueConfig.maxRetries + 1,
+      backoff: {
+        type: queueConfig.backoffType,
+        delay: queueConfig.backoffDelay,
+      },
+      removeOnComplete: { count: 1000 },
+      removeOnFail: { count: 5000 },
     },
-    removeOnComplete: { count: 1000 },
-    removeOnFail: { count: 5000 },
-  },
-});
+  });
+}
+
+export function getDocumentProcessingQueue(): Queue<DocumentProcessingJobData> {
+  if (!documentProcessingQueue) {
+    documentProcessingQueue = createDocumentProcessingQueue();
+  }
+
+  return documentProcessingQueue;
+}
+
+async function closeDocumentProcessingQueue(): Promise<void> {
+  if (!documentProcessingQueue) {
+    return;
+  }
+
+  try {
+    await documentProcessingQueue.close();
+  } catch (error) {
+    if (!(error instanceof Error) || error.message !== 'Connection is closed.') {
+      throw error;
+    }
+  } finally {
+    documentProcessingQueue = null;
+  }
+}
 
 // ==================== Enqueue Helper ====================
 
@@ -67,7 +95,7 @@ export async function enqueueDocumentProcessing(
   ].filter((segment): segment is string => Boolean(segment));
   const jobId = jobIdSegments.join('-');
 
-  await documentProcessingQueue.add('process', jobData, { jobId });
+  await getDocumentProcessingQueue().add('process', jobData, { jobId });
   logger.info(
     {
       documentId,
@@ -223,5 +251,5 @@ export async function stopDocumentProcessingWorker(): Promise<void> {
     worker = null;
     logger.info('Document processing worker stopped');
   }
-  await documentProcessingQueue.close();
+  await closeDocumentProcessingQueue();
 }
