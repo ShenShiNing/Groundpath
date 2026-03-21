@@ -16,22 +16,6 @@ const {
   customProviderMock: vi.fn(),
 }));
 
-vi.mock('@config/env', () => ({
-  llmConfig: {
-    anthropicApiKey: 'env-anthropic-key',
-    openaiApiKey: 'env-openai-key',
-    zhipuApiKey: 'env-zhipu-key',
-    ollamaBaseUrl: 'http://localhost:11434',
-    deepseek: { apiKey: 'env-deepseek-key' },
-  },
-  serverConfig: {
-    nodeEnv: 'test',
-  },
-  loggingConfig: {
-    level: 'silent',
-  },
-}));
-
 vi.mock('@modules/llm/providers/openai.provider', () => ({
   OpenAIProvider: openAIProviderMock,
 }));
