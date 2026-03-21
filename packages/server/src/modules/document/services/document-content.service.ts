@@ -14,7 +14,7 @@ import { documentVersionRepository } from '../repositories/document-version.repo
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { enqueueDocumentProcessing } from '@modules/rag';
+import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 import { storageProvider } from '@modules/storage';
 import type { RequestContext } from './document-upload.service';
 import { toDocumentInfo } from './document-upload.service';
@@ -213,7 +213,7 @@ export const documentContentService = {
       durationMs: Date.now() - startTime,
     });
 
-    enqueueDocumentProcessing(documentId, userId, {
+    dispatchDocumentProcessing(documentId, userId, {
       targetDocumentVersion: newVersion,
       reason: 'edit',
     }).catch((err) => {

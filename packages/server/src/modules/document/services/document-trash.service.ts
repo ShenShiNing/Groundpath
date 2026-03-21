@@ -15,7 +15,7 @@ import { documentChunkRepository } from '../repositories/document-chunk.reposito
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { enqueueDocumentProcessing } from '@modules/rag';
+import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 import { vectorRepository } from '@modules/vector';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
@@ -142,7 +142,7 @@ export const documentTrashService = {
     });
 
     // 4. Enqueue reprocessing (will update totalChunks via delta calculation)
-    enqueueDocumentProcessing(documentId, userId, {
+    dispatchDocumentProcessing(documentId, userId, {
       targetDocumentVersion: document.currentVersion,
       reason: 'restore',
     }).catch((err) => {

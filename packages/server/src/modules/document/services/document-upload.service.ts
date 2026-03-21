@@ -10,7 +10,7 @@ import { documentVersionRepository } from '../repositories/document-version.repo
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { enqueueDocumentProcessing } from '@modules/rag';
+import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 
 const logger = createLogger('document-upload.service');
@@ -211,7 +211,7 @@ export const documentUploadService = {
     });
 
     // Enqueue document processing for RAG (non-blocking)
-    enqueueDocumentProcessing(docId, userId, {
+    dispatchDocumentProcessing(docId, userId, {
       targetDocumentVersion: 1,
       reason: 'upload',
     }).catch((err) => {

@@ -185,6 +185,7 @@ describe('auth.routes', () => {
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/logout-all',
+      requireCsrfProtectionMock,
       authenticateMock,
       authControllerMock.logoutAll
     );

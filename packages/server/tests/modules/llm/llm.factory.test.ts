@@ -16,22 +16,6 @@ const {
   customProviderMock: vi.fn(),
 }));
 
-vi.mock('@config/env', () => ({
-  llmConfig: {
-    anthropicApiKey: 'env-anthropic-key',
-    openaiApiKey: 'env-openai-key',
-    zhipuApiKey: 'env-zhipu-key',
-    ollamaBaseUrl: 'http://localhost:11434',
-    deepseek: { apiKey: 'env-deepseek-key' },
-  },
-  serverConfig: {
-    nodeEnv: 'test',
-  },
-  loggingConfig: {
-    level: 'silent',
-  },
-}));
-
 vi.mock('@modules/llm/providers/openai.provider', () => ({
   OpenAIProvider: openAIProviderMock,
 }));
@@ -87,40 +71,33 @@ describe('llm.factory > createLLMProvider', () => {
     expect(provider).toEqual({ provider: 'openai', apiKey: 'direct-key', model: 'gpt-4o' });
   });
 
-  it('should fallback to env key for openai', () => {
-    const provider = createLLMProvider('openai', { model: 'gpt-4o-mini' });
-
-    expect(openAIProviderMock).toHaveBeenCalledWith('env-openai-key', 'gpt-4o-mini');
-    expect(provider).toEqual({
-      provider: 'openai',
-      apiKey: 'env-openai-key',
-      model: 'gpt-4o-mini',
-    });
+  it('should throw when openai api key is not provided', () => {
+    expect(() => createLLMProvider('openai', { model: 'gpt-4o-mini' })).toThrow(
+      'OpenAI API key is required'
+    );
   });
 
-  it('should create anthropic provider with env fallback key', () => {
-    const provider = createLLMProvider('anthropic', { model: 'claude-sonnet' });
-
-    expect(anthropicProviderMock).toHaveBeenCalledWith('env-anthropic-key', 'claude-sonnet');
-    expect(provider).toEqual({
-      provider: 'anthropic',
-      apiKey: 'env-anthropic-key',
-      model: 'claude-sonnet',
-    });
+  it('should throw when anthropic api key is not provided', () => {
+    expect(() => createLLMProvider('anthropic', { model: 'claude-sonnet' })).toThrow(
+      'Anthropic API key is required'
+    );
   });
 
-  it('should create deepseek and zhipu providers', () => {
-    const deepseek = createLLMProvider('deepseek', { model: 'deepseek-chat' });
-    const zhipu = createLLMProvider('zhipu', { model: 'glm-4' });
-
-    expect(deepSeekProviderMock).toHaveBeenCalledWith('env-deepseek-key', 'deepseek-chat');
-    expect(zhipuProviderMock).toHaveBeenCalledWith('env-zhipu-key', 'glm-4');
-    expect(deepseek).toEqual({
-      provider: 'deepseek',
-      apiKey: 'env-deepseek-key',
+  it('should create deepseek and zhipu providers with explicit keys', () => {
+    const deepseek = createLLMProvider('deepseek', {
+      apiKey: 'direct-deepseek-key',
       model: 'deepseek-chat',
     });
-    expect(zhipu).toEqual({ provider: 'zhipu', apiKey: 'env-zhipu-key', model: 'glm-4' });
+    const zhipu = createLLMProvider('zhipu', { apiKey: 'direct-zhipu-key', model: 'glm-4' });
+
+    expect(deepSeekProviderMock).toHaveBeenCalledWith('direct-deepseek-key', 'deepseek-chat');
+    expect(zhipuProviderMock).toHaveBeenCalledWith('direct-zhipu-key', 'glm-4');
+    expect(deepseek).toEqual({
+      provider: 'deepseek',
+      apiKey: 'direct-deepseek-key',
+      model: 'deepseek-chat',
+    });
+    expect(zhipu).toEqual({ provider: 'zhipu', apiKey: 'direct-zhipu-key', model: 'glm-4' });
   });
 
   it('should create ollama provider with default or overridden base url', () => {

@@ -1,24 +1,13 @@
-export * from './repositories/document-index-version.repository';
-export * from './repositories/document-node.repository';
-export * from './repositories/document-node-content.repository';
-export * from './repositories/document-edge.repository';
-export * from './repositories/document-node-search.repository';
-export * from './repositories/document-index-backfill-run.repository';
-export * from './repositories/document-index-backfill-item.repository';
-export * from './services/document-index.service';
-export * from './services/document-index-activation.service';
-export * from './services/document-index-backfill.service';
-export * from './services/document-index-backfill-progress.service';
-export * from './services/document-index-cache.service';
-export * from './services/document-index-artifact-cleanup.service';
-export * from './services/document-parse-router.service';
-export * from './services/structured-rag-rollout.service';
-export * from './services/parsers/docx-structure.parser';
-export * from './services/parsers/pdf-structure.parser';
-export * from './services/parsers/markdown-structure.parser';
-export * from './services/parsers/heuristic-structure.parser';
-export * from './services/parsers/reference-edge-extractor';
-export * from './services/parsers/types';
-export * from './services/search/outline-search.service';
-export * from './services/search/node-read.service';
-export * from './services/search/ref-follow.service';
+// Lifecycle services
+export { documentIndexService } from './services/document-index.service';
+export { documentParseRouterService } from './services/document-parse-router.service';
+export type {
+  DocumentRouteMode,
+  DocumentRouteReason,
+} from './services/document-parse-router.service';
+export { documentIndexActivationService } from './services/document-index-activation.service';
+export { documentIndexBackfillService } from './services/document-index-backfill.service';
+export { documentIndexBackfillProgressService } from './services/document-index-backfill-progress.service';
+export { documentIndexArtifactCleanupService } from './services/document-index-artifact-cleanup.service';
+export { documentIndexCacheService } from './services/document-index-cache.service';
+export { structuredRagRolloutService } from './services/structured-rag-rollout.service';

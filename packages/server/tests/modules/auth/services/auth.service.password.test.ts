@@ -88,7 +88,7 @@ vi.mock('@core/db/db.utils', () => ({
 }));
 
 // Import after mocks
-import { passwordService } from '@modules/auth';
+import { passwordService } from '@modules/auth/services/password.service';
 import { userService } from '@modules/user';
 import { refreshTokenRepository } from '@modules/auth';
 import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';

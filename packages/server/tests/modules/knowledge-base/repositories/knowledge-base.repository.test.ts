@@ -15,6 +15,8 @@ const {
   andMock,
   isNullMock,
   sqlMock,
+  countMock,
+  relationsMock,
   getDbContextMock,
   nowMock,
   knowledgeBasesMock,
@@ -60,6 +62,8 @@ const {
       strings: Array.from(strings),
       values,
     })),
+    countMock: vi.fn(() => 'COUNT_SQL'),
+    relationsMock: vi.fn(() => ({})),
     getDbContextMock: vi.fn((tx: unknown) => tx ?? db),
     nowMock: vi.fn(() => 'NOW_SQL'),
     knowledgeBasesMock: {
@@ -78,6 +82,8 @@ vi.mock('drizzle-orm', () => ({
   and: andMock,
   isNull: isNullMock,
   sql: sqlMock,
+  count: countMock,
+  relations: relationsMock,
 }));
 
 vi.mock('@core/db', () => ({
@@ -91,6 +97,14 @@ vi.mock('@core/db/db.utils', () => ({
 
 vi.mock('@core/db/schema/document/knowledge-bases.schema', () => ({
   knowledgeBases: knowledgeBasesMock,
+}));
+
+vi.mock('@core/db/schema/document/documents.schema', () => ({
+  documents: {
+    knowledgeBaseId: 'doc.knowledgeBaseId',
+    deletedAt: 'doc.deletedAt',
+    chunkCount: 'doc.chunkCount',
+  },
 }));
 
 import { knowledgeBaseRepository } from '@modules/knowledge-base/repositories/knowledge-base.repository';

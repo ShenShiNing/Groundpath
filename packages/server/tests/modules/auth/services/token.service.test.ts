@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
 import type { DeviceInfo } from '@knowledge-agent/shared/types';
-import { tokenService } from '@modules/auth';
+import { tokenService } from '@modules/auth/services/token.service';
 import { AppError } from '@core/errors';
 import type { AccessTokenSubject } from '@core/types';
 

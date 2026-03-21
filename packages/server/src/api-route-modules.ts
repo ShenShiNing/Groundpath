@@ -1,14 +1,16 @@
 import type { Router } from 'express';
-import { authRoutes, emailRoutes, oauthRoutes } from './modules/auth';
-import { chatRoutes } from './modules/chat';
-import { documentAiRoutes } from './modules/document-ai';
-import { documentRoutes } from './modules/document';
-import { knowledgeBaseRoutes } from './modules/knowledge-base';
-import { llmRoutes } from './modules/llm';
-import { logsRoutes } from './modules/logs';
-import { ragRoutes } from './modules/rag';
-import { storageRoutes } from './modules/storage';
-import { userRoutes } from './modules/user';
+import authRoutes from './modules/auth/auth.routes';
+import emailRoutes from './modules/auth/verification/email.routes';
+import oauthRoutes from './modules/auth/oauth/oauth.routes';
+import chatRoutes from './modules/chat/chat.routes';
+import documentAiRoutes from './modules/document-ai/document-ai.routes';
+import documentRoutes from './modules/document/document.routes';
+import knowledgeBaseRoutes from './modules/knowledge-base/knowledge-base.routes';
+import llmRoutes from './modules/llm/llm.routes';
+import logsRoutes from './modules/logs/logs.routes';
+import ragRoutes from './modules/rag/rag.routes';
+import { storageRoutes } from './modules/storage/storage.routes';
+import userRoutes from './modules/user/user.routes';
 
 export type ApiRouteModuleId =
   | 'storage'
