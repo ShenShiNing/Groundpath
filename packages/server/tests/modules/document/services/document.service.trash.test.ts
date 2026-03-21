@@ -82,8 +82,8 @@ vi.mock('@modules/vector', () => ({
   },
 }));
 
-vi.mock('@modules/rag/queue/document-processing.queue', () => ({
-  enqueueDocumentProcessing: vi.fn(() => Promise.resolve()),
+vi.mock('@modules/document/ports/document-processing.port', () => ({
+  dispatchDocumentProcessing: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('@core/logger/operation-logger', () => ({

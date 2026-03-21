@@ -18,19 +18,13 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
     listByUser: vi.fn(),
     listAll: vi.fn(),
     updateCounters: vi.fn(),
-  },
-}));
-
-vi.mock('@modules/document', () => ({
-  documentRepository: {
-    countByKnowledgeBaseId: vi.fn(),
-    sumChunksByKnowledgeBaseId: vi.fn(),
+    countDocumentsByKnowledgeBaseId: vi.fn(),
+    sumDocumentChunksByKnowledgeBaseId: vi.fn(),
   },
 }));
 
 import { counterSyncService } from '@modules/knowledge-base/services/counter-sync.service';
 import { knowledgeBaseRepository } from '@modules/knowledge-base/repositories/knowledge-base.repository';
-import { documentRepository } from '@modules/document';
 
 const now = new Date('2026-02-17T00:00:00.000Z');
 
@@ -77,8 +71,8 @@ describe('counterSyncService', () => {
 
   it('should sync one knowledge base and update counters when values changed', async () => {
     vi.mocked(knowledgeBaseRepository.findById).mockResolvedValue(kb1);
-    vi.mocked(documentRepository.countByKnowledgeBaseId).mockResolvedValue(4);
-    vi.mocked(documentRepository.sumChunksByKnowledgeBaseId).mockResolvedValue(12);
+    vi.mocked(knowledgeBaseRepository.countDocumentsByKnowledgeBaseId).mockResolvedValue(4);
+    vi.mocked(knowledgeBaseRepository.sumDocumentChunksByKnowledgeBaseId).mockResolvedValue(12);
 
     const result = await counterSyncService.syncKnowledgeBase('kb-1');
 
@@ -97,8 +91,8 @@ describe('counterSyncService', () => {
 
   it('should not update counters when values are already in sync', async () => {
     vi.mocked(knowledgeBaseRepository.findById).mockResolvedValue(kb1);
-    vi.mocked(documentRepository.countByKnowledgeBaseId).mockResolvedValue(1);
-    vi.mocked(documentRepository.sumChunksByKnowledgeBaseId).mockResolvedValue(5);
+    vi.mocked(knowledgeBaseRepository.countDocumentsByKnowledgeBaseId).mockResolvedValue(1);
+    vi.mocked(knowledgeBaseRepository.sumDocumentChunksByKnowledgeBaseId).mockResolvedValue(5);
 
     const result = await counterSyncService.syncKnowledgeBase('kb-1');
 
