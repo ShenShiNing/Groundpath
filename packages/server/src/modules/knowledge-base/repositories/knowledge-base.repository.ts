@@ -1,4 +1,4 @@
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, count } from 'drizzle-orm';
 import { db } from '@core/db';
 import { now, getDbContext, type Transaction } from '@core/db/db.utils';
 import {
@@ -6,6 +6,7 @@ import {
   type KnowledgeBase,
   type NewKnowledgeBase,
 } from '@core/db/schema/document/knowledge-bases.schema';
+import { documents } from '@core/db/schema/document/documents.schema';
 
 function extractRows<T>(result: unknown): T[] {
   return (result as [T[]])[0] ?? [];
@@ -178,5 +179,29 @@ export const knowledgeBaseRepository = {
    */
   async listAll(): Promise<KnowledgeBase[]> {
     return db.select().from(knowledgeBases).where(isNull(knowledgeBases.deletedAt));
+  },
+
+  /**
+   * Count active (non-deleted) documents belonging to a knowledge base.
+   * Used by counter-sync to avoid cross-module dependency on the document repository.
+   */
+  async countDocumentsByKnowledgeBaseId(knowledgeBaseId: string): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(documents)
+      .where(and(eq(documents.knowledgeBaseId, knowledgeBaseId), isNull(documents.deletedAt)));
+    return result[0]?.count ?? 0;
+  },
+
+  /**
+   * Sum chunk counts for active documents belonging to a knowledge base.
+   * Used by counter-sync to avoid cross-module dependency on the document repository.
+   */
+  async sumDocumentChunksByKnowledgeBaseId(knowledgeBaseId: string): Promise<number> {
+    const result = await db
+      .select({ total: sql<number>`COALESCE(SUM(${documents.chunkCount}), 0)` })
+      .from(documents)
+      .where(and(eq(documents.knowledgeBaseId, knowledgeBaseId), isNull(documents.deletedAt)));
+    return result[0]?.total ?? 0;
   },
 };

@@ -20,9 +20,19 @@ import { initializeScheduler } from '@core/scheduler';
 import { closeDatabase } from '@core/db';
 import { closeRedis, connectRedis } from '@core/redis';
 import { createShutdownHandler } from '@core/server/shutdown';
-import { startDocumentProcessingWorker, stopDocumentProcessingWorker } from '@modules/rag';
+import {
+  startDocumentProcessingWorker,
+  stopDocumentProcessingWorker,
+  enqueueDocumentProcessing,
+} from '@modules/rag';
+import { registerDocumentProcessingDispatcher } from '@modules/document';
 import { setupOpenApi } from '@core/openapi';
 import router from './router';
+
+// ==================== Composition Root ====================
+
+// Wire the document → rag dependency via port (breaks circular import)
+registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
 
 // ==================== App Setup ====================
 

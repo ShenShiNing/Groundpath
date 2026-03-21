@@ -1,7 +1,6 @@
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
-import { documentRepository } from '@modules/document';
 
 const logger = createLogger('counter-sync.service');
 
@@ -26,8 +25,9 @@ export const counterSyncService = {
     }
 
     // Get actual counts from documents
-    const actualDocumentCount = await documentRepository.countByKnowledgeBaseId(kbId);
-    const actualTotalChunks = await documentRepository.sumChunksByKnowledgeBaseId(kbId);
+    const actualDocumentCount = await knowledgeBaseRepository.countDocumentsByKnowledgeBaseId(kbId);
+    const actualTotalChunks =
+      await knowledgeBaseRepository.sumDocumentChunksByKnowledgeBaseId(kbId);
 
     const result: SyncResult = {
       knowledgeBaseId: kbId,

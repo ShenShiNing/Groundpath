@@ -10,7 +10,7 @@ import { documentVersionRepository } from '../repositories/document-version.repo
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { enqueueDocumentProcessing } from '@modules/rag';
+import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 
 const logger = createLogger('document-version.service');
 
@@ -179,7 +179,7 @@ export const documentVersionService = {
     });
 
     // Enqueue document processing for RAG (non-blocking)
-    enqueueDocumentProcessing(documentId, userId, {
+    dispatchDocumentProcessing(documentId, userId, {
       targetDocumentVersion: newVersion,
       reason: 'upload',
     }).catch((err) => {
@@ -310,7 +310,7 @@ export const documentVersionService = {
     });
 
     // Enqueue document processing for RAG (non-blocking)
-    enqueueDocumentProcessing(documentId, userId, {
+    dispatchDocumentProcessing(documentId, userId, {
       targetDocumentVersion: newVersionNumber,
       reason: 'restore',
     }).catch((err) => {
