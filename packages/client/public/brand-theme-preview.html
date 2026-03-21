@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>溯知主题色预览</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f7fbf9;
+        --bg-strong: #eff6f2;
+        --surface: rgba(255, 255, 255, 0.78);
+        --surface-strong: #ffffff;
+        --border: rgba(18, 33, 28, 0.1);
+        --text: #11201b;
+        --text-muted: #60736b;
+        --shadow: 0 24px 64px rgba(8, 80, 65, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        font-family:
+          Aptos,
+          "Segoe UI Variable Text",
+          "PingFang SC",
+          "Hiragino Sans GB",
+          "Microsoft YaHei UI",
+          sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(29, 158, 117, 0.18), transparent 28%),
+          radial-gradient(circle at 85% 12%, rgba(8, 80, 65, 0.16), transparent 22%),
+          linear-gradient(180deg, #fcfffd 0%, var(--bg) 42%, #eef6f2 100%);
+        color: var(--text);
+      }
+
+      .shell {
+        width: min(1200px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 40px 0 72px;
+      }
+
+      .hero,
+      .panel {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        border-radius: 28px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 250, 247, 0.92)),
+          var(--surface);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 28px;
+        padding: 40px;
+      }
+
+      .hero::before,
+      .panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(120deg, rgba(29, 158, 117, 0.06), transparent 28%),
+          linear-gradient(300deg, rgba(8, 80, 65, 0.05), transparent 30%);
+        pointer-events: none;
+      }
+
+      .panel {
+        margin-top: 22px;
+        padding: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(225, 245, 238, 0.92);
+        color: #0e5c49;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #1d9e75;
+        box-shadow: 0 0 0 6px rgba(29, 158, 117, 0.12);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 20px;
+        max-width: 12ch;
+        font-size: clamp(40px, 7vw, 72px);
+        line-height: 0.95;
+        letter-spacing: -0.06em;
+      }
+
+      .hero p {
+        margin-top: 18px;
+        max-width: 56ch;
+        color: var(--text-muted);
+        font-size: 17px;
+        line-height: 1.8;
+      }
+
+      .chip-row,
+      .mini-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .chip-row {
+        margin-top: 24px;
+      }
+
+      .chip,
+      .mini-chip {
+        border-radius: 999px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+        background: rgba(255, 255, 255, 0.74);
+        font-weight: 600;
+      }
+
+      .chip {
+        padding: 10px 14px;
+        color: #214138;
+      }
+
+      .mini-chip {
+        padding: 8px 12px;
+        font-size: 13px;
+        color: #355046;
+      }
+
+      .hero-preview {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+
+      .logo-stage {
+        display: grid;
+        grid-template-columns: 140px minmax(0, 1fr);
+        gap: 18px;
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+        background: rgba(255, 255, 255, 0.84);
+      }
+
+      .logo-tile {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 140px;
+        border-radius: 22px;
+        background:
+          radial-gradient(circle at 30% 20%, rgba(225, 245, 238, 0.96), rgba(29, 158, 117, 0.08)),
+          linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(226, 242, 236, 0.82));
+      }
+
+      .logo-tile::after {
+        content: "";
+        position: absolute;
+        inset: 12px;
+        border: 1px dashed rgba(14, 92, 73, 0.12);
+        border-radius: 18px;
+      }
+
+      .logo-tile img {
+        width: 84px;
+        height: 84px;
+        z-index: 1;
+      }
+
+      .preview-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .surface-card,
+      .dark-card {
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      .surface-card {
+        border: 1px solid rgba(8, 80, 65, 0.08);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 248, 0.92));
+      }
+
+      .dark-card {
+        background:
+          radial-gradient(circle at top left, rgba(29, 158, 117, 0.18), transparent 32%),
+          linear-gradient(180deg, #0d3128, #061e19);
+        color: #f4fcf8;
+      }
+
+      .card-title {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .metric {
+        margin-top: 8px;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .metric-note {
+        margin-top: 6px;
+        color: rgba(17, 32, 27, 0.66);
+        font-size: 14px;
+      }
+
+      .dark-card .metric-note {
+        color: rgba(244, 252, 248, 0.72);
+      }
+
+      .section-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 22px;
+      }
+
+      .section-head h2 {
+        font-size: clamp(28px, 4vw, 40px);
+        line-height: 1;
+        letter-spacing: -0.05em;
+      }
+
+      .section-head p {
+        max-width: 56ch;
+        color: var(--text-muted);
+        line-height: 1.7;
+      }
+
+      .anchor-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .anchor-card {
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .anchor-swatch {
+        height: 92px;
+        border-radius: 16px;
+      }
+
+      .anchor-meta {
+        margin-top: 14px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .anchor-name {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .anchor-use {
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .palette-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .swatch-card {
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        padding: 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+        background: rgba(255, 255, 255, 0.82);
+        transition:
+          transform 180ms ease,
+          border-color 180ms ease,
+          box-shadow 180ms ease;
+        cursor: pointer;
+      }
+
+      .swatch-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(8, 80, 65, 0.16);
+        box-shadow: 0 18px 40px rgba(8, 80, 65, 0.08);
+      }
+
+      .swatch {
+        display: grid;
+        place-items: end start;
+        height: 76px;
+        padding: 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .swatch-info {
+        display: grid;
+        gap: 4px;
+      }
+
+      .swatch-label {
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .swatch-desc {
+        color: var(--text-muted);
+        line-height: 1.55;
+      }
+
+      .swatch-copy {
+        color: #0e5c49;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .semantic-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .semantic-card {
+        padding: 18px;
+        border-radius: 20px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      .semantic-card h3 {
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .semantic-card p {
+        margin-top: 6px;
+        color: var(--text-muted);
+        line-height: 1.55;
+      }
+
+      .semantic-preview {
+        margin-top: 14px;
+        height: 92px;
+        border-radius: 16px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+      }
+
+      .mockup-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 18px;
+      }
+
+      .app-shell,
+      .sidebar-shell {
+        border-radius: 24px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.84);
+      }
+
+      .app-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px;
+        border-bottom: 1px solid rgba(8, 80, 65, 0.08);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 242, 0.9));
+      }
+
+      .app-toolbar strong {
+        font-size: 16px;
+        letter-spacing: -0.03em;
+      }
+
+      .toolbar-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 16px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .button-primary {
+        background: var(--brand-500);
+        color: #f5fcf8;
+      }
+
+      .button-primary.secondary {
+        background: var(--brand-600);
+      }
+
+      .button-soft {
+        border-color: rgba(29, 158, 117, 0.14);
+        background: var(--brand-100);
+        color: var(--brand-700);
+      }
+
+      .button-ghost {
+        border-color: rgba(8, 80, 65, 0.08);
+        background: rgba(255, 255, 255, 0.82);
+        color: #29433a;
+      }
+
+      .app-content {
+        display: grid;
+        gap: 16px;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(247, 251, 249, 1), rgba(241, 247, 244, 0.96));
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat-box,
+      .message-card,
+      .search-box,
+      .sidebar-card {
+        border-radius: 18px;
+        border: 1px solid rgba(8, 80, 65, 0.08);
+      }
+
+      .stat-box {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .stat-label {
+        color: var(--text-muted);
+        font-size: 13px;
+      }
+
+      .stat-value {
+        margin-top: 10px;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+      }
+
+      .message-card {
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .message-card.primary {
+        background: linear-gradient(180deg, rgba(225, 245, 238, 0.9), rgba(244, 252, 248, 0.98));
+      }
+
+      .message-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .badge {
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(8, 80, 65, 0.08);
+        color: #164033;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .badge.success {
+        background: rgba(29, 158, 117, 0.12);
+        color: var(--brand-700);
+      }
+
+      .search-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        background: rgba(255, 255, 255, 0.94);
+      }
+
+      .search-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--brand-500);
+        box-shadow: 0 0 0 8px rgba(29, 158, 117, 0.12);
+      }
+
+      .search-line {
+        height: 12px;
+        flex: 1;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(8, 80, 65, 0.14), rgba(8, 80, 65, 0.03));
+      }
+
+      .sidebar-shell {
+        padding: 18px;
+        background:
+          radial-gradient(circle at top left, rgba(29, 158, 117, 0.12), transparent 36%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 246, 0.98));
+      }
+
+      .sidebar-card {
+        padding: 18px;
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .sidebar-card.dark {
+        background:
+          radial-gradient(circle at top left, rgba(29, 158, 117, 0.22), transparent 26%),
+          linear-gradient(180deg, #0d3128, #06211b);
+        color: #f3fbf7;
+      }
+
+      .sidebar-card.dark .mini-chip {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(243, 251, 247, 0.9);
+      }
+
+      .copy-toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        transform: translateY(12px);
+        opacity: 0;
+        padding: 12px 16px;
+        border-radius: 14px;
+        background: #0d3128;
+        color: #f4fcf8;
+        font-weight: 700;
+        box-shadow: 0 18px 40px rgba(8, 80, 65, 0.28);
+        transition:
+          opacity 180ms ease,
+          transform 180ms ease;
+      }
+
+      .copy-toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+
+      @media (max-width: 980px) {
+        .hero,
+        .mockup-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .anchor-grid,
+        .semantic-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100vw - 20px, 1200px);
+          padding: 18px 0 40px;
+        }
+
+        .hero,
+        .panel {
+          padding: 20px;
+          border-radius: 22px;
+        }
+
+        .anchor-grid,
+        .semantic-grid,
+        .stats-row {
+          grid-template-columns: 1fr;
+        }
+
+        .logo-stage,
+        .swatch-card {
+          grid-template-columns: 1fr;
+        }
+
+        .swatch-card {
+          gap: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Suzhi Theme Study</div>
+          <h1>根据 icon 提炼一套能落地的溯知主题色</h1>
+          <p>
+            这个预览页以 logo 的四个锚点色为起点：答案高光、品牌主绿、结构深绿、根系深色。主色阶与中性阶都在页面内自动生成，方便直接观察浅色界面、深色卡片、按钮与数据卡的实际效果。
+          </p>
+          <div class="chip-row">
+            <span class="chip">主色建议：#1D9E75</span>
+            <span class="chip">导航深色：#0E5C49</span>
+            <span class="chip">深根强调：#085041</span>
+            <span class="chip">浅底高光：#E1F5EE</span>
+          </div>
+        </div>
+        <div class="hero-preview">
+          <div class="logo-stage">
+            <div class="logo-tile">
+              <img src="./favicon.svg" alt="溯知图标" />
+            </div>
+            <div class="preview-stack">
+              <div class="surface-card">
+                <div class="card-title">Brand Direction</div>
+                <div class="metric">溯源而知，一问即达</div>
+                <div class="metric-note">主色不是“科技蓝”，而是偏可信、可验证、带组织记忆感的林地绿。</div>
+              </div>
+              <div class="dark-card">
+                <div class="card-title">On Dark Surface</div>
+                <div class="metric">答案要亮，根系要稳</div>
+                <div class="metric-note">深背景更适合仪表、导航、关键数据区，而不是整页铺满。</div>
+              </div>
+            </div>
+          </div>
+          <div class="mini-chip-row">
+            <span class="mini-chip">单击任意色块可复制色值</span>
+            <span class="mini-chip">包含 50-950 全色阶</span>
+            <span class="mini-chip">附语义 token 与组件预览</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Icon 锚点色</h2>
+            <p>先固定图形里真正有语义的颜色，再从这些锚点延展成完整主题。这样后续 UI 不会长成另一套语言。</p>
+          </div>
+        </div>
+        <div id="anchor-grid" class="anchor-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Brand 色阶</h2>
+            <p>这组是主品牌色阶，适合按钮、选中态、品牌图形、强调块和关键状态。推荐 `500` 作为默认主题色，`600/700` 用于 hover 和 active。</p>
+          </div>
+          <p>生成逻辑：`50/100` 取 icon 高光系，`500` 取主品牌绿，`800` 取根系深色，之间做分段插值。</p>
+        </div>
+        <div id="brand-scale" class="palette-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>Sage 中性色阶</h2>
+            <p>这组是偏绿灰的中性阶，不抢品牌主色，适合背景、边框、正文、分割线和静态模块。它决定的是“整体气质”，不是按钮颜色。</p>
+          </div>
+          <p>建议浅色界面默认落在 `50-200`，正文和标题主要使用 `700-950`。</p>
+        </div>
+        <div id="neutral-scale" class="palette-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>语义 Token</h2>
+            <p>主题最终要落到语义层，而不是页面里到处手写 `green-500`。这里给的是更适合产品 UI 的推荐分工。</p>
+          </div>
+        </div>
+        <div id="semantic-grid" class="semantic-grid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <div>
+            <h2>组件效果</h2>
+            <p>同一套色阶放进真实组件里，才能看出是否“稳”。这里重点看按钮层级、浅底信息卡、深色摘要卡和检索输入区的关系。</p>
+          </div>
+        </div>
+
+        <div class="mockup-grid">
+          <div class="app-shell">
+            <div class="app-toolbar">
+              <strong>溯知 / Brand Preview Console</strong>
+              <div class="toolbar-actions">
+                <span class="button button-soft">引用问答</span>
+                <span class="button button-ghost">组织记忆</span>
+              </div>
+            </div>
+
+            <div class="app-content">
+              <div class="search-box">
+                <span class="search-dot"></span>
+                <div class="search-line"></div>
+              </div>
+
+              <div class="stats-row">
+                <div class="stat-box">
+                  <div class="stat-label">平均检索耗时</div>
+                  <div class="stat-value">1.8s</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">可引用答案占比</div>
+                  <div class="stat-value">92%</div>
+                </div>
+                <div class="stat-box">
+                  <div class="stat-label">本周新增文档</div>
+                  <div class="stat-value">148</div>
+                </div>
+              </div>
+
+              <div class="message-card primary">
+                <div class="message-head">
+                  <strong>推荐按钮层级</strong>
+                  <div class="toolbar-actions">
+                    <span class="button button-primary">Primary 500</span>
+                    <span class="button button-primary secondary">Hover 600</span>
+                  </div>
+                </div>
+                <div class="metric-note">
+                  主按钮用 `brand-500`，hover 进入 `brand-600`。不要把 `700/800` 当默认按钮，否则整体会过重。
+                </div>
+                <div class="badge-row">
+                  <span class="badge success">可信来源</span>
+                  <span class="badge">语义检索</span>
+                  <span class="badge">组织记忆</span>
+                </div>
+              </div>
+
+              <div class="message-card">
+                <div class="message-head">
+                  <strong>浅底内容卡</strong>
+                  <span class="mini-chip">Surface + Border</span>
+                </div>
+                <div class="metric-note">
+                  内容卡以中性阶为主，让主色只出现在重要动作和状态上，页面会更克制，也更像企业级产品。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-shell">
+            <div class="sidebar-card">
+              <div class="card-title">Recommended Mapping</div>
+              <div class="metric">品牌主色是“点睛”，不是“底色”</div>
+              <div class="metric-note">
+                大面积背景使用 `neutral-50` 或 `neutral-100`，让绿色只占少量高价值区域。
+              </div>
+              <div class="badge-row">
+                <span class="badge success">brand-500</span>
+                <span class="badge">neutral-50</span>
+                <span class="badge">neutral-900</span>
+              </div>
+            </div>
+
+            <div class="sidebar-card dark" style="margin-top: 14px">
+              <div class="card-title">Dark Module</div>
+              <div class="metric">适合导航、洞察卡、摘要区</div>
+              <div class="metric-note">深色区要让高光与数值浮出来，所以图标里的亮芯和主绿会非常有用。</div>
+              <div class="mini-chip-row" style="margin-top: 14px">
+                <span class="mini-chip">#0E5C49</span>
+                <span class="mini-chip">#085041</span>
+                <span class="mini-chip">#E1F5EE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div class="copy-toast" id="copy-toast">已复制</div>
+
+    <script>
+      const shadeLabels = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+
+      const iconAnchors = [
+        { name: "Answer Glow", hex: "#E1F5EE", use: "答案高光、轻提示背景、浅色状态底。" },
+        { name: "Brand Core", hex: "#1D9E75", use: "主按钮、选中态、主品牌识别色。" },
+        { name: "Branch Stem", hex: "#167E61", use: "hover、图标主干、比主色更稳的强调层。" },
+        { name: "Root Depth", hex: "#085041", use: "深色模块、导航高亮、权威感数据块。" }
+      ];
+
+      const brandAnchors = {
+        50: "#F4FCF8",
+        100: "#E1F5EE",
+        500: "#1D9E75",
+        600: "#167E61",
+        800: "#085041",
+        950: "#031B16"
+      };
+
+      const neutralAnchors = {
+        50: "#F7FBF9",
+        100: "#EFF5F2",
+        500: "#63786F",
+        700: "#394C44",
+        900: "#15211C",
+        950: "#09110D"
+      };
+
+      const semanticTokens = [
+        {
+          name: "App Background",
+          token: "neutral-50",
+          color: () => getCssVar("--neutral-50"),
+          desc: "页面底色，建议永远不要用纯白铺满整页。"
+        },
+        {
+          name: "Surface",
+          token: "surface",
+          color: "#FFFFFF",
+          desc: "卡片、弹层、表格主体底色。"
+        },
+        {
+          name: "Soft Surface",
+          token: "neutral-100",
+          color: () => getCssVar("--neutral-100"),
+          desc: "浅提示区、hover 背景、分组容器。"
+        },
+        {
+          name: "Primary Action",
+          token: "brand-500",
+          color: () => getCssVar("--brand-500"),
+          desc: "默认主按钮、主操作、关键品牌点。"
+        },
+        {
+          name: "Primary Hover",
+          token: "brand-600",
+          color: () => getCssVar("--brand-600"),
+          desc: "按钮 hover、选中态、图标主干。"
+        },
+        {
+          name: "Focus Ring",
+          token: "brand-300",
+          color: () => getCssVar("--brand-300"),
+          desc: "输入框聚焦、键盘导航可见性。"
+        },
+        {
+          name: "Border",
+          token: "neutral-200",
+          color: () => getCssVar("--neutral-200"),
+          desc: "边框、分割线、弱结构信息。"
+        },
+        {
+          name: "Text Strong",
+          token: "neutral-900",
+          color: () => getCssVar("--neutral-900"),
+          desc: "正文标题、主要指标、核心信息。"
+        },
+        {
+          name: "Text Muted",
+          token: "neutral-500",
+          color: () => getCssVar("--neutral-500"),
+          desc: "辅助说明、元数据、次级标签。"
+        }
+      ];
+
+      function hexToRgb(hex) {
+        const raw = hex.replace("#", "");
+        const value = raw.length === 3 ? raw.split("").map((v) => v + v).join("") : raw;
+        return {
+          r: parseInt(value.slice(0, 2), 16),
+          g: parseInt(value.slice(2, 4), 16),
+          b: parseInt(value.slice(4, 6), 16)
+        };
+      }
+
+      function rgbToHex({ r, g, b }) {
+        const toHex = (value) => value.toString(16).padStart(2, "0");
+        return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+      }
+
+      function mixHex(a, b, ratio) {
+        const from = hexToRgb(a);
+        const to = hexToRgb(b);
+
+        return rgbToHex({
+          r: Math.round(from.r + (to.r - from.r) * ratio),
+          g: Math.round(from.g + (to.g - from.g) * ratio),
+          b: Math.round(from.b + (to.b - from.b) * ratio)
+        });
+      }
+
+      function generateScale(labels, anchors) {
+        const entries = Object.entries(anchors)
+          .map(([key, value]) => [Number(key), value])
+          .sort((left, right) => left[0] - right[0]);
+
+        return labels.map((label) => {
+          const direct = anchors[label];
+          if (direct) {
+            return { label, hex: direct };
+          }
+
+          let lower = entries[0];
+          let upper = entries[entries.length - 1];
+
+          for (let index = 0; index < entries.length - 1; index += 1) {
+            const current = entries[index];
+            const next = entries[index + 1];
+
+            if (label > current[0] && label < next[0]) {
+              lower = current;
+              upper = next;
+              break;
+            }
+          }
+
+          const ratio = (label - lower[0]) / (upper[0] - lower[0]);
+          return { label, hex: mixHex(lower[1], upper[1], ratio) };
+        });
+      }
+
+      function getCssVar(name) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      }
+
+      function relativeLuminance(hex) {
+        const { r, g, b } = hexToRgb(hex);
+        const srgb = [r, g, b].map((channel) => {
+          const normalized = channel / 255;
+          return normalized <= 0.03928
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+
+        return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+      }
+
+      function textColorFor(hex) {
+        return relativeLuminance(hex) > 0.58 ? "#10211C" : "#F4FCF8";
+      }
+
+      function setCssScale(prefix, scale) {
+        scale.forEach(({ label, hex }) => {
+          document.documentElement.style.setProperty(`--${prefix}-${label}`, hex);
+        });
+      }
+
+      function swatchDescription(prefix, label) {
+        if (prefix === "brand") {
+          if (label <= 100) return "浅提示背景、选区高亮、轻量状态底。";
+          if (label <= 300) return "focus、hover、弱强调、可视反馈。";
+          if (label === 400) return "次主按钮、活跃标签、图标强调。";
+          if (label === 500) return "默认主题色、主按钮、关键识别点。";
+          if (label === 600) return "hover、主动作强化、图标主干。";
+          if (label <= 800) return "深模块、选中导航、强调块。";
+          return "深色背景、权威信息、极深文本或底色。";
+        }
+
+        if (label <= 100) return "页面背景、浅分组背景、画布底色。";
+        if (label <= 300) return "边框、分隔线、容器浅底。";
+        if (label <= 500) return "辅助文案、说明文本、弱标签。";
+        if (label <= 700) return "正文、正文强调、结构标题。";
+        return "主标题、数据、最高对比文字。";
+      }
+
+      function renderAnchors() {
+        const container = document.getElementById("anchor-grid");
+        container.innerHTML = iconAnchors
+          .map(
+            (anchor) => `
+              <article class="anchor-card">
+                <div class="anchor-swatch" style="background:${anchor.hex}"></div>
+                <div class="anchor-meta">
+                  <div class="anchor-name">${anchor.name}</div>
+                  <div class="anchor-name">${anchor.hex}</div>
+                  <div class="anchor-use">${anchor.use}</div>
+                </div>
+              </article>
+            `
+          )
+          .join("");
+      }
+
+      function renderScale(containerId, prefix, scale) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = scale
+          .map(({ label, hex }) => {
+            const textColor = textColorFor(hex);
+
+            return `
+              <article class="swatch-card" data-copy="${hex}">
+                <div class="swatch" style="background:${hex}; color:${textColor}">
+                  <span>${label}</span>
+                </div>
+                <div class="swatch-info">
+                  <div class="swatch-label">${prefix === "brand" ? "Brand" : "Neutral"} ${label}</div>
+                  <div class="swatch-desc">${hex} · ${swatchDescription(prefix, label)}</div>
+                </div>
+                <div class="swatch-copy">Click to copy</div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      function renderSemantics() {
+        const container = document.getElementById("semantic-grid");
+        container.innerHTML = semanticTokens
+          .map((token) => {
+            const color = typeof token.color === "function" ? token.color() : token.color;
+            const onColor = textColorFor(color);
+
+            return `
+              <article class="semantic-card">
+                <h3>${token.name}</h3>
+                <p>${token.token} · ${token.desc}</p>
+                <div class="semantic-preview" style="background:${color}; color:${onColor}; display:grid; place-items:center; font-weight:800;">
+                  ${color}
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      async function copyToClipboard(value) {
+        try {
+          await navigator.clipboard.writeText(value);
+          showToast(`已复制 ${value}`);
+        } catch {
+          showToast(`复制失败：${value}`);
+        }
+      }
+
+      let toastTimer = null;
+
+      function showToast(message) {
+        const toast = document.getElementById("copy-toast");
+        toast.textContent = message;
+        toast.classList.add("show");
+
+        window.clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => {
+          toast.classList.remove("show");
+        }, 1600);
+      }
+
+      const brandScale = generateScale(shadeLabels, brandAnchors);
+      const neutralScale = generateScale(shadeLabels, neutralAnchors);
+
+      setCssScale("brand", brandScale);
+      setCssScale("neutral", neutralScale);
+      renderAnchors();
+      renderScale("brand-scale", "brand", brandScale);
+      renderScale("neutral-scale", "neutral", neutralScale);
+      renderSemantics();
+
+      document.addEventListener("click", (event) => {
+        const target = event.target.closest("[data-copy]");
+        if (!target) return;
+        copyToClipboard(target.dataset.copy);
+      });
+    </script>
+  </body>
+</html>
