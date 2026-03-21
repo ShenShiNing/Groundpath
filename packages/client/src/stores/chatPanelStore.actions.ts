@@ -1,8 +1,5 @@
-import type { ChatMessage, ChatPanelState, ToolStep } from './chatPanelStore.types';
-
-type SetState = (
-  updater: Partial<ChatPanelState> | ((state: ChatPanelState) => Partial<ChatPanelState>)
-) => void;
+import type { ChatMessage, ToolStep } from './chatPanelStore.types';
+import type { SetState } from './chatPanelStore.core';
 
 export function createMessageActions(set: SetState) {
   return {
