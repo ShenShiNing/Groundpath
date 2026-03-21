@@ -1,6 +1,3 @@
-// Controllers
-export * from './controllers/knowledge-base.controller';
-
 // Services
 export * from './services/knowledge-base.service';
 export { getCollectionName } from './services/knowledge-base.service';

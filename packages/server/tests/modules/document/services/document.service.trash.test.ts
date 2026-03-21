@@ -113,7 +113,7 @@ import { documentService } from '@modules/document';
 import { documentRepository } from '@modules/document';
 import { documentVersionRepository } from '@modules/document';
 import { documentStorageService } from '@modules/document';
-import { documentTrashService } from '@modules/document';
+import { documentTrashService } from '@modules/document/services/document-trash.service';
 
 // ==================== listTrash ====================
 // 场景：查询已删除的文档（回收站）
