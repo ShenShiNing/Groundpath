@@ -1,6 +1,6 @@
 import React, { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render } from '../../utils/render';
+import { flushPromises, render } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({
   markdownRenderer: vi.fn(),
@@ -50,6 +50,26 @@ vi.mock('@/lib/utils', () => ({
 import { ChatMarkdown } from '@/components/chat/ChatMarkdown';
 import type { Citation } from '@/stores';
 
+async function waitFor(assertion: () => void) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await flushPromises();
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Condition was not met');
+}
+
 describe('ChatMarkdown', () => {
   const citation: Citation = {
     id: 'cit-1',
@@ -66,6 +86,7 @@ describe('ChatMarkdown', () => {
   });
 
   it('renders markdown progressively while streaming and keeps the cursor visible', async () => {
+    const expectedSource = '# Streaming answer\n\nWith citation [1](#citation-1)';
     const view = await render(
       <ChatMarkdown
         content={'# Streaming answer\n\nWith citation [1]'}
@@ -74,31 +95,31 @@ describe('ChatMarkdown', () => {
         isStreaming
       />
     );
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 10));
+
+    await waitFor(() => {
+      expect(mocks.markdownRenderer).toHaveBeenLastCalledWith(expectedSource);
+      expect(view.container.querySelector('[data-testid="markdown-renderer"]')?.textContent).toBe(
+        expectedSource
+      );
     });
 
-    expect(mocks.markdownRenderer).toHaveBeenCalledWith(
-      '# Streaming answer\n\nWith citation [1](#citation-1)'
-    );
-    expect(view.container.querySelector('[data-testid="markdown-renderer"]')).not.toBeNull();
     expect(view.container.querySelector('[aria-hidden="true"]')).not.toBeNull();
 
     await view.unmount();
   });
 
   it('falls back to the full markdown renderer after streaming ends', async () => {
+    const expectedSource = 'Final answer [1](#citation-1)';
     const view = await render(
       <ChatMarkdown content="Final answer [1]" citations={[citation]} onCitationClick={vi.fn()} />
     );
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 10));
-    });
 
-    expect(mocks.markdownRenderer).toHaveBeenCalledWith('Final answer [1](#citation-1)');
-    expect(
-      view.container.querySelector('[data-testid="markdown-renderer"]')?.textContent
-    ).toContain('[1](#citation-1)');
+    await waitFor(() => {
+      expect(mocks.markdownRenderer).toHaveBeenLastCalledWith(expectedSource);
+      expect(view.container.querySelector('[data-testid="markdown-renderer"]')?.textContent).toBe(
+        expectedSource
+      );
+    });
 
     await view.unmount();
   });

@@ -7,17 +7,18 @@
 
 这个仓库已经具备中型 monorepo 的持续演进能力，`server / client / shared` 的职责边界总体清晰，后端在配置治理、服务编排、任务调度、集成测试上的成熟度依然明显高于常见业务仓库。
 
-和 2026-03-21 的初版审查相比，当前最大的变化不是“功能新增”，而是“架构门禁重新变得可信”：
+和 2026-03-21 的初版审查相比，当前最大的变化不是“功能新增”，而是“架构门禁、repo 级测试、coverage 闭环一起恢复可用”：
 
 1. `dependency-cruiser` 规则已经收敛，`pnpm architecture:check` 与 `pnpm architecture:check:all` 现在都为全绿。
-2. 历史 deep import 债务已经清零，`.dependency-cruiser-known-violations.json` 现在为空数组。
-3. 代码质量的主要风险已经从“后端边界债”转移到“前端可维护性”和“repo 级测试反馈”。
+2. `pnpm test` 现在已恢复全绿，154 个测试文件、1013 个测试全部通过。
+3. `packages/client/src/**/*.{ts,tsx}` 已纳入 coverage，client 不再游离在反馈闭环之外。
+4. 历史 deep import 债务已经清零，`.dependency-cruiser-known-violations.json` 现在为空数组。
 
 当前最值得优先处理的，不再是继续清理 `depcruise` 历史包袱，而是：
 
-1. 修复 `pnpm test` 下 client 侧 2 个红测，恢复仓库级绿灯。
-2. 把 client 纳入 coverage 反馈闭环。
-3. 拆分前端几个已经接近职责上限的编排热点文件。
+1. 拆分前端几个已经接近职责上限的编排热点文件。
+2. 在已接通的 client coverage 上补阈值和关键路径指标。
+3. 把 public API 约束持续固化进 CI 和 code review。
 
 ## 2. 审查范围与方法
 
@@ -31,15 +32,22 @@
   - `pnpm architecture:check`：通过
   - `pnpm architecture:check:all`：通过
   - `pnpm test:server`：通过
-  - `pnpm test`：失败，client 有 2 个红测
+  - `pnpm test`：通过
+  - `pnpm test:coverage`：通过
 
 当前 `pnpm test` 的结果是：
 
 - 总测试文件：154
 - 总测试数：1013
-- 通过：1011
-- 失败：2
-- 失败文件：`packages/client/tests/components/chat/ChatMarkdown.test.tsx`
+- 通过：1013
+- 失败：0
+
+当前 `pnpm test:coverage` 的基线是：
+
+- 全仓：statements `50.18%`，branches `41.74%`，functions `42.80%`，lines `50.69%`
+- client：statements `39.76%`，branches `32.71%`，functions `33.77%`，lines `40.16%`
+- server：statements `55.23%`，branches `47.05%`，functions `51.11%`，lines `55.74%`
+- shared：statements `91.73%`，branches `92.86%`，functions `41.67%`，lines `91.60%`
 
 ## 3. 项目结构概览
 
@@ -131,23 +139,23 @@
 
 另外，推送分支时 `db:drift-check` 也通过，说明本次 public API 收口没有引入 schema 漂移或迁移一致性问题。
 
+### 4.4 Repo 级测试与 coverage 闭环已恢复
+
+这次补的不是业务功能，而是质量信号的可靠性。
+
+当前状态：
+
+- `pnpm test`：通过
+- `pnpm test:coverage`：通过
+- `packages/client/src/**/*.{ts,tsx}`：已纳入 coverage
+
+更具体地说，这次 client 红测并不是已经确认的产品行为回归，而是测试本身对动态 import 使用固定 `10ms` 等待导致的异步抖动。把等待方式改成“等待真实渲染完成”之后，`ChatMarkdown` 单测和全仓测试都恢复稳定。
+
+这一步的价值不只是“把 CI 点绿”，而是把 repo 级测试重新恢复成可以直接参考的主干信号，并让 client 首次进入统一 coverage 视图。
+
 ## 5. 主要问题与风险
 
-### 5.1 P1：仓库级测试仍然不是全绿
-
-虽然 `pnpm test:server` 已通过，但 `pnpm test` 当前仍失败，原因是 client 侧 2 个测试未通过：
-
-- `packages/client/tests/components/chat/ChatMarkdown.test.tsx`
-
-这说明当前 repo 级质量信号仍然不完整。对协作者来说，“后端绿、全仓红”仍然会降低主干状态的可信度。
-
-影响：
-
-- 根级测试门禁不可直接作为 merge 信号
-- 前端流式渲染链路的稳定性仍有回归风险
-- 架构门禁已修复，但仓库级发布信号还未完全恢复
-
-### 5.2 P1：前端编排热点仍然集中
+### 5.1 P1：前端编排热点仍然集中
 
 最明显的三个文件仍然是：
 
@@ -166,20 +174,22 @@
 
 这会直接提高认知负担，并增加后续功能继续向中心化文件堆积的概率。
 
-### 5.3 P1：coverage 统计仍然对 client 失明
+### 5.2 P1：client coverage 已进入闭环，但覆盖深度仍然偏低
 
-虽然根 `vitest.config.ts` 的 `projects` 已包含 `packages/client`，但 `coverage.include` 目前仍只统计：
+这次更新之后，coverage 已经不再“对 client 失明”，但新的结论也因此变得更具体：
 
-- `packages/server/src/**/*.ts`
-- `packages/shared/src/**/*.ts`
+- client statements：`39.76%`
+- client branches：`32.71%`
+- client functions：`33.77%`
+- client lines：`40.16%`
 
 这意味着：
 
-- client 虽然有 38 个测试文件，但没有被纳入 coverage 反馈闭环
-- 仓库当前最复杂的交互链路之一仍然缺少定量覆盖指标
-- 即使后续把 `pnpm test` 修绿，coverage 也还不能真实反映前端质量
+- client 复杂交互虽然已经“可见”，但覆盖基线仍然偏低
+- `pages / routes / ui primitives` 一类目录仍有明显空白区域
+- 如果没有阈值或关键路径指标，coverage 目前更像观察面板，还不是约束门禁
 
-### 5.4 P2：public API 已出现，但还需要持续治理
+### 5.3 P2：public API 已出现，但还需要持续治理
 
 这次清理 deep import 之后，模块 public API 已经从“口头约定”变成了真实代码结构。但这也带来了新的维护要求：
 
@@ -194,35 +204,41 @@
 和 2026-03-21 的初版相比，这个项目当前更准确的成熟度判断是：
 
 - 架构门禁已经从“存在但不可信”进入“存在且可信”
+- repo 级测试已经恢复全绿
+- client 已进入 coverage 反馈闭环
 - 后端边界债已显著收敛
-- 主要质量风险开始集中到前端交互链路与仓库级反馈闭环
+- 主要质量风险进一步集中到前端交互链路的可维护性与覆盖深度
 
-也就是说，现在最有价值的工作不再是继续修后端历史白名单，而是做两类更直接的维护性治理：
+也就是说，现在最有价值的工作不再是继续修后端历史白名单，也不再是先把测试点绿或把 client 接进 coverage，而是做两类更直接的维护性治理：
 
-1. 恢复 repo 级测试全绿
-2. 控制前端编排继续中心化
+1. 控制前端编排继续中心化
+2. 把已可见的 client coverage 提升成真正可约束的质量信号
 
 ## 7. 建议的改进路线
 
-### 7.1 第一阶段：先恢复 repo 级绿灯
+### 7.1 第一阶段（已完成）：恢复 repo 级绿灯
 
-建议优先做下面几件事：
+当前已经完成：
 
 1. 修复 `packages/client/tests/components/chat/ChatMarkdown.test.tsx` 的 2 个失败用例。
-2. 确认这两个失败是测试预期落后，还是流式 markdown 渲染行为真的发生了回归。
+2. 确认失败原因是测试对动态 import 的固定等待时间导致的异步抖动，而不是已确认的流式 markdown 行为回归。
 3. 让 `pnpm test` 恢复为可直接作为主干质量信号的命令。
 
-这是当前最直接的质量收益点，因为架构检查已经绿了，测试红灯现在成为更明显的阻塞信号。
+这一步已经把“后端绿、全仓红”的状态收回来了。
 
-### 7.2 第二阶段：补齐 client 质量反馈
+### 7.2 第二阶段（已完成）：补齐 client 质量反馈
 
-建议：
+当前已经完成：
 
-1. 将 `packages/client/src/**/*.ts(x)` 纳入 coverage。
-2. 为关键前端能力设置最低阈值。
-3. 对聊天流式链路建立单独的 smoke/contract 级测试指标。
+1. 将 `packages/client/src/**/*.{ts,tsx}` 纳入 coverage。
+2. 让 `pnpm test:coverage` 输出 `client / server / shared` 的统一视图。
+3. 把问题从“看不见 client”推进到“可以量化 client 的真实基线”。
 
-否则前端复杂度继续上涨后，测试“存在”但质量不可量化的问题还会持续。
+下一步不再是“先接 coverage”，而是：
+
+1. 为关键前端能力设置最低阈值。
+2. 对聊天流式链路建立单独的 smoke/contract 级测试指标。
+3. 优先补齐当前低覆盖目录而不是平均用力。
 
 ### 7.3 第三阶段：拆前端三个热点文件
 
@@ -255,12 +271,14 @@
 - 配置治理成熟
 - 后端流程编排意识较强
 - 架构门禁已经恢复可信
+- repo 级测试已经恢复全绿
+- client 已进入 coverage 反馈闭环
 - 测试体系依然明显高于同类项目平均水平
 
 当前真正需要警惕的，不再是“后端边界已经失控”，而是：
 
-1. repo 级测试信号还没完全恢复
-2. 前端复杂交互开始形成新的中心化热点
-3. client 质量反馈还没有进入 coverage 闭环
+1. 前端复杂交互继续形成新的中心化热点
+2. client coverage 虽然已经可见，但当前基线仍然偏低
+3. public API 约束需要被长期守住，而不是只完成一次性清理
 
-如果团队接下来一到两个迭代里优先完成“修 client 红测 + 补 coverage + 拆前端热点”这三件事，这个仓库会进入一个比 2026-03-21 更稳定的可维护阶段。
+如果团队接下来一到两个迭代里优先完成“拆前端热点 + 为 client coverage 增加阈值/关键链路指标 + 固化 public API 约束”这三件事，这个仓库会进入一个比 2026-03-21 更稳定的可维护阶段。
