@@ -93,7 +93,23 @@ vi.mock('@modules/document', () => ({
   documentChunkRepository: documentChunkRepositoryMock,
 }));
 
+vi.mock('@modules/document/repositories/document.repository', () => ({
+  documentRepository: documentRepositoryMock,
+}));
+
+vi.mock('@modules/document/repositories/document-version.repository', () => ({
+  documentVersionRepository: documentVersionRepositoryMock,
+}));
+
+vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
+  documentChunkRepository: documentChunkRepositoryMock,
+}));
+
 vi.mock('@modules/knowledge-base', () => ({
+  knowledgeBaseService: knowledgeBaseServiceMock,
+}));
+
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 
@@ -140,6 +156,7 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn(),
   and: vi.fn(),
   inArray: vi.fn(),
+  relations: vi.fn(() => ({})),
   sql: Object.assign(
     (strings: TemplateStringsArray, ...values: unknown[]) => ({ strings, values }),
     {

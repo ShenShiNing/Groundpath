@@ -86,9 +86,10 @@ export default function KnowledgeBaseDetailPage() {
       void navigate({
         to: '/documents/$id',
         params: { id: document.id },
+        search: { fromKnowledgeBaseId: knowledgeBaseId },
       });
     },
-    [navigate]
+    [knowledgeBaseId, navigate]
   );
 
   const handleDeleteDocument = useCallback((document: DocumentListItem) => {

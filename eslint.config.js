@@ -21,6 +21,15 @@ export default [
     },
   },
   {
+    files: ['**/*.cjs'],
+    languageOptions: {
+      sourceType: 'commonjs',
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
     files: ['packages/**/*.{ts,tsx,js,jsx}'],
     plugins: {
       'react-hooks': reactHooks,

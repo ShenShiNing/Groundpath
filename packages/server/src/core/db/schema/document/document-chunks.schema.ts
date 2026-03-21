@@ -9,7 +9,6 @@ import {
   json,
   foreignKey,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
 import { documents } from './documents.schema';
 import { documentIndexVersions } from './document-index-versions.schema';
 
@@ -57,14 +56,6 @@ export const documentChunks = mysqlTable(
     }).onDelete('cascade'),
   ]
 );
-
-// ==================== Relations ====================
-export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
-  document: one(documents, {
-    fields: [documentChunks.documentId],
-    references: [documents.id],
-  }),
-}));
 
 export type DocumentChunk = typeof documentChunks.$inferSelect;
 export type NewDocumentChunk = typeof documentChunks.$inferInsert;

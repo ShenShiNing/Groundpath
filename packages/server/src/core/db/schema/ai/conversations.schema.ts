@@ -1,8 +1,6 @@
 import { mysqlTable, varchar, timestamp, index, foreignKey } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
 import { knowledgeBases } from '../document/knowledge-bases.schema';
-import { messages } from './messages.schema';
 
 export const conversations = mysqlTable(
   'conversations',
@@ -44,19 +42,6 @@ export const conversations = mysqlTable(
     }).onDelete('set null'),
   ]
 );
-
-// ==================== Relations ====================
-export const conversationsRelations = relations(conversations, ({ one, many }) => ({
-  user: one(users, {
-    fields: [conversations.userId],
-    references: [users.id],
-  }),
-  knowledgeBase: one(knowledgeBases, {
-    fields: [conversations.knowledgeBaseId],
-    references: [knowledgeBases.id],
-  }),
-  messages: many(messages),
-}));
 
 export type Conversation = typeof conversations.$inferSelect;
 export type NewConversation = typeof conversations.$inferInsert;

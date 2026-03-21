@@ -9,7 +9,6 @@ import {
   foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { users } from '../user/users.schema';
-import { relations } from 'drizzle-orm';
 
 // ==================== 刷新Token表 ====================
 export const refreshTokens = mysqlTable(
@@ -51,14 +50,6 @@ export const refreshTokens = mysqlTable(
     }).onDelete('cascade'),
   ]
 );
-
-// ==================== Relations ====================
-export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
-  user: one(users, {
-    fields: [refreshTokens.userId],
-    references: [users.id],
-  }),
-}));
 
 export type RefreshToken = typeof refreshTokens.$inferSelect;
 export type NewRefreshToken = typeof refreshTokens.$inferInsert;

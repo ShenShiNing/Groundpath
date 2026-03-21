@@ -61,7 +61,7 @@ export function SecurityPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-8 xl:items-start xl:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 rounded-2xl border border-border/70 bg-background/70">
             <section className="px-6 py-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -152,22 +152,24 @@ export function SecurityPage() {
             </section>
           </div>
 
-          <aside className="space-y-4 xl:sticky xl:top-6 xl:self-start xl:border-l xl:pl-6">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold">{t('tips.title')}</h2>
-              <p className="text-sm text-muted-foreground">{t('tips.description')}</p>
-            </div>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              {tipItems.map((item, index) => (
-                <li key={item} className="flex gap-3">
-                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                    {index + 1}
-                  </span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </aside>
+          <div className="xl:self-start">
+            <aside className="space-y-4 xl:sticky xl:top-6 xl:border-l xl:pl-6">
+              <div className="space-y-2">
+                <h2 className="text-lg font-semibold">{t('tips.title')}</h2>
+                <p className="text-sm text-muted-foreground">{t('tips.description')}</p>
+              </div>
+              <ul className="space-y-3 text-sm text-muted-foreground">
+                {tipItems.map((item, index) => (
+                  <li key={item} className="flex gap-3">
+                    <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {index + 1}
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          </div>
         </div>
       </div>
     </div>

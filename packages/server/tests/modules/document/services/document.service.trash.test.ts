@@ -63,7 +63,7 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
   },
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
     getEmbeddingConfig: vi.fn(() =>

@@ -7,10 +7,7 @@ import {
   structuredRagDashboardQuerySchema,
   structuredRagReportQuerySchema,
 } from '@knowledge-agent/shared/schemas';
-import { loginLogController } from './controllers/login-log.controller';
-import { operationLogController } from './controllers/operation-log.controller';
-import { structuredRagDashboardController } from './controllers/structured-rag-dashboard.controller';
-import { structuredRagReportController } from './controllers/structured-rag-report.controller';
+import { logsRouteHandlers } from './logs.route-handlers';
 
 const router = express.Router();
 
@@ -23,25 +20,25 @@ router.use(authenticate);
  * GET /api/logs/login
  * List current user's login history
  */
-router.get('/login', validateQuery(loginLogQuerySchema), loginLogController.list);
+router.get('/login', validateQuery(loginLogQuerySchema), logsRouteHandlers.loginLogController.list);
 
 /**
  * GET /api/logs/login/recent
  * Get recent login history (simplified)
  */
-router.get('/login/recent', loginLogController.recent);
+router.get('/login/recent', logsRouteHandlers.loginLogController.recent);
 
 // ==================== Structured RAG Dashboard ====================
 
 router.get(
   '/structured-rag/summary',
   validateQuery(structuredRagDashboardQuerySchema),
-  structuredRagDashboardController.summary
+  logsRouteHandlers.structuredRagDashboardController.summary
 );
 router.get(
   '/structured-rag/report',
   validateQuery(structuredRagReportQuerySchema),
-  structuredRagReportController.report
+  logsRouteHandlers.structuredRagReportController.report
 );
 
 // ==================== Operation Logs ====================
@@ -50,7 +47,11 @@ router.get(
  * GET /api/logs/operations
  * List current user's operation history
  */
-router.get('/operations', validateQuery(operationLogQuerySchema), operationLogController.list);
+router.get(
+  '/operations',
+  validateQuery(operationLogQuerySchema),
+  logsRouteHandlers.operationLogController.list
+);
 
 /**
  * GET /api/logs/operations/resource/:resourceType/:resourceId
@@ -59,7 +60,7 @@ router.get('/operations', validateQuery(operationLogQuerySchema), operationLogCo
 router.get(
   '/operations/resource/:resourceType/:resourceId',
   validateQuery(resourceHistorySchema),
-  operationLogController.resourceHistory
+  logsRouteHandlers.operationLogController.resourceHistory
 );
 
 export default router;

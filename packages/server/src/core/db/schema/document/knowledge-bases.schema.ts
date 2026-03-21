@@ -7,9 +7,7 @@ import {
   int,
   foreignKey,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
-import { documents } from './documents.schema';
 
 export const knowledgeBases = mysqlTable(
   'knowledge_bases',
@@ -50,15 +48,6 @@ export const knowledgeBases = mysqlTable(
     }).onDelete('restrict'),
   ]
 );
-
-// ==================== Relations ====================
-export const knowledgeBasesRelations = relations(knowledgeBases, ({ one, many }) => ({
-  user: one(users, {
-    fields: [knowledgeBases.userId],
-    references: [users.id],
-  }),
-  documents: many(documents),
-}));
 
 export type KnowledgeBase = typeof knowledgeBases.$inferSelect;
 export type NewKnowledgeBase = typeof knowledgeBases.$inferInsert;

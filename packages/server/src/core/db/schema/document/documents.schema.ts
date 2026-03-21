@@ -9,12 +9,8 @@ import {
   int,
   foreignKey,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
 import { users } from '../user/users.schema';
-import { documentVersions } from './document-versions.schema';
-import { documentChunks } from './document-chunks.schema';
 import { knowledgeBases } from './knowledge-bases.schema';
-import { documentIndexVersions } from './document-index-versions.schema';
 
 export const documents = mysqlTable(
   'documents',
@@ -85,21 +81,6 @@ export const documents = mysqlTable(
     }).onDelete('cascade'),
   ]
 );
-
-// ==================== Relations ====================
-export const documentsRelations = relations(documents, ({ one, many }) => ({
-  user: one(users, {
-    fields: [documents.userId],
-    references: [users.id],
-  }),
-  knowledgeBase: one(knowledgeBases, {
-    fields: [documents.knowledgeBaseId],
-    references: [knowledgeBases.id],
-  }),
-  versions: many(documentVersions),
-  chunks: many(documentChunks),
-  indexVersions: many(documentIndexVersions),
-}));
 
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;

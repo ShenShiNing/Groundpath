@@ -8,10 +8,6 @@ import {
   uniqueIndex,
   text,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
-import { userAuths } from '../auth/user-auths.schema';
-import { refreshTokens } from '../auth/refresh-tokens.schema';
-import { loginLogs } from '../system/login-logs.schema';
 
 export const users = mysqlTable(
   'users',
@@ -55,13 +51,6 @@ export const users = mysqlTable(
     uniqueIndex('email_deleted_idx').on(table.email, table.deletedAt),
   ]
 );
-
-// ==================== Relations ====================
-export const usersRelations = relations(users, ({ many }) => ({
-  auths: many(userAuths),
-  refreshTokens: many(refreshTokens),
-  loginLogs: many(loginLogs),
-}));
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

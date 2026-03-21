@@ -8,7 +8,6 @@ import {
   index,
   foreignKey,
 } from 'drizzle-orm/mysql-core';
-import { relations } from 'drizzle-orm';
 import { conversations } from './conversations.schema';
 import type { MessageMetadata } from '@knowledge-agent/shared/types';
 
@@ -41,14 +40,6 @@ export const messages = mysqlTable(
     }).onDelete('cascade'),
   ]
 );
-
-// ==================== Relations ====================
-export const messagesRelations = relations(messages, ({ one }) => ({
-  conversation: one(conversations, {
-    fields: [messages.conversationId],
-    references: [conversations.id],
-  }),
-}));
 
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
