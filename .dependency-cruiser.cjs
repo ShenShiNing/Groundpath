@@ -5,8 +5,11 @@ module.exports = {
     {
       name: 'no-circular',
       severity: 'error',
-      comment: 'Circular dependencies lead to tight coupling and initialization issues.',
-      from: {},
+      comment:
+        'Circular dependencies in application code lead to tight coupling and initialization issues. ORM schema relation files are excluded because bidirectional Drizzle relations otherwise drown out the signal.',
+      from: {
+        pathNot: '^packages/server/src/core/db/schema/',
+      },
       to: { circular: true },
     },
 
@@ -16,19 +19,19 @@ module.exports = {
       severity: 'error',
       comment:
         'Controllers must go through services; direct repository access bypasses business logic.',
-      from: { path: 'src/modules/.+/controllers/.+\\.ts$' },
-      to: { path: 'src/modules/.+/repositories/.+\\.ts$' },
+      from: { path: '^packages/server/src/modules/[^/]+/controllers/.+\\.ts$' },
+      to: { path: '^packages/server/src/modules/[^/]+/repositories/.+\\.ts$' },
     },
 
-    // ── Rule 3: Routes must not cross-module import controllers ──
+    // ── Rule 3: Modules must not import controllers from other modules ──
     {
       name: 'no-cross-module-controller-import',
       severity: 'error',
       comment:
-        'Routes should only import controllers from their own module. Cross-module access should go through the module barrel or services.',
-      from: { path: 'src/modules/(?<module>[^/]+)/.+\\.routes\\.ts$' },
+        'Controllers are module boundaries. Cross-module access should go through the target module barrel or a public service API.',
+      from: { path: '^packages/server/src/modules/([^/]+)/' },
       to: {
-        path: 'src/modules/(?!\\k<module>/).+/controllers/.+\\.ts$',
+        path: '^packages/server/src/modules/(?!$1/)[^/]+/controllers/.+\\.ts$',
       },
     },
 
@@ -57,8 +60,8 @@ module.exports = {
       severity: 'error',
       comment:
         'Shared code is foundational — it must not depend on feature modules to avoid layering violations.',
-      from: { path: 'src/shared/' },
-      to: { path: 'src/modules/' },
+      from: { path: '^packages/server/src/shared/' },
+      to: { path: '^packages/server/src/modules/' },
     },
 
     // ── Rule 6: No cross-module deep imports (bypass barrel) ──
@@ -66,11 +69,10 @@ module.exports = {
       name: 'no-cross-module-deep-import',
       severity: 'warn',
       comment:
-        'Cross-module imports should go through the barrel (index.ts), not deep into services/repositories.',
-      from: { path: 'src/modules/(?<fromModule>[^/]+)/' },
+        'Cross-module imports should go through the target module barrel, not deep into internal services or repositories.',
+      from: { path: '^packages/server/src/modules/([^/]+)/' },
       to: {
-        path: 'src/modules/(?!\\k<fromModule>/)[^/]+/(services|repositories|controllers)/.+\\.ts$',
-        pathNot: ['src/modules/[^/]+/index\\.ts$'],
+        path: '^packages/server/src/modules/(?!$1/)[^/]+/(services|repositories)/.+\\.ts$',
       },
     },
   ],

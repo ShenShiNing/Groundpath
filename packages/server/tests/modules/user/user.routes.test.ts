@@ -11,7 +11,6 @@ const {
   changeEmailValidatorMock,
   profileValidatorMock,
   userControllerMock,
-  uploadControllerMock,
   multerFactoryMock,
   multerMemoryStorageMock,
   multerSingleMock,
@@ -64,8 +63,6 @@ const {
     userControllerMock: {
       changeEmail: vi.fn(),
       updateProfile: vi.fn(),
-    },
-    uploadControllerMock: {
       uploadAvatar: vi.fn(),
     },
     multerFactoryMock: hoistedMulterFactory,
@@ -96,10 +93,6 @@ vi.mock('@knowledge-agent/shared/schemas', () => ({
 
 vi.mock('@modules/user/controllers/user.controller', () => ({
   userController: userControllerMock,
-}));
-
-vi.mock('@modules/document/controllers/upload.controller', () => ({
-  uploadController: uploadControllerMock,
 }));
 
 import userRoutes from '@modules/user/user.routes';
@@ -149,7 +142,7 @@ describe('user.routes', () => {
       '/avatar',
       authenticateMock,
       expect.any(Function),
-      uploadControllerMock.uploadAvatar
+      userControllerMock.uploadAvatar
     );
   });
 

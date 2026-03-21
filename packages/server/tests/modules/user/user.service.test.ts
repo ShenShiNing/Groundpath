@@ -8,6 +8,7 @@ vi.mock('@modules/user/repositories/user.repository', () => ({
     findById: vi.fn(),
     existsByEmailExcludingUser: vi.fn(),
     updateEmail: vi.fn(),
+    updateProfile: vi.fn(),
   },
 }));
 
@@ -35,9 +36,18 @@ vi.mock('@core/utils', () => ({
   })),
 }));
 
+vi.mock('@modules/document', () => ({
+  storageService: {
+    validateFile: vi.fn(),
+    deleteByUrl: vi.fn(),
+    uploadAvatar: vi.fn(),
+  },
+}));
+
 import { userService } from '@modules/user';
 import { userRepository } from '@modules/user/repositories/user.repository';
 import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
+import { storageService } from '@modules/document';
 
 describe('userService > changeEmail', () => {
   beforeEach(() => {
@@ -152,5 +162,75 @@ describe('userService > changeEmail', () => {
 
     expect(actual).toEqual(expected);
     expect(userRepository.updateEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe('userService > uploadAvatar', () => {
+  const mockFile = {
+    buffer: Buffer.from('avatar'),
+    mimetype: 'image/png',
+    originalname: 'avatar.png',
+    size: 1024,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(userRepository.findById).mockResolvedValue(mockUser);
+    vi.mocked(storageService.validateFile).mockReturnValue({ valid: true });
+    vi.mocked(storageService.uploadAvatar).mockResolvedValue('https://cdn.example.com/avatar.png');
+    vi.mocked(userRepository.updateProfile).mockResolvedValue({
+      ...mockUser,
+      avatarUrl: 'https://cdn.example.com/avatar.png',
+    });
+  });
+
+  it('should upload avatar and update profile', async () => {
+    const result = await userService.uploadAvatar(mockUser.id, mockFile);
+
+    expect(storageService.validateFile).toHaveBeenCalledWith(mockFile);
+    expect(storageService.deleteByUrl).not.toHaveBeenCalled();
+    expect(storageService.uploadAvatar).toHaveBeenCalledWith(mockUser.id, mockFile);
+    expect(userRepository.updateProfile).toHaveBeenCalledWith(mockUser.id, {
+      avatarUrl: 'https://cdn.example.com/avatar.png',
+    });
+    expect(result.avatarUrl).toBe('https://cdn.example.com/avatar.png');
+  });
+
+  it('should delete the previous avatar before replacing it', async () => {
+    vi.mocked(userRepository.findById).mockResolvedValue({
+      ...mockUser,
+      avatarUrl: 'https://cdn.example.com/old-avatar.png',
+    });
+
+    await userService.uploadAvatar(mockUser.id, mockFile);
+
+    expect(storageService.deleteByUrl).toHaveBeenCalledWith(
+      'https://cdn.example.com/old-avatar.png'
+    );
+  });
+
+  it('should reject when no file is provided', async () => {
+    await expect(userService.uploadAvatar(mockUser.id)).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      statusCode: 400,
+    });
+
+    expect(storageService.validateFile).not.toHaveBeenCalled();
+    expect(storageService.uploadAvatar).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid avatar files', async () => {
+    vi.mocked(storageService.validateFile).mockReturnValue({
+      valid: false,
+      error: 'Invalid file type. Allowed: JPEG, PNG, GIF, WebP',
+    });
+
+    await expect(userService.uploadAvatar(mockUser.id, mockFile)).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      statusCode: 400,
+    });
+
+    expect(storageService.uploadAvatar).not.toHaveBeenCalled();
+    expect(userRepository.updateProfile).not.toHaveBeenCalled();
   });
 });

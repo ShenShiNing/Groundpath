@@ -10,6 +10,7 @@ import { Errors } from '@core/errors';
 import { userRepository } from '../repositories/user.repository';
 import { normalizeEmail, toUserPublicInfo } from '@core/utils';
 import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
+import { storageService } from '@modules/document';
 
 /**
  * User service for profile management and cross-module user operations
@@ -74,6 +75,45 @@ export const userService = {
     data: { username?: string; bio?: string | null; avatarUrl?: string | null }
   ): Promise<User | undefined> {
     return userRepository.updateProfile(userId, data);
+  },
+
+  /**
+   * Upload and replace the user's avatar
+   */
+  async uploadAvatar(
+    userId: string,
+    file?: { buffer: Buffer; mimetype: string; originalname: string; size: number }
+  ): Promise<UserPublicInfo> {
+    if (!file) {
+      throw Errors.validation('No file uploaded');
+    }
+
+    const validation = storageService.validateFile(file);
+    if (!validation.valid) {
+      throw Errors.validation(validation.error ?? 'Invalid file upload');
+    }
+
+    const existingUser = await userRepository.findById(userId);
+    if (!existingUser) {
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
+
+    if (existingUser.avatarUrl) {
+      try {
+        await storageService.deleteByUrl(existingUser.avatarUrl);
+      } catch {
+        // Ignore deletion errors to keep avatar replacement best-effort.
+      }
+    }
+
+    const avatarUrl = await storageService.uploadAvatar(userId, file);
+    const updatedUser = await userRepository.updateProfile(userId, { avatarUrl });
+
+    if (!updatedUser) {
+      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+    }
+
+    return toUserPublicInfo(updatedUser);
   },
 
   // ==================== Public API ====================

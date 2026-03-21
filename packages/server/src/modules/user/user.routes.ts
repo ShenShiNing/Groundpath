@@ -6,8 +6,6 @@ import {
   updateProfileRequestSchema,
 } from '@knowledge-agent/shared/schemas';
 import { userController } from './controllers/user.controller';
-// Direct import to avoid circular dependency through barrels
-import { uploadController } from '@modules/document/controllers/upload.controller';
 
 const router = express.Router();
 
@@ -81,7 +79,7 @@ router.post(
   '/avatar',
   authenticate,
   uploadWithErrorHandling('avatar'),
-  uploadController.uploadAvatar
+  userController.uploadAvatar
 );
 
 export default router;

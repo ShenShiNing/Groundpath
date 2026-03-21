@@ -28,4 +28,13 @@ export const userController = {
     const user = await userService.changeEmail(userId, data);
     sendSuccessResponse(res, user);
   }),
+
+  /**
+   * POST /api/user/avatar
+   */
+  uploadAvatar: asyncHandler(async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const user = await userService.uploadAvatar(userId, req.file);
+    sendSuccessResponse(res, user);
+  }),
 };

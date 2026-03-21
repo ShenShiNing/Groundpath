@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
 
-const { authenticateMock, userControllerMock, uploadControllerMock } = vi.hoisted(() => {
+const { authenticateMock, userControllerMock } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     const authHeader = req.headers.authorization;
     const isAuthorized =
@@ -41,8 +41,6 @@ const { authenticateMock, userControllerMock, uploadControllerMock } = vi.hoiste
       updateProfile: vi.fn((_req, res) =>
         res.status(200).json({ success: true, route: 'profile-updated' })
       ),
-    },
-    uploadControllerMock: {
       uploadAvatar: vi.fn((_req, res) =>
         res.status(200).json({ success: true, route: 'avatar-uploaded' })
       ),
@@ -60,10 +58,6 @@ vi.mock('@core/middleware', async () => {
 
 vi.mock('@modules/user/controllers/user.controller', () => ({
   userController: userControllerMock,
-}));
-
-vi.mock('@modules/document/controllers/upload.controller', () => ({
-  uploadController: uploadControllerMock,
 }));
 
 import userRoutes from '@modules/user/user.routes';
@@ -206,7 +200,7 @@ describe('user.routes http behavior', () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('FILE_TOO_LARGE');
-    expect(uploadControllerMock.uploadAvatar).not.toHaveBeenCalled();
+    expect(userControllerMock.uploadAvatar).not.toHaveBeenCalled();
   });
 
   it('should pass valid avatar upload to controller', async () => {
@@ -224,6 +218,6 @@ describe('user.routes http behavior', () => {
 
     expect(response.status).toBe(200);
     expect(body.route).toBe('avatar-uploaded');
-    expect(uploadControllerMock.uploadAvatar).toHaveBeenCalledTimes(1);
+    expect(userControllerMock.uploadAvatar).toHaveBeenCalledTimes(1);
   });
 });
