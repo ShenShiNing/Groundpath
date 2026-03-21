@@ -4,7 +4,7 @@ import { conversationApi, sendMessageWithSSE } from '@/api';
 import { logClientError } from '@/lib/logger';
 import { queryClient, queryKeys } from '@/lib/query';
 import type { ConversationWithMessages, MessageInfo } from '@knowledge-agent/shared/types';
-import type { ChatMessage, ChatPanelState, StreamControls, ToolStep } from './chatPanelStore.types';
+import type { ChatMessage, ChatPanelState, StreamControls } from './chatPanelStore.types';
 import { toStoreCitation, agentTraceToToolSteps } from './chatPanelStore.types';
 import { createMessageActions } from './chatPanelStore.actions';
 
