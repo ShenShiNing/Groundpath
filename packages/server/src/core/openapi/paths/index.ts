@@ -50,13 +50,89 @@ export const openApiRouteModules: Record<ApiRouteModuleId, OpenApiRouteModuleMet
   'document-ai': createModuleMetadata(['Document AI'], documentAiOpenApiOperations, PROTECTED),
 };
 
+const readinessResponseSchema = z.object({
+  status: z.enum(['ready', 'not_ready']),
+  timestamp: z.string(),
+  checks: z.record(
+    z.string(),
+    z.object({
+      status: z.enum(['up', 'down']),
+      required: z.boolean(),
+      latencyMs: z.number(),
+      error: z.string().optional(),
+    })
+  ),
+});
+
 export const standaloneOpenApiOperations = defineOpenApiOperations({
-  'GET /api/hello': {
+  'GET /health': {
     tags: ['System'],
-    summary: '健康检查',
+    summary: 'Readiness health check',
     responses: {
       200: {
-        description: '服务运行状态',
+        description: 'Service is ready to receive traffic',
+        content: {
+          'application/json': {
+            schema: readinessResponseSchema,
+          },
+        },
+      },
+      503: {
+        description: 'Service is not ready to receive traffic',
+        content: {
+          'application/json': {
+            schema: readinessResponseSchema,
+          },
+        },
+      },
+    },
+  },
+  'GET /health/live': {
+    tags: ['System'],
+    summary: 'Liveness health check',
+    responses: {
+      200: {
+        description: 'Process is alive',
+        content: {
+          'application/json': {
+            schema: z.object({
+              status: z.literal('alive'),
+              timestamp: z.string(),
+              uptimeSeconds: z.number(),
+            }),
+          },
+        },
+      },
+    },
+  },
+  'GET /health/ready': {
+    tags: ['System'],
+    summary: 'Readiness health check',
+    responses: {
+      200: {
+        description: 'Service is ready to receive traffic',
+        content: {
+          'application/json': {
+            schema: readinessResponseSchema,
+          },
+        },
+      },
+      503: {
+        description: 'Service is not ready to receive traffic',
+        content: {
+          'application/json': {
+            schema: readinessResponseSchema,
+          },
+        },
+      },
+    },
+  },
+  'GET /api/hello': {
+    tags: ['System'],
+    summary: 'Legacy hello endpoint',
+    responses: {
+      200: {
+        description: 'Legacy health endpoint response',
         content: {
           'application/json': {
             schema: z.object({ message: z.string() }),

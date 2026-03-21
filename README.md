@@ -98,9 +98,49 @@ Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieva
 
 ## 2. 部署流程（详细）
 
-当前仓库未内置 Docker 编排文件，推荐按以下方式部署。
+仓库现已内置 Docker 编排与 GitHub Actions，可直接用 `docker compose` 启动标准化环境；如果你不使用容器，也可以继续按下面的手工方式部署。
 
-### 2.1 环境准备
+### 2.1 Docker Compose 快速启动
+
+最短路径：
+
+```bash
+pnpm docker:up
+```
+
+启动后默认地址：
+
+- 前端：`http://localhost:8080`
+- 后端 API：`http://localhost:3000`
+- Swagger：`http://localhost:8080/api-docs`
+- 健康检查：`http://localhost:8080/health/live`、`http://localhost:8080/health/ready`
+
+Compose 默认会拉起：
+
+- `client`：Nginx 托管前端并反代 `/api`、`/api-docs`、`/health*`
+- `server`：Express API 服务
+- `mysql`、`redis`、`qdrant`：后端依赖
+
+如需覆盖默认密码、端口或 JWT 密钥，可在启动前通过 shell 环境变量覆盖，例如：
+
+```bash
+# Linux/macOS
+JWT_SECRET=replace-with-32-char-secret ENCRYPTION_KEY=replace-with-32-char-secret pnpm docker:up
+
+# Windows PowerShell
+$env:JWT_SECRET='replace-with-32-char-secret'
+$env:ENCRYPTION_KEY='replace-with-32-char-secret'
+pnpm docker:up
+```
+
+停止并清理容器：
+
+```bash
+pnpm docker:down
+pnpm docker:down:volumes
+```
+
+### 2.2 环境准备
 
 必须依赖：
 
@@ -116,13 +156,13 @@ Knowledge Agent 是一个面向个人/团队知识管理场景的 RAG（Retrieva
 - SMTP 服务（邮箱验证码/重置密码）
 - Cloudflare R2（生产文件存储）
 
-### 2.2 拉取与安装
+### 2.3 拉取与安装
 
 ```bash
 pnpm install
 ```
 
-### 2.3 配置环境变量
+### 2.4 配置环境变量
 
 后端会从 `packages/server` 目录读取：
 
@@ -160,7 +200,7 @@ Copy-Item packages/server/.env.example packages/server/.env
 - `IMAGE_DESCRIPTION_ENABLED`、`VLM_PROVIDER`、`VLM_MODEL`、`VLM_API_KEY`（启用图片描述时需要）
 - `DOCUMENT_PROCESSING_RECOVERY_*`、`DOCUMENT_BUILD_CLEANUP_*`、`BACKFILL_SCHEDULE_*`（处理恢复、构建清理、索引回填计划任务）
 
-### 2.4 初始化数据库
+### 2.5 初始化数据库
 
 开发环境快速同步 schema：
 
@@ -181,7 +221,7 @@ pnpm -F @knowledge-agent/server db:drift-check
 pnpm -F @knowledge-agent/server db:verify
 ```
 
-### 2.5 启动开发环境
+### 2.6 启动开发环境
 
 ```bash
 pnpm dev
@@ -194,7 +234,7 @@ pnpm dev
 
 说明：开发模式下 Vite 已代理 `/api` 到 `http://localhost:3000`。
 
-### 2.6 构建与生产启动
+### 2.7 构建与生产启动
 
 1. 构建所有包：
 
@@ -213,7 +253,7 @@ pnpm -F @knowledge-agent/server start
 - 构建产物目录：`packages/client/dist`
 - 使用 Nginx/Caddy/静态托管服务提供该目录
 
-### 2.7 生产反向代理建议（Nginx 示例）
+### 2.8 生产反向代理建议（Nginx 示例）
 
 前端使用相对路径访问 `/api`，推荐同域部署：
 
@@ -240,14 +280,32 @@ server {
     # SSE 需要关闭代理缓冲
     proxy_buffering off;
   }
+
+  location /api-docs {
+    proxy_pass http://127.0.0.1:3000;
+  }
+
+  location /api-docs/ {
+    proxy_pass http://127.0.0.1:3000;
+  }
+
+  location /health {
+    proxy_pass http://127.0.0.1:3000;
+  }
+
+  location /health/ {
+    proxy_pass http://127.0.0.1:3000;
+  }
 }
 ```
 
 如果部署在反向代理后，请设置 `TRUST_PROXY`（例如 `1` 或 `true`），保证限流与审计 IP 正确。
 
-### 2.8 部署后验证清单
+### 2.9 部署后验证清单
 
-- `GET /api/hello` 可返回成功
+- `GET /health/live` 可返回 `200`
+- `GET /health/ready` 在依赖就绪后返回 `200`
+- `GET /api/hello` 仍可返回成功（兼容旧探针）
 - `GET /api-docs` 可正常打开 Swagger UI
 - 登录后能创建知识库
 - 上传文档后 `processingStatus` 最终变为 `completed`
@@ -317,6 +375,9 @@ server {
 | `pnpm dev`                                                | 同时启动前后端开发服务           |
 | `pnpm dev:client`                                         | 仅启动前端                       |
 | `pnpm dev:server`                                         | 仅启动后端                       |
+| `pnpm docker:up`                                          | 使用 Docker Compose 启动整套环境 |
+| `pnpm docker:down`                                        | 停止 Docker Compose 环境         |
+| `pnpm docker:down:volumes`                                | 停止并清理 Docker 数据卷         |
 | `pnpm build`                                              | 构建全部包                       |
 | `pnpm lint`                                               | ESLint 检查                      |
 | `pnpm lint:fix`                                           | ESLint 自动修复                  |
@@ -338,7 +399,8 @@ server {
 
 ## 4.1 架构门禁
 
-- 提向主干的 Pull Request 和推送到 `main` 时，GitHub Actions 会自动执行 `pnpm architecture:check`。
+- Pull Request 和分支推送会自动执行 `pnpm lint`、`pnpm test`、`pnpm build`、`pnpm architecture:check`，并验证前后端 Docker 镜像可构建。
+- 推送到 `main` 或手动触发时，CD workflow 会把 `server` / `client` 镜像发布到 GitHub Container Registry（GHCR）。
 - 新增后端跨模块复用时，默认通过拥有方模块的 `public/*` 出口暴露，不直接新增 deep import。
 - 具体守则见 [docs/architecture-guardrails.md](./docs/architecture-guardrails.md)。
 

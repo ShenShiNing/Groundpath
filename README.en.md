@@ -98,9 +98,49 @@ This repository is a `pnpm` monorepo:
 
 ## 2. Deployment Guide (Detailed)
 
-This repository currently does not include Docker orchestration files. The recommended deployment path is manual/service-based deployment.
+This repository now includes Docker orchestration and GitHub Actions. The default path is `docker compose`, while the manual/service-based deployment flow remains available below.
 
-### 2.1 Prerequisites
+### 2.1 Docker Compose Quick Start
+
+Shortest path:
+
+```bash
+pnpm docker:up
+```
+
+Default URLs after startup:
+
+- Frontend: `http://localhost:8080`
+- Backend API: `http://localhost:3000`
+- Swagger: `http://localhost:8080/api-docs`
+- Health checks: `http://localhost:8080/health/live`, `http://localhost:8080/health/ready`
+
+Compose starts these services by default:
+
+- `client`: Nginx serving the frontend and proxying `/api`, `/api-docs`, and `/health*`
+- `server`: Express API server
+- `mysql`, `redis`, `qdrant`: backend dependencies
+
+To override default ports, passwords, or runtime secrets, set shell env vars before startup:
+
+```bash
+# Linux/macOS
+JWT_SECRET=replace-with-32-char-secret ENCRYPTION_KEY=replace-with-32-char-secret pnpm docker:up
+
+# Windows PowerShell
+$env:JWT_SECRET='replace-with-32-char-secret'
+$env:ENCRYPTION_KEY='replace-with-32-char-secret'
+pnpm docker:up
+```
+
+To stop and clean up:
+
+```bash
+pnpm docker:down
+pnpm docker:down:volumes
+```
+
+### 2.2 Prerequisites
 
 Required:
 
@@ -116,13 +156,13 @@ Optional:
 - SMTP service (email verification/password reset)
 - Cloudflare R2 (production file storage)
 
-### 2.2 Install Dependencies
+### 2.3 Install Dependencies
 
 ```bash
 pnpm install
 ```
 
-### 2.3 Configure Environment Variables
+### 2.4 Configure Environment Variables
 
 The backend loads env files from `packages/server` in this order:
 
@@ -160,7 +200,7 @@ Common important settings:
 - `IMAGE_DESCRIPTION_ENABLED`, `VLM_PROVIDER`, `VLM_MODEL`, `VLM_API_KEY` (required when image descriptions are enabled)
 - `DOCUMENT_PROCESSING_RECOVERY_*`, `DOCUMENT_BUILD_CLEANUP_*`, `BACKFILL_SCHEDULE_*` (recovery, build cleanup, and index backfill schedules)
 
-### 2.4 Initialize Database
+### 2.5 Initialize Database
 
 For development (quick schema sync):
 
@@ -181,7 +221,7 @@ pnpm -F @knowledge-agent/server db:drift-check
 pnpm -F @knowledge-agent/server db:verify
 ```
 
-### 2.5 Start Development Environment
+### 2.6 Start Development Environment
 
 ```bash
 pnpm dev
@@ -194,7 +234,7 @@ Default ports:
 
 Note: in development, Vite already proxies `/api` to `http://localhost:3000`.
 
-### 2.6 Build and Start in Production
+### 2.7 Build and Start in Production
 
 1. Build all packages:
 
@@ -213,7 +253,7 @@ pnpm -F @knowledge-agent/server start
 - Build output: `packages/client/dist`
 - Host this directory with Nginx/Caddy/static hosting service
 
-### 2.7 Reverse Proxy Recommendation (Nginx)
+### 2.8 Reverse Proxy Recommendation (Nginx)
 
 The frontend uses relative `/api` paths. Same-domain deployment is recommended.
 
@@ -240,14 +280,32 @@ server {
     # SSE requires proxy buffering disabled
     proxy_buffering off;
   }
+
+  location /api-docs {
+    proxy_pass http://127.0.0.1:3000;
+  }
+
+  location /api-docs/ {
+    proxy_pass http://127.0.0.1:3000;
+  }
+
+  location /health {
+    proxy_pass http://127.0.0.1:3000;
+  }
+
+  location /health/ {
+    proxy_pass http://127.0.0.1:3000;
+  }
 }
 ```
 
 If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) so rate limiting and audit IPs are correct.
 
-### 2.8 Post-Deployment Checklist
+### 2.9 Post-Deployment Checklist
 
-- `GET /api/hello` returns success
+- `GET /health/live` returns `200`
+- `GET /health/ready` returns `200` after dependencies are ready
+- `GET /api/hello` still returns success for legacy probes
 - `GET /api-docs` opens Swagger UI successfully
 - You can create a knowledge base after login
 - Uploaded documents eventually reach `processingStatus=completed`
@@ -317,6 +375,9 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 | `pnpm dev`                                                | Start frontend and backend in parallel        |
 | `pnpm dev:client`                                         | Start frontend only                           |
 | `pnpm dev:server`                                         | Start backend only                            |
+| `pnpm docker:up`                                          | Start the full stack with Docker Compose      |
+| `pnpm docker:down`                                        | Stop the Docker Compose stack                 |
+| `pnpm docker:down:volumes`                                | Stop the stack and remove Docker volumes      |
 | `pnpm build`                                              | Build all packages                            |
 | `pnpm lint`                                               | Run ESLint                                    |
 | `pnpm lint:fix`                                           | Auto-fix ESLint issues                        |
@@ -335,6 +396,12 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 | `pnpm -F @knowledge-agent/server document-index:backfill` | Manually enqueue document-index backfill      |
 | `pnpm -F @knowledge-agent/client preview`                 | Preview the built frontend locally            |
 | `pnpm architecture:check`                                 | Validate backend dependency architecture      |
+
+## 4.1 Architecture Gate
+
+- Pull requests and branch pushes automatically run `pnpm lint`, `pnpm test`, `pnpm build`, `pnpm architecture:check`, and Docker image build verification.
+- Pushes to `main` and manual dispatch publish versioned `server` / `client` images to GitHub Container Registry (GHCR).
+- When adding backend cross-module reuse, prefer the owning module's `public/*` exports instead of new deep imports.
 
 ## 5. Open Source License
 

@@ -1,0 +1,97 @@
+name: knowledge-agent
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-knowledge_agent}
+      MYSQL_USER: ${MYSQL_USER:-knowledge_agent}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-knowledge_agent}
+    ports:
+      - '${MYSQL_PORT:-3306}:3306'
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER:-knowledge_agent} -p${MYSQL_PASSWORD:-knowledge_agent}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - '${QDRANT_PORT:-6333}:6333'
+      - '${QDRANT_GRPC_PORT:-6334}:6334'
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      DATABASE_URL: mysql://${MYSQL_USER:-knowledge_agent}:${MYSQL_PASSWORD:-knowledge_agent}@mysql:3306/${MYSQL_DATABASE:-knowledge_agent}
+      REDIS_URL: redis://redis:6379
+      REDIS_PREFIX: ${REDIS_PREFIX:-knowledge-agent}
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-at-least-32-characters}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change-this-encryption-key-at-least-32}
+      EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:-change-this-email-secret}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      LOCAL_STORAGE_PATH: /data/uploads
+      QDRANT_URL: http://qdrant:6333
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - '${SERVER_PORT:-3000}:3000'
+    volumes:
+      - uploads-data:/data/uploads
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      API_UPSTREAM: http://server:3000
+    ports:
+      - '${CLIENT_PORT:-8080}:80'
+
+volumes:
+  mysql-data:
+  redis-data:
+  qdrant-data:
+  uploads-data:

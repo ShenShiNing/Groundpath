@@ -12,6 +12,7 @@ export {
   emailConfig,
   embeddingConfig,
   featureFlags,
+  healthConfig,
   llmConfig,
   loggingConfig,
   oauthConfig,
