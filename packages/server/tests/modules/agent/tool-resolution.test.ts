@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@core/config/env', () => mocks.env);
 
-vi.mock('@modules/document-index/services/structured-rag-rollout.service', () => ({
+vi.mock('@modules/document-index/public/rollout', () => ({
   structuredRagRolloutService: mocks.rolloutService,
 }));
 

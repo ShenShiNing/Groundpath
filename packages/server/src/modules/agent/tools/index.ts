@@ -6,7 +6,7 @@ import { NodeReadTool } from './node-read.tool';
 import { RefFollowTool } from './ref-follow.tool';
 import { VectorFallbackSearchTool } from './vector-fallback-search.tool';
 import { WebSearchTool } from './web-search.tool';
-import { structuredRagRolloutService } from '@modules/document-index/services/structured-rag-rollout.service';
+import { structuredRagRolloutService } from '@modules/document-index/public/rollout';
 
 export type { AgentTool, ToolContext, ToolExecutionResult, ToolDefinition } from './tool.interface';
 export { KBSearchTool } from './kb-search.tool';

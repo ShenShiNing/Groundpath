@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@modules/document-index/services/search/node-read.service', () => ({
+vi.mock('@modules/document-index/public/search', () => ({
   nodeReadService: mocks.service,
 }));
 

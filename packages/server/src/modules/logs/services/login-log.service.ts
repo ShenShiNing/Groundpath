@@ -4,7 +4,7 @@ import { buildPagination } from '@core/utils';
 import {
   loginLogRepository,
   type LoginLogListParams,
-} from '../../auth/repositories/login-log.repository';
+} from '@modules/auth/public/login-logs';
 
 export interface LoginLogListItem {
   id: string;

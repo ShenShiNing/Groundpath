@@ -2,12 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ==================== Mocks ====================
 
-const { queueAddMock, processingServiceMock } = vi.hoisted(() => ({
+const { queueAddMock, processingServiceMock, documentIndexBackfillProgressServiceMock } =
+  vi.hoisted(() => ({
   queueAddMock: vi.fn(async () => ({ id: 'job-1' })),
   processingServiceMock: {
     processDocument: vi.fn(async () => ({ outcome: 'completed' })),
   },
-}));
+  documentIndexBackfillProgressServiceMock: {
+    markProcessing: vi.fn(),
+    recordOutcome: vi.fn(),
+  },
+  }));
 
 vi.mock('@core/config/env', () => ({
   queueConfig: {
@@ -56,6 +61,10 @@ vi.mock('bullmq', () => {
 
 vi.mock('@modules/rag/services/processing.service', () => ({
   processingService: processingServiceMock,
+}));
+
+vi.mock('@modules/document-index/public/backfill-progress', () => ({
+  documentIndexBackfillProgressService: documentIndexBackfillProgressServiceMock,
 }));
 
 import {

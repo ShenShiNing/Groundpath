@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@modules/document-index/services/search/outline-search.service', () => ({
+vi.mock('@modules/document-index/public/search', () => ({
   outlineSearchService: mocks.service,
 }));
 

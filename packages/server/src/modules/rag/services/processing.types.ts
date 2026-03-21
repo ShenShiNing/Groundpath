@@ -1,11 +1,11 @@
 import type { EmbeddingProvider } from '@modules/embedding';
 import { documentRepository, documentVersionRepository } from '@modules/document';
-import type { DocumentProcessingEnqueueOptions } from '../queue/document-processing.types';
 import type {
   DocumentRouteMode,
   DocumentRouteReason,
-} from '@modules/document-index/services/document-parse-router.service';
-import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
+} from '@modules/document-index/public/routing';
+import type { ParsedDocumentStructure } from '@modules/document-index/public/parsers';
+import type { DocumentProcessingEnqueueOptions } from '../queue/document-processing.types';
 import type { NewDocumentChunk } from '@core/db/schema/document/document-chunks.schema';
 import type { VectorPoint } from '@modules/vector';
 

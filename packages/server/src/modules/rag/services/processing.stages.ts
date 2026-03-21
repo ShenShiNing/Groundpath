@@ -3,7 +3,8 @@ import { documentConfig } from '@config/env';
 import type { EmbeddingProviderType } from '@modules/embedding';
 import { getEmbeddingProviderByType } from '@modules/embedding';
 import { documentChunkRepository, documentRepository } from '@modules/document';
-import { documentIndexService } from '@modules/document-index/services/document-index.service';
+import { documentIndexService } from '@modules/document-index/public/indexing';
+import type { ParsedDocumentStructure } from '@modules/document-index/public/parsers';
 import { chunkingService } from './chunking.service';
 import { vectorRepository } from '@modules/vector';
 import type { NewDocumentChunk } from '@core/db/schema/document/document-chunks.schema';
@@ -16,7 +17,6 @@ import type {
   DocumentProcessingResult,
   ProcessingDocument,
 } from './processing.types';
-import type { ParsedDocumentStructure } from '@modules/document-index/services/parsers/types';
 
 const logger = createLogger('processing.service');
 

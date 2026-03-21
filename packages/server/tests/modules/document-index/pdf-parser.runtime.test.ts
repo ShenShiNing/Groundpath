@@ -34,7 +34,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@config/env', () => mocks.env);
 
-vi.mock('@modules/document/services/document-storage.service', () => ({
+vi.mock('@modules/document/public/storage', () => ({
   documentStorageService: mocks.storageService,
 }));
 

@@ -166,7 +166,7 @@ describeRealIntegration('document index backfill real db/queue integration', () 
         updatedAt: new Date('2026-03-11T00:00:00.000Z'),
       },
     ]);
-  });
+  }, 30_000);
 
   afterAll(async () => {
     if (documentProcessingQueue) {

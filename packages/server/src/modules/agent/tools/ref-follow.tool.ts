@@ -1,5 +1,5 @@
 import type { AgentTool, ToolContext, ToolDefinition, ToolExecutionResult } from './tool.interface';
-import { refFollowService } from '@modules/document-index/services/search/ref-follow.service';
+import { refFollowService } from '@modules/document-index/public/search';
 
 const REF_FOLLOW_DEFINITION: ToolDefinition = {
   name: 'ref_follow',

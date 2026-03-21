@@ -302,7 +302,7 @@ vi.mock('@modules/document', () => ({
   },
 }));
 
-vi.mock('@modules/document/repositories/document.repository', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: {
     listBackfillCandidates: vi.fn(
       async (options?: {
