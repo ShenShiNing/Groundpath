@@ -31,4 +31,36 @@ describe('OpenAPI route auto-discovery', () => {
     expect(normalizedPath).toBe('/api/files/{key}');
     expect(document.paths[normalizedPath]?.get).toBeDefined();
   });
+
+  it('describes structured rag summary and report responses with concrete schemas', () => {
+    const document = buildOpenApiDocument();
+    const summaryDataSchema = (
+      document.paths['/api/logs/structured-rag/summary']?.get?.responses?.['200'] as {
+        content?: { 'application/json'?: { schema?: { properties?: { data?: unknown } } } };
+      }
+    )?.content?.['application/json']?.schema?.properties?.data as
+      | { properties?: Record<string, unknown> }
+      | undefined;
+    const reportDataSchema = (
+      document.paths['/api/logs/structured-rag/report']?.get?.responses?.['200'] as {
+        content?: { 'application/json'?: { schema?: { properties?: { data?: unknown } } } };
+      }
+    )?.content?.['application/json']?.schema?.properties?.data as
+      | { properties?: Record<string, unknown> }
+      | undefined;
+
+    expect(summaryDataSchema?.properties).toMatchObject({
+      agent: expect.any(Object),
+      index: expect.any(Object),
+      alerts: expect.any(Object),
+      trend: expect.any(Object),
+      recentEvents: expect.any(Object),
+    });
+    expect(reportDataSchema?.properties).toMatchObject({
+      generatedAt: expect.any(Object),
+      highlights: expect.any(Object),
+      summary: expect.any(Object),
+      markdown: expect.any(Object),
+    });
+  });
 });
