@@ -14,6 +14,14 @@ import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 
 const logger = createLogger('document-version.service');
 
+function documentNotFoundError(message: string = 'Document not found') {
+  return Errors.auth(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND', message, 404);
+}
+
+function versionNotFoundError(message: string = 'Version not found') {
+  return Errors.auth(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND', message, 404);
+}
+
 /**
  * Request context for logging
  */
@@ -62,11 +70,7 @@ export const documentVersionService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw Errors.auth(
-        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-        'Document not found',
-        404
-      );
+      throw documentNotFoundError();
     }
 
     // Validate file
@@ -101,18 +105,35 @@ export const documentVersionService = {
       textContent = extracted.text;
     }
 
-    const newVersion = document.currentVersion + 1;
-
     // MySQL operations in a single transaction
     // If DB transaction fails, clean up the uploaded file to prevent orphans
     let updated: Document | undefined;
+    let versionContext:
+      | {
+          previousVersion: number;
+          newVersion: number;
+          title: string;
+        }
+      | undefined;
     try {
       updated = await withTransaction(async (tx) => {
+        const lockedDocument = await documentRepository.lockByIdAndUser(documentId, userId, tx);
+        if (!lockedDocument || lockedDocument.deletedAt) {
+          throw documentNotFoundError();
+        }
+
+        const newVersion = lockedDocument.currentVersion + 1;
+        versionContext = {
+          previousVersion: lockedDocument.currentVersion,
+          newVersion,
+          title: lockedDocument.title,
+        };
+
         // Create new version record
         await documentVersionRepository.create(
           {
             id: uuidv4(),
-            documentId: document.id,
+            documentId: lockedDocument.id,
             version: newVersion,
             fileName: file.originalname,
             mimeType: resolvedMimeType,
@@ -163,12 +184,12 @@ export const documentVersionService = {
       userId,
       resourceType: 'document',
       resourceId: documentId,
-      resourceName: document.title,
+      resourceName: versionContext?.title ?? document.title,
       action: 'document.upload_version',
-      description: `Uploaded new version ${newVersion} for: ${document.title}`,
+      description: `Uploaded new version ${versionContext?.newVersion ?? document.currentVersion + 1} for: ${versionContext?.title ?? document.title}`,
       metadata: {
-        previousVersion: document.currentVersion,
-        newVersion,
+        previousVersion: versionContext?.previousVersion ?? document.currentVersion,
+        newVersion: versionContext?.newVersion ?? document.currentVersion + 1,
         fileName: file.originalname,
         fileSize: file.size,
         changeNote: options?.changeNote ?? null,
@@ -180,7 +201,7 @@ export const documentVersionService = {
 
     // Enqueue document processing for RAG (non-blocking)
     dispatchDocumentProcessing(documentId, userId, {
-      targetDocumentVersion: newVersion,
+      targetDocumentVersion: versionContext?.newVersion ?? document.currentVersion + 1,
       reason: 'upload',
     }).catch((err) => {
       logger.warn(
@@ -234,31 +255,40 @@ export const documentVersionService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw Errors.auth(
-        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-        'Document not found',
-        404
-      );
+      throw documentNotFoundError();
     }
 
     const version = await documentVersionRepository.findById(versionId);
     if (!version || version.documentId !== documentId) {
-      throw Errors.auth(
-        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-        'Version not found',
-        404
-      );
+      throw versionNotFoundError();
     }
 
-    const newVersionNumber = document.currentVersion + 1;
-
     // MySQL operations in a single transaction
+    let versionContext:
+      | {
+          previousVersion: number;
+          newVersion: number;
+          title: string;
+        }
+      | undefined;
     const updated = await withTransaction(async (tx) => {
+      const lockedDocument = await documentRepository.lockByIdAndUser(documentId, userId, tx);
+      if (!lockedDocument || lockedDocument.deletedAt) {
+        throw documentNotFoundError();
+      }
+
+      const newVersionNumber = lockedDocument.currentVersion + 1;
+      versionContext = {
+        previousVersion: lockedDocument.currentVersion,
+        newVersion: newVersionNumber,
+        title: lockedDocument.title,
+      };
+
       // Create a new version that restores old content
       await documentVersionRepository.create(
         {
           id: uuidv4(),
-          documentId: document.id,
+          documentId: lockedDocument.id,
           version: newVersionNumber,
           fileName: version.fileName,
           mimeType: version.mimeType,
@@ -296,13 +326,13 @@ export const documentVersionService = {
       userId,
       resourceType: 'document',
       resourceId: documentId,
-      resourceName: document.title,
+      resourceName: versionContext?.title ?? document.title,
       action: 'document.restore_version',
       description: `Restored document to version ${version.version}`,
       metadata: {
-        previousVersion: document.currentVersion,
+        previousVersion: versionContext?.previousVersion ?? document.currentVersion,
         restoredFromVersion: version.version,
-        newVersion: newVersionNumber,
+        newVersion: versionContext?.newVersion ?? document.currentVersion + 1,
       },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
@@ -311,7 +341,7 @@ export const documentVersionService = {
 
     // Enqueue document processing for RAG (non-blocking)
     dispatchDocumentProcessing(documentId, userId, {
-      targetDocumentVersion: newVersionNumber,
+      targetDocumentVersion: versionContext?.newVersion ?? document.currentVersion + 1,
       reason: 'restore',
     }).catch((err) => {
       logger.warn(

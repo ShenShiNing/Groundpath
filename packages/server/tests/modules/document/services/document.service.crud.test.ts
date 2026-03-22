@@ -26,6 +26,8 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
+    findByIdAndUserIncludingDeleted: vi.fn(),
+    lockByIdAndUser: vi.fn(),
     list: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
@@ -62,9 +64,10 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
   },
 }));
 
-vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
+    lockOwnership: vi.fn(),
     getEmbeddingConfig: vi.fn(() =>
       Promise.resolve({
         collectionName: 'test-collection',
@@ -319,7 +322,8 @@ describe('documentService > delete', () => {
 
   // 场景 1：成功软删除
   it('should soft delete document', async () => {
-    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(mockDocument);
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(mockDocument);
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDocument);
     vi.mocked(documentRepository.softDelete).mockResolvedValue(undefined);
 
     await documentService.delete(mockDocumentId, mockUserId);
@@ -339,7 +343,7 @@ describe('documentService > delete', () => {
 
   // 场景 2：文档不存在
   it('should throw DOCUMENT_NOT_FOUND when document does not exist', async () => {
-    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(undefined);
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(undefined);
 
     let actual: { code: string } | null = null;
     try {
@@ -355,6 +359,23 @@ describe('documentService > delete', () => {
     );
 
     expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND);
+    expect(documentRepository.softDelete).not.toHaveBeenCalled();
+  });
+
+  // 场景 3：重复删除应直接返回，不再重复扣减计数
+  it('should no-op when document is already deleted after acquiring the lock', async () => {
+    const deletedDocument = {
+      ...mockDocument,
+      deletedAt: new Date('2024-01-15'),
+      deletedBy: mockUserId,
+    };
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(
+      deletedDocument
+    );
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(deletedDocument);
+
+    await expect(documentService.delete(mockDocumentId, mockUserId)).resolves.toBeUndefined();
+
     expect(documentRepository.softDelete).not.toHaveBeenCalled();
   });
 });

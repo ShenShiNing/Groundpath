@@ -29,6 +29,7 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
+    lockByIdAndUser: vi.fn(),
     list: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
@@ -98,6 +99,7 @@ import { documentStorageService } from '@modules/document/public/storage';
 describe('documentService > uploadNewVersion', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDocument);
   });
 
   // 场景 1：成功上传新版本
@@ -297,6 +299,42 @@ describe('documentService > uploadNewVersion', () => {
       expect.anything() // tx parameter
     );
   });
+
+  // 场景 7：版本号应以事务内锁定后的 currentVersion 为准
+  it('should derive new version from the locked document state inside the transaction', async () => {
+    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(mockDocument);
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue({
+      ...mockDocument,
+      currentVersion: 4,
+    });
+    vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
+    vi.mocked(documentVersionRepository.create).mockResolvedValue(mockDocumentVersion);
+    vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);
+    vi.mocked(documentStorageService.extractTextContent).mockResolvedValue({
+      text: null,
+      truncated: false,
+    });
+    vi.mocked(documentRepository.update).mockResolvedValue({
+      ...mockDocument,
+      currentVersion: 5,
+    });
+
+    await documentService.uploadNewVersion(mockDocumentId, mockUserId, mockFile);
+
+    expect(documentVersionRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: 5,
+      }),
+      expect.anything()
+    );
+    expect(documentRepository.update).toHaveBeenCalledWith(
+      mockDocumentId,
+      expect.objectContaining({
+        currentVersion: 5,
+      }),
+      expect.anything()
+    );
+  });
 });
 
 // ==================== getVersionHistory ====================
@@ -401,6 +439,7 @@ describe('documentService > getVersionHistory', () => {
 describe('documentService > restoreVersion', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDocument);
   });
 
   // 场景 1：成功恢复到历史版本
@@ -434,6 +473,7 @@ describe('documentService > restoreVersion', () => {
   it('should create new version with restore changeNote', async () => {
     const currentDoc = { ...mockDocument, currentVersion: 3 };
     vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(currentDoc);
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(currentDoc);
     vi.mocked(documentVersionRepository.findById).mockResolvedValue({
       ...mockDocumentVersion,
       version: 1,
@@ -473,10 +513,12 @@ describe('documentService > restoreVersion', () => {
 
   // 场景 3：使用目标版本的文件属性更新文档
   it('should update document with target version file properties', async () => {
-    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue({
+    const currentDoc = {
       ...mockDocument,
       currentVersion: 2,
-    });
+    };
+    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(currentDoc);
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(currentDoc);
     vi.mocked(documentVersionRepository.findById).mockResolvedValue(mockDocumentVersion);
     vi.mocked(documentVersionRepository.create).mockResolvedValue({
       ...mockDocumentVersion,
@@ -580,5 +622,43 @@ describe('documentService > restoreVersion', () => {
     expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND);
     expect(documentVersionRepository.create).not.toHaveBeenCalled();
     expect(documentRepository.update).not.toHaveBeenCalled();
+  });
+
+  // 场景 7：恢复版本时也应使用事务内锁定后的版本号
+  it('should derive restored version number from the locked document state', async () => {
+    vi.mocked(documentRepository.findByIdAndUser).mockResolvedValue(mockDocument);
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue({
+      ...mockDocument,
+      currentVersion: 7,
+    });
+    vi.mocked(documentVersionRepository.findById).mockResolvedValue({
+      ...mockDocumentVersion,
+      version: 3,
+    });
+    vi.mocked(documentVersionRepository.create).mockResolvedValue({
+      ...mockDocumentVersion,
+      id: 'generated-uuid-123',
+      version: 8,
+    });
+    vi.mocked(documentRepository.update).mockResolvedValue({
+      ...mockDocument,
+      currentVersion: 8,
+    });
+
+    await documentService.restoreVersion(mockDocumentId, mockVersionId, mockUserId);
+
+    expect(documentVersionRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: 8,
+      }),
+      expect.anything()
+    );
+    expect(documentRepository.update).toHaveBeenCalledWith(
+      mockDocumentId,
+      expect.objectContaining({
+        currentVersion: 8,
+      }),
+      expect.anything()
+    );
   });
 });
