@@ -17,7 +17,7 @@ const {
   knowledgeBaseControllerMock,
   createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchemaMock,
-  documentListParamsSchemaMock,
+  knowledgeBaseDocumentListParamsSchemaMock,
   knowledgeBaseListParamsSchemaMock,
   createKbValidatorMock,
   updateKbValidatorMock,
@@ -57,7 +57,7 @@ const {
 
   const createKbSchema = { type: 'create-kb-schema' };
   const updateKbSchema = { type: 'update-kb-schema' };
-  const listParamsSchema = { type: 'document-list-schema' };
+  const listParamsSchema = { type: 'knowledge-base-document-list-schema' };
   const knowledgeBaseListSchema = { type: 'knowledge-base-list-schema' };
   const createKbValidator = vi.fn();
   const updateKbValidator = vi.fn();
@@ -105,7 +105,7 @@ const {
     },
     createKnowledgeBaseSchemaMock: createKbSchema,
     updateKnowledgeBaseSchemaMock: updateKbSchema,
-    documentListParamsSchemaMock: listParamsSchema,
+    knowledgeBaseDocumentListParamsSchemaMock: listParamsSchema,
     knowledgeBaseListParamsSchemaMock: knowledgeBaseListSchema,
     createKbValidatorMock: createKbValidator,
     updateKbValidatorMock: updateKbValidator,
@@ -145,7 +145,7 @@ vi.mock('@core/middleware', () => ({
 vi.mock('@groundpath/shared/schemas', () => ({
   createKnowledgeBaseSchema: createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchema: updateKnowledgeBaseSchemaMock,
-  documentListParamsSchema: documentListParamsSchemaMock,
+  knowledgeBaseDocumentListParamsSchema: knowledgeBaseDocumentListParamsSchemaMock,
   knowledgeBaseListParamsSchema: knowledgeBaseListParamsSchemaMock,
 }));
 
@@ -186,6 +186,7 @@ describe('knowledge-base.routes', () => {
   it('should register knowledge base crud routes with validators', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(createKnowledgeBaseSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(updateKnowledgeBaseSchemaMock);
+    expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseDocumentListParamsSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseListParamsSchemaMock);
 
     expect(mockRouter.post).toHaveBeenCalledWith(
@@ -208,7 +209,7 @@ describe('knowledge-base.routes', () => {
   });
 
   it('should register document routes with controller handlers', () => {
-    expect(validateQueryMock).toHaveBeenCalledWith(documentListParamsSchemaMock);
+    expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseDocumentListParamsSchemaMock);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/documents',
       generalRateLimiterMock,

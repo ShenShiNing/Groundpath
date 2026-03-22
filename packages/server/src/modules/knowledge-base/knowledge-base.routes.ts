@@ -13,7 +13,7 @@ import {
 import {
   createKnowledgeBaseSchema,
   updateKnowledgeBaseSchema,
-  documentListParamsSchema,
+  knowledgeBaseDocumentListParamsSchema,
   knowledgeBaseListParamsSchema,
 } from '@groundpath/shared/schemas';
 
@@ -105,7 +105,7 @@ router.post(
 // List documents in knowledge base
 router.get(
   '/:id/documents',
-  validateQuery(documentListParamsSchema),
+  validateQuery(knowledgeBaseDocumentListParamsSchema),
   knowledgeBaseController.listDocuments
 );
 
