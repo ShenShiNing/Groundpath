@@ -99,19 +99,4 @@ export const knowledgeBasesApi = {
     );
     return unwrapResponse(response.data);
   },
-
-  /**
-   * Search within a knowledge base
-   */
-  async search(
-    kbId: string,
-    query: string,
-    options?: { limit?: number; scoreThreshold?: number }
-  ): Promise<unknown[]> {
-    const response = await apiClient.post<ApiResponse<unknown[]>>(
-      `/api/knowledge-bases/${kbId}/search`,
-      { query, ...options }
-    );
-    return unwrapResponse(response.data);
-  },
 };

@@ -21,6 +21,10 @@ describe('knowledgeBasesApi', () => {
     vi.clearAllMocks();
   });
 
+  it('should not expose the deprecated knowledge base search endpoint', () => {
+    expect(knowledgeBasesApi).not.toHaveProperty('search');
+  });
+
   it('should unwrap paginated knowledge base list and return items only', async () => {
     const responsePayload = {
       knowledgeBases: [

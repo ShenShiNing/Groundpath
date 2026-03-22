@@ -3,13 +3,9 @@ import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
+import type { DocumentListResponse } from '@groundpath/shared/types';
 
-const {
-  authenticateMock,
-  createSanitizeMiddlewareMock,
-  knowledgeBaseControllerMock,
-  documentServiceMock,
-} = vi.hoisted(() => {
+const { authenticateMock, createSanitizeMiddlewareMock } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     const authHeader = req.headers.authorization;
     const isAuthorized =
@@ -42,20 +38,6 @@ const {
   return {
     authenticateMock: vi.fn(authenticate),
     createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
-    knowledgeBaseControllerMock: {
-      create: vi.fn((_req, res) => res.status(201).json({ success: true, route: 'kb-create' })),
-      list: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'kb-list' })),
-      getById: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'kb-get' })),
-      update: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'kb-update' })),
-      delete: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'kb-delete' })),
-    },
-    documentServiceMock: {
-      upload: vi.fn(async () => ({ id: 'doc-1' })),
-      list: vi.fn(async () => ({
-        items: [{ id: 'doc-1' }],
-        pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-      })),
-    },
   };
 });
 
@@ -70,12 +52,21 @@ vi.mock('@config/env', async () => {
   };
 });
 
-vi.mock('@modules/knowledge-base/controllers/knowledge-base.controller', () => ({
-  knowledgeBaseController: knowledgeBaseControllerMock,
+vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
+  knowledgeBaseService: {
+    create: vi.fn(),
+    list: vi.fn(),
+    getById: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
 }));
 
 vi.mock('@modules/document/public/documents', () => ({
-  documentService: documentServiceMock,
+  documentService: {
+    upload: vi.fn(),
+    list: vi.fn(),
+  },
 }));
 
 vi.mock('@core/middleware', async () => {
@@ -88,6 +79,21 @@ vi.mock('@core/middleware', async () => {
 });
 
 import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
+import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { documentService } from '@modules/document/public/documents';
+
+const mockListedDocument = {
+  id: 'doc-1',
+  title: 'Doc 1',
+  description: null,
+  fileName: 'doc-1.txt',
+  fileSize: 128,
+  fileExtension: 'txt',
+  documentType: 'text' as const,
+  processingStatus: 'completed' as const,
+  createdAt: new Date('2026-03-22T00:00:00.000Z'),
+  updatedAt: new Date('2026-03-22T00:00:00.000Z'),
+};
 
 describe('knowledge-base.routes http behavior', () => {
   let server: Server;
@@ -159,7 +165,7 @@ describe('knowledge-base.routes http behavior', () => {
 
     expect(response.status).toBe(401);
     expect(body.error.code).toBe('UNAUTHORIZED');
-    expect(knowledgeBaseControllerMock.create).not.toHaveBeenCalled();
+    expect(knowledgeBaseService.create).not.toHaveBeenCalled();
   });
 
   it('should validate create payload', async () => {
@@ -175,10 +181,16 @@ describe('knowledge-base.routes http behavior', () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(knowledgeBaseControllerMock.create).not.toHaveBeenCalled();
+    expect(knowledgeBaseService.create).not.toHaveBeenCalled();
   });
 
   it('should pass valid create request to controller', async () => {
+    vi.mocked(knowledgeBaseService.create).mockResolvedValue({
+      id: 'kb-1',
+      name: 'kb-main',
+      embeddingProvider: 'openai',
+    } as Awaited<ReturnType<typeof knowledgeBaseService.create>>);
+
     const response = await fetch(`${baseUrl}/knowledge-bases`, {
       method: 'POST',
       headers: {
@@ -187,11 +199,12 @@ describe('knowledge-base.routes http behavior', () => {
       },
       body: JSON.stringify({ name: 'kb-main', embeddingProvider: 'openai' }),
     });
-    const body = (await response.json()) as HttpTestBody;
+    const body = (await response.json()) as HttpTestBody<{ id: string; name: string }>;
 
     expect(response.status).toBe(201);
-    expect(body.route).toBe('kb-create');
-    expect(knowledgeBaseControllerMock.create).toHaveBeenCalledTimes(1);
+    expect(body.success).toBe(true);
+    expect(body.data?.id).toBe('kb-1');
+    expect(knowledgeBaseService.create).toHaveBeenCalledTimes(1);
   });
 
   it('should reject document upload when knowledge base id is invalid uuid', async () => {
@@ -207,7 +220,7 @@ describe('knowledge-base.routes http behavior', () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(documentServiceMock.upload).not.toHaveBeenCalled();
+    expect(documentService.upload).not.toHaveBeenCalled();
   });
 
   it('should reject document upload when file is missing', async () => {
@@ -222,7 +235,7 @@ describe('knowledge-base.routes http behavior', () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(documentServiceMock.upload).not.toHaveBeenCalled();
+    expect(documentService.upload).not.toHaveBeenCalled();
   });
 
   it('should reject oversized document upload', async () => {
@@ -241,7 +254,32 @@ describe('knowledge-base.routes http behavior', () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('FILE_TOO_LARGE');
-    expect(documentServiceMock.upload).not.toHaveBeenCalled();
+    expect(documentService.upload).not.toHaveBeenCalled();
+  });
+
+  it('should upload document for valid request', async () => {
+    vi.mocked(documentService.upload).mockResolvedValue({ id: 'doc-1' } as Awaited<
+      ReturnType<typeof documentService.upload>
+    >);
+
+    const formData = new FormData();
+    formData.set('file', new Blob(['hello'], { type: 'text/plain' }), 'a.txt');
+    formData.set('title', 'Doc');
+
+    const response = await fetch(
+      `${baseUrl}/knowledge-bases/123e4567-e89b-12d3-a456-426614174000/documents`,
+      {
+        method: 'POST',
+        headers: { authorization: 'Bearer valid-access' },
+        body: formData,
+      }
+    );
+    const body = (await response.json()) as HttpTestBody<{ document: { id: string } }>;
+
+    expect(response.status).toBe(201);
+    expect(body.success).toBe(true);
+    expect(body.data?.document.id).toBe('doc-1');
+    expect(documentService.upload).toHaveBeenCalledTimes(1);
   });
 
   it('should validate list-documents query parameters', async () => {
@@ -255,20 +293,30 @@ describe('knowledge-base.routes http behavior', () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(documentServiceMock.list).not.toHaveBeenCalled();
+    expect(documentService.list).not.toHaveBeenCalled();
   });
 
   it('should return documents for valid list-documents request', async () => {
+    const mockResult: DocumentListResponse = {
+      documents: [mockListedDocument],
+      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    };
+    vi.mocked(documentService.list).mockResolvedValue(mockResult);
+
     const response = await fetch(
       `${baseUrl}/knowledge-bases/123e4567-e89b-12d3-a456-426614174000/documents?page=1&pageSize=20`,
       {
         headers: { authorization: 'Bearer valid-access' },
       }
     );
-    const body = (await response.json()) as HttpTestBody;
+    const body = (await response.json()) as HttpTestBody<{
+      documents: Array<{ id: string }>;
+      pagination: { total: number };
+    }>;
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(documentServiceMock.list).toHaveBeenCalledTimes(1);
+    expect(body.data.documents).toHaveLength(1);
+    expect(documentService.list).toHaveBeenCalledTimes(1);
   });
 });
