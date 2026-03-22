@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
 import { db } from '@core/db';
 import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
@@ -30,6 +30,30 @@ export const documentNodeRepository = {
       .from(documentNodes)
       .where(eq(documentNodes.indexVersionId, indexVersionId))
       .orderBy(documentNodes.orderNo);
+  },
+
+  async listImageStorageKeysByDocumentIds(
+    documentIds: string[],
+    tx?: Transaction
+  ): Promise<string[]> {
+    if (documentIds.length === 0) {
+      return [];
+    }
+
+    const ctx = getDbContext(tx);
+    const result = await ctx
+      .select({ imageStorageKey: documentNodes.imageStorageKey })
+      .from(documentNodes)
+      .where(
+        and(
+          inArray(documentNodes.documentId, documentIds),
+          isNotNull(documentNodes.imageStorageKey)
+        )
+      );
+
+    return result
+      .map((row) => row.imageStorageKey)
+      .filter((imageStorageKey): imageStorageKey is string => Boolean(imageStorageKey));
   },
 
   async deleteByIndexVersionId(indexVersionId: string, tx?: Transaction): Promise<void> {

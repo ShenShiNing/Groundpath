@@ -1,4 +1,4 @@
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import { db } from '@core/db';
 import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
@@ -34,6 +34,19 @@ export const documentVersionRepository = {
       .from(documentVersions)
       .where(eq(documentVersions.documentId, documentId))
       .orderBy(desc(documentVersions.version));
+  },
+
+  async listByDocumentIds(documentIds: string[], tx?: Transaction): Promise<DocumentVersion[]> {
+    if (documentIds.length === 0) {
+      return [];
+    }
+
+    const ctx = getDbContext(tx);
+    return ctx
+      .select()
+      .from(documentVersions)
+      .where(inArray(documentVersions.documentId, documentIds))
+      .orderBy(desc(documentVersions.version), desc(documentVersions.createdAt));
   },
 
   /**

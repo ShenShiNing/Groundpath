@@ -122,8 +122,9 @@ export const knowledgeBaseRepository = {
   /**
    * Soft delete knowledge base
    */
-  async softDelete(id: string, deletedBy: string): Promise<void> {
-    await db
+  async softDelete(id: string, deletedBy: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx
       .update(knowledgeBases)
       .set({
         deletedAt: now(),

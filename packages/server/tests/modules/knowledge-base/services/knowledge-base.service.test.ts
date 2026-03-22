@@ -21,6 +21,15 @@ const mockEmbeddingConfig = vi.hoisted(() => ({
 }));
 
 const logOperationMock = vi.hoisted(() => vi.fn());
+const withTransactionMock = vi.hoisted(() =>
+  vi.fn(async (callback: (tx: unknown) => Promise<unknown>) => callback({ id: 'tx-1' }))
+);
+const loggerMock = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
 
 vi.mock('uuid', () => ({
   v4: vi.fn(() => 'kb-generated-id'),
@@ -38,6 +47,18 @@ vi.mock('@core/logger/operation-logger', () => ({
   logOperation: logOperationMock,
 }));
 
+vi.mock('@core/db/db.utils', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@core/db/db.utils')>();
+  return {
+    ...original,
+    withTransaction: withTransactionMock,
+  };
+});
+
+vi.mock('@core/logger', () => ({
+  createLogger: vi.fn(() => loggerMock),
+}));
+
 vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => ({
   knowledgeBaseRepository: {
     create: vi.fn(),
@@ -53,11 +74,46 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
   },
 }));
 
+vi.mock('@modules/document/public/repositories', () => ({
+  documentRepository: {
+    listByKnowledgeBaseId: vi.fn(),
+    hardDeleteByKnowledgeBaseId: vi.fn(),
+  },
+  documentVersionRepository: {
+    listByDocumentIds: vi.fn(),
+  },
+}));
+
+vi.mock('@modules/document/public/storage', () => ({
+  documentStorageService: {
+    deleteDocument: vi.fn(),
+  },
+}));
+
+vi.mock('@modules/document-index/public/repositories', () => ({
+  documentNodeRepository: {
+    listImageStorageKeysByDocumentIds: vi.fn(),
+  },
+}));
+
+vi.mock('@modules/vector/public/repositories', () => ({
+  vectorRepository: {
+    deleteByKnowledgeBaseId: vi.fn(),
+  },
+}));
+
 import {
   knowledgeBaseService,
   getCollectionName,
 } from '@modules/knowledge-base/services/knowledge-base.service';
+import {
+  documentRepository,
+  documentVersionRepository,
+} from '@modules/document/public/repositories';
+import { documentStorageService } from '@modules/document/public/storage';
+import { documentNodeRepository } from '@modules/document-index/public/repositories';
 import { knowledgeBaseRepository } from '@modules/knowledge-base/repositories/knowledge-base.repository';
+import { vectorRepository } from '@modules/vector/public/repositories';
 
 const mockUserId = 'user-123';
 const mockKbId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
@@ -88,12 +144,22 @@ describe('knowledgeBaseService', () => {
     mockEmbeddingConfig.zhipu.apiKey = 'zhipu-test-key';
     mockEmbeddingConfig.openai.model = 'text-embedding-3-small';
     mockEmbeddingConfig.ollama.model = 'nomic-embed-text';
+    withTransactionMock.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({ id: 'tx-1' })
+    );
     vi.mocked(knowledgeBaseRepository.create).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseRepository.findByIdAndUser).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseRepository.findById).mockResolvedValue(mockKnowledgeBase);
+    vi.mocked(knowledgeBaseRepository.lockByIdAndUser).mockResolvedValue(true);
     vi.mocked(knowledgeBaseRepository.update).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseRepository.listByUser).mockResolvedValue([mockKnowledgeBase]);
     vi.mocked(knowledgeBaseRepository.countByUser).mockResolvedValue(1);
+    vi.mocked(documentRepository.listByKnowledgeBaseId).mockResolvedValue([]);
+    vi.mocked(documentRepository.hardDeleteByKnowledgeBaseId).mockResolvedValue(undefined);
+    vi.mocked(documentVersionRepository.listByDocumentIds).mockResolvedValue([]);
+    vi.mocked(documentNodeRepository.listImageStorageKeysByDocumentIds).mockResolvedValue([]);
+    vi.mocked(documentStorageService.deleteDocument).mockResolvedValue(undefined);
+    vi.mocked(vectorRepository.deleteByKnowledgeBaseId).mockResolvedValue(true);
   });
 
   it('should format collection names consistently', () => {
@@ -251,16 +317,151 @@ describe('knowledgeBaseService', () => {
   });
 
   it('should delete knowledge base and write operation log', async () => {
+    vi.mocked(documentRepository.listByKnowledgeBaseId).mockResolvedValue([
+      {
+        id: 'doc-1',
+        userId: mockUserId,
+        knowledgeBaseId: mockKbId,
+        title: 'Active Doc',
+        description: null,
+        currentVersion: 2,
+        activeIndexVersionId: 'idx-1',
+        fileName: 'active.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 1024,
+        fileExtension: 'pdf',
+        documentType: 'pdf',
+        processingStatus: 'completed',
+        processingError: null,
+        processingStartedAt: null,
+        publishGeneration: 0,
+        chunkCount: 6,
+        createdBy: mockUserId,
+        createdAt: mockNow,
+        updatedBy: mockUserId,
+        updatedAt: mockNow,
+        deletedBy: null,
+        deletedAt: null,
+      },
+      {
+        id: 'doc-2',
+        userId: mockUserId,
+        knowledgeBaseId: mockKbId,
+        title: 'Deleted Doc',
+        description: null,
+        currentVersion: 1,
+        activeIndexVersionId: null,
+        fileName: 'deleted.md',
+        mimeType: 'text/markdown',
+        fileSize: 128,
+        fileExtension: 'md',
+        documentType: 'markdown',
+        processingStatus: 'pending',
+        processingError: null,
+        processingStartedAt: null,
+        publishGeneration: 0,
+        chunkCount: 0,
+        createdBy: mockUserId,
+        createdAt: mockNow,
+        updatedBy: mockUserId,
+        updatedAt: mockNow,
+        deletedBy: mockUserId,
+        deletedAt: mockNow,
+      },
+    ]);
+    vi.mocked(documentVersionRepository.listByDocumentIds).mockResolvedValue([
+      {
+        id: 'ver-1',
+        documentId: 'doc-1',
+        version: 1,
+        fileName: 'active-v1.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 1024,
+        fileExtension: 'pdf',
+        documentType: 'pdf',
+        storageKey: 'storage/doc-1-v1.pdf',
+        textContent: null,
+        wordCount: null,
+        source: 'upload',
+        changeNote: null,
+        createdBy: mockUserId,
+        createdAt: mockNow,
+      },
+      {
+        id: 'ver-2',
+        documentId: 'doc-1',
+        version: 2,
+        fileName: 'active-v2.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 2048,
+        fileExtension: 'pdf',
+        documentType: 'pdf',
+        storageKey: 'storage/doc-1-v2.pdf',
+        textContent: null,
+        wordCount: null,
+        source: 'upload',
+        changeNote: null,
+        createdBy: mockUserId,
+        createdAt: mockNow,
+      },
+      {
+        id: 'ver-3',
+        documentId: 'doc-2',
+        version: 1,
+        fileName: 'deleted.md',
+        mimeType: 'text/markdown',
+        fileSize: 128,
+        fileExtension: 'md',
+        documentType: 'markdown',
+        storageKey: 'storage/doc-1-v2.pdf',
+        textContent: '# deleted',
+        wordCount: null,
+        source: 'restore',
+        changeNote: null,
+        createdBy: mockUserId,
+        createdAt: mockNow,
+      },
+    ]);
+    vi.mocked(documentNodeRepository.listImageStorageKeysByDocumentIds).mockResolvedValue([
+      'storage/images/doc-1-figure.png',
+      'storage/images/doc-1-figure.png',
+    ]);
+
     await knowledgeBaseService.delete(mockKbId, mockUserId, {
       ipAddress: '127.0.0.1',
       userAgent: 'vitest',
     });
 
-    expect(knowledgeBaseRepository.softDelete).toHaveBeenCalledWith(mockKbId, mockUserId);
+    expect(documentRepository.listByKnowledgeBaseId).toHaveBeenCalledWith(
+      mockKbId,
+      { includeDeleted: true },
+      { id: 'tx-1' }
+    );
+    expect(documentRepository.hardDeleteByKnowledgeBaseId).toHaveBeenCalledWith(mockKbId, {
+      id: 'tx-1',
+    });
+    expect(knowledgeBaseRepository.softDelete).toHaveBeenCalledWith(mockKbId, mockUserId, {
+      id: 'tx-1',
+    });
+    expect(documentStorageService.deleteDocument).toHaveBeenCalledTimes(3);
+    expect(
+      vi.mocked(documentStorageService.deleteDocument).mock.calls.map(([storageKey]) => storageKey)
+    ).toEqual(['storage/doc-1-v1.pdf', 'storage/doc-1-v2.pdf', 'storage/images/doc-1-figure.png']);
+    expect(vectorRepository.deleteByKnowledgeBaseId).toHaveBeenCalledWith(
+      'embedding_openai_1536',
+      mockKbId
+    );
     expect(logOperationMock).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'knowledge_base.delete',
         resourceId: mockKbId,
+        metadata: expect.objectContaining({
+          deletedDocumentCount: 2,
+          deletedActiveDocumentCount: 1,
+          deletedChunkTotal: 6,
+          deletedVersionCount: 3,
+          deletedStorageArtifactCount: 3,
+        }),
       })
     );
   });

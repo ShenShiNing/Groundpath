@@ -9,6 +9,15 @@ import type {
 } from '@groundpath/shared/types';
 import type { KnowledgeBase } from '@core/db/schema/document/knowledge-bases.schema';
 import type { Transaction } from '@core/db/db.utils';
+import { withTransaction } from '@core/db/db.utils';
+import { createLogger } from '@core/logger';
+import { documentNodeRepository } from '@modules/document-index/public/repositories';
+import {
+  documentRepository,
+  documentVersionRepository,
+} from '@modules/document/public/repositories';
+import { documentStorageService } from '@modules/document/public/storage';
+import { vectorRepository } from '@modules/vector/public/repositories';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
 import { logOperation } from '@core/logger/operation-logger';
 import {
@@ -23,6 +32,8 @@ import type { EmbeddingConfig, RequestContext } from './knowledge-base.service.h
 
 export type { EmbeddingConfig, RequestContext } from './knowledge-base.service.helpers';
 export { getCollectionName } from './knowledge-base.service.helpers';
+
+const logger = createLogger('knowledge-base.service');
 
 function buildOperationContext(startTime: number, ctx?: RequestContext) {
   return {
@@ -50,6 +61,10 @@ async function getKnowledgeBaseOrThrow(kbId: string): Promise<KnowledgeBase> {
     throw knowledgeBaseNotFoundError();
   }
   return kb;
+}
+
+function uniqueStorageKeys(keys: string[]): string[] {
+  return [...new Set(keys)];
 }
 
 /**
@@ -180,15 +195,66 @@ export const knowledgeBaseService = {
   },
 
   /**
-   * Delete knowledge base (soft delete)
-   * Note: Cascade deletion of documents and vectors should be handled by the caller
+   * Delete knowledge base and cascade cleanup of its documents, index artifacts, and vectors.
    */
   async delete(kbId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();
 
     const kb = await getOwnedKnowledgeBaseOrThrow(kbId, userId);
+    const collectionName = getCollectionName(
+      kb.embeddingProvider as EmbeddingProviderType,
+      kb.embeddingDimensions
+    );
 
-    await knowledgeBaseRepository.softDelete(kbId, userId);
+    const deletionSummary = await withTransaction(async (tx) => {
+      await knowledgeBaseService.lockOwnership(kbId, userId, tx);
+
+      const documents = await documentRepository.listByKnowledgeBaseId(
+        kbId,
+        { includeDeleted: true },
+        tx
+      );
+      const documentIds = documents.map((document) => document.id);
+      const versions = await documentVersionRepository.listByDocumentIds(documentIds, tx);
+      const imageStorageKeys = await documentNodeRepository.listImageStorageKeysByDocumentIds(
+        documentIds,
+        tx
+      );
+
+      await documentRepository.hardDeleteByKnowledgeBaseId(kbId, tx);
+      await knowledgeBaseRepository.softDelete(kbId, userId, tx);
+
+      return {
+        deletedDocumentCount: documents.length,
+        deletedActiveDocumentCount: documents.filter((document) => !document.deletedAt).length,
+        deletedChunkTotal: documents.reduce((sum, document) => sum + document.chunkCount, 0),
+        deletedVersionCount: versions.length,
+        storageKeys: uniqueStorageKeys([
+          ...versions.map((version) => version.storageKey),
+          ...imageStorageKeys,
+        ]),
+      };
+    });
+
+    for (const storageKey of deletionSummary.storageKeys) {
+      try {
+        await documentStorageService.deleteDocument(storageKey);
+      } catch (err) {
+        logger.warn(
+          { kbId, storageKey, err },
+          'Failed to delete document storage artifact after knowledge base deletion'
+        );
+      }
+    }
+
+    try {
+      await vectorRepository.deleteByKnowledgeBaseId(collectionName, kbId);
+    } catch (err) {
+      logger.warn(
+        { kbId, collectionName, err },
+        'Failed to delete vectors after knowledge base deletion'
+      );
+    }
 
     // Log operation
     logOperation({
@@ -201,6 +267,11 @@ export const knowledgeBaseService = {
       metadata: {
         documentCount: kb.documentCount,
         totalChunks: kb.totalChunks,
+        deletedDocumentCount: deletionSummary.deletedDocumentCount,
+        deletedActiveDocumentCount: deletionSummary.deletedActiveDocumentCount,
+        deletedChunkTotal: deletionSummary.deletedChunkTotal,
+        deletedVersionCount: deletionSummary.deletedVersionCount,
+        deletedStorageArtifactCount: deletionSummary.storageKeys.length,
       },
       ...buildOperationContext(startTime, ctx),
     });

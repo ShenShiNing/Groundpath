@@ -58,6 +58,23 @@ export const documentRepositoryCore = {
     return result[0];
   },
 
+  async listByKnowledgeBaseId(
+    knowledgeBaseId: string,
+    options?: { includeDeleted?: boolean },
+    tx?: Transaction
+  ): Promise<Document[]> {
+    const ctx = getDbContext(tx);
+    const whereClause = options?.includeDeleted
+      ? eq(documents.knowledgeBaseId, knowledgeBaseId)
+      : and(eq(documents.knowledgeBaseId, knowledgeBaseId), isNull(documents.deletedAt));
+
+    return ctx
+      .select()
+      .from(documents)
+      .where(whereClause)
+      .orderBy(asc(documents.createdAt), asc(documents.id));
+  },
+
   async list(
     userId: string,
     params: DocumentListParams
@@ -184,5 +201,10 @@ export const documentRepositoryCore = {
   async hardDelete(id: string, tx?: Transaction): Promise<void> {
     const ctx = getDbContext(tx);
     await ctx.delete(documents).where(eq(documents.id, id));
+  },
+
+  async hardDeleteByKnowledgeBaseId(knowledgeBaseId: string, tx?: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx.delete(documents).where(eq(documents.knowledgeBaseId, knowledgeBaseId));
   },
 };
