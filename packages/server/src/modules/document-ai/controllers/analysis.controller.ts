@@ -4,7 +4,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { analysisRequestSchema } from '@knowledge-agent/shared/schemas';
+import { analysisRequestSchema } from '@groundpath/shared/schemas';
 import { analysisService } from '../services/analysis.service';
 import { sendSuccessResponse, handleError } from '@core/errors';
 

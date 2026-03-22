@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import { AppError } from '@core/errors';
 import { mockUser, logTestInfo } from '@tests/__mocks__/auth.mocks';
 

@@ -20,7 +20,7 @@ import {
 import { TableCell, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { formatTimeAgo } from '@/lib/date';
-import type { KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { KnowledgeBaseListItem } from '@groundpath/shared/types';
 import type { TFunction } from 'i18next';
 
 export type KnowledgeBasePageT = TFunction<['knowledgeBase', 'common']>;

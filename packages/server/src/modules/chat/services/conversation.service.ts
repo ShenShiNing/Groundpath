@@ -4,8 +4,8 @@ import type {
   ConversationListItem,
   ConversationListResponse,
   ConversationSearchResponse,
-} from '@knowledge-agent/shared/types';
-import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
+} from '@groundpath/shared/types';
+import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
 import { conversationRepository } from '../repositories/conversation.repository';
 import { messageRepository } from '../repositories/message.repository';
 import { knowledgeBaseService } from '@modules/knowledge-base';

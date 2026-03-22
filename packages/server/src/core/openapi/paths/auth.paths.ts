@@ -1,11 +1,11 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 import {
   loginRequestSchema,
   registerRequestSchema,
   registerWithCodeRequestSchema,
   changePasswordRequestSchema,
   resetPasswordRequestSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { errorResponse, messageResponse, PROTECTED, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 

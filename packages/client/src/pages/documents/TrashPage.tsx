@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { CalendarClock, RotateCcw, Search, Trash, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { TrashDocumentListItem } from '@knowledge-agent/shared/types';
+import type { TrashDocumentListItem } from '@groundpath/shared/types';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {

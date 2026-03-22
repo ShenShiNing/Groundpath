@@ -1,4 +1,4 @@
-import type { AuthResponse } from '@knowledge-agent/shared/types';
+import type { AuthResponse } from '@groundpath/shared/types';
 
 // ==================== State Store Types ====================
 

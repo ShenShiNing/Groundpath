@@ -1,7 +1,7 @@
 import { Clock, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ProcessingStatus } from '@knowledge-agent/shared/types';
+import type { ProcessingStatus } from '@groundpath/shared/types';
 import { useTranslation } from 'react-i18next';
 
 interface ProcessingStatusBadgeProps {
@@ -18,7 +18,10 @@ export function ProcessingStatusBadge({
   showLabel = true,
 }: ProcessingStatusBadgeProps) {
   const { t } = useTranslation('document');
-  const statusConfig: Record<ProcessingStatus, { label: string; icon: typeof Clock; className: string }> = {
+  const statusConfig: Record<
+    ProcessingStatus,
+    { label: string; icon: typeof Clock; className: string }
+  > = {
     pending: {
       label: t('status.pending'),
       icon: Clock,

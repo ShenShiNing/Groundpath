@@ -151,7 +151,7 @@ function HomeUserMenu() {
 }
 
 function Navbar() {
-  const { t } = useTranslation('home');
+  const { t } = useTranslation(['home', 'common']);
   const { theme, setTheme } = useTheme();
   const accessToken = useAuthStore((s) => s.accessToken);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -169,7 +169,7 @@ function Navbar() {
               <Brain className="size-4" />
             </div>
             <span className="font-display text-base font-semibold tracking-tight">
-              KnowledgeAgent
+              {t('brand', { ns: 'common' })}
             </span>
           </Link>
 
@@ -206,7 +206,7 @@ function Navbar() {
 }
 
 const HomePage = () => {
-  const { t } = useTranslation('home');
+  const { t } = useTranslation(['home', 'common']);
   const accessToken = useAuthStore((s) => s.accessToken);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
@@ -356,7 +356,9 @@ const HomePage = () => {
       <footer className="border-t">
         <div className="container">
           <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between text-sm text-muted-foreground">
-            <p>© {new Date().getFullYear()} KnowledgeAgent</p>
+            <p>
+              © {new Date().getFullYear()} {t('brand', { ns: 'common' })}
+            </p>
             <div className="flex items-center gap-5">
               <Link
                 to="/about"

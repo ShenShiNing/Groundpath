@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import { authConfig } from '@config/env';
 import { Errors, handleError } from '../errors';
 import {

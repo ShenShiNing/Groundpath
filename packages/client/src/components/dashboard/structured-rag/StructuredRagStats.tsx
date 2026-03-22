@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Activity, Gauge, Layers3, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
-import type { StructuredRagDashboardSummary } from '@knowledge-agent/shared/types';
+import type { StructuredRagDashboardSummary } from '@groundpath/shared/types';
 import { formatMs, formatPercent } from './utils';
 
 function StatCard({

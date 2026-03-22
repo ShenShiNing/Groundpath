@@ -1,4 +1,4 @@
-# Knowledge Agent — 代码库综合分析报告
+# Groundpath — 代码库综合分析报告
 
 > 生成日期：2026-03-21
 > 代码量：~23,500 行 TypeScript（763 个源文件）
@@ -28,7 +28,7 @@
 
 ## 1. 项目概览
 
-Knowledge Agent 是一个面向个人/团队的 **RAG（检索增强生成）知识管理平台**。用户可以：
+Groundpath 是一个面向个人/团队的 **RAG（检索增强生成）知识管理平台**。用户可以：
 
 - 创建知识库、上传文档（PDF / DOCX / Markdown / 纯文本）
 - 文档自动向量化、结构化索引
@@ -44,56 +44,56 @@ Knowledge Agent 是一个面向个人/团队的 **RAG（检索增强生成）知
 
 ### 2.1 前端
 
-| 类别 | 技术 |
-|------|------|
-| 框架 | React 19 + TypeScript 5.9 |
-| 构建 | Vite 7.3 |
-| 路由 | TanStack Router |
-| 状态 | Zustand（客户端）+ TanStack Query（服务端） |
-| 表单 | TanStack Form + Zod |
-| UI | Radix UI + Tailwind CSS 4 + Lucide Icons |
-| 国际化 | i18next |
-| 主题 | next-themes（OKLCH 色彩系统） |
-| HTTP | Axios（REST）+ fetch（SSE 流式） |
+| 类别   | 技术                                        |
+| ------ | ------------------------------------------- |
+| 框架   | React 19 + TypeScript 5.9                   |
+| 构建   | Vite 7.3                                    |
+| 路由   | TanStack Router                             |
+| 状态   | Zustand（客户端）+ TanStack Query（服务端） |
+| 表单   | TanStack Form + Zod                         |
+| UI     | Radix UI + Tailwind CSS 4 + Lucide Icons    |
+| 国际化 | i18next                                     |
+| 主题   | next-themes（OKLCH 色彩系统）               |
+| HTTP   | Axios（REST）+ fetch（SSE 流式）            |
 
 ### 2.2 后端
 
-| 类别 | 技术 |
-|------|------|
-| 运行时 | Node.js + Express 5 + TypeScript 5.9 |
-| ORM | Drizzle ORM（MySQL） |
-| 缓存 | Redis（ioredis） |
-| 队列 | BullMQ |
-| 定时任务 | node-cron |
-| 日志 | Pino |
-| API 文档 | Swagger / OpenAPI（zod-to-openapi） |
-| 文件存储 | 本地 / Cloudflare R2（S3 兼容） |
-| 向量数据库 | Qdrant |
+| 类别       | 技术                                 |
+| ---------- | ------------------------------------ |
+| 运行时     | Node.js + Express 5 + TypeScript 5.9 |
+| ORM        | Drizzle ORM（MySQL）                 |
+| 缓存       | Redis（ioredis）                     |
+| 队列       | BullMQ                               |
+| 定时任务   | node-cron                            |
+| 日志       | Pino                                 |
+| API 文档   | Swagger / OpenAPI（zod-to-openapi）  |
+| 文件存储   | 本地 / Cloudflare R2（S3 兼容）      |
+| 向量数据库 | Qdrant                               |
 
 ### 2.3 AI 集成
 
-| 类别 | 技术 |
-|------|------|
-| LLM | OpenAI / Anthropic Claude / 智谱 / DeepSeek / Ollama |
-| Embedding | 智谱 / OpenAI / Ollama |
-| VLM | OpenAI gpt-4o / Anthropic Claude |
-| Agent | Claude Agent SDK + Tavily（网络搜索） |
+| 类别      | 技术                                                 |
+| --------- | ---------------------------------------------------- |
+| LLM       | OpenAI / Anthropic Claude / 智谱 / DeepSeek / Ollama |
+| Embedding | 智谱 / OpenAI / Ollama                               |
+| VLM       | OpenAI gpt-4o / Anthropic Claude                     |
+| Agent     | Claude Agent SDK + Tavily（网络搜索）                |
 
 ### 2.4 质量工具
 
-| 类别 | 技术 |
-|------|------|
-| 测试 | Vitest 4 + @vitest/coverage-v8 |
-| Lint | ESLint 9 + typescript-eslint + Prettier |
-| Git hooks | Husky + lint-staged |
-| 架构检查 | dependency-cruiser |
+| 类别      | 技术                                    |
+| --------- | --------------------------------------- |
+| 测试      | Vitest 4 + @vitest/coverage-v8          |
+| Lint      | ESLint 9 + typescript-eslint + Prettier |
+| Git hooks | Husky + lint-staged                     |
+| 架构检查  | dependency-cruiser                      |
 
 ---
 
 ## 3. 项目结构
 
 ```
-knowledge-agent/
+groundpath/
 ├── packages/
 │   ├── client/                 # React 前端（~22,500 行）
 │   │   ├── src/
@@ -176,6 +176,7 @@ HTTP Request
 ```
 
 **评价**：严格的四层分层，依赖方向单向。dependency-cruiser 规则强制执行：
+
 - Controller 不能直接访问 Repository
 - 跨模块导入必须通过 barrel（index.ts）
 - 共享代码不依赖功能模块
@@ -197,8 +198,8 @@ modules/auth/
 
 ```typescript
 const apiRouteModules = [
-  { id: 'auth',    basePath: '/api/auth',    router: authRoutes },
-  { id: 'chat',    basePath: '/api/chat',    router: chatRoutes },
+  { id: 'auth', basePath: '/api/auth', router: authRoutes },
+  { id: 'chat', basePath: '/api/chat', router: chatRoutes },
   { id: 'document', basePath: '/api/documents', router: documentRoutes },
   // ...
 ];
@@ -223,6 +224,7 @@ const apiRouteModules = [
 ```
 
 **幂等性保证**：
+
 - BullMQ 使用语义化 Job ID（`doc-{id}-v{version}-idx-{ver}`），自动去重
 - Redis 分布式锁防止并发处理同一文档
 - 失败重试使用指数退避
@@ -243,18 +245,18 @@ const apiRouteModules = [
 
 ### 4.5 文件大小分析（后端 Top 10）
 
-| 文件 | 行数 | 状态 |
-|------|------|------|
-| `scripts/db-consistency-check/checks.ts` | 433 | ⚠️ 超限（脚本，可接受） |
-| `vector/vector.repository.ts` | 431 | ⚠️ 超限 |
-| `document-ai/services/analysis.service.ts` | 404 | ⚠️ 超限 |
-| `rag/services/processing.executor.ts` | 395 | ✅ 接近限制 |
-| `logs/services/structured-rag-dashboard.service.ts` | 393 | ✅ 接近限制 |
-| `knowledge-base/services/knowledge-base.service.ts` | 380 | ✅ 接近限制 |
-| `document/controllers/document.controller.ts` | 367 | ✅ 可控 |
-| `chat/repositories/message.repository.ts` | 363 | ✅ 可控 |
-| `document-ai/services/summary.service.ts` | 358 | ✅ 可控 |
-| `document/services/document-storage.service.ts` | 347 | ✅ 可控 |
+| 文件                                                | 行数 | 状态                    |
+| --------------------------------------------------- | ---- | ----------------------- |
+| `scripts/db-consistency-check/checks.ts`            | 433  | ⚠️ 超限（脚本，可接受） |
+| `vector/vector.repository.ts`                       | 431  | ⚠️ 超限                 |
+| `document-ai/services/analysis.service.ts`          | 404  | ⚠️ 超限                 |
+| `rag/services/processing.executor.ts`               | 395  | ✅ 接近限制             |
+| `logs/services/structured-rag-dashboard.service.ts` | 393  | ✅ 接近限制             |
+| `knowledge-base/services/knowledge-base.service.ts` | 380  | ✅ 接近限制             |
+| `document/controllers/document.controller.ts`       | 367  | ✅ 可控                 |
+| `chat/repositories/message.repository.ts`           | 363  | ✅ 可控                 |
+| `document-ai/services/summary.service.ts`           | 358  | ✅ 可控                 |
+| `document/services/document-storage.service.ts`     | 347  | ✅ 可控                 |
 
 > 项目规范：~400 行上限。3 个文件轻微超限，总体控制良好。
 
@@ -290,6 +292,7 @@ const apiRouteModules = [
 ```
 
 **评价**：
+
 - 客户端状态（Zustand）与服务端状态（React Query）职责清晰
 - `accessToken` 仅存在内存中，不持久化（安全最佳实践）
 - SSE 流式处理独立于 Axios，使用原生 fetch
@@ -312,6 +315,7 @@ const apiRouteModules = [
 ```
 
 **设计模式**：
+
 - 大页面拆分为子组件 + Controller Hook（如 `useChatPageController`）
 - `memo()` + `useCallback` / `useMemo` 优化渲染（130+ 处使用）
 - 懒加载重型组件（md-editor、PDF viewer）
@@ -331,18 +335,18 @@ manualChunks: {
 
 ### 5.5 文件大小分析（前端 Top 10）
 
-| 文件 | 行数 | 状态 |
-|------|------|------|
-| `pages/chat-page/useChatPageController.ts` | 458 | ⚠️ 超限 |
-| `stores/chatPanelStore.ts` | 434 | ⚠️ 超限 |
-| `hooks/useDocuments.ts` | 432 | ⚠️ 超限 |
-| `pages/documents/DocumentDetailPage.tsx` | 426 | ⚠️ 超限 |
-| `pages/Home.tsx` | 381 | ✅ 接近限制 |
-| `pages/documents/TrashPage.tsx` | 374 | ✅ 接近限制 |
-| `security/ChangePasswordForm.tsx` | 353 | ✅ 可控 |
-| `security/AccountEmailForm.tsx` | 350 | ✅ 可控 |
-| `layout/AppSidebar.tsx` | 313 | ✅ 可控 |
-| `chat/ChatMessage.tsx` | 305 | ✅ 可控 |
+| 文件                                       | 行数 | 状态        |
+| ------------------------------------------ | ---- | ----------- |
+| `pages/chat-page/useChatPageController.ts` | 458  | ⚠️ 超限     |
+| `stores/chatPanelStore.ts`                 | 434  | ⚠️ 超限     |
+| `hooks/useDocuments.ts`                    | 432  | ⚠️ 超限     |
+| `pages/documents/DocumentDetailPage.tsx`   | 426  | ⚠️ 超限     |
+| `pages/Home.tsx`                           | 381  | ✅ 接近限制 |
+| `pages/documents/TrashPage.tsx`            | 374  | ✅ 接近限制 |
+| `security/ChangePasswordForm.tsx`          | 353  | ✅ 可控     |
+| `security/AccountEmailForm.tsx`            | 350  | ✅ 可控     |
+| `layout/AppSidebar.tsx`                    | 313  | ✅ 可控     |
+| `chat/ChatMessage.tsx`                     | 305  | ✅ 可控     |
 
 > 4 个文件超过 400 行限制，需要进一步拆分。
 
@@ -359,6 +363,7 @@ packages/shared/
 ```
 
 **评价**：
+
 - 单一数据契约（Single Source of Truth）：验证逻辑只写一次
 - 前后端类型一致性通过编译时保证
 - 构建输出 `.d.ts` 声明文件供消费
@@ -384,14 +389,14 @@ core/db/schema/
 
 ### 7.2 设计特点
 
-| 特性 | 实现 |
-|------|------|
-| 主键 | UUID |
-| 软删除 | `deletedAt` / `deletedBy` 字段 |
-| 审计字段 | `createdAt/By`, `updatedAt/By` |
+| 特性     | 实现                                |
+| -------- | ----------------------------------- |
+| 主键     | UUID                                |
+| 软删除   | `deletedAt` / `deletedBy` 字段      |
+| 审计字段 | `createdAt/By`, `updatedAt/By`      |
 | 版本控制 | `document_versions` 表 + 版本号字段 |
-| 索引策略 | 复合索引（状态+用户+删除标记） |
-| 关系管理 | Drizzle relations |
+| 索引策略 | 复合索引（状态+用户+删除标记）      |
+| 关系管理 | Drizzle relations                   |
 
 ### 7.3 迁移管理
 
@@ -421,20 +426,23 @@ core/db/schema/
 ### 8.2 环境验证
 
 **17 个 Zod Schema** 覆盖所有基础设施和业务配置：
+
 - Server、Database、Redis、Auth、Email、OAuth
 - Storage、Embedding、Vector、LLM、VLM、Agent
 - Queue、Logging、Feature Flags、Schedule 等
 
 强制约束示例：
+
 ```typescript
-JWT_SECRET: z.string().min(32)     // 强制 32+ 字符
-ENCRYPTION_KEY: z.string().min(32)
-NODE_ENV: z.enum(['development', 'production', 'test'])
+JWT_SECRET: z.string().min(32); // 强制 32+ 字符
+ENCRYPTION_KEY: z.string().min(32);
+NODE_ENV: z.enum(['development', 'production', 'test']);
 ```
 
 ### 8.3 Feature Flags
 
 12+ 个功能标记支持渐进式发布：
+
 - `STRUCTURED_RAG_ENABLED` / `STRUCTURED_RAG_ROLLOUT_MODE`
 - `IMAGE_DESCRIPTION_ENABLED`
 - `DOCUMENT_PROCESSING_RECOVERY_ENABLED`
@@ -462,31 +470,35 @@ NODE_ENV: z.enum(['development', 'production', 'test'])
 
 ### 9.2 覆盖分布
 
-| 包 | 测试文件 | 源文件 | 比率 |
-|----|---------:|-------:|------|
-| Server | 114 | ~450 | 25% |
-| Client | 38 | ~260 | 15% |
-| Shared | 2 | ~50 | 4% |
+| 包     | 测试文件 | 源文件 | 比率 |
+| ------ | -------: | -----: | ---- |
+| Server |      114 |   ~450 | 25%  |
+| Client |       38 |   ~260 | 15%  |
+| Shared |        2 |    ~50 | 4%   |
 
 ### 9.3 测试模式
 
 **单元测试**（`tests/modules/`）：
+
 - 使用 `vi.mock()` + `vi.hoisted()` 完全隔离
 - 每个服务方法有多场景覆盖（如登录测试 22 个场景）
 - 共享 Mock 库（`tests/__mocks__/`）
 - `logTestInfo()` 辅助调试
 
 **集成测试**（`tests/integration/`）：
+
 - 真实 MySQL + Redis 连接
 - 条件执行（`RUN_REAL_*_INTEGRATION` 环境变量）
 - 端到端流程验证（文档索引回填等）
 
 **E2E 测试**（`tests/e2e/`）：
+
 - 启动完整 Express 服务器（随机端口）
 - `smoke-auth` / `smoke-chat` / `smoke-kb-document` / `smoke-trash`
 - 丰富的 helper 函数（`jsonFetch`, `authFetch`, `authPost` 等）
 
 **前端测试**（`client/tests/`）：
+
 - 组件测试（jsdom 环境）
 - Hook 测试
 - Store 测试
@@ -494,13 +506,13 @@ NODE_ENV: z.enum(['development', 'production', 'test'])
 
 ### 9.4 测试基础设施评价
 
-| 方面 | 评分 | 说明 |
-|------|:----:|------|
-| 框架选型 | ⭐⭐⭐⭐⭐ | Vitest 配置健全，多项目支持 |
-| 单元测试 | ⭐⭐⭐⭐⭐ | Mock 库完善，场景覆盖全面 |
-| 集成测试 | ⭐⭐⭐⭐ | 有真实 DB 测试，覆盖关键路径 |
-| E2E 测试 | ⭐⭐⭐ | 4 个 smoke 测试，可扩展 |
-| 前端测试 | ⭐⭐⭐ | 有基础覆盖，复杂 Hook 测试不足 |
+| 方面     |    评分    | 说明                           |
+| -------- | :--------: | ------------------------------ |
+| 框架选型 | ⭐⭐⭐⭐⭐ | Vitest 配置健全，多项目支持    |
+| 单元测试 | ⭐⭐⭐⭐⭐ | Mock 库完善，场景覆盖全面      |
+| 集成测试 |  ⭐⭐⭐⭐  | 有真实 DB 测试，覆盖关键路径   |
+| E2E 测试 |   ⭐⭐⭐   | 4 个 smoke 测试，可扩展        |
+| 前端测试 |   ⭐⭐⭐   | 有基础覆盖，复杂 Hook 测试不足 |
 
 ---
 
@@ -529,14 +541,14 @@ TypeScript（严格模式）
 
 6 条强制规则：
 
-| 规则 | 级别 | 说明 |
-|------|------|------|
-| `no-circular` | ❌ Error | 禁止循环依赖 |
-| `no-controller-to-repository` | ❌ Error | Controller 必须经过 Service |
+| 规则                                | 级别     | 说明                        |
+| ----------------------------------- | -------- | --------------------------- |
+| `no-circular`                       | ❌ Error | 禁止循环依赖                |
+| `no-controller-to-repository`       | ❌ Error | Controller 必须经过 Service |
 | `no-cross-module-controller-import` | ❌ Error | 路由只导入同模块 Controller |
-| `no-orphans` | ⚠️ Warn | 检测孤立文件 |
-| `no-shared-to-modules` | ❌ Error | 共享层不依赖功能模块 |
-| `no-cross-module-deep-import` | ⚠️ Warn | 跨模块应通过 barrel 导入 |
+| `no-orphans`                        | ⚠️ Warn  | 检测孤立文件                |
+| `no-shared-to-modules`              | ❌ Error | 共享层不依赖功能模块        |
+| `no-cross-module-deep-import`       | ⚠️ Warn  | 跨模块应通过 barrel 导入    |
 
 ### 10.3 Git Hooks
 
@@ -568,15 +580,15 @@ OAuth 集成：
 
 ### 11.2 防御措施
 
-| 威胁 | 防御 |
-|------|------|
-| XSS | Helmet CSP + 输入清洗（HTML 标签移除） |
-| CSRF | Cookie SameSite + CSRF Token 验证 |
-| 暴力破解 | Redis-backed 速率限制（登录/注册/邮件/AI） |
-| SQL 注入 | Drizzle ORM 参数化查询 |
-| 路径遍历 | 文件签名验证 + `../` 检测 |
-| 密码泄露 | bcryptjs hash（可配置 salt 轮数） |
-| Token 泄露 | accessToken 不持久化 + HttpOnly Cookie |
+| 威胁       | 防御                                       |
+| ---------- | ------------------------------------------ |
+| XSS        | Helmet CSP + 输入清洗（HTML 标签移除）     |
+| CSRF       | Cookie SameSite + CSRF Token 验证          |
+| 暴力破解   | Redis-backed 速率限制（登录/注册/邮件/AI） |
+| SQL 注入   | Drizzle ORM 参数化查询                     |
+| 路径遍历   | 文件签名验证 + `../` 检测                  |
+| 密码泄露   | bcryptjs hash（可配置 salt 轮数）          |
+| Token 泄露 | accessToken 不持久化 + HttpOnly Cookie     |
 
 ### 11.3 文件安全
 
@@ -601,6 +613,7 @@ Pino JSON Logger
 ### 12.2 指标追踪
 
 结构化 RAG 观测指标：
+
 - Agent 执行（工具调用数、持续时间、停止原因）
 - 聊天（流式 vs 非流式、Agent vs Legacy 模式）
 - 索引构建（解析方法、成功/失败原因）
@@ -608,13 +621,13 @@ Pino JSON Logger
 
 ### 12.3 运维脚本
 
-| 脚本 | 用途 |
-|------|------|
-| `db:drift-check` | 检测 Schema 漂移 |
-| `db:consistency-check` | 数据完整性校验 |
-| `db:sync-counters` | 统计计数器修正 |
-| `document-index:backfill` | 索引回填 |
-| `db:migrate` | 迁移执行 |
+| 脚本                      | 用途             |
+| ------------------------- | ---------------- |
+| `db:drift-check`          | 检测 Schema 漂移 |
+| `db:consistency-check`    | 数据完整性校验   |
+| `db:sync-counters`        | 统计计数器修正   |
+| `document-index:backfill` | 索引回填         |
+| `db:migrate`              | 迁移执行         |
 
 ### 12.4 缺失项
 
@@ -627,20 +640,20 @@ Pino JSON Logger
 
 ## 13. 综合评分
 
-| 维度 | 评分 | 说明 |
-|------|:----:|------|
-| **架构设计** | ⭐⭐⭐⭐⭐ | 分层清晰、模块独立、依赖规则强制 |
-| **代码组织** | ⭐⭐⭐⭐½ | 结构一致，少数文件超限 |
-| **类型安全** | ⭐⭐⭐⭐⭐ | 严格 TS + Zod 端到端验证 |
-| **安全设计** | ⭐⭐⭐⭐⭐ | 多层防御，Token 管理规范 |
-| **配置管理** | ⭐⭐⭐⭐⭐ | Zod Schema 验证 + 分层默认值 |
-| **测试覆盖** | ⭐⭐⭐⭐ | 单元测试优秀，E2E/前端可加强 |
-| **错误处理** | ⭐⭐⭐⭐⭐ | 统一 AppError 体系，全局兜底 |
-| **性能优化** | ⭐⭐⭐⭐ | 代码分割、memoization、连接池 |
-| **可观测性** | ⭐⭐⭐½ | 日志完善，缺 APM/链路追踪 |
-| **DevOps** | ⭐⭐½ | 无 Docker/CI，依赖本地开发 |
-| **文档** | ⭐⭐⭐ | 有 env 文档和 CLAUDE.md，缺架构文档 |
-| **代码复用** | ⭐⭐⭐⭐½ | 共享包设计好，少量重复逻辑 |
+| 维度         |    评分    | 说明                                |
+| ------------ | :--------: | ----------------------------------- |
+| **架构设计** | ⭐⭐⭐⭐⭐ | 分层清晰、模块独立、依赖规则强制    |
+| **代码组织** | ⭐⭐⭐⭐½  | 结构一致，少数文件超限              |
+| **类型安全** | ⭐⭐⭐⭐⭐ | 严格 TS + Zod 端到端验证            |
+| **安全设计** | ⭐⭐⭐⭐⭐ | 多层防御，Token 管理规范            |
+| **配置管理** | ⭐⭐⭐⭐⭐ | Zod Schema 验证 + 分层默认值        |
+| **测试覆盖** |  ⭐⭐⭐⭐  | 单元测试优秀，E2E/前端可加强        |
+| **错误处理** | ⭐⭐⭐⭐⭐ | 统一 AppError 体系，全局兜底        |
+| **性能优化** |  ⭐⭐⭐⭐  | 代码分割、memoization、连接池       |
+| **可观测性** |  ⭐⭐⭐½   | 日志完善，缺 APM/链路追踪           |
+| **DevOps**   |   ⭐⭐½    | 无 Docker/CI，依赖本地开发          |
+| **文档**     |   ⭐⭐⭐   | 有 env 文档和 CLAUDE.md，缺架构文档 |
+| **代码复用** | ⭐⭐⭐⭐½  | 共享包设计好，少量重复逻辑          |
 
 **总体评分：4.2 / 5** — 企业级水准的全栈 RAG 应用，架构成熟度高。
 
@@ -663,30 +676,30 @@ Pino JSON Logger
 
 ### P0 — 高优先级
 
-| 编号 | 建议 | 说明 |
-|:----:|------|------|
-| 1 | **添加 Docker 配置** | 缺少 Dockerfile 和 docker-compose，新成员上手困难，生产部署缺乏标准化 |
-| 2 | **建立 CI/CD 管道** | 无 GitHub Actions，测试/lint/构建/部署全靠手动，PR 质量无自动保障 |
-| 3 | **添加健康检查端点** | 缺少 `/health`（readiness/liveness），生产环境无法被编排系统监控 |
+| 编号 | 建议                 | 说明                                                                  |
+| :--: | -------------------- | --------------------------------------------------------------------- |
+|  1   | **添加 Docker 配置** | 缺少 Dockerfile 和 docker-compose，新成员上手困难，生产部署缺乏标准化 |
+|  2   | **建立 CI/CD 管道**  | 无 GitHub Actions，测试/lint/构建/部署全靠手动，PR 质量无自动保障     |
+|  3   | **添加健康检查端点** | 缺少 `/health`（readiness/liveness），生产环境无法被编排系统监控      |
 
 ### P1 — 中优先级
 
-| 编号 | 建议 | 说明 |
-|:----:|------|------|
-| 4 | **拆分超限文件** | 7 个文件 >400 行（详见 4.5 和 5.5），建议拆分以保持可维护性 |
-| 5 | **扩展前端测试** | 复杂 Hook（`useChatPageController`）和流式逻辑缺少测试覆盖 |
-| 6 | **增加 E2E 测试** | 当前仅 4 个 smoke 测试，建议覆盖核心用户流程（文档上传→向量化→对话） |
-| 7 | **添加 APM/链路追踪** | 当前仅有结构化日志，缺少请求链路追踪能力（如 OpenTelemetry） |
+| 编号 | 建议                  | 说明                                                                 |
+| :--: | --------------------- | -------------------------------------------------------------------- |
+|  4   | **拆分超限文件**      | 7 个文件 >400 行（详见 4.5 和 5.5），建议拆分以保持可维护性          |
+|  5   | **扩展前端测试**      | 复杂 Hook（`useChatPageController`）和流式逻辑缺少测试覆盖           |
+|  6   | **增加 E2E 测试**     | 当前仅 4 个 smoke 测试，建议覆盖核心用户流程（文档上传→向量化→对话） |
+|  7   | **添加 APM/链路追踪** | 当前仅有结构化日志，缺少请求链路追踪能力（如 OpenTelemetry）         |
 
 ### P2 — 低优先级
 
-| 编号 | 建议 | 说明 |
-|:----:|------|------|
-| 8 | **chatPanelStore 职责拆分** | 同时管理 UI 状态、数据、副作用，可拆为 UI Store + Data Store |
-| 9 | **SSE 流式处理抽象** | 流处理逻辑分散在多个文件，可考虑统一 Observable 模式 |
-| 10 | **补充架构文档** | 缺少 ADR（Architecture Decision Records）和系统架构图 |
-| 11 | **类型转换统一** | 前端存在多个相似转换函数（`toStoreMessage`, `toStoreCitation`），可合并 |
+| 编号 | 建议                        | 说明                                                                    |
+| :--: | --------------------------- | ----------------------------------------------------------------------- |
+|  8   | **chatPanelStore 职责拆分** | 同时管理 UI 状态、数据、副作用，可拆为 UI Store + Data Store            |
+|  9   | **SSE 流式处理抽象**        | 流处理逻辑分散在多个文件，可考虑统一 Observable 模式                    |
+|  10  | **补充架构文档**            | 缺少 ADR（Architecture Decision Records）和系统架构图                   |
+|  11  | **类型转换统一**            | 前端存在多个相似转换函数（`toStoreMessage`, `toStoreCitation`），可合并 |
 
 ---
 
-*本报告基于代码库截至 2026-03-21 的快照生成。*
+_本报告基于代码库截至 2026-03-21 的快照生成。_

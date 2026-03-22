@@ -23,7 +23,7 @@ const principles = [
 ] as const;
 
 export default function AboutPage() {
-  const { t } = useTranslation('home');
+  const { t } = useTranslation(['home', 'common']);
   const accessToken = useAuthStore((s) => s.accessToken);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
@@ -42,7 +42,7 @@ export default function AboutPage() {
                 <Brain className="size-4" />
               </div>
               <span className="font-display text-base font-semibold tracking-tight">
-                KnowledgeAgent
+                {t('brand', { ns: 'common' })}
               </span>
             </Link>
             <div className="flex items-center gap-2">

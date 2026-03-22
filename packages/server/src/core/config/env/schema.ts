@@ -1,4 +1,5 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { BRAND_CONFIG } from '@groundpath/shared/constants';
+import { z } from '@groundpath/shared/schemas';
 import { booleanString, csvStringArray } from './helpers';
 
 const serverSchema = z.object({
@@ -20,13 +21,13 @@ const databaseSchema = z.object({
 
 const redisSchema = z.object({
   REDIS_URL: z.string().min(1),
-  REDIS_PREFIX: z.string().default('knowledge-agent'),
+  REDIS_PREFIX: z.string().default(BRAND_CONFIG.redisPrefix),
 });
 
 const authSchema = z.object({
   JWT_SECRET: z.string().min(32),
-  JWT_ISSUER: z.string().default('knowledge-agent'),
-  JWT_AUDIENCE: z.string().default('knowledge-agent-client'),
+  JWT_ISSUER: z.string().default(BRAND_CONFIG.jwtIssuer),
+  JWT_AUDIENCE: z.string().default(BRAND_CONFIG.jwtAudience),
   ENCRYPTION_KEY: z.string().min(32),
   OAUTH_EXCHANGE_CODE_SECRET: z.string().default(''),
   AUTH_COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).default('strict'),
@@ -39,7 +40,7 @@ const emailSchema = z.object({
   SMTP_SECURE: booleanString(false),
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
-  EMAIL_FROM_NAME: z.string().default('Knowledge Agent'),
+  EMAIL_FROM_NAME: z.string().default(BRAND_CONFIG.emailFromName),
   EMAIL_FROM_ADDRESS: z.string().default('noreply@example.com'),
   EMAIL_VERIFICATION_SECRET: z.string().min(1),
 });

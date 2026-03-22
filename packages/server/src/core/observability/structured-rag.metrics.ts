@@ -1,4 +1,4 @@
-import type { AgentStopReason } from '@knowledge-agent/shared/types';
+import type { AgentStopReason } from '@groundpath/shared/types';
 import { createLogger } from '@core/logger';
 
 const logger = createLogger('structured-rag.metrics');

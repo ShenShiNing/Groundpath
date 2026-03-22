@@ -1,8 +1,4 @@
-import type {
-  ApiResponse,
-  AuthResponse,
-  OAuthExchangeRequest,
-} from '@knowledge-agent/shared/types';
+import type { ApiResponse, AuthResponse, OAuthExchangeRequest } from '@groundpath/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
 
 /**

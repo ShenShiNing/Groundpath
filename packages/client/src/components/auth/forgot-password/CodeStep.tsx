@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AxiosError } from 'axios';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { emailApi } from '@/api';

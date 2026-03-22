@@ -4,12 +4,12 @@ import type {
   LLMProviderInfo,
   TestLLMConnectionResponse,
   FetchModelsResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import type {
   UpdateLLMConfigInput,
   TestLLMConnectionInput,
   FetchModelsInput,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { apiClient, unwrapResponse } from '@/lib/http';
 
 export const llmConfigApi = {

@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { HTTP_STATUS, AUTH_ERROR_CODES } from '@groundpath/shared';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -7,7 +7,7 @@ import type {
   RegisterWithCodeRequest,
   ResetPasswordRequest,
   AuthResponse,
-} from '@knowledge-agent/shared';
+} from '@groundpath/shared';
 import { authService } from '../services/auth.service';
 import { sessionService } from '../services/session.service';
 import { passwordService } from '../services/password.service';

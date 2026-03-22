@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { Database, Ellipsis, FileText, Sparkles, Trash2, Upload } from 'lucide-react';
-import type { DocumentListItem, KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem, KnowledgeBaseListItem } from '@groundpath/shared/types';
 import { ChatKnowledgeScopeCombobox, DocumentScopeSelector } from '@/components/chat';
 import { Button } from '@/components/ui/button';
 import {

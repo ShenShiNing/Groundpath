@@ -4,7 +4,7 @@ import type {
   DocumentContentResponse,
   DocumentInfo,
   VersionListResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { fireClick, flushPromises, render } from '../../utils/render';
 
 const mocks = vi.hoisted(() => ({

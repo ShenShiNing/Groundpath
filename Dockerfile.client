@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY packages/client ./packages/client
 
-RUN pnpm --filter @knowledge-agent/client build
+RUN pnpm --filter @groundpath/client build
 
 FROM nginx:1.27-alpine
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { Save, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/components/theme/theme-provider';

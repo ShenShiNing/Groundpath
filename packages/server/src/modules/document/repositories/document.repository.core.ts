@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, isNotNull, isNull, like } from 'drizzle-orm';
-import type { DocumentListParams, TrashListParams } from '@knowledge-agent/shared/types';
+import type { DocumentListParams, TrashListParams } from '@groundpath/shared/types';
 import { db } from '@core/db';
 import { getDbContext, now, type Transaction } from '@core/db/db.utils';
 import {

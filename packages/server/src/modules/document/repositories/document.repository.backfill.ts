@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { db } from '@core/db';
 import { documents } from '@core/db/schema/document/documents.schema';
 import type { DocumentBackfillCandidate } from './document.repository.types';

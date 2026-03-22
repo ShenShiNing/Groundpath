@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { TokenPair, DeviceInfo } from '@knowledge-agent/shared/types';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
+import type { TokenPair, DeviceInfo } from '@groundpath/shared/types';
 import { authConfig } from '@config/env';
 import type { User } from '@core/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@core/types';

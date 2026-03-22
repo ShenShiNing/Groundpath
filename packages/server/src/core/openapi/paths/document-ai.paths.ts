@@ -1,10 +1,10 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 import {
   summaryRequestSchema,
   analysisRequestSchema,
   generateRequestSchema,
   expandRequestSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { errorResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 

@@ -3,7 +3,7 @@ import { db } from '@core/db';
 import { getDbContext, type Transaction } from '@core/db/db.utils';
 import { messages, type Message, type NewMessage } from '@core/db/schema/ai/messages.schema';
 import { conversations } from '@core/db/schema/ai/conversations.schema';
-import type { ConversationSearchItem } from '@knowledge-agent/shared/types';
+import type { ConversationSearchItem } from '@groundpath/shared/types';
 
 function buildBooleanSearchQuery(query: string): string {
   const normalized = query.trim();

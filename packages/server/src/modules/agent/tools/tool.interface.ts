@@ -1,4 +1,4 @@
-import type { Citation } from '@knowledge-agent/shared/types';
+import type { Citation } from '@groundpath/shared/types';
 
 export type ToolCategory = 'structured' | 'fallback' | 'external';
 

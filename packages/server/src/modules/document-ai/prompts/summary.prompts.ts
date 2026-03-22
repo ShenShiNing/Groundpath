@@ -3,7 +3,7 @@
  * Prompt templates for document summarization
  */
 
-import type { SummaryLength } from '@knowledge-agent/shared/types';
+import type { SummaryLength } from '@groundpath/shared/types';
 
 interface SummaryPromptOptions {
   length: SummaryLength;

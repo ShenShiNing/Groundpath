@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import type { ModelInfo, FetchModelsOptions } from '../providers/llm-provider.interface';
 import { llmConfig } from '@config/env';
 import { Errors } from '@core/errors';

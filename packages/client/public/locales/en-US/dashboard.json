@@ -25,7 +25,7 @@
   "hero": {
     "welcome": "Welcome back",
     "titleWithUser": "{{username}}'s Workspace",
-    "titleDefault": "KnowledgeAgent Dashboard",
+    "titleDefault": "Groundpath Dashboard",
     "openKnowledgeBases": "Open Knowledge Bases",
     "configureModel": "Configure Model"
   },

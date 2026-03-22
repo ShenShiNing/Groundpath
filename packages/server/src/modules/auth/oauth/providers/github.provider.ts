@@ -1,4 +1,4 @@
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import { Errors } from '@core/errors';
 import { serverConfig, oauthConfig } from '@config/env';
 import type {

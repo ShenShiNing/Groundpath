@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
-import { HTTP_STATUS } from '@knowledge-agent/shared';
+import { HTTP_STATUS } from '@groundpath/shared';
 import type {
   UpdateDocumentRequest,
   DocumentListParams,
   TrashListParams,
   SaveDocumentContentRequest,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { documentService } from '../services/document.service';
 import { sendSuccessResponse } from '@core/errors';
 import { AppError } from '@core/errors/app-error';

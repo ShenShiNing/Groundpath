@@ -1,5 +1,5 @@
-import type { ApiResponse } from '@knowledge-agent/shared/types';
-import { isSuccessResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
+import { isSuccessResponse } from '@groundpath/shared/types';
 
 /** API 请求错误 */
 export class ApiRequestError extends Error {

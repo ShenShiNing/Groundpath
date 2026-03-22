@@ -1,12 +1,14 @@
-# Suzhi / Knowledge Agent
+# Groundpath
 
 English version of README. Chinese version: [README.md](./README.md)
 
 Last updated: March 22, 2026
 
-> Product brand is now `Suzhi / Groundpath`. Repository name and internal package scope still use `KnowledgeAgent` / `@knowledge-agent/*` during the migration window.
+> Brand is now `溯知 / Groundpath`. Repository name is `groundpath` and workspace scope is `@groundpath/*`.
 
-Knowledge Agent is a RAG (Retrieval-Augmented Generation) application for personal and team knowledge management. It provides an end-to-end workflow from document ingestion, chunking and embedding, semantic retrieval, and multi-turn chat with citations, plus Document AI features (summary, analysis, generation).
+Trace the source. Reach the answer.
+
+Groundpath is a RAG (Retrieval-Augmented Generation) application for personal and team knowledge management. It provides an end-to-end workflow from document ingestion, chunking and embedding, semantic retrieval, and multi-turn chat with citations, plus Document AI features (summary, analysis, generation).
 
 This repository is a `pnpm` monorepo:
 
@@ -207,20 +209,20 @@ Common important settings:
 For development (quick schema sync):
 
 ```bash
-pnpm -F @knowledge-agent/server db:push
+pnpm -F @groundpath/server db:push
 ```
 
 For production (recommended):
 
 ```bash
-pnpm -F @knowledge-agent/server db:migrate
+pnpm -F @groundpath/server db:migrate
 ```
 
 Before pushing or releasing, run the structure checks:
 
 ```bash
-pnpm -F @knowledge-agent/server db:drift-check
-pnpm -F @knowledge-agent/server db:verify
+pnpm -F @groundpath/server db:drift-check
+pnpm -F @groundpath/server db:verify
 ```
 
 ### 2.6 Start Development Environment
@@ -247,7 +249,7 @@ pnpm build
 2. Start backend service:
 
 ```bash
-pnpm -F @knowledge-agent/server start
+pnpm -F @groundpath/server start
 ```
 
 3. Serve frontend static assets:
@@ -264,7 +266,7 @@ server {
   listen 80;
   server_name your-domain.com;
 
-  root /var/www/knowledge-agent/client-dist;
+  root /var/www/groundpath/client-dist;
   index index.html;
 
   location / {
@@ -372,32 +374,32 @@ If deployed behind reverse proxy, set `TRUST_PROXY` (for example `1` or `true`) 
 
 ## 4. Common Commands
 
-| Command                                                   | Description                                   |
-| --------------------------------------------------------- | --------------------------------------------- |
-| `pnpm dev`                                                | Start frontend and backend in parallel        |
-| `pnpm dev:client`                                         | Start frontend only                           |
-| `pnpm dev:server`                                         | Start backend only                            |
-| `pnpm docker:up`                                          | Start the full stack with Docker Compose      |
-| `pnpm docker:down`                                        | Stop the Docker Compose stack                 |
-| `pnpm docker:down:volumes`                                | Stop the stack and remove Docker volumes      |
-| `pnpm build`                                              | Build all packages                            |
-| `pnpm lint`                                               | Run ESLint                                    |
-| `pnpm lint:fix`                                           | Auto-fix ESLint issues                        |
-| `pnpm format`                                             | Format code with Prettier                     |
-| `pnpm test`                                               | Run tests                                     |
-| `pnpm test:coverage`                                      | Run tests with coverage                       |
-| `pnpm test:server`                                        | Run backend tests only                        |
-| `pnpm test:shared`                                        | Run shared-package tests only                 |
-| `pnpm -F @knowledge-agent/server db:push`                 | Sync schema in development                    |
-| `pnpm -F @knowledge-agent/server db:drift-check`          | Check schema/migration drift                  |
-| `pnpm -F @knowledge-agent/server db:check`                | Run database consistency checks               |
-| `pnpm -F @knowledge-agent/server db:migrate`              | Run database migrations                       |
-| `pnpm -F @knowledge-agent/server db:verify`               | Run drift check and DB consistency validation |
-| `pnpm -F @knowledge-agent/server db:studio`               | Open Drizzle Studio GUI                       |
-| `pnpm -F @knowledge-agent/server db:sync-counters`        | Manually sync knowledge base counters         |
-| `pnpm -F @knowledge-agent/server document-index:backfill` | Manually enqueue document-index backfill      |
-| `pnpm -F @knowledge-agent/client preview`                 | Preview the built frontend locally            |
-| `pnpm architecture:check`                                 | Validate backend dependency architecture      |
+| Command                                              | Description                                   |
+| ---------------------------------------------------- | --------------------------------------------- |
+| `pnpm dev`                                           | Start frontend and backend in parallel        |
+| `pnpm dev:client`                                    | Start frontend only                           |
+| `pnpm dev:server`                                    | Start backend only                            |
+| `pnpm docker:up`                                     | Start the full stack with Docker Compose      |
+| `pnpm docker:down`                                   | Stop the Docker Compose stack                 |
+| `pnpm docker:down:volumes`                           | Stop the stack and remove Docker volumes      |
+| `pnpm build`                                         | Build all packages                            |
+| `pnpm lint`                                          | Run ESLint                                    |
+| `pnpm lint:fix`                                      | Auto-fix ESLint issues                        |
+| `pnpm format`                                        | Format code with Prettier                     |
+| `pnpm test`                                          | Run tests                                     |
+| `pnpm test:coverage`                                 | Run tests with coverage                       |
+| `pnpm test:server`                                   | Run backend tests only                        |
+| `pnpm test:shared`                                   | Run shared-package tests only                 |
+| `pnpm -F @groundpath/server db:push`                 | Sync schema in development                    |
+| `pnpm -F @groundpath/server db:drift-check`          | Check schema/migration drift                  |
+| `pnpm -F @groundpath/server db:check`                | Run database consistency checks               |
+| `pnpm -F @groundpath/server db:migrate`              | Run database migrations                       |
+| `pnpm -F @groundpath/server db:verify`               | Run drift check and DB consistency validation |
+| `pnpm -F @groundpath/server db:studio`               | Open Drizzle Studio GUI                       |
+| `pnpm -F @groundpath/server db:sync-counters`        | Manually sync knowledge base counters         |
+| `pnpm -F @groundpath/server document-index:backfill` | Manually enqueue document-index backfill      |
+| `pnpm -F @groundpath/client preview`                 | Preview the built frontend locally            |
+| `pnpm architecture:check`                            | Validate backend dependency architecture      |
 
 ## 4.1 Architecture Gate
 

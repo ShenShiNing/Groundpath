@@ -1,4 +1,4 @@
-import type { MessageInfo, Citation } from '@knowledge-agent/shared/types';
+import type { MessageInfo, Citation } from '@groundpath/shared/types';
 import type { ChatMessage } from '@modules/llm';
 
 const SYSTEM_PROMPT = `You are a helpful AI assistant with access to a knowledge base.

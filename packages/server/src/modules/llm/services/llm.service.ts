@@ -1,5 +1,5 @@
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
-import { LLM_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import type { LLMProviderType } from '@groundpath/shared/types';
+import { LLM_ERROR_CODES } from '@groundpath/shared/constants';
 import { createLLMProvider } from '../llm.factory';
 import { llmConfigService } from './llm-config.service';
 import type { LLMProvider, GenerateOptions } from '../providers/llm-provider.interface';

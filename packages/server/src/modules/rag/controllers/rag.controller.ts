@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { ragSearchRequestSchema } from '@knowledge-agent/shared/schemas';
+import { ragSearchRequestSchema } from '@groundpath/shared/schemas';
 import { sendSuccessResponse, handleError, Errors } from '@core/errors';
 import { getParamId } from '@core/utils';
 import { searchService } from '../services/search.service';

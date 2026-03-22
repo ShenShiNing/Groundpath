@@ -1,4 +1,4 @@
-import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
+import type { EmbeddingProviderType } from '@groundpath/shared/types';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';

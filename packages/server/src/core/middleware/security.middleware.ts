@@ -2,7 +2,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import { timingSafeEqual } from 'crypto';
 import type { Request, Response, NextFunction } from 'express';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import { serverConfig, storageConfig } from '@config/env';
 import { Errors, handleError } from '@core/errors';
 import type { AccessTokenPayload, RefreshTokenContext } from '@core/types';

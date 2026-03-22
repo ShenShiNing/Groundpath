@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 

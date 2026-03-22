@@ -7,7 +7,7 @@ import type {
   DocumentListResponse,
   TrashListResponse,
   VersionListResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import {
   useDeleteDocument,
   useDocument,

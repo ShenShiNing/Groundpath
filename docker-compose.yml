@@ -1,4 +1,4 @@
-name: knowledge-agent
+name: groundpath
 
 services:
   mysql:
@@ -64,7 +64,7 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
       DATABASE_URL: mysql://${MYSQL_USER:-knowledge_agent}:${MYSQL_PASSWORD:-knowledge_agent}@mysql:3306/${MYSQL_DATABASE:-knowledge_agent}
       REDIS_URL: redis://redis:6379
-      REDIS_PREFIX: ${REDIS_PREFIX:-knowledge-agent}
+      REDIS_PREFIX: ${REDIS_PREFIX:-groundpath}
       JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-at-least-32-characters}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change-this-encryption-key-at-least-32}
       EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:-change-this-email-secret}

@@ -1,5 +1,5 @@
-import { z } from '@knowledge-agent/shared/schemas';
-import { oauthExchangeRequestSchema } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
+import { oauthExchangeRequestSchema } from '@groundpath/shared/schemas';
 import { errorResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 

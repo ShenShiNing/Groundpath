@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
 
 /**
  * Send a standardized error response

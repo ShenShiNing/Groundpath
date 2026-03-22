@@ -100,7 +100,7 @@ const {
 vi.mock('@modules/auth/controllers/auth.controller', async () => {
   const { asyncHandler } = await import('@core/errors/async-handler');
   const { sendSuccessResponse } = await import('@core/errors');
-  const { HTTP_STATUS } = await import('@knowledge-agent/shared');
+  const { HTTP_STATUS } = await import('@groundpath/shared');
 
   return {
     authController: {

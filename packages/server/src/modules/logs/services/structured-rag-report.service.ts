@@ -1,5 +1,5 @@
 import { structuredRagObservabilityConfig } from '@config/env';
-import type { StructuredRagLongTermReport } from '@knowledge-agent/shared/types';
+import type { StructuredRagLongTermReport } from '@groundpath/shared/types';
 import { structuredRagDashboardService } from './structured-rag-dashboard.service';
 
 export interface StructuredRagReportParams {

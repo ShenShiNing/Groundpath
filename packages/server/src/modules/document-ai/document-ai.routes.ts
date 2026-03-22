@@ -11,7 +11,7 @@ import {
   analysisRequestSchema,
   generateRequestSchema,
   expandRequestSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { summaryController } from './controllers/summary.controller';
 import { analysisController } from './controllers/analysis.controller';
 import { generationController } from './controllers/generation.controller';

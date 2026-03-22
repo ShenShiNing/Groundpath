@@ -55,10 +55,10 @@
 
 ## 三、Redis
 
-| 变量           |  必填  | 默认值            | 状态 | 说明                                                  |
-| -------------- | :----: | ----------------- | :--: | ----------------------------------------------------- |
-| `REDIS_URL`    | **是** | —                 | 活跃 | Redis 连接字符串. 支持密码: `redis://:pass@host:6379` |
-| `REDIS_PREFIX` |   否   | `knowledge-agent` | 活跃 | Redis key 前缀, 用于多实例隔离                        |
+| 变量           |  必填  | 默认值       | 状态 | 说明                                                  |
+| -------------- | :----: | ------------ | :--: | ----------------------------------------------------- |
+| `REDIS_URL`    | **是** | —            | 活跃 | Redis 连接字符串. 支持密码: `redis://:pass@host:6379` |
+| `REDIS_PREFIX` |   否   | `groundpath` | 活跃 | Redis key 前缀, 用于多实例隔离                        |
 
 **引用**: `redisConfig` 被 2 个文件引用 — Redis 客户端、BullMQ 队列连接
 
@@ -69,8 +69,8 @@
 | 变量                         |  必填  | 默认值                         | 状态 | 说明                                                                        |
 | ---------------------------- | :----: | ------------------------------ | :--: | --------------------------------------------------------------------------- |
 | `JWT_SECRET`                 | **是** | —                              | 活跃 | JWT HS256 签名密钥, >= 32 字符                                              |
-| `JWT_ISSUER`                 |   否   | `knowledge-agent`              | 活跃 | JWT `iss` 声明                                                              |
-| `JWT_AUDIENCE`               |   否   | `knowledge-agent-client`       | 活跃 | JWT `aud` 声明                                                              |
+| `JWT_ISSUER`                 |   否   | `groundpath`                   | 活跃 | JWT `iss` 声明                                                              |
+| `JWT_AUDIENCE`               |   否   | `groundpath-client`            | 活跃 | JWT `aud` 声明                                                              |
 | `ENCRYPTION_KEY`             | **是** | —                              | 活跃 | 通用加密密钥, >= 32 字符. 用于 LLM API Key 加密、刷新令牌哈希、文件签名兜底 |
 | `OAUTH_EXCHANGE_CODE_SECRET` |   否   | `""` (降级为 `ENCRYPTION_KEY`) | 活跃 | OAuth 交换码哈希密钥. 未设置时复用 `ENCRYPTION_KEY`                         |
 | `AUTH_COOKIE_SAMESITE`       |   否   | `strict`                       | 活跃 | Cookie SameSite 策略: `strict` / `lax` / `none`                             |
@@ -89,7 +89,7 @@
 | `SMTP_SECURE`               |   否   | `false`               | 活跃 | 是否使用 TLS 直连 (端口 465 时通常设 `true`) |
 | `SMTP_USER`                 |   否   | `""`                  | 活跃 | SMTP 用户名                                  |
 | `SMTP_PASS`                 |   否   | `""`                  | 活跃 | SMTP 密码                                    |
-| `EMAIL_FROM_NAME`           |   否   | `Knowledge Agent`     | 活跃 | 发件人显示名                                 |
+| `EMAIL_FROM_NAME`           |   否   | `Groundpath`          | 活跃 | 发件人显示名                                 |
 | `EMAIL_FROM_ADDRESS`        |   否   | `noreply@example.com` | 活跃 | 发件人地址                                   |
 | `EMAIL_VERIFICATION_SECRET` | **是** | —                     | 活跃 | 邮箱验证码签名密钥, >= 1 字符                |
 

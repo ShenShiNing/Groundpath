@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireClick, fireInput, flushPromises, render } from '../../utils/render';
 import type { AISettingsConfig } from '../../../src/components/settings/ai/types';
-import type { LLMProviderInfo } from '@knowledge-agent/shared/types';
+import type { LLMProviderInfo } from '@groundpath/shared/types';
 
 const mocks = vi.hoisted(() => ({
   canFetchModels: vi.fn(),

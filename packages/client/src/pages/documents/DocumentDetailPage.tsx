@@ -5,7 +5,7 @@ import type {
   DocumentType,
   DocumentVersionListItem,
   VersionSource,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import {
   ArrowLeft,
   Download,

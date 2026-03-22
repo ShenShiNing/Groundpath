@@ -4,7 +4,7 @@ import type {
   UserPublicInfo,
   RegisterRequest,
   RegisterWithCodeRequest,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { authApi, setTokenAccessors } from '@/api';
 import { logClientError } from '@/lib/logger';
 

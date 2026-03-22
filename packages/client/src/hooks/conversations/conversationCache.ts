@@ -4,7 +4,7 @@ import type {
   ConversationInfo,
   ConversationListResponse,
   ConversationSearchResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 const GLOBAL_CONVERSATION_SCOPE = '__global__';
 

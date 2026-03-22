@@ -17,7 +17,7 @@ import type {
   ExpandRequest,
   ExpandResponse,
   DocumentAISSEEvent,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import {
   apiClient,
   unwrapResponse,

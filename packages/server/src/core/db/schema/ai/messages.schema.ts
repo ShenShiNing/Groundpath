@@ -9,7 +9,7 @@ import {
   foreignKey,
 } from 'drizzle-orm/mysql-core';
 import { conversations } from './conversations.schema';
-import type { MessageMetadata } from '@knowledge-agent/shared/types';
+import type { MessageMetadata } from '@groundpath/shared/types';
 
 export const messages = mysqlTable(
   'messages',

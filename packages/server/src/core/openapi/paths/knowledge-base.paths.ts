@@ -1,9 +1,9 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 import {
   createKnowledgeBaseSchema,
   updateKnowledgeBaseSchema,
   knowledgeBaseListParamsSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { errorResponse, messageResponse, paginatedResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 

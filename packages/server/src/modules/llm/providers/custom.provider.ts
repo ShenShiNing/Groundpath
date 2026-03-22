@@ -4,7 +4,7 @@ import type {
   GenerateOptions,
   StreamChunk,
 } from './llm-provider.interface';
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
 

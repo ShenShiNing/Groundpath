@@ -1,9 +1,9 @@
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import type {
   ChangeEmailRequest,
   UpdateProfileRequest,
   UserPublicInfo,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import type { User, NewUser } from '@core/db/schema/user/users.schema';
 import { withTransaction, type Transaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';

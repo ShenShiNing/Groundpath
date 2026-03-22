@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
-import type { AuthResponse, DeviceInfo } from '@knowledge-agent/shared/types';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
+import { parseDeviceInfo } from '@groundpath/shared/utils';
+import type { AuthResponse, DeviceInfo } from '@groundpath/shared/types';
 import type { User } from '@core/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@core/types';
 import { generateOAuthStateToken, toUserPublicInfo, verifyOAuthStateToken } from '@core/utils';

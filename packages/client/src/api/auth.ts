@@ -7,7 +7,7 @@ import type {
   RegisterWithCodeRequest,
   ResetPasswordRequest,
   ResetPasswordResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
 import { getDeviceInfo } from '@/lib/device';
 

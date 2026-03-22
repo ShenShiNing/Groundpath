@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
-import { HTTP_STATUS, ERROR_CODES } from '@knowledge-agent/shared';
-import type { ApiResponse } from '@knowledge-agent/shared';
-import type { ZodError, ZodType } from '@knowledge-agent/shared/schemas';
+import { HTTP_STATUS, ERROR_CODES } from '@groundpath/shared';
+import type { ApiResponse } from '@groundpath/shared';
+import type { ZodError, ZodType } from '@groundpath/shared/schemas';
 
 /**
  * Format Zod validation errors into a structured object

@@ -1,5 +1,5 @@
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const authMocks = vi.hoisted(() => ({

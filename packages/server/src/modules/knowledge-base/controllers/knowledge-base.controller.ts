@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express';
-import { HTTP_STATUS } from '@knowledge-agent/shared';
+import { HTTP_STATUS } from '@groundpath/shared';
 import type {
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
   KnowledgeBaseListParams,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { knowledgeBaseService } from '../services/knowledge-base.service';
 import { sendSuccessResponse } from '@core/errors';
 import { AppError } from '@core/errors/app-error';

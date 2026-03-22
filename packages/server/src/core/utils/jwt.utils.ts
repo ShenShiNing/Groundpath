@@ -1,5 +1,5 @@
 import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import { authConfig } from '@config/env';
 import type { AccessTokenPayload, RefreshTokenPayload } from '../types';
 import { AppError, Errors } from '../errors';

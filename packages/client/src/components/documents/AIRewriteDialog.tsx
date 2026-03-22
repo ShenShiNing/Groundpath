@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, RefreshCw, Square } from 'lucide-react';
 import { toast } from 'sonner';
-import type { GenerationStyle } from '@knowledge-agent/shared/types';
+import type { GenerationStyle } from '@groundpath/shared/types';
 import {
   Dialog,
   DialogContent,

@@ -1,8 +1,9 @@
-import type { KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import { BRAND_STORAGE_KEYS } from '@groundpath/shared/constants';
+import type { KnowledgeBaseListItem } from '@groundpath/shared/types';
 
 export type ChatScopeValue = string | null;
 
-const CHAT_SCOPE_STORAGE_KEY = 'knowledge-agent.chat-scope';
+const CHAT_SCOPE_STORAGE_KEY = BRAND_STORAGE_KEYS.chatScope;
 const GENERAL_SCOPE_STORAGE_VALUE = '__general__';
 
 export function readStoredChatScope(): ChatScopeValue | undefined {

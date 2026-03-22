@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { MoreVertical, FileText, Layers } from 'lucide-react';
-import type { KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { KnowledgeBaseListItem } from '@groundpath/shared/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {

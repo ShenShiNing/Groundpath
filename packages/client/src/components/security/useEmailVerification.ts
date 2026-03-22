@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { AxiosError } from 'axios';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
 import type { TFunction } from 'i18next';
 import { toast } from 'sonner';
 import { emailApi } from '@/api';

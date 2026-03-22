@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { KNOWLEDGE_BASE_ERROR_CODES } from '@knowledge-agent/shared';
+import { KNOWLEDGE_BASE_ERROR_CODES } from '@groundpath/shared';
 import type {
   KnowledgeBaseInfo,
   KnowledgeBaseListItem,
@@ -8,7 +8,7 @@ import type {
   UpdateKnowledgeBaseRequest,
   KnowledgeBaseListParams,
   EmbeddingProviderType,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import type { KnowledgeBase } from '@core/db/schema/document/knowledge-bases.schema';
 import type { Transaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';

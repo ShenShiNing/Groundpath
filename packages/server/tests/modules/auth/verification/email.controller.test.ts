@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
-import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@groundpath/shared';
 import { AppError } from '@core/errors';
 import { logTestInfo } from '@tests/__mocks__/email.mocks';
 

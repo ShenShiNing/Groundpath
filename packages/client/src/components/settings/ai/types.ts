@@ -3,7 +3,7 @@ import type {
   LLMModelInfo,
   LLMProviderInfo,
   LLMProviderType,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 export interface AISettingsFormValues {
   provider: LLMProviderType;

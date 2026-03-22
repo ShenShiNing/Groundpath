@@ -86,7 +86,7 @@ vi.mock('@core/middleware', () => ({
   validateBody: validateBodyMock,
 }));
 
-vi.mock('@knowledge-agent/shared/schemas', () => ({
+vi.mock('@groundpath/shared/schemas', () => ({
   changeEmailRequestSchema: changeEmailRequestSchemaMock,
   updateProfileRequestSchema: updateProfileRequestSchemaMock,
 }));

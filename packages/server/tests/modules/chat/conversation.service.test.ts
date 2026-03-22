@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
 
 const mocks = vi.hoisted(() => ({
   conversationRepository: {

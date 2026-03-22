@@ -4,7 +4,7 @@ import type {
   ToolCallInfo,
   ToolResultInfo,
   AgentStep,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 // ============================================================================
 // Types

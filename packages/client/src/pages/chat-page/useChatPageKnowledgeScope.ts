@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ChatMessage } from '@/stores';
-import type { KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { KnowledgeBaseListItem } from '@groundpath/shared/types';
 import { readStoredChatScope, resolveChatScopeValue, writeStoredChatScope } from './chatScope';
 
 interface UseChatPageKnowledgeScopeArgs {

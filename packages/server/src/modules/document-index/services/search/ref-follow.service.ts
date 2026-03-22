@@ -1,5 +1,5 @@
 import { agentConfig } from '@config/env';
-import type { Citation } from '@knowledge-agent/shared/types';
+import type { Citation } from '@groundpath/shared/types';
 import { documentEdgeRepository } from '../../repositories/document-edge.repository';
 import { documentNodeSearchRepository } from '../../repositories/document-node-search.repository';
 import { buildNodeExcerpt, buildNodeLocator } from './node-presentation';

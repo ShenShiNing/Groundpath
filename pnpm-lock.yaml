@@ -62,7 +62,7 @@ importers:
       '@base-ui/react':
         specifier: ^1.1.0
         version: 1.1.0(@types/react@19.2.9)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@knowledge-agent/shared':
+      '@groundpath/shared':
         specifier: workspace:*
         version: link:../shared
       '@radix-ui/react-alert-dialog':
@@ -222,7 +222,7 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.978.0
         version: 3.978.0
-      '@knowledge-agent/shared':
+      '@groundpath/shared':
         specifier: workspace:*
         version: link:../shared
       '@qdrant/js-client-rest':

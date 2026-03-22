@@ -4,7 +4,7 @@ import { queryKeys } from '@/lib/query';
 import type {
   ConversationListResponse,
   ConversationSearchResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { GLOBAL_CONVERSATION_SCOPE, getConversationScopeKey } from './conversationCache';
 
 const CONVERSATION_LIST_STALE_TIME_MS = 30 * 1000;

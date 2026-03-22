@@ -8,7 +8,7 @@ import type {
   GenerateWithToolsOptions,
   ToolGenerateResult,
 } from './llm-provider.interface';
-import type { LLMProviderType, ToolCallInfo } from '@knowledge-agent/shared/types';
+import type { LLMProviderType, ToolCallInfo } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
 

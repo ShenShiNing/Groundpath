@@ -20,7 +20,7 @@ export function LanguageToggle({ compact = false, className }: LanguageTogglePro
   const handleToggle = () => {
     const nextLanguage: Language = language === 'zh-CN' ? 'en-US' : 'zh-CN';
     void i18n.changeLanguage(nextLanguage);
-    localStorage.setItem('knowledge-agent.language', nextLanguage);
+    localStorage.setItem('groundpath.language', nextLanguage);
     document.documentElement.lang = nextLanguage;
   };
 

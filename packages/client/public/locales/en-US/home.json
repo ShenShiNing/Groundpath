@@ -6,9 +6,9 @@
   "login": "Log in",
   "getStarted": "Get started",
   "hero": {
-    "badge": "A trustworthy AI knowledge assistant for creators and learners",
-    "title": "Knowledge Base Agent",
-    "titleMuted": "Make your knowledge searchable, conversational, and verifiable",
+    "badge": "Groundpath · Trace the source. Reach the answer.",
+    "title": "Groundpath",
+    "titleMuted": "Turn your knowledge into a searchable, conversational, and verifiable answer system",
     "description": "Consolidate your documents and notes, then use semantic retrieval with cited answers to turn hard-to-find knowledge into instant responses.",
     "enterDashboard": "Go to Dashboard",
     "startBuilding": "Build your knowledge base",
@@ -75,8 +75,8 @@
       "getStarted": "Get started"
     },
     "hero": {
-      "title": "About KnowledgeAgent",
-      "description": "KnowledgeAgent is dedicated to making enterprise knowledge searchable, conversational, and verifiable. We transform document assets into continuously evolving knowledge systems, helping teams quickly find accurate answers in daily collaboration."
+      "title": "About Groundpath",
+      "description": "Groundpath helps teams keep knowledge searchable, conversational, and verifiable. It turns documents into a living knowledge system so every answer can be traced back to its source."
     },
     "action": {
       "dashboard": "Go to Dashboard",

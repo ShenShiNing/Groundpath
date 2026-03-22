@@ -12,7 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import type { DocumentListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem } from '@groundpath/shared/types';
 import { CHAT_SELECTOR_INPUT_CLASSNAME } from './chatSelectorStyles';
 
 // ============================================================================

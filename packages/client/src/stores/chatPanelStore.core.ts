@@ -1,6 +1,6 @@
 import i18n from '@/i18n/i18n';
 import { queryClient, queryKeys } from '@/lib/query';
-import type { ConversationWithMessages, MessageInfo } from '@knowledge-agent/shared/types';
+import type { ConversationWithMessages, MessageInfo } from '@groundpath/shared/types';
 import type { ChatMessage, ChatPanelState } from './chatPanelStore.types';
 import { agentTraceToToolSteps, toStoreCitation } from './chatPanelStore.types';
 

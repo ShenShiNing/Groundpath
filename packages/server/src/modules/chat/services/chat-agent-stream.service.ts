@@ -1,4 +1,4 @@
-import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
 import { resolveTools, executeAgentLoop } from '@modules/agent';
 import { toPlainChatMessages } from '@modules/agent/agent-executor.runtime';
 import { agentConfig } from '@core/config/env';

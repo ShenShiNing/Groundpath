@@ -1,4 +1,4 @@
-import type { AppErrorCode } from '@knowledge-agent/shared/types';
+import type { AppErrorCode } from '@groundpath/shared/types';
 
 /**
  * Base error class for all application errors.

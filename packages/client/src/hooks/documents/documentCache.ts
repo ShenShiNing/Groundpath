@@ -5,7 +5,7 @@ import type {
   DocumentListItem,
   DocumentListResponse,
   TrashListResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { queryKeys } from '@/lib/query';
 
 function toDocumentListItem(document: DocumentInfo): DocumentListItem {

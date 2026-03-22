@@ -1,4 +1,4 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 import type { ApiRouteModuleId } from '../../../api-route-modules';
 import { PROTECTED } from '../registry';
 import {

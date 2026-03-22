@@ -25,7 +25,7 @@
   "hero": {
     "welcome": "欢迎回来",
     "titleWithUser": "{{username}} 的工作台",
-    "titleDefault": "KnowledgeAgent 控制台",
+    "titleDefault": "溯知控制台",
     "openKnowledgeBases": "打开知识库",
     "configureModel": "配置模型参数"
   },

@@ -81,7 +81,7 @@ vi.mock('@core/middleware', () => ({
   aiRateLimiter: vi.fn(),
 }));
 
-vi.mock('@knowledge-agent/shared/schemas', () => ({
+vi.mock('@groundpath/shared/schemas', () => ({
   summaryRequestSchema: summaryRequestSchemaMock,
   analysisRequestSchema: analysisRequestSchemaMock,
   generateRequestSchema: generateRequestSchemaMock,

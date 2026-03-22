@@ -1,8 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type {
-  SaveDocumentContentRequest,
-  UpdateDocumentRequest,
-} from '@knowledge-agent/shared/types';
+import type { SaveDocumentContentRequest, UpdateDocumentRequest } from '@groundpath/shared/types';
 import { documentsApi } from '@/api';
 import { queryKeys } from '@/lib/query';
 import {

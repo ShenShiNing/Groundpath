@@ -1,6 +1,6 @@
 import type { Response } from 'express';
-import type { DocumentAISSEEvent } from '@knowledge-agent/shared/types';
-import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import type { DocumentAISSEEvent } from '@groundpath/shared/types';
+import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared/constants';
 import type { LLMProvider, GenerateOptions, ChatMessage } from '@modules/llm';
 import { createLogger } from '@core/logger';
 

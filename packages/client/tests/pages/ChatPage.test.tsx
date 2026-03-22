@@ -3,7 +3,7 @@ import { act } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatPanelState, ChatMessage as StoreChatMessage } from '@/stores';
 import type { Citation } from '@/stores/chatPanelStore.types';
-import type { DocumentListItem, KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem, KnowledgeBaseListItem } from '@groundpath/shared/types';
 import ChatPage from '@/pages/ChatPage';
 import { useChatPanelStore } from '@/stores';
 import { fireClick, fireInput, flushPromises, render } from '../utils/render';
@@ -461,7 +461,7 @@ describe('ChatPage', () => {
     await flushPromises();
 
     expect(switchKnowledgeBase).toHaveBeenCalledWith('kb-ready');
-    expect(window.localStorage.getItem('knowledge-agent.chat-scope')).toBe('kb-ready');
+    expect(window.localStorage.getItem('groundpath.chat-scope')).toBe('kb-ready');
 
     const scope = view.container.querySelector('[data-testid="document-scope"]');
     expect(scope?.textContent).toContain('Ready Guide');
@@ -543,7 +543,7 @@ describe('ChatPage', () => {
     await flushPromises();
 
     expect(switchKnowledgeBase).toHaveBeenCalledWith(null);
-    expect(window.localStorage.getItem('knowledge-agent.chat-scope')).toBe('__general__');
+    expect(window.localStorage.getItem('groundpath.chat-scope')).toBe('__general__');
     expect(view.container.querySelector('[data-testid="document-scope"]')).toBeNull();
     expect(
       view.container.querySelector('input[placeholder="input.placeholder.general"]')
@@ -610,7 +610,7 @@ describe('ChatPage', () => {
 
     expect(startNewConversation).toHaveBeenCalledTimes(1);
     expect(switchKnowledgeBase).toHaveBeenCalledWith(null);
-    expect(window.localStorage.getItem('knowledge-agent.chat-scope')).toBe('__general__');
+    expect(window.localStorage.getItem('groundpath.chat-scope')).toBe('__general__');
 
     await view.unmount();
   });

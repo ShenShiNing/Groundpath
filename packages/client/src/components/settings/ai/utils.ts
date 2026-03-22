@@ -1,4 +1,4 @@
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import type { AIProviderCapabilities, AISettingsProviderInfo } from './types';
 
 export function getProviderCapabilities(

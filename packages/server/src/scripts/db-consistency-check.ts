@@ -2,7 +2,7 @@
  * CLI script to check database consistency
  *
  * Usage:
- *   pnpm -F @knowledge-agent/server db:check [options]
+ *   pnpm -F @groundpath/server db:check [options]
  *
  * Options:
  *   --fix    Auto-fix counter mismatches using counterSyncService.syncAll()

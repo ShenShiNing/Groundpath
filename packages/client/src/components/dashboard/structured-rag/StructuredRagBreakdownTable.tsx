@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { StructuredRagDashboardKnowledgeBaseBreakdown } from '@knowledge-agent/shared/types';
+import type { StructuredRagDashboardKnowledgeBaseBreakdown } from '@groundpath/shared/types';
 import { formatMs, formatPercent } from './utils';
 
 interface StructuredRagBreakdownTableProps {

@@ -1,7 +1,7 @@
 import express from 'express';
 import { oauthController } from './oauth.controller';
 import { requireCsrfProtection, validateBody } from '@core/middleware';
-import { oauthExchangeRequestSchema } from '@knowledge-agent/shared/schemas';
+import { oauthExchangeRequestSchema } from '@groundpath/shared/schemas';
 
 const router = express.Router();
 

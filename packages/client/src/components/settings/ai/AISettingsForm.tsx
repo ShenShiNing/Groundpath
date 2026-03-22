@@ -15,7 +15,7 @@ import { canFetchModels, useAISettingsStore } from '@/stores';
 import { AISettingsActions } from '@/components/settings/ai/sections/AISettingsActions';
 import { AISettingsCredentialsSection } from '@/components/settings/ai/sections/AISettingsCredentialsSection';
 import { AISettingsModelSection } from '@/components/settings/ai/sections/AISettingsModelSection';
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import type { AISettingsFormValues } from './types';
 import { getProviderCapabilities } from './utils';
 

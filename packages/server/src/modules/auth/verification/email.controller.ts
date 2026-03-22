@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { SendVerificationCodeRequest, VerifyCodeRequest } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
+import type { SendVerificationCodeRequest, VerifyCodeRequest } from '@groundpath/shared';
 import { emailVerificationService } from '../verification/email-verification.service';
 import { userService } from '../../user';
 import { sendSuccessResponse } from '@core/errors';

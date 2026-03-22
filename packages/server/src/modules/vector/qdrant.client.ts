@@ -2,7 +2,7 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 import { vectorConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
-import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
+import type { EmbeddingProviderType } from '@groundpath/shared/types';
 
 const logger = createLogger('qdrant.client');
 

@@ -177,7 +177,7 @@ vi.mock('@core/middleware', () => ({
   getValidatedQuery: getValidatedQueryMock,
 }));
 
-vi.mock('@knowledge-agent/shared/schemas', () => ({
+vi.mock('@groundpath/shared/schemas', () => ({
   createKnowledgeBaseSchema: createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchema: updateKnowledgeBaseSchemaMock,
   documentListParamsSchema: documentListParamsSchemaMock,
@@ -206,7 +206,7 @@ vi.mock('@core/utils', () => ({
   getClientIp: getClientIpMock,
 }));
 
-vi.mock('@knowledge-agent/shared', () => ({
+vi.mock('@groundpath/shared', () => ({
   HTTP_STATUS: {
     CREATED: 201,
   },

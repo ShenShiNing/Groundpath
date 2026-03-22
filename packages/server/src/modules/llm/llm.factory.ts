@@ -1,4 +1,4 @@
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import type { LLMProvider } from './providers/llm-provider.interface';
 import { OpenAIProvider } from './providers/openai.provider';
 import { AnthropicProvider } from './providers/anthropic.provider';

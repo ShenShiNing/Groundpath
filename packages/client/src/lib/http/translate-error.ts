@@ -1,5 +1,5 @@
 import i18n from '@/i18n/i18n';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
 import type { AxiosError } from 'axios';
 
 type DynamicTranslate = (key: string) => string;

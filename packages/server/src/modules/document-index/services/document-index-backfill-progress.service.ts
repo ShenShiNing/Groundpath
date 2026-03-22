@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { createLogger } from '@core/logger';
 import { Errors } from '@core/errors';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { documentIndexBackfillRunRepository } from '../repositories/document-index-backfill-run.repository';
 import { documentIndexBackfillItemRepository } from '../repositories/document-index-backfill-item.repository';
 import type { DocumentIndexBackfillItem } from '@core/db/schema/document/document-index-backfill-items.schema';

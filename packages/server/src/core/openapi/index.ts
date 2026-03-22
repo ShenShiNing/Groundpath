@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import swaggerUi from 'swagger-ui-express';
+import { BRAND_CONFIG } from '@groundpath/shared/constants';
 import { ensureOpenApiRoutesRegistered } from './route-discovery';
 import { generateDocument } from './registry';
 
@@ -14,7 +15,7 @@ export function setupOpenApi(app: Express) {
     '/api-docs',
     swaggerUi.serve,
     swaggerUi.setup(document, {
-      customSiteTitle: 'Knowledge Agent API',
+      customSiteTitle: BRAND_CONFIG.openApi.title,
       customCss: '.swagger-ui .topbar { display: none }',
     })
   );

@@ -1,4 +1,5 @@
-import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
+import { BRAND_CONFIG } from '@groundpath/shared/constants';
+import type { EmailVerificationCodeType } from '@groundpath/shared/types';
 
 interface EmailTemplateParams {
   code: string;
@@ -9,22 +10,22 @@ interface EmailTemplateParams {
 function getSubject(type: EmailVerificationCodeType): string {
   switch (type) {
     case 'register':
-      return 'Verify your email - Knowledge Agent';
+      return `Verify your email - ${BRAND_CONFIG.displayName.en}`;
     case 'reset_password':
-      return 'Reset your password - Knowledge Agent';
+      return `Reset your password - ${BRAND_CONFIG.displayName.en}`;
     case 'change_email':
-      return 'Verify your new email - Knowledge Agent';
+      return `Verify your new email - ${BRAND_CONFIG.displayName.en}`;
     case 'login':
-      return 'Login verification code - Knowledge Agent';
+      return `Login verification code - ${BRAND_CONFIG.displayName.en}`;
     default:
-      return 'Verification code - Knowledge Agent';
+      return `Verification code - ${BRAND_CONFIG.displayName.en}`;
   }
 }
 
 function getHeading(type: EmailVerificationCodeType): string {
   switch (type) {
     case 'register':
-      return 'Welcome to Knowledge Agent!';
+      return `Welcome to ${BRAND_CONFIG.displayName.en}!`;
     case 'reset_password':
       return 'Reset Your Password';
     case 'change_email':
@@ -105,7 +106,7 @@ function generateHtmlTemplate({ code, type, expiresInMinutes }: EmailTemplatePar
                 If you didn't request this code, you can safely ignore this email.
               </p>
               <p style="margin: 0; font-size: 12px; color: #a1a1aa; text-align: center;">
-                &copy; ${new Date().getFullYear()} Knowledge Agent. All rights reserved.
+                &copy; ${new Date().getFullYear()} ${BRAND_CONFIG.displayName.en}. All rights reserved.
               </p>
             </td>
           </tr>
@@ -133,7 +134,7 @@ This code will expire in ${expiresInMinutes} minutes.
 
 If you didn't request this code, you can safely ignore this email.
 
-© ${new Date().getFullYear()} Knowledge Agent. All rights reserved.
+© ${new Date().getFullYear()} ${BRAND_CONFIG.displayName.en}. All rights reserved.
 `.trim();
 }
 

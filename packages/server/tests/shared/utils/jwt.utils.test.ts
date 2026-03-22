@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import {
   generateAccessToken,
   verifyAccessToken,

@@ -4,8 +4,8 @@
  */
 
 import type { Response } from 'express';
-import type { SummaryLength, SummaryResponse } from '@knowledge-agent/shared/types';
-import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import type { SummaryLength, SummaryResponse } from '@groundpath/shared/types';
+import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared/constants';
 import { llmService } from '@modules/llm';
 import type { ChatMessage } from '@modules/llm';
 import { documentContentService } from '@modules/document';

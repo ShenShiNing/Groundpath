@@ -1,4 +1,4 @@
-import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
+import type { EmbeddingProviderType } from '@groundpath/shared/types';
 import type { ChatMessage } from '@/stores/chatPanelStore';
 
 export type KnowledgeSeedSource = 'conversation' | 'latest-assistant';

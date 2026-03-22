@@ -4,7 +4,7 @@
  */
 
 import type { Request, Response } from 'express';
-import { summaryRequestSchema } from '@knowledge-agent/shared/schemas';
+import { summaryRequestSchema } from '@groundpath/shared/schemas';
 import { summaryService } from '../services/summary.service';
 import { sendSuccessResponse, handleError } from '@core/errors';
 

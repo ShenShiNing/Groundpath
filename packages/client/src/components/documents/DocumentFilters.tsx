@@ -1,5 +1,5 @@
 import { Search, Filter, X } from 'lucide-react';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {

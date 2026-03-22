@@ -3,7 +3,7 @@ import { ArrowLeft, FileText, Layers, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from 'react-i18next';
-import type { KnowledgeBaseInfo } from '@knowledge-agent/shared/types';
+import type { KnowledgeBaseInfo } from '@groundpath/shared/types';
 
 interface KnowledgeBaseDetailHeaderProps {
   knowledgeBase: KnowledgeBaseInfo;

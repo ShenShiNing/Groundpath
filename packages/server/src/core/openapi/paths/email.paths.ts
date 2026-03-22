@@ -1,8 +1,8 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 import {
   sendVerificationCodeRequestSchema,
   verifyCodeRequestSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { errorResponse, messageResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 

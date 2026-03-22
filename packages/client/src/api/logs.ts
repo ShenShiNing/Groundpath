@@ -2,11 +2,11 @@ import type {
   ApiResponse,
   StructuredRagDashboardSummary,
   StructuredRagLongTermReport,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import type {
   StructuredRagDashboardQueryParams,
   StructuredRagReportQueryParams,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { apiClient, unwrapResponse } from '@/lib/http';
 
 export const logsApi = {

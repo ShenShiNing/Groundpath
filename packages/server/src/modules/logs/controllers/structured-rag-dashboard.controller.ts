@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { StructuredRagDashboardQueryParams } from '@knowledge-agent/shared/schemas';
+import type { StructuredRagDashboardQueryParams } from '@groundpath/shared/schemas';
 import { sendSuccessResponse } from '@core/errors';
 import { asyncHandler } from '@core/errors/async-handler';
 import { getValidatedQuery } from '@core/middleware';

@@ -1,4 +1,4 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 
 /** Helper for boolean env vars */
 export const booleanString = (defaultValue: boolean = false) =>

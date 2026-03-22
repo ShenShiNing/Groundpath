@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 
 interface AISettingsState {
   // UI 状态

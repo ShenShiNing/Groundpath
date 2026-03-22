@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared';
+import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared';
 import { AppError } from '@core/errors';
 import {
   mockUserId,

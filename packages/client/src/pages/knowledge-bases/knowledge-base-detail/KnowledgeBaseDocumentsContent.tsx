@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslation } from 'react-i18next';
-import type { DocumentListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem } from '@groundpath/shared/types';
 import { DocumentGridCard, DocumentTableRow } from '../DocumentItemViews';
 import type { ViewMode } from './types';
 

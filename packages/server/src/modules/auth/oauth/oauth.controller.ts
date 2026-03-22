@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { OAuthExchangeRequest, AuthResponse } from '@knowledge-agent/shared/types';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
+import type { OAuthExchangeRequest, AuthResponse } from '@groundpath/shared/types';
 import { serverConfig } from '@config/env';
 import { createLogger } from '@core/logger';
 import { sendSuccessResponse, Errors } from '@core/errors';

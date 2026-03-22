@@ -1,7 +1,7 @@
 <div align="center">
   <img src="./packages/client/src/assets/brand/logo-mark.svg" alt="溯知 Logo" width="88" height="88" />
 
-  <h1>溯知 Suzhi</h1>
+  <h1>溯知 / Groundpath</h1>
 
   <p><strong>溯源而知，一问即达</strong></p>
 
@@ -32,7 +32,7 @@
   </p>
 </div>
 
-> 当前产品品牌为 `溯知 / Groundpath`。仓库名、npm scope 与内部包名暂时仍沿用 `KnowledgeAgent` / `@knowledge-agent/*`，以保证迁移过程稳定。
+> 品牌信息已统一为 `溯知 / Groundpath`，仓库名为 `groundpath`，workspace scope 为 `@groundpath/*`。
 
 ## 产品一览
 
@@ -153,7 +153,7 @@ pnpm docker:up
 ```bash
 pnpm install
 Copy-Item packages/server/.env.example packages/server/.env
-pnpm -F @knowledge-agent/server db:push
+pnpm -F @groundpath/server db:push
 pnpm dev
 ```
 
@@ -190,16 +190,16 @@ pnpm dev
 
 ## 常用命令
 
-| 命令                                             | 用途                     |
-| ------------------------------------------------ | ------------------------ |
-| `pnpm dev`                                       | 同时启动前后端开发环境   |
-| `pnpm build`                                     | 构建整个 monorepo        |
-| `pnpm test`                                      | 运行测试                 |
-| `pnpm lint`                                      | 运行 ESLint              |
-| `pnpm architecture:check`                        | 检查后端模块边界         |
-| `pnpm -F @knowledge-agent/server db:push`        | 开发环境同步 schema      |
-| `pnpm -F @knowledge-agent/server db:migrate`     | 生产环境执行迁移         |
-| `pnpm -F @knowledge-agent/server db:drift-check` | 校验 schema 与迁移一致性 |
+| 命令                                        | 用途                     |
+| ------------------------------------------- | ------------------------ |
+| `pnpm dev`                                  | 同时启动前后端开发环境   |
+| `pnpm build`                                | 构建整个 monorepo        |
+| `pnpm test`                                 | 运行测试                 |
+| `pnpm lint`                                 | 运行 ESLint              |
+| `pnpm architecture:check`                   | 检查后端模块边界         |
+| `pnpm -F @groundpath/server db:push`        | 开发环境同步 schema      |
+| `pnpm -F @groundpath/server db:migrate`     | 生产环境执行迁移         |
+| `pnpm -F @groundpath/server db:drift-check` | 校验 schema 与迁移一致性 |
 
 ## 工程约束
 
@@ -238,6 +238,6 @@ pnpm dev
 
 ## 当前状态
 
-- 产品品牌已切换为 `溯知 / Groundpath`
-- 前端已引入新的品牌图标与主题色方向
-- 包名与内部 scope 仍使用 `knowledge-agent`，后续会逐步同步迁移
+- 产品品牌与技术命名已统一为 `溯知 / Groundpath`
+- 仓库名已切换为 `groundpath`
+- workspace 包作用域已切换为 `@groundpath/*`

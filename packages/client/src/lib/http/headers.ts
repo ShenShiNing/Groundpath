@@ -38,7 +38,7 @@ export function getPreferredLanguageHeader(): string | null {
     return null;
   }
 
-  const fromStorage = window.localStorage.getItem('knowledge-agent.language');
+  const fromStorage = window.localStorage.getItem('groundpath.language');
   if (fromStorage) {
     return fromStorage;
   }

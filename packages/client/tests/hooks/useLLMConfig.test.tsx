@@ -6,8 +6,8 @@ import type {
   LLMConfigInfo,
   LLMProviderInfo,
   TestLLMConnectionResponse,
-} from '@knowledge-agent/shared/types';
-import type { UpdateLLMConfigInput } from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/types';
+import type { UpdateLLMConfigInput } from '@groundpath/shared/schemas';
 import {
   useDeleteLLMConfig,
   useLLMConfig,

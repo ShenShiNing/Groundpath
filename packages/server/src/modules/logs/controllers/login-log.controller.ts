@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { LoginLogQueryParams } from '@knowledge-agent/shared/schemas';
+import type { LoginLogQueryParams } from '@groundpath/shared/schemas';
 import { loginLogService } from '../services/login-log.service';
 import { sendSuccessResponse } from '@core/errors';
 import { asyncHandler } from '@core/errors/async-handler';

@@ -6,7 +6,7 @@ import type {
   DocumentListResponse,
   KnowledgeBaseInfo,
   KnowledgeBaseListItem,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import {
   useCreateKnowledgeBase,
   useDeleteDocuments,

@@ -1,5 +1,5 @@
 import type { User } from '@core/db/schema/user/users.schema';
-import type { UserPublicInfo } from '@knowledge-agent/shared/types';
+import type { UserPublicInfo } from '@groundpath/shared/types';
 import type { AccessTokenSubject } from '@core/types';
 import { storageConfig } from '@config/env';
 import { storageProvider } from '@modules/storage';

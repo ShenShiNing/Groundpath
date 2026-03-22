@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Database, MessageSquareText } from 'lucide-react';
-import type { KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { KnowledgeBaseListItem } from '@groundpath/shared/types';
 import {
   Combobox,
   ComboboxContent,

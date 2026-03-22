@@ -1,7 +1,7 @@
 import { randomInt } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
-import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
-import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
+import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@groundpath/shared';
+import type { EmailVerificationCodeType } from '@groundpath/shared/types';
 import { emailConfig } from '@config/env';
 import { emailVerificationRepository } from '../verification/email-verification.repository';
 import { emailService } from './email.service';

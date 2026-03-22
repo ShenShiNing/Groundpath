@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
 import { getAccessToken, getOrRefreshToken, hasRefreshToken } from './auth';
 import { getCsrfTokenFromCookie, getPreferredLanguageHeader } from './headers';
 

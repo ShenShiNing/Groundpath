@@ -1,10 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
 import { authenticate, validateBody } from '@core/middleware';
-import {
-  changeEmailRequestSchema,
-  updateProfileRequestSchema,
-} from '@knowledge-agent/shared/schemas';
+import { changeEmailRequestSchema, updateProfileRequestSchema } from '@groundpath/shared/schemas';
 import { userController } from './controllers/user.controller';
 
 const router = express.Router();

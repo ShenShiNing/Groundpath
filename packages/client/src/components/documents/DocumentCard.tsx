@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import { FileText, FileType, File, MoreVertical, Download, Pencil, Trash2 } from 'lucide-react';
-import type { DocumentListItem, DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentListItem, DocumentType } from '@groundpath/shared/types';
 import { cn, openInNewTab } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

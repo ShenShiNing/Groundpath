@@ -1,8 +1,5 @@
 import type { Request, Response } from 'express';
-import type {
-  OperationLogQueryParams,
-  ResourceHistoryParams,
-} from '@knowledge-agent/shared/schemas';
+import type { OperationLogQueryParams, ResourceHistoryParams } from '@groundpath/shared/schemas';
 import { operationLogService } from '../services/operation-log.service';
 import { sendSuccessResponse } from '@core/errors';
 import { AppError } from '@core/errors/app-error';

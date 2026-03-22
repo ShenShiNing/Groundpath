@@ -11,7 +11,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { ProcessingStatusBadge } from '@/components/documents/ProcessingStatusBadge';
 import { formatBytes, cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
-import type { DocumentListItem, DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentListItem, DocumentType } from '@groundpath/shared/types';
 
 export const documentTypeConfig: Record<DocumentType, { color: string; bgColor: string }> = {
   pdf: { color: 'text-red-600 dark:text-red-400', bgColor: 'bg-red-50 dark:bg-red-500/10' },

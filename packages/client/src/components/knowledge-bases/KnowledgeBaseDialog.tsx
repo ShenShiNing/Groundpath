@@ -3,7 +3,7 @@ import type {
   KnowledgeBaseInfo,
   KnowledgeBaseListItem,
   EmbeddingProviderType,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import {
   Dialog,
   DialogContent,

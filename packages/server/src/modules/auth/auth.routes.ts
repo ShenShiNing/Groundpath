@@ -17,7 +17,7 @@ import {
   changePasswordRequestSchema,
   registerWithCodeRequestSchema,
   resetPasswordRequestSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 
 const router = express.Router();
 

@@ -1,4 +1,4 @@
-import { CHAT_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
 import { ragConfig } from '@config/env';
 import { searchService } from '@modules/rag';
 import { structuredRagMetrics } from '@core/observability';

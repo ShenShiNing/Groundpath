@@ -5,7 +5,7 @@ import type {
   MessageMetadata,
   ToolCallInfo,
   ToolResultInfo,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 export interface SendMessageOptions {
   userId: string;

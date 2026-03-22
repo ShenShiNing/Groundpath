@@ -3,7 +3,7 @@
  * Prompt templates for document generation and expansion
  */
 
-import type { GenerationTemplate, GenerationStyle } from '@knowledge-agent/shared/types';
+import type { GenerationTemplate, GenerationStyle } from '@groundpath/shared/types';
 
 interface GenerationPromptOptions {
   template?: GenerationTemplate;

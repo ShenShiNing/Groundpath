@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { MessageInfo, MessageRole, MessageMetadata } from '@knowledge-agent/shared/types';
+import type { MessageInfo, MessageRole, MessageMetadata } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 import { messageRepository } from '../repositories/message.repository';
 import type { Message } from '@core/db/schema/ai/messages.schema';

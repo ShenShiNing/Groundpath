@@ -1,7 +1,7 @@
-# KnowledgeAgent 架构与代码质量审查报告
+# Groundpath 架构与代码质量审查报告
 
 - 审查日期：2026-03-15
-- 仓库：`KnowledgeAgent`
+- 仓库：`groundpath`
 - 审查范围：架构设计、数据库设计、API 设计、代码质量、安全、性能、测试
 - 复核基线：当前工作区代码 + `pnpm architecture:check` / `pnpm test` / `pnpm lint`
 
@@ -9,7 +9,7 @@
 
 ## 一、项目概述
 
-KnowledgeAgent 是一个企业级 RAG（检索增强生成）知识库管理平台，采用 pnpm monorepo 架构，前后端分离。
+Groundpath 是一个企业级 RAG（检索增强生成）知识库管理平台，采用 pnpm monorepo 架构，前后端分离。
 
 | 维度       | 选型                                                      |
 | ---------- | --------------------------------------------------------- |

@@ -4,7 +4,7 @@ import type {
   SendVerificationCodeResponse,
   VerifyCodeRequest,
   VerifyCodeResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
 
 export const emailApi = {

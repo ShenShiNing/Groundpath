@@ -5,7 +5,7 @@ import type {
   ConversationInfo,
   ConversationListResponse,
   ConversationSearchResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import {
   useConversations,
   useDeleteConversation,
@@ -147,9 +147,7 @@ describe('useConversations hooks', () => {
         queryClient.getQueryData(queryKeys.conversations.search(searchParams)) !== undefined
     );
 
-    expect(getQueryStaleTime(queryClient, queryKeys.conversations.list('__global__'))).toBe(
-      30_000
-    );
+    expect(getQueryStaleTime(queryClient, queryKeys.conversations.list('__global__'))).toBe(30_000);
     expect(getQueryStaleTime(queryClient, queryKeys.conversations.search(searchParams))).toBe(
       30_000
     );

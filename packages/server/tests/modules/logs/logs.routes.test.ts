@@ -86,7 +86,7 @@ vi.mock('@core/middleware', () => ({
   validateQuery: validateQueryMock,
 }));
 
-vi.mock('@knowledge-agent/shared/schemas', () => ({
+vi.mock('@groundpath/shared/schemas', () => ({
   loginLogQuerySchema: loginLogQuerySchemaMock,
   operationLogQuerySchema: operationLogQuerySchemaMock,
   resourceHistorySchema: resourceHistorySchemaMock,

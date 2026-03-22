@@ -1,4 +1,4 @@
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { documentIndexConfig, featureFlags } from '@config/env';
 import { estimateDocumentTokens } from './document-token-estimator';
 import { structuredRagRolloutService } from './structured-rag-rollout.service';

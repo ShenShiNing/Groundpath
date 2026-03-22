@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { logsApi } from '@/api';
 import { queryKeys } from '@/lib/query';
-import type { StructuredRagDashboardQueryParams } from '@knowledge-agent/shared/schemas';
+import type { StructuredRagDashboardQueryParams } from '@groundpath/shared/schemas';
 
 export function useStructuredRagDashboard(params?: Partial<StructuredRagDashboardQueryParams>) {
   const normalizedParams = {

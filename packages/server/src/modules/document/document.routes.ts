@@ -15,7 +15,7 @@ import {
   documentListParamsSchema,
   trashListParamsSchema,
   saveDocumentContentSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 
 const router = express.Router();
 

@@ -1,11 +1,11 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 import {
   loginLogQuerySchema,
   operationLogQuerySchema,
   resourceHistorySchema,
   structuredRagDashboardQuerySchema,
   structuredRagReportQuerySchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { paginatedResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 

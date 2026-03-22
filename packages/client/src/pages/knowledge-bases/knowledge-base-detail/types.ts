@@ -1,4 +1,4 @@
-import type { DocumentListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem } from '@groundpath/shared/types';
 
 export type ViewMode = 'grid' | 'table';
 

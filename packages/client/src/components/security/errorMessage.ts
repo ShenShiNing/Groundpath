@@ -1,5 +1,5 @@
-import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@knowledge-agent/shared';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import { AUTH_ERROR_CODES, EMAIL_ERROR_CODES } from '@groundpath/shared';
+import type { ApiResponse } from '@groundpath/shared/types';
 import type { AxiosError } from 'axios';
 import type { TFunction } from 'i18next';
 import { translateApiError } from '@/lib/http/translate-error';

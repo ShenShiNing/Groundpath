@@ -14,7 +14,7 @@ interface AuthPageLayoutProps {
 }
 
 function AuthHeader() {
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'common']);
   const accessToken = useAuthStore((s) => s.accessToken);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasAuthSession = isAuthenticated || !!accessToken;
@@ -31,7 +31,7 @@ function AuthHeader() {
               <Brain className="size-4" />
             </div>
             <span className="font-display text-base font-semibold tracking-tight">
-              KnowledgeAgent
+              {t('brand', { ns: 'common' })}
             </span>
           </Link>
 

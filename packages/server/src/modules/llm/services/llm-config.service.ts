@@ -1,10 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import type {
-  LLMProviderType,
-  LLMConfigInfo,
-  LLMProviderInfo,
-} from '@knowledge-agent/shared/types';
-import { LLM_ERROR_CODES } from '@knowledge-agent/shared/constants';
+import type { LLMProviderType, LLMConfigInfo, LLMProviderInfo } from '@groundpath/shared/types';
+import { LLM_ERROR_CODES } from '@groundpath/shared/constants';
 import { llmConfigRepository } from '../repositories/llm-config.repository';
 import { encryptionService } from './encryption.service';
 import { Errors } from '@core/errors';

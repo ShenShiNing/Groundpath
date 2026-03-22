@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { HTTP_STATUS, AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { ApiResponse } from '@knowledge-agent/shared';
+import { HTTP_STATUS, AUTH_ERROR_CODES } from '@groundpath/shared';
+import type { ApiResponse } from '@groundpath/shared';
 import { featureFlags, serverConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';

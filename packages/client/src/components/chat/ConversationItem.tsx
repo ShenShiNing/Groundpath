@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
-import type { ConversationListItem } from '@knowledge-agent/shared/types';
+import type { ConversationListItem } from '@groundpath/shared/types';
 
 // ============================================================================
 // Types

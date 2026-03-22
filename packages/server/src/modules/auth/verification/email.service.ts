@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import type Mail from 'nodemailer/lib/mailer';
-import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
+import type { EmailVerificationCodeType } from '@groundpath/shared/types';
 import { emailConfig } from '@config/env';
 import { emailTemplates } from '@core/email/templates/verification.template';
 

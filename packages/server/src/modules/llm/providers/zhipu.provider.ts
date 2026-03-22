@@ -7,7 +7,7 @@ import type {
   GenerateWithToolsOptions,
   ToolGenerateResult,
 } from './llm-provider.interface';
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 import { openaiCompatGenerateWithTools } from './openai-compat';
 import { logger } from '@core/logger';

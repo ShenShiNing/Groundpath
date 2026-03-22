@@ -4,7 +4,7 @@ import { emailSendRateLimiter, emailVerifyRateLimiter, validateBody } from '@cor
 import {
   sendVerificationCodeRequestSchema,
   verifyCodeRequestSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 
 const router = express.Router();
 

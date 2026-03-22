@@ -1,4 +1,4 @@
-import type { TokenPair } from '@knowledge-agent/shared/types';
+import type { TokenPair } from '@groundpath/shared/types';
 
 // ==================== Shared Test Data ====================
 

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
+import type { EmbeddingProviderType } from '@groundpath/shared/types';
 import { knowledgeBasesApi, conversationApi } from '@/api';
 import { useCreateKnowledgeBase, useKnowledgeBases } from '@/hooks';
 import { useTranslation } from 'react-i18next';

@@ -6,7 +6,7 @@ import type {
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
   DocumentListParams,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 // ==================== Query Hooks ====================
 

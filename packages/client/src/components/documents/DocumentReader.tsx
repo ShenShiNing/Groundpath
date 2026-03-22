@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Loader2, FileWarning } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { cn } from '@/lib/utils';
 
 interface DocumentReaderProps {

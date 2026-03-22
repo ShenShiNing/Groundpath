@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import type { AISettingsConfig, AISettingsFormValues, AISettingsProviderInfo } from '../types';
 
 interface AISettingsCredentialsSectionProps {

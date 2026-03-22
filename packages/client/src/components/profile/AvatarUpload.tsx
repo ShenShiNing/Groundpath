@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Upload, Loader2 } from 'lucide-react';
 import type { AxiosError } from 'axios';
-import type { ApiResponse, UserPublicInfo } from '@knowledge-agent/shared/types';
+import type { ApiResponse, UserPublicInfo } from '@groundpath/shared/types';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';

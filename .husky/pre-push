@@ -1,1 +1,1 @@
-pnpm -F @knowledge-agent/server db:drift-check
+pnpm -F @groundpath/server db:drift-check

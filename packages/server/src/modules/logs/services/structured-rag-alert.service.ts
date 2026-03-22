@@ -1,10 +1,11 @@
 import { structuredRagObservabilityConfig } from '@config/env';
 import { emailService } from '@modules/auth';
+import { BRAND_CONFIG } from '@groundpath/shared/constants';
 import { systemLogRepository } from '../repositories/system-log.repository';
 import { systemLogger } from '@core/logger/system-logger';
 import { createLogger } from '@core/logger';
 import { structuredRagReportService } from './structured-rag-report.service';
-import type { StructuredRagDashboardAlert } from '@knowledge-agent/shared/types';
+import type { StructuredRagDashboardAlert } from '@groundpath/shared/types';
 
 const logger = createLogger('structured-rag-alert.service');
 
@@ -165,7 +166,7 @@ export const structuredRagAlertService = {
 
     await emailService.sendEmail({
       to: recipients,
-      subject: `[KnowledgeAgent] Structured RAG Alerts (${notifyAlerts.length})`,
+      subject: `[${BRAND_CONFIG.structuredRagAlertPrefix}] Structured RAG Alerts (${notifyAlerts.length})`,
       text: `${report.markdown}\n\n## Notification Decision\n${alertSection}`,
     });
 

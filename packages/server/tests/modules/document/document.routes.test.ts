@@ -151,7 +151,7 @@ vi.mock('@core/middleware', () => ({
   generalRateLimiter: vi.fn(),
 }));
 
-vi.mock('@knowledge-agent/shared/schemas', () => ({
+vi.mock('@groundpath/shared/schemas', () => ({
   updateDocumentRequestSchema: updateDocumentRequestSchemaMock,
   documentListParamsSchema: documentListParamsSchemaMock,
   trashListParamsSchema: trashListParamsSchemaMock,

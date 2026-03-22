@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Request, Response, RequestHandler } from 'express';
-import { HTTP_STATUS } from '@knowledge-agent/shared';
+import { HTTP_STATUS } from '@groundpath/shared';
 
 const sendSuccessResponseMock = vi.hoisted(() => vi.fn());
 

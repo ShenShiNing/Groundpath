@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { conversationApi } from '@/api';
 import { queryKeys } from '@/lib/query';
-import type { UpdateConversationInput } from '@knowledge-agent/shared/schemas';
+import type { UpdateConversationInput } from '@groundpath/shared/schemas';
 import {
   GLOBAL_CONVERSATION_SCOPE,
   removeConversationFromListCache,

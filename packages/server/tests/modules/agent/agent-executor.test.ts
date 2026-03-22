@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentExecutorOptions } from '@modules/agent/agent-executor';
 import type { AgentTool, ToolContext, ToolDefinition } from '@modules/agent/tools/tool.interface';
 import type { LLMProvider, ChatMessage, GenerateOptions } from '@modules/llm';
-import type { Citation } from '@knowledge-agent/shared/types';
+import type { Citation } from '@groundpath/shared/types';
 
 vi.mock('@core/config/env', () => ({
   agentConfig: {

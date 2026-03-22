@@ -7,7 +7,7 @@ import type {
   StructuredRagDashboardKnowledgeBaseBreakdown,
   StructuredRagDashboardSummary,
   StructuredRagDashboardTrendPoint,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 export interface StructuredRagDashboardParams {
   userId?: string;

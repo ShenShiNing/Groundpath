@@ -15,15 +15,15 @@ import {
   updateKnowledgeBaseSchema,
   documentListParamsSchema,
   knowledgeBaseListParamsSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { documentService } from '@modules/document';
 import { sendSuccessResponse } from '@core/errors';
 import { AppError } from '@core/errors/app-error';
 import { asyncHandler } from '@core/errors/async-handler';
 import { requireUserId, getParamId, getClientIp } from '@core/utils';
 import { getValidatedQuery } from '@core/middleware';
-import { HTTP_STATUS } from '@knowledge-agent/shared';
-import type { DocumentListParams } from '@knowledge-agent/shared/types';
+import { HTTP_STATUS } from '@groundpath/shared';
+import type { DocumentListParams } from '@groundpath/shared/types';
 
 const router = express.Router();
 

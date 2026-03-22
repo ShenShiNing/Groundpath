@@ -1,10 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
-import { DOCUMENT_ERROR_CODES } from '@knowledge-agent/shared';
+import { DOCUMENT_ERROR_CODES } from '@groundpath/shared';
 import type {
   DocumentInfo,
   DocumentContentResponse,
   SaveDocumentContentRequest,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import type { Document } from '@core/db/schema/document/documents.schema';
 import { withTransaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';

@@ -1,7 +1,7 @@
 import type {
   StructuredRagDashboardAlert,
   StructuredRagDashboardRecentEvent,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 export interface StructuredRagRecentEventItem extends StructuredRagDashboardRecentEvent {
   stopReason: string | null;

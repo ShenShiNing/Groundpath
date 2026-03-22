@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
+import { parseDeviceInfo } from '@groundpath/shared/utils';
 import type {
   LoginRequest,
   RegisterRequest,
@@ -9,7 +9,7 @@ import type {
   UserPublicInfo,
   DeviceInfo,
   RegisterWithCodeRequest,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import type { User } from '@core/db/schema/user/users.schema';
 import { toUserPublicInfo, normalizeEmail, buildAccessTokenSubject } from '@core/utils';
 import { Errors } from '@core/errors';

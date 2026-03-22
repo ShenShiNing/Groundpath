@@ -7,7 +7,7 @@ import { KnowledgeBaseDialog } from '@/components/knowledge-bases';
 import { useDeleteDocument, useKBDocuments, useKnowledgeBase } from '@/hooks';
 import { openInNewTab } from '@/lib/utils';
 import { queryKeys } from '@/lib/query';
-import type { DocumentListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem } from '@groundpath/shared/types';
 import { KnowledgeBaseDeleteDialog } from './knowledge-base-detail/KnowledgeBaseDeleteDialog';
 import { KnowledgeBaseDetailErrorState } from './knowledge-base-detail/KnowledgeBaseDetailStates';
 import { KnowledgeBaseDetailHeader } from './knowledge-base-detail/KnowledgeBaseDetailHeader';

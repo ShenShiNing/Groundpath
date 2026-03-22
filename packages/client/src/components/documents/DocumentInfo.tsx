@@ -1,6 +1,6 @@
 import { FileText, Calendar, HardDrive, Tag, History } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { DocumentInfo, DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentInfo, DocumentType } from '@groundpath/shared/types';
 import { formatDateTime } from '@/lib/date';
 
 interface DocumentInfoProps {

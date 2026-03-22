@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AxiosError } from 'axios';
 import { Mail } from 'lucide-react';
-import { emailSchema } from '@knowledge-agent/shared/schemas';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+import { emailSchema } from '@groundpath/shared/schemas';
+import type { ApiResponse } from '@groundpath/shared/types';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { emailApi } from '@/api';

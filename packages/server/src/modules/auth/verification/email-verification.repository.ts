@@ -1,5 +1,5 @@
 import { eq, and, gt, desc, sql } from 'drizzle-orm';
-import type { EmailVerificationCodeType } from '@knowledge-agent/shared/types';
+import type { EmailVerificationCodeType } from '@groundpath/shared/types';
 import { db } from '@core/db';
 import { now, addMinutes, subtractSeconds } from '@core/db/db.utils';
 import {

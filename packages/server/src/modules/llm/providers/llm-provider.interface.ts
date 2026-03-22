@@ -1,4 +1,4 @@
-import type { LLMProviderType, ToolCallInfo } from '@knowledge-agent/shared/types';
+import type { LLMProviderType, ToolCallInfo } from '@groundpath/shared/types';
 import type { ToolDefinition } from '@modules/agent/tools/tool.interface';
 
 export interface ChatMessage {

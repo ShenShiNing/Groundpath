@@ -1,7 +1,7 @@
 import type { Response } from 'express';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
-import { HTTP_STATUS, ERROR_CODES } from '@knowledge-agent/shared';
-import { ZodError } from '@knowledge-agent/shared/schemas';
+import type { ApiResponse } from '@groundpath/shared/types';
+import { HTTP_STATUS, ERROR_CODES } from '@groundpath/shared';
+import { ZodError } from '@groundpath/shared/schemas';
 import { logger } from '@core/logger';
 import { AppError } from './app-error';
 import { sendErrorResponse } from './response';

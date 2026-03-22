@@ -3,7 +3,7 @@ import {
   updateLLMConfigSchema,
   testLLMConnectionSchema,
   fetchModelsSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { llmConfigService } from '../services/llm-config.service';
 import { llmService } from '../services/llm.service';
 import { modelFetcherService } from '../services/model-fetcher.service';

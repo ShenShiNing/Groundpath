@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LayoutGrid, List, Loader2 } from 'lucide-react';
-import type { DocumentListItem } from '@knowledge-agent/shared/types';
+import type { DocumentListItem } from '@groundpath/shared/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { DocumentCard } from './DocumentCard';

@@ -2,7 +2,7 @@
  * CLI script to enqueue document-index backfill jobs.
  *
  * Usage:
- *   pnpm -F @knowledge-agent/server document-index:backfill [options]
+ *   pnpm -F @groundpath/server document-index:backfill [options]
  *
  * Options:
  *   --kb <id>                Filter by knowledge base ID
@@ -30,7 +30,7 @@ if (!databaseConfig.url) {
   process.exit(1);
 }
 
-import { DOCUMENT_TYPES, type DocumentType } from '@knowledge-agent/shared/types';
+import { DOCUMENT_TYPES, type DocumentType } from '@groundpath/shared/types';
 import { documentIndexBackfillService } from '@modules/document-index';
 import { closeDatabase } from '@core/db';
 

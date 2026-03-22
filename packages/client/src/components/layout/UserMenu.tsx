@@ -68,7 +68,7 @@ export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
   const handleLanguageChange = (value: string) => {
     if (value !== 'zh-CN' && value !== 'en-US') return;
     void i18n.changeLanguage(value);
-    localStorage.setItem('knowledge-agent.language', value);
+    localStorage.setItem('groundpath.language', value);
     document.documentElement.lang = value;
   };
 

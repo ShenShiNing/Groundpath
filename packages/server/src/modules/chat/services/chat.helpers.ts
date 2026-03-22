@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import type { Citation, MessageMetadata, SSEEvent } from '@knowledge-agent/shared/types';
+import type { Citation, MessageMetadata, SSEEvent } from '@groundpath/shared/types';
 import type { SearchResult } from '@modules/vector';
 import { documentRepository } from '@modules/document';
 import { messageService } from './message.service';

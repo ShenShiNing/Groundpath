@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { ResetPasswordRequest } from '@knowledge-agent/shared/types';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
+import type { ResetPasswordRequest } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 import { withTransaction, type Transaction } from '@core/db/db.utils';
 import { normalizeEmail } from '@core/utils';

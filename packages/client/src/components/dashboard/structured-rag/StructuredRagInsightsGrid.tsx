@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '@/lib/date';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { StructuredRagDashboardSummary } from '@knowledge-agent/shared/types';
+import type { StructuredRagDashboardSummary } from '@groundpath/shared/types';
 import type { StructuredRagRecentEventItem } from './utils';
 import { formatMs, formatPercent } from './utils';
 

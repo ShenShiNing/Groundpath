@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import bcrypt from 'bcryptjs';
-import { AUTH_ERROR_CODES } from '@knowledge-agent/shared';
-import type { RegisterRequest } from '@knowledge-agent/shared/types';
+import { AUTH_ERROR_CODES } from '@groundpath/shared';
+import type { RegisterRequest } from '@groundpath/shared/types';
 import { AppError } from '@core/errors';
 import { mockTokenPair, mockCreatedUser, logTestInfo } from '@tests/__mocks__/auth.mocks';
 

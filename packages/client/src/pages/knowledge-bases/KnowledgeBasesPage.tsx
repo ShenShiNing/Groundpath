@@ -9,7 +9,7 @@ import { useKnowledgeBases, useDeleteKnowledgeBase } from '@/hooks';
 import { KnowledgeBaseDialog } from '@/components/knowledge-bases';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import type { KnowledgeBaseListItem } from '@knowledge-agent/shared/types';
+import type { KnowledgeBaseListItem } from '@groundpath/shared/types';
 import {
   KnowledgeBaseGridCard,
   KnowledgeBaseTableRow,

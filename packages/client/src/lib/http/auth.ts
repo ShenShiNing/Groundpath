@@ -4,7 +4,7 @@
  * executeRefresh 使用原生 fetch，避免与 axios 实例循环依赖。
  */
 
-import type { ApiResponse, AuthResponse } from '@knowledge-agent/shared/types';
+import type { ApiResponse, AuthResponse } from '@groundpath/shared/types';
 import i18n from '@/i18n/i18n';
 import { logClientError } from '@/lib/logger';
 import { ApiRequestError, unwrapResponse } from './error';

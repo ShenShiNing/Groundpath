@@ -1,5 +1,5 @@
 import { agentConfig, documentIndexConfig } from '@config/env';
-import type { Citation } from '@knowledge-agent/shared/types';
+import type { Citation } from '@groundpath/shared/types';
 import { documentNodeRepository } from '../../repositories/document-node.repository';
 import { documentNodeSearchRepository } from '../../repositories/document-node-search.repository';
 import { documentIndexCacheService } from '../document-index-cache.service';

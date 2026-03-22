@@ -6,7 +6,7 @@ import {
   resourceHistorySchema,
   structuredRagDashboardQuerySchema,
   structuredRagReportQuerySchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { logsRouteHandlers } from './logs.route-handlers';
 
 const router = express.Router();

@@ -8,8 +8,8 @@ import type {
   VersionListResponse,
   DocumentContentResponse,
   SaveDocumentContentRequest,
-} from '@knowledge-agent/shared/types';
-import type { ApiResponse } from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
+import type { ApiResponse } from '@groundpath/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
 
 export interface UploadOptions {

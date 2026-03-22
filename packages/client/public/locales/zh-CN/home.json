@@ -6,9 +6,9 @@
   "login": "登录",
   "getStarted": "免费开始",
   "hero": {
-    "badge": "为个人创作与学习打造可信的 AI 知识助手",
-    "title": "Knowledge Base Agent",
-    "titleMuted": "让你的知识可检索、可对话、可验证",
+    "badge": "溯知 · 溯源而知，一问即达",
+    "title": "溯知",
+    "titleMuted": "把你的知识变成可检索、可对话、可验证的答案系统",
     "description": "统一沉淀你的文档与笔记，通过语义检索和引用式回答，把知识从「难找」变成「即问即得」，让学习与创作更高效。",
     "enterDashboard": "进入控制台",
     "startBuilding": "开始构建知识库",
@@ -75,8 +75,8 @@
       "getStarted": "免费开始"
     },
     "hero": {
-      "title": "关于 KnowledgeAgent",
-      "description": "KnowledgeAgent 致力于让企业知识「可检索、可对话、可验证」。我们把文档资产转化为可持续演进的知识系统，帮助团队在日常协作中快速获得准确答案。"
+      "title": "关于溯知",
+      "description": "溯知致力于让团队知识「可检索、可对话、可验证」。我们把文档资产转化为可持续演进的知识系统，让每个答案都能回到来源。"
     },
     "action": {
       "dashboard": "进入控制台",

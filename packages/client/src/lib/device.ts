@@ -1,5 +1,5 @@
-import type { DeviceInfo } from '@knowledge-agent/shared/types';
-import { parseDeviceInfo } from '@knowledge-agent/shared/utils';
+import type { DeviceInfo } from '@groundpath/shared/types';
+import { parseDeviceInfo } from '@groundpath/shared/utils';
 
 /**
  * Get current device info from browser's navigator.

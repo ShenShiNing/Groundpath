@@ -1,4 +1,4 @@
-import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
+import type { EmbeddingProviderType } from '@groundpath/shared/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 

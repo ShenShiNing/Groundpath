@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { sendMessageSchema, listMessagesSchema } from '@knowledge-agent/shared/schemas';
+import { sendMessageSchema, listMessagesSchema } from '@groundpath/shared/schemas';
 import { chatService } from '../services/chat.service';
 import { messageService } from '../services/message.service';
 import { conversationService } from '../services/conversation.service';

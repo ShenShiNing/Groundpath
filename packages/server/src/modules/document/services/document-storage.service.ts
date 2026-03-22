@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { PDFParse } from 'pdf-parse';
 import mammoth from 'mammoth';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { documentConfig, storageConfig } from '@config/env';
 import { createLogger } from '@core/logger';
 import { storageProvider } from '../../storage';

@@ -3,7 +3,7 @@ import type {
   GenerateWithToolsOptions,
   ToolGenerateResult,
 } from './llm-provider.interface';
-import type { ToolCallInfo } from '@knowledge-agent/shared/types';
+import type { ToolCallInfo } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 
 // --- OpenAI-compatible tool calling types ---

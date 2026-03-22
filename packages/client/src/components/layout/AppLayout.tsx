@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from '@tanstack/react-router';
+import { BRAND_STORAGE_KEYS } from '@groundpath/shared/constants';
 import { authApi } from '@/api';
 import { logClientError } from '@/lib/logger';
 import { useAuthStore } from '@/stores';
@@ -14,7 +15,7 @@ interface AppLayoutProps {
   showSidebar?: boolean;
 }
 
-const SIDEBAR_COLLAPSED_STORAGE_KEY = 'knowledge-agent.sidebar-collapsed';
+const SIDEBAR_COLLAPSED_STORAGE_KEY = BRAND_STORAGE_KEYS.sidebarCollapsed;
 
 function getInitialSidebarCollapsedState(): boolean {
   if (typeof window === 'undefined') {

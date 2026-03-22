@@ -3,7 +3,8 @@ import {
   OpenApiGeneratorV3,
   extendZodWithOpenApi,
 } from '@asteasolutions/zod-to-openapi';
-import { z } from '@knowledge-agent/shared/schemas';
+import { BRAND_CONFIG } from '@groundpath/shared/constants';
+import { z } from '@groundpath/shared/schemas';
 
 extendZodWithOpenApi(z);
 
@@ -89,9 +90,9 @@ export function generateDocument() {
   return generator.generateDocument({
     openapi: '3.0.0',
     info: {
-      title: 'Knowledge Agent API',
+      title: BRAND_CONFIG.openApi.title,
       version: '1.0.0',
-      description: 'Knowledge Agent 后端 API 文档',
+      description: BRAND_CONFIG.openApi.descriptionZhCN,
     },
     servers: [{ url: '/', description: 'Current server' }],
   });

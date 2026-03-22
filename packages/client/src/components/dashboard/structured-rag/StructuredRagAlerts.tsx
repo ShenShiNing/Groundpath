@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
-import type { StructuredRagDashboardAlert } from '@knowledge-agent/shared/types';
+import type { StructuredRagDashboardAlert } from '@groundpath/shared/types';
 import { getAlertThresholdLabel, getAlertValueLabel } from './utils';
 
 interface StructuredRagAlertsProps {

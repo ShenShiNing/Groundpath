@@ -1,4 +1,4 @@
-import { z } from '@knowledge-agent/shared/schemas';
+import { z } from '@groundpath/shared/schemas';
 import {
   createConversationSchema,
   updateConversationSchema,
@@ -6,7 +6,7 @@ import {
   listConversationsSchema,
   listMessagesSchema,
   searchConversationsSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { errorResponse, messageResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 

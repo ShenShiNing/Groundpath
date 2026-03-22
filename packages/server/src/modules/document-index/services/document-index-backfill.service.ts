@@ -4,7 +4,7 @@ import {
   type DocumentBackfillCandidate,
 } from '@modules/document/public/repositories';
 import { enqueueDocumentProcessing } from '@modules/rag/queue/document-processing.queue';
-import type { DocumentType } from '@knowledge-agent/shared/types';
+import type { DocumentType } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 import { documentIndexBackfillProgressService } from './document-index-backfill-progress.service';

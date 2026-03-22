@@ -2,7 +2,7 @@
  * CLI script to sync knowledge base counters
  *
  * Usage:
- *   pnpm -F @knowledge-agent/server db:sync-counters [options]
+ *   pnpm -F @groundpath/server db:sync-counters [options]
  *
  * Options:
  *   --kb <id>    Sync a specific knowledge base

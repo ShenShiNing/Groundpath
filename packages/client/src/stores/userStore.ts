@@ -5,7 +5,7 @@ import type {
   ChangeEmailRequest,
   UpdateProfileRequest,
   UserPublicInfo,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { userApi, authApi } from '@/api';
 
 interface UserState {

@@ -4,7 +4,7 @@ import {
   updateConversationSchema,
   listConversationsSchema,
   searchConversationsSchema,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import { conversationService } from '../services/conversation.service';
 import { messageService } from '../services/message.service';
 import { sendSuccessResponse, handleError } from '@core/errors';

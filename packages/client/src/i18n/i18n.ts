@@ -46,7 +46,7 @@ void i18n
 
     detection: {
       order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'knowledge-agent.language',
+      lookupLocalStorage: 'groundpath.language',
       caches: ['localStorage'],
     },
 

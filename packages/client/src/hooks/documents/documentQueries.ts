@@ -4,7 +4,7 @@ import type {
   DocumentListParams,
   TrashListParams,
   VersionListResponse,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import { documentsApi } from '@/api';
 import { queryKeys } from '@/lib/query';
 

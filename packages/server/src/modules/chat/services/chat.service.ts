@@ -1,6 +1,6 @@
 import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import type { Citation, MessageMetadata } from '@knowledge-agent/shared/types';
+import type { Citation, MessageMetadata } from '@groundpath/shared/types';
 import { resolveTools } from '@modules/agent';
 import { llmService, type LLMProvider } from '@modules/llm';
 import { searchService } from '@modules/rag';

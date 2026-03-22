@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { llmConfigApi } from '@/api';
 import { queryKeys } from '@/lib/query';
-import type { LLMProviderType } from '@knowledge-agent/shared/types';
+import type { LLMProviderType } from '@groundpath/shared/types';
 import { useTranslation } from 'react-i18next';
 
 /**

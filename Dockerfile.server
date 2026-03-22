@@ -18,11 +18,11 @@ RUN pnpm install --frozen-lockfile
 COPY packages/shared ./packages/shared
 COPY packages/server ./packages/server
 
-RUN pnpm --filter @knowledge-agent/shared build
-RUN pnpm --filter @knowledge-agent/server build
+RUN pnpm --filter @groundpath/shared build
+RUN pnpm --filter @groundpath/server build
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=5 CMD node -e "fetch('http://127.0.0.1:3000/health/ready').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"
 
-CMD ["pnpm", "--filter", "@knowledge-agent/server", "exec", "tsx", "src/index.ts"]
+CMD ["pnpm", "--filter", "@groundpath/server", "exec", "tsx", "src/index.ts"]

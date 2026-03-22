@@ -6,7 +6,7 @@ import { ConversationItem } from './ConversationItem';
 import { useConversations, useDeleteConversation } from '@/hooks';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import type { ConversationListItem as ConversationListItemType } from '@knowledge-agent/shared/types';
+import type { ConversationListItem as ConversationListItemType } from '@groundpath/shared/types';
 
 // ============================================================================
 // Types

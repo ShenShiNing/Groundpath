@@ -10,13 +10,13 @@ import type {
   SSEEvent,
   ToolCallInfo,
   ToolResultInfo,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 import type {
   CreateConversationInput,
   SearchConversationsInput,
   UpdateConversationInput,
   SendMessageInput,
-} from '@knowledge-agent/shared/schemas';
+} from '@groundpath/shared/schemas';
 import {
   apiClient,
   unwrapResponse,
@@ -141,7 +141,7 @@ export interface SSEHandlers {
     messageId: string;
     userMessageId?: string;
     title?: string;
-    stopReason?: import('@knowledge-agent/shared/types').AgentStopReason;
+    stopReason?: import('@groundpath/shared/types').AgentStopReason;
   }) => void;
   onError: (error: { code: string; message: string }) => void;
   onToolStart?: (data: { stepIndex: number; toolCalls: ToolCallInfo[] }) => void;

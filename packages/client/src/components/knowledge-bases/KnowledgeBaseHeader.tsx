@@ -1,5 +1,5 @@
 import { Database, FileText, Layers, Settings } from 'lucide-react';
-import type { KnowledgeBaseInfo } from '@knowledge-agent/shared/types';
+import type { KnowledgeBaseInfo } from '@groundpath/shared/types';
 import { Button } from '@/components/ui/button';
 import { EmbeddingProviderBadge } from './EmbeddingProviderBadge';
 

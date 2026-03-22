@@ -3,7 +3,7 @@ import { createLogger } from '@core/logger';
 import { getEmbeddingProviderByType } from '@modules/embedding';
 import { vectorRepository, ensureCollection } from '@modules/vector';
 import type { SearchResult } from '@modules/vector';
-import type { EmbeddingProviderType } from '@knowledge-agent/shared/types';
+import type { EmbeddingProviderType } from '@groundpath/shared/types';
 import { knowledgeBaseService } from '@modules/knowledge-base';
 import { documentRepository } from '@modules/document';
 

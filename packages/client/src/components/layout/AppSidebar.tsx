@@ -181,7 +181,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
               <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
                 <Brain className="size-3.5" />
               </div>
-              <span>KnowledgeAgent</span>
+              <span>{t('brand', { ns: 'common' })}</span>
             </Link>
             <Button
               variant="ghost"

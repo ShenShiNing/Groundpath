@@ -14,8 +14,8 @@ import type {
   KeywordsResponse,
   EntitiesResponse,
   StructureResponse,
-} from '@knowledge-agent/shared/types';
-import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared/constants';
+} from '@groundpath/shared/types';
+import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared/constants';
 import { llmService } from '@modules/llm';
 import type { ChatMessage } from '@modules/llm';
 import { documentContentService } from '@modules/document';

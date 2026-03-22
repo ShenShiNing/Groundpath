@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Request, Response } from 'express';
-import { DOCUMENT_AI_ERROR_CODES } from '@knowledge-agent/shared';
+import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared';
 import { AppError } from '@core/errors';
 import {
   mockUserId,

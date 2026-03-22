@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { ChangeEmailRequest, UpdateProfileRequest } from '@knowledge-agent/shared/types';
+import type { ChangeEmailRequest, UpdateProfileRequest } from '@groundpath/shared/types';
 import { userService } from '../services/user.service';
 import { sendSuccessResponse } from '@core/errors';
 import { asyncHandler } from '@core/errors/async-handler';

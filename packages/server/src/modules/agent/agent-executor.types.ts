@@ -6,7 +6,7 @@ import type {
   Citation,
   ToolCallInfo,
   ToolResultInfo,
-} from '@knowledge-agent/shared/types';
+} from '@groundpath/shared/types';
 
 export interface AgentExecutorOptions {
   provider: LLMProvider;

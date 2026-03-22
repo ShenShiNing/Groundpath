@@ -85,7 +85,7 @@ describe('AppLayout', () => {
   });
 
   it('should hydrate persisted collapse state and persist sidebar toggles', async () => {
-    localStorage.setItem('knowledge-agent.sidebar-collapsed', 'true');
+    localStorage.setItem('groundpath.sidebar-collapsed', 'true');
 
     const view = await render(
       <AppLayout>
@@ -103,7 +103,7 @@ describe('AppLayout', () => {
       ) ?? null
     );
 
-    expect(localStorage.getItem('knowledge-agent.sidebar-collapsed')).toBe('false');
+    expect(localStorage.getItem('groundpath.sidebar-collapsed')).toBe('false');
     expect(
       view.container.querySelector('[data-testid="app-sidebar"]')?.getAttribute('data-collapsed')
     ).toBe('no');
