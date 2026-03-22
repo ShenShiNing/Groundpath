@@ -6,11 +6,12 @@
 
 ## 架构概览
 
-环境变量通过三层管理:
+环境变量通过四层管理:
 
-1. **`env/schema.ts`** — Zod 校验 + 默认值
-2. **`env/configs.ts`** — 合并 env 与 defaults, 对外暴露配置对象
-3. **`defaults/*.defaults.ts`** — 业务常量 (batch size / TTL / 阈值等), 不在 `.env` 中配置
+1. **`packages/server/src/core/config/env/schema.ts`** — Zod 校验 + 默认值
+2. **`packages/server/src/core/config/env/configs.ts`** — 合并 env 与 defaults
+3. **`packages/server/src/core/config/defaults/*.defaults.ts`** — 业务常量 (batch size / TTL / 阈值等), 不在 `.env` 中配置
+4. **`packages/server/src/core/config/env.ts`** — 对业务代码暴露配置对象的统一入口
 
 ---
 
