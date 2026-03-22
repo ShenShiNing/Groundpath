@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AGENT_STOP_REASONS } from '../types/chat';
+import { AGENT_STOP_REASONS, MESSAGE_ROLES } from '../types/chat';
 
 export const chunkCitationSchema = z.object({
   sourceType: z.literal('chunk'),
@@ -73,6 +73,65 @@ export const messageMetadataSchema = z.object({
   tokenUsage: tokenUsageSchema.optional(),
   agentTrace: z.array(agentStepSchema).optional(),
   stopReason: z.enum(AGENT_STOP_REASONS).optional(),
+});
+
+export const offsetPaginationSchema = z.object({
+  limit: z.number().int().min(0),
+  offset: z.number().int().min(0),
+  total: z.number().int().min(0),
+  hasMore: z.boolean(),
+});
+
+export const messageInfoSchema = z.object({
+  id: z.string().uuid(),
+  conversationId: z.string().uuid(),
+  role: z.enum(MESSAGE_ROLES),
+  content: z.string(),
+  metadata: messageMetadataSchema.nullable(),
+  createdAt: z.string().datetime(),
+});
+
+export const conversationInfoSchema = z.object({
+  id: z.string().uuid(),
+  userId: z.string().uuid(),
+  knowledgeBaseId: z.string().uuid().nullable(),
+  title: z.string(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const conversationListItemSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  knowledgeBaseId: z.string().uuid().nullable(),
+  messageCount: z.number().int().min(0),
+  lastMessageAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+});
+
+export const conversationSearchItemSchema = z.object({
+  conversationId: z.string().uuid(),
+  conversationTitle: z.string(),
+  knowledgeBaseId: z.string().uuid().nullable(),
+  messageId: z.string().uuid(),
+  role: z.enum(MESSAGE_ROLES),
+  snippet: z.string(),
+  matchedAt: z.string().datetime(),
+  score: z.number().finite().nullable(),
+});
+
+export const conversationListResponseSchema = z.object({
+  items: z.array(conversationListItemSchema),
+  pagination: offsetPaginationSchema,
+});
+
+export const conversationSearchResponseSchema = z.object({
+  items: z.array(conversationSearchItemSchema),
+  pagination: offsetPaginationSchema,
+});
+
+export const conversationWithMessagesSchema = conversationInfoSchema.extend({
+  messages: z.array(messageInfoSchema),
 });
 
 export const createConversationSchema = z.object({
