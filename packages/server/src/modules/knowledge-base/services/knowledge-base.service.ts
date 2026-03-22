@@ -1,8 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { KNOWLEDGE_BASE_ERROR_CODES } from '@groundpath/shared';
 import type {
   KnowledgeBaseInfo,
-  KnowledgeBaseListItem,
   KnowledgeBaseListResponse,
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
@@ -11,125 +9,47 @@ import type {
 } from '@groundpath/shared/types';
 import type { KnowledgeBase } from '@core/db/schema/document/knowledge-bases.schema';
 import type { Transaction } from '@core/db/db.utils';
-import { Errors } from '@core/errors';
 import { knowledgeBaseRepository } from '../repositories/knowledge-base.repository';
 import { logOperation } from '@core/logger/operation-logger';
-import { embeddingConfig } from '@config/env';
+import {
+  assertProviderConfigured,
+  getCollectionName,
+  getEmbeddingConfigForProvider,
+  knowledgeBaseNotFoundError,
+  toKnowledgeBaseInfo,
+  toKnowledgeBaseListItem,
+} from './knowledge-base.service.helpers';
+import type { EmbeddingConfig, RequestContext } from './knowledge-base.service.helpers';
 
-export interface RequestContext {
-  ipAddress?: string | null;
-  userAgent?: string | null;
-}
+export type { EmbeddingConfig, RequestContext } from './knowledge-base.service.helpers';
+export { getCollectionName } from './knowledge-base.service.helpers';
 
-/**
- * Embedding configuration for a provider
- */
-export interface EmbeddingConfig {
-  provider: EmbeddingProviderType;
-  model: string;
-  dimensions: number;
-  collectionName: string;
-}
-
-/**
- * Get embedding model and dimensions for a provider from env config
- */
-function getEmbeddingConfigForProvider(provider: EmbeddingProviderType): {
-  model: string;
-  dimensions: number;
-} {
-  switch (provider) {
-    case 'zhipu':
-      return {
-        model: embeddingConfig.zhipu.model,
-        dimensions: embeddingConfig.zhipu.dimensions,
-      };
-    case 'openai': {
-      // OpenAI models have fixed dimensions
-      const model = embeddingConfig.openai.model;
-      const dimensionsMap: Record<string, number> = {
-        'text-embedding-3-small': 1536,
-        'text-embedding-3-large': 3072,
-        'text-embedding-ada-002': 1536,
-      };
-      return {
-        model,
-        dimensions: dimensionsMap[model] ?? 1536,
-      };
-    }
-    case 'ollama': {
-      // Ollama models have fixed dimensions
-      const model = embeddingConfig.ollama.model;
-      const dimensionsMap: Record<string, number> = {
-        'nomic-embed-text': 768,
-        'mxbai-embed-large': 1024,
-        'all-minilm': 384,
-      };
-      return {
-        model,
-        dimensions: dimensionsMap[model] ?? 768,
-      };
-    }
-    default:
-      throw Errors.auth(
-        KNOWLEDGE_BASE_ERROR_CODES.INVALID_EMBEDDING_PROVIDER as 'INVALID_EMBEDDING_PROVIDER',
-        `Invalid embedding provider: ${provider}`,
-        400
-      );
-  }
-}
-
-function assertProviderConfigured(provider: EmbeddingProviderType): void {
-  if (provider === 'openai' && !embeddingConfig.openai.apiKey) {
-    throw Errors.validation('OPENAI_API_KEY 未配置，无法使用 OpenAI 嵌入模型');
-  }
-  if (provider === 'zhipu' && !embeddingConfig.zhipu.apiKey) {
-    throw Errors.validation('ZHIPU_API_KEY 未配置，无法使用智谱嵌入模型');
-  }
-}
-
-/**
- * Generate Qdrant collection name from provider and dimensions
- */
-export function getCollectionName(provider: EmbeddingProviderType, dimensions: number): string {
-  return `embedding_${provider}_${dimensions}`;
-}
-
-/**
- * Convert database knowledge base to API info
- */
-function toKnowledgeBaseInfo(kb: KnowledgeBase): KnowledgeBaseInfo {
+function buildOperationContext(startTime: number, ctx?: RequestContext) {
   return {
-    id: kb.id,
-    userId: kb.userId,
-    name: kb.name,
-    description: kb.description,
-    embeddingProvider: kb.embeddingProvider as EmbeddingProviderType,
-    embeddingModel: kb.embeddingModel,
-    embeddingDimensions: kb.embeddingDimensions,
-    documentCount: kb.documentCount,
-    totalChunks: kb.totalChunks,
-    createdAt: kb.createdAt,
-    updatedAt: kb.updatedAt,
+    ipAddress: ctx?.ipAddress ?? null,
+    userAgent: ctx?.userAgent ?? null,
+    durationMs: Date.now() - startTime,
   };
 }
 
-/**
- * Convert database knowledge base to list item
- */
-function toKnowledgeBaseListItem(kb: KnowledgeBase): KnowledgeBaseListItem {
-  return {
-    id: kb.id,
-    name: kb.name,
-    description: kb.description,
-    embeddingProvider: kb.embeddingProvider as EmbeddingProviderType,
-    embeddingModel: kb.embeddingModel,
-    embeddingDimensions: kb.embeddingDimensions,
-    documentCount: kb.documentCount,
-    totalChunks: kb.totalChunks,
-    createdAt: kb.createdAt,
-    updatedAt: kb.updatedAt,
-  };
+async function getOwnedKnowledgeBaseOrThrow(
+  kbId: string,
+  userId: string,
+  message = 'Knowledge base not found'
+): Promise<KnowledgeBase> {
+  const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
+  if (!kb) {
+    throw knowledgeBaseNotFoundError(message);
+  }
+  return kb;
+}
+
+async function getKnowledgeBaseOrThrow(kbId: string): Promise<KnowledgeBase> {
+  const kb = await knowledgeBaseRepository.findById(kbId);
+  if (!kb) {
+    throw knowledgeBaseNotFoundError();
+  }
+  return kb;
 }
 
 /**
@@ -176,9 +96,7 @@ export const knowledgeBaseService = {
         embeddingModel: model,
         embeddingDimensions: dimensions,
       },
-      ipAddress: ctx?.ipAddress ?? null,
-      userAgent: ctx?.userAgent ?? null,
-      durationMs: Date.now() - startTime,
+      ...buildOperationContext(startTime, ctx),
     });
 
     return toKnowledgeBaseInfo(kb);
@@ -188,15 +106,7 @@ export const knowledgeBaseService = {
    * Get knowledge base by ID (with ownership check)
    */
   async getById(kbId: string, userId: string): Promise<KnowledgeBaseInfo> {
-    const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
-    if (!kb) {
-      throw Errors.auth(
-        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
-        'Knowledge base not found',
-        404
-      );
-    }
-    return toKnowledgeBaseInfo(kb);
+    return toKnowledgeBaseInfo(await getOwnedKnowledgeBaseOrThrow(kbId, userId));
   },
 
   /**
@@ -233,14 +143,7 @@ export const knowledgeBaseService = {
   ): Promise<KnowledgeBaseInfo> {
     const startTime = Date.now();
 
-    const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
-    if (!kb) {
-      throw Errors.auth(
-        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
-        'Knowledge base not found',
-        404
-      );
-    }
+    const kb = await getOwnedKnowledgeBaseOrThrow(kbId, userId);
 
     // Capture old values for logging
     const oldValue = {
@@ -253,13 +156,16 @@ export const knowledgeBaseService = {
       ...(data.description !== undefined && { description: data.description }),
       updatedBy: userId,
     });
+    if (!updated) {
+      throw knowledgeBaseNotFoundError();
+    }
 
     // Log operation
     logOperation({
       userId,
       resourceType: 'knowledge_base',
       resourceId: kbId,
-      resourceName: updated!.name,
+      resourceName: updated.name,
       action: 'knowledge_base.update',
       description: 'Updated knowledge base',
       oldValue,
@@ -267,12 +173,10 @@ export const knowledgeBaseService = {
         name: data.name ?? kb.name,
         description: data.description ?? kb.description,
       },
-      ipAddress: ctx?.ipAddress ?? null,
-      userAgent: ctx?.userAgent ?? null,
-      durationMs: Date.now() - startTime,
+      ...buildOperationContext(startTime, ctx),
     });
 
-    return toKnowledgeBaseInfo(updated!);
+    return toKnowledgeBaseInfo(updated);
   },
 
   /**
@@ -282,14 +186,7 @@ export const knowledgeBaseService = {
   async delete(kbId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();
 
-    const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
-    if (!kb) {
-      throw Errors.auth(
-        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
-        'Knowledge base not found',
-        404
-      );
-    }
+    const kb = await getOwnedKnowledgeBaseOrThrow(kbId, userId);
 
     await knowledgeBaseRepository.softDelete(kbId, userId);
 
@@ -305,9 +202,7 @@ export const knowledgeBaseService = {
         documentCount: kb.documentCount,
         totalChunks: kb.totalChunks,
       },
-      ipAddress: ctx?.ipAddress ?? null,
-      userAgent: ctx?.userAgent ?? null,
-      durationMs: Date.now() - startTime,
+      ...buildOperationContext(startTime, ctx),
     });
   },
 
@@ -315,14 +210,7 @@ export const knowledgeBaseService = {
    * Get embedding configuration for a knowledge base
    */
   async getEmbeddingConfig(kbId: string): Promise<EmbeddingConfig> {
-    const kb = await knowledgeBaseRepository.findById(kbId);
-    if (!kb) {
-      throw Errors.auth(
-        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
-        'Knowledge base not found',
-        404
-      );
-    }
+    const kb = await getKnowledgeBaseOrThrow(kbId);
 
     return {
       provider: kb.embeddingProvider as EmbeddingProviderType,
@@ -339,15 +227,7 @@ export const knowledgeBaseService = {
    * Validate knowledge base exists and belongs to user
    */
   async validateOwnership(kbId: string, userId: string): Promise<KnowledgeBase> {
-    const kb = await knowledgeBaseRepository.findByIdAndUser(kbId, userId);
-    if (!kb) {
-      throw Errors.auth(
-        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
-        'Knowledge base not found or access denied',
-        404
-      );
-    }
-    return kb;
+    return getOwnedKnowledgeBaseOrThrow(kbId, userId, 'Knowledge base not found or access denied');
   },
 
   /**
@@ -356,11 +236,7 @@ export const knowledgeBaseService = {
   async lockOwnership(kbId: string, userId: string, tx: Transaction): Promise<void> {
     const locked = await knowledgeBaseRepository.lockByIdAndUser(kbId, userId, tx);
     if (!locked) {
-      throw Errors.auth(
-        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND as 'KNOWLEDGE_BASE_NOT_FOUND',
-        'Knowledge base not found or access denied',
-        404
-      );
+      throw knowledgeBaseNotFoundError('Knowledge base not found or access denied');
     }
   },
 
