@@ -12,8 +12,8 @@ import {
 } from '@core/middleware';
 import {
   createKnowledgeBaseSchema,
+  knowledgeBaseDocumentListParamsSchema,
   updateKnowledgeBaseSchema,
-  documentListParamsSchema,
   knowledgeBaseListParamsSchema,
 } from '@groundpath/shared/schemas';
 import { documentService } from '@modules/document';
@@ -177,7 +177,7 @@ router.post(
 // List documents in knowledge base
 router.get(
   '/:id/documents',
-  validateQuery(documentListParamsSchema),
+  validateQuery(knowledgeBaseDocumentListParamsSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
     const kbId = getParamId(req, 'id');

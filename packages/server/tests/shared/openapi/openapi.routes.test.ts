@@ -6,6 +6,71 @@ import { type HttpMethod, toOpenApiOperationKey } from '@core/openapi/route-meta
 
 const HTTP_METHODS: HttpMethod[] = ['get', 'post', 'put', 'patch', 'delete'];
 
+type OpenApiSchema = {
+  properties?: Record<string, OpenApiSchema>;
+  items?: OpenApiSchema;
+  anyOf?: OpenApiSchema[];
+  enum?: string[];
+  required?: string[];
+  format?: string;
+};
+
+type OpenApiParameter = {
+  name?: string;
+  in?: string;
+  required?: boolean;
+  schema?: OpenApiSchema;
+};
+
+function asSchema(value: unknown): OpenApiSchema | undefined {
+  return value && typeof value === 'object' ? (value as OpenApiSchema) : undefined;
+}
+
+function getResponseSchema(
+  path: string,
+  method: HttpMethod,
+  statusCode: number | string
+): OpenApiSchema | undefined {
+  const document = buildOpenApiDocument();
+  return asSchema(
+    document.paths[path]?.[method]?.responses?.[String(statusCode)]?.content?.['application/json']
+      ?.schema
+  );
+}
+
+function getRequestBodySchema(
+  path: string,
+  method: HttpMethod,
+  mediaType: string = 'application/json'
+): OpenApiSchema | undefined {
+  const document = buildOpenApiDocument();
+  return asSchema(document.paths[path]?.[method]?.requestBody?.content?.[mediaType]?.schema);
+}
+
+function getOperationParameters(path: string, method: HttpMethod): OpenApiParameter[] {
+  const document = buildOpenApiDocument();
+  const parameters = document.paths[path]?.[method]?.parameters;
+  return Array.isArray(parameters) ? (parameters as OpenApiParameter[]) : [];
+}
+
+function getProperty(schema: OpenApiSchema | undefined, key: string): OpenApiSchema | undefined {
+  return asSchema(schema?.properties?.[key]);
+}
+
+function getItems(schema: OpenApiSchema | undefined): OpenApiSchema | undefined {
+  return asSchema(schema?.items);
+}
+
+function getQueryParameter(
+  path: string,
+  method: HttpMethod,
+  name: string
+): OpenApiParameter | undefined {
+  return getOperationParameters(path, method).find(
+    (parameter) => parameter.in === 'query' && parameter.name === name
+  );
+}
+
 describe('OpenAPI route auto-discovery', () => {
   it('keeps the generated OpenAPI document in sync with registered Express routes', () => {
     const document = buildOpenApiDocument();
@@ -33,34 +98,107 @@ describe('OpenAPI route auto-discovery', () => {
   });
 
   it('describes structured rag summary and report responses with concrete schemas', () => {
-    const document = buildOpenApiDocument();
-    const summaryDataSchema = (
-      document.paths['/api/logs/structured-rag/summary']?.get?.responses?.['200'] as {
-        content?: { 'application/json'?: { schema?: { properties?: { data?: unknown } } } };
-      }
-    )?.content?.['application/json']?.schema?.properties?.data as
-      | { properties?: Record<string, unknown> }
-      | undefined;
-    const reportDataSchema = (
-      document.paths['/api/logs/structured-rag/report']?.get?.responses?.['200'] as {
-        content?: { 'application/json'?: { schema?: { properties?: { data?: unknown } } } };
-      }
-    )?.content?.['application/json']?.schema?.properties?.data as
-      | { properties?: Record<string, unknown> }
-      | undefined;
+    const summarySchema = getResponseSchema('/api/logs/structured-rag/summary', 'get', 200);
+    const summaryData = getProperty(summarySchema, 'data');
+    expect(getProperty(getProperty(summaryData, 'agent'), 'fallbackRatio')).toBeDefined();
+    expect(
+      getProperty(getItems(getProperty(summaryData, 'recentEvents')), 'metadata')
+    ).toBeDefined();
 
-    expect(summaryDataSchema?.properties).toMatchObject({
-      agent: expect.any(Object),
-      index: expect.any(Object),
-      alerts: expect.any(Object),
-      trend: expect.any(Object),
-      recentEvents: expect.any(Object),
-    });
-    expect(reportDataSchema?.properties).toMatchObject({
-      generatedAt: expect.any(Object),
-      highlights: expect.any(Object),
-      summary: expect.any(Object),
-      markdown: expect.any(Object),
-    });
+    const reportSchema = getResponseSchema('/api/logs/structured-rag/report', 'get', 200);
+    const reportData = getProperty(reportSchema, 'data');
+    expect(getProperty(getProperty(reportData, 'summary'), 'index')).toBeDefined();
+    expect(getProperty(reportData, 'markdown')).toBeDefined();
+  });
+
+  it('keeps knowledge base and document contracts aligned with live API payloads', () => {
+    const knowledgeBaseListSchema = getResponseSchema('/api/knowledge-bases', 'get', 200);
+    const knowledgeBaseListData = getProperty(knowledgeBaseListSchema, 'data');
+    const knowledgeBases = getProperty(knowledgeBaseListData, 'knowledgeBases');
+    expect(getProperty(getItems(knowledgeBases), 'embeddingModel')).toBeDefined();
+    expect(getProperty(getItems(knowledgeBases), 'totalChunks')).toBeDefined();
+    expect(getProperty(knowledgeBaseListData, 'pagination')).toBeDefined();
+
+    const knowledgeBaseDocumentsSchema = getResponseSchema(
+      '/api/knowledge-bases/{id}/documents',
+      'get',
+      200
+    );
+    const knowledgeBaseDocumentsData = getProperty(knowledgeBaseDocumentsSchema, 'data');
+    expect(getProperty(knowledgeBaseDocumentsData, 'documents')).toBeDefined();
+    expect(getProperty(knowledgeBaseDocumentsData, 'pagination')).toBeDefined();
+    expect(getQueryParameter('/api/knowledge-bases/{id}/documents', 'get', 'page')?.required).toBe(
+      false
+    );
+    expect(
+      getQueryParameter('/api/knowledge-bases/{id}/documents', 'get', 'knowledgeBaseId')
+    ).toBeUndefined();
+
+    const knowledgeBaseDocumentUploadSchema = getRequestBodySchema(
+      '/api/knowledge-bases/{id}/documents',
+      'post',
+      'multipart/form-data'
+    );
+    expect(getProperty(knowledgeBaseDocumentUploadSchema, 'file')?.format).toBe('binary');
+    expect(getProperty(knowledgeBaseDocumentUploadSchema, 'title')).toBeDefined();
+    expect(getProperty(knowledgeBaseDocumentUploadSchema, 'description')).toBeDefined();
+    expect(knowledgeBaseDocumentUploadSchema?.required).toContain('file');
+
+    const knowledgeBaseDocumentUploadResponse = getResponseSchema(
+      '/api/knowledge-bases/{id}/documents',
+      'post',
+      201
+    );
+    const knowledgeBaseDocumentUploadData = getProperty(
+      knowledgeBaseDocumentUploadResponse,
+      'data'
+    );
+    expect(getProperty(knowledgeBaseDocumentUploadData, 'message')).toBeDefined();
+    expect(
+      getProperty(getProperty(knowledgeBaseDocumentUploadData, 'document'), 'fileName')
+    ).toBeDefined();
+
+    const documentUploadSchema = getRequestBodySchema(
+      '/api/documents',
+      'post',
+      'multipart/form-data'
+    );
+    expect(getProperty(documentUploadSchema, 'knowledgeBaseId')).toBeDefined();
+    expect(getProperty(documentUploadSchema, 'title')).toBeDefined();
+    expect(getProperty(documentUploadSchema, 'description')).toBeDefined();
+    expect(documentUploadSchema?.required).toEqual(
+      expect.arrayContaining(['file', 'knowledgeBaseId'])
+    );
+
+    const documentUploadResponse = getResponseSchema('/api/documents', 'post', 201);
+    const documentUploadData = getProperty(documentUploadResponse, 'data');
+    expect(getProperty(documentUploadData, 'message')).toBeDefined();
+    expect(
+      getProperty(getProperty(documentUploadData, 'document'), 'currentVersion')
+    ).toBeDefined();
+
+    const versionListSchema = getResponseSchema('/api/documents/{id}/versions', 'get', 200);
+    const versionListData = getProperty(versionListSchema, 'data');
+    const versions = getProperty(versionListData, 'versions');
+    expect(getProperty(getItems(versions), 'version')).toBeDefined();
+    expect(getProperty(getItems(versions), 'versionNumber')).toBeUndefined();
+    expect(getProperty(versionListData, 'currentVersion')).toBeDefined();
+
+    const versionUploadSchema = getRequestBodySchema(
+      '/api/documents/{id}/versions',
+      'post',
+      'multipart/form-data'
+    );
+    expect(getProperty(versionUploadSchema, 'changeNote')).toBeDefined();
+
+    const saveContentSchema = getResponseSchema('/api/documents/{id}/content', 'put', 200);
+    const saveContentData = getProperty(saveContentSchema, 'data');
+    expect(getProperty(saveContentData, 'message')).toBeDefined();
+    expect(getProperty(getProperty(saveContentData, 'document'), 'processingStatus')).toBeDefined();
+
+    const clearTrashSchema = getResponseSchema('/api/documents/trash', 'delete', 200);
+    const clearTrashData = getProperty(clearTrashSchema, 'data');
+    expect(getProperty(clearTrashData, 'deletedCount')).toBeDefined();
+    expect(getProperty(clearTrashData, 'failedCount')).toBeDefined();
   });
 });
