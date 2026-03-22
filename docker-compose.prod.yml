@@ -1,0 +1,185 @@
+name: groundpath-prod
+
+x-server-build: &server-build
+  context: .
+  dockerfile: Dockerfile.server
+
+x-server-env: &server-env
+  NODE_ENV: production
+  PORT: 3000
+  SERVER_TIMEOUT: ${SERVER_TIMEOUT:-30000}
+  SERVER_KEEP_ALIVE_TIMEOUT: ${SERVER_KEEP_ALIVE_TIMEOUT:-65000}
+  SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-10000}
+  TRUST_PROXY: ${TRUST_PROXY:-1}
+  FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+  DATABASE_URL: mysql://${MYSQL_USER:-groundpath}:${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}@mysql:3306/${MYSQL_DATABASE:-groundpath}
+  DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
+  DB_QUEUE_LIMIT: ${DB_QUEUE_LIMIT:-0}
+  DB_TIMEZONE: ${DB_TIMEZONE:-+00:00}
+  REDIS_URL: redis://redis:6379
+  REDIS_PREFIX: ${REDIS_PREFIX:-groundpath}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  JWT_ISSUER: ${JWT_ISSUER:-groundpath}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:-groundpath-client}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+  OAUTH_EXCHANGE_CODE_SECRET: ${OAUTH_EXCHANGE_CODE_SECRET:-}
+  AUTH_COOKIE_SAMESITE: ${AUTH_COOKIE_SAMESITE:-strict}
+  AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_SECURE: ${SMTP_SECURE:-false}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASS: ${SMTP_PASS:-}
+  EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Groundpath}
+  EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@groundpath.one}
+  EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:?EMAIL_VERIFICATION_SECRET is required}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL:-https://groundpath.one/api/auth/oauth/google/callback}
+  GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+  GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+  GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL:-https://groundpath.one/api/auth/oauth/github/callback}
+  STORAGE_TYPE: ${STORAGE_TYPE:-local}
+  LOCAL_STORAGE_PATH: /data/uploads
+  R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+  R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+  R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+  R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
+  R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+  FILE_SIGNING_SECRET: ${FILE_SIGNING_SECRET:-}
+  DISABLE_FILE_SIGNING: ${DISABLE_FILE_SIGNING:-false}
+  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-zhipu}
+  EMBEDDING_CONCURRENCY: ${EMBEDDING_CONCURRENCY:-5}
+  ZHIPU_API_KEY: ${ZHIPU_API_KEY:-}
+  ZHIPU_EMBEDDING_MODEL: ${ZHIPU_EMBEDDING_MODEL:-embedding-3}
+  ZHIPU_EMBEDDING_DIMENSIONS: ${ZHIPU_EMBEDDING_DIMENSIONS:-1024}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+  OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+  OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+  QDRANT_URL: http://qdrant:6333
+  QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+  MODEL_FETCH_TIMEOUT: ${MODEL_FETCH_TIMEOUT:-15000}
+  QUEUE_CONCURRENCY: ${QUEUE_CONCURRENCY:-3}
+  BACKFILL_SCHEDULE_CRON: ${BACKFILL_SCHEDULE_CRON:-0 2 * * *}
+  VLM_PROVIDER: ${VLM_PROVIDER:-openai}
+  VLM_MODEL: ${VLM_MODEL:-gpt-4o-mini}
+  VLM_API_KEY: ${VLM_API_KEY:-}
+  VLM_BASE_URL: ${VLM_BASE_URL:-}
+  TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  STRUCTURED_RAG_ALERTS_ENABLED: ${STRUCTURED_RAG_ALERTS_ENABLED:-false}
+  STRUCTURED_RAG_ALERT_EMAIL_TO: ${STRUCTURED_RAG_ALERT_EMAIL_TO:-}
+  STRUCTURED_RAG_ALERT_SCHEDULE_CRON: ${STRUCTURED_RAG_ALERT_SCHEDULE_CRON:-0 5 * * *}
+  DOCUMENT_PROCESSING_RECOVERY_CRON: ${DOCUMENT_PROCESSING_RECOVERY_CRON:-*/10 * * * *}
+  DOCUMENT_BUILD_CLEANUP_CRON: ${DOCUMENT_BUILD_CLEANUP_CRON:-30 3 * * *}
+  DOCUMENT_BUILD_CLEANUP_RETENTION_DAYS: ${DOCUMENT_BUILD_CLEANUP_RETENTION_DAYS:-7}
+  DOCUMENT_BUILD_CLEANUP_BATCH_SIZE: ${DOCUMENT_BUILD_CLEANUP_BATCH_SIZE:-100}
+  DISABLE_RATE_LIMIT: ${DISABLE_RATE_LIMIT:-false}
+  COUNTER_SYNC_ENABLED: ${COUNTER_SYNC_ENABLED:-false}
+  STRUCTURED_RAG_ENABLED: ${STRUCTURED_RAG_ENABLED:-false}
+  STRUCTURED_RAG_ROLLOUT_MODE: ${STRUCTURED_RAG_ROLLOUT_MODE:-disabled}
+  STRUCTURED_RAG_INTERNAL_USER_IDS: ${STRUCTURED_RAG_INTERNAL_USER_IDS:-}
+  STRUCTURED_RAG_INTERNAL_KB_IDS: ${STRUCTURED_RAG_INTERNAL_KB_IDS:-}
+  IMAGE_DESCRIPTION_ENABLED: ${IMAGE_DESCRIPTION_ENABLED:-false}
+  DOCUMENT_PROCESSING_RECOVERY_ENABLED: ${DOCUMENT_PROCESSING_RECOVERY_ENABLED:-true}
+  DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED: ${DOCUMENT_PROCESSING_RECOVERY_REQUEUE_ENABLED:-true}
+  DOCUMENT_BUILD_CLEANUP_ENABLED: ${DOCUMENT_BUILD_CLEANUP_ENABLED:-true}
+  LOG_CLEANUP_ENABLED: ${LOG_CLEANUP_ENABLED:-true}
+  BACKFILL_SCHEDULE_ENABLED: ${BACKFILL_SCHEDULE_ENABLED:-false}
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    command:
+      - mysqld
+      - --default-time-zone=+00:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-groundpath}
+      MYSQL_USER: ${MYSQL_USER:-groundpath}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      TZ: UTC
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER:-groundpath} -p${MYSQL_PASSWORD:-groundpath}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  migrate:
+    build: *server-build
+    restart: 'no'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env.production
+    environment: *server-env
+    command: ['pnpm', '--filter', '@groundpath/server', 'db:migrate:prod']
+
+  server:
+    build: *server-build
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env.production
+    environment: *server-env
+    volumes:
+      - uploads-data:/data/uploads
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    environment:
+      API_UPSTREAM: http://server:3000
+    ports:
+      - '127.0.0.1:${CLIENT_PORT:-18080}:80'
+
+volumes:
+  mysql-data:
+  redis-data:
+  qdrant-data:
+  uploads-data:
