@@ -30,12 +30,15 @@ vi.mock('@core/logger', () => ({
   createLogger: () => loggerMock,
 }));
 
-vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 
-vi.mock('@modules/vector', () => ({
+vi.mock('@modules/vector/public/qdrant', () => ({
   ensureCollection: ensureCollectionMock,
+}));
+
+vi.mock('@modules/vector/public/repositories', () => ({
   vectorRepository: vectorRepositoryMock,
 }));
 
@@ -43,7 +46,7 @@ vi.mock('@modules/embedding', () => ({
   getEmbeddingProviderByType: getEmbeddingProviderByTypeMock,
 }));
 
-vi.mock('@modules/document/repositories/document.repository', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: documentRepositoryMock,
 }));
 

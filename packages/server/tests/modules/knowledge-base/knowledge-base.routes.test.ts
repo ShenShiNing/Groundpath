@@ -184,7 +184,7 @@ vi.mock('@groundpath/shared/schemas', () => ({
   knowledgeBaseListParamsSchema: knowledgeBaseListParamsSchemaMock,
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/documents', () => ({
   documentService: documentServiceMock,
 }));
 
@@ -213,7 +213,7 @@ vi.mock('@groundpath/shared', () => ({
 }));
 
 import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
-import { documentService } from '@modules/document';
+import { documentService } from '@modules/document/public/documents';
 import { sendSuccessResponse } from '@core/errors';
 import { requireUserId, getParamId, getClientIp } from '@core/utils';
 import { getValidatedQuery } from '@core/middleware';

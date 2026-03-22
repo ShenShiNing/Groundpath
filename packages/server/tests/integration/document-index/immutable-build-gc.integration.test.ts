@@ -215,7 +215,7 @@ vi.mock('@modules/document-index/repositories/document-index-version.repository'
   },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: {
     findById: vi.fn(async (id: string) => state.documents.get(id)),
     update: vi.fn(async (id: string, data: Record<string, unknown>) => {
@@ -293,17 +293,6 @@ vi.mock('@modules/document', () => ({
         ])
       );
     }),
-  },
-  documentChunkRepository: {
-    countByIndexVersionId: vi.fn(
-      async (indexVersionId: string) =>
-        state.chunks.filter((chunk) => chunk.indexVersionId === indexVersionId).length
-    ),
-  },
-}));
-
-vi.mock('@modules/document/public/repositories', () => ({
-  documentRepository: {
     listBackfillCandidates: vi.fn(
       async (options?: {
         knowledgeBaseId?: string;
@@ -371,6 +360,12 @@ vi.mock('@modules/document/public/repositories', () => ({
       }
     ),
   },
+  documentChunkRepository: {
+    countByIndexVersionId: vi.fn(
+      async (indexVersionId: string) =>
+        state.chunks.filter((chunk) => chunk.indexVersionId === indexVersionId).length
+    ),
+  },
 }));
 
 vi.mock('@modules/rag/services/processing.service', () => ({
@@ -386,7 +381,7 @@ vi.mock('@modules/document-index/services/document-index-cache.service', () => (
   },
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: {
     getEmbeddingConfig: vi.fn(async () => ({
       provider: 'openai',
@@ -396,8 +391,11 @@ vi.mock('@modules/knowledge-base', () => ({
   },
 }));
 
-vi.mock('@modules/vector', () => ({
+vi.mock('@modules/vector/public/qdrant', () => ({
   ensureCollection: vi.fn(async () => undefined),
+}));
+
+vi.mock('@modules/vector/public/repositories', () => ({
   vectorRepository: {
     deleteByIndexVersionId: vi.fn(async (_collectionName: string, indexVersionId: string) => {
       let found = false;

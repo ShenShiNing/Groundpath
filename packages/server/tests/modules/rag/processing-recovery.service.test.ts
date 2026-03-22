@@ -28,7 +28,7 @@ vi.mock('@core/logger', () => ({
   }),
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: mocks.documentRepository,
 }));
 

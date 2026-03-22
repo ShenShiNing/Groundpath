@@ -13,7 +13,7 @@ import type {
 import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared/constants';
 import { llmService } from '@modules/llm';
 import type { ChatMessage } from '@modules/llm';
-import { documentContentService } from '@modules/document';
+import { documentContentService } from '@modules/document/public/content';
 import { searchService } from '@modules/rag';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';

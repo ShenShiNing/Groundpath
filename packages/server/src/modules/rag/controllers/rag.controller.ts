@@ -4,8 +4,8 @@ import { sendSuccessResponse, handleError, Errors } from '@core/errors';
 import { getParamId } from '@core/utils';
 import { searchService } from '../services/search.service';
 import { enqueueDocumentProcessing } from '../queue';
-import { documentRepository } from '@modules/document';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { documentRepository } from '@modules/document/public/repositories';
+import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 
 export const ragController = {
   async search(req: Request, res: Response): Promise<void> {

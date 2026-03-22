@@ -1,7 +1,7 @@
 import type { AgentTool, ToolContext, ToolExecutionResult, ToolDefinition } from './tool.interface';
 import type { Citation } from '@groundpath/shared/types';
 import { searchService } from '@modules/rag';
-import { documentRepository } from '@modules/document';
+import { documentRepository } from '@modules/document/public/repositories';
 import { createLogger } from '@core/logger';
 
 const logger = createLogger('kb-search.tool');

@@ -58,7 +58,7 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
   },
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
     getEmbeddingConfig: vi.fn(),
@@ -85,10 +85,12 @@ vi.mock('@core/logger', () => ({
 }));
 
 // Import after mocks
-import { documentService } from '@modules/document';
-import { documentRepository } from '@modules/document';
-import { documentVersionRepository } from '@modules/document';
-import { documentStorageService } from '@modules/document';
+import { documentService } from '@modules/document/public/documents';
+import {
+  documentRepository,
+  documentVersionRepository,
+} from '@modules/document/public/repositories';
+import { documentStorageService } from '@modules/document/public/storage';
 
 // ==================== uploadNewVersion ====================
 // 场景：上传文档的新版本

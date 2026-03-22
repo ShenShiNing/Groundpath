@@ -1,7 +1,0 @@
-// Services
-export * from './services/knowledge-base.service';
-export { getCollectionName } from './services/knowledge-base.service';
-export * from './services/counter-sync.service';
-
-// Repositories
-export * from './repositories/knowledge-base.repository';

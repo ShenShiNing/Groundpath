@@ -16,7 +16,7 @@ import {
   documentListParamsSchema,
   knowledgeBaseListParamsSchema,
 } from '@groundpath/shared/schemas';
-import { documentService } from '@modules/document';
+import { documentService } from '@modules/document/public/documents';
 import { sendSuccessResponse } from '@core/errors';
 import { AppError } from '@core/errors/app-error';
 import { asyncHandler } from '@core/errors/async-handler';

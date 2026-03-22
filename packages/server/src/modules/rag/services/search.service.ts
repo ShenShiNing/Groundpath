@@ -1,11 +1,12 @@
 import { ragConfig } from '@config/env';
 import { createLogger } from '@core/logger';
 import { getEmbeddingProviderByType } from '@modules/embedding';
-import { vectorRepository, ensureCollection } from '@modules/vector';
-import type { SearchResult } from '@modules/vector';
+import { documentRepository } from '@modules/document/public/repositories';
+import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
+import { ensureCollection } from '@modules/vector/public/qdrant';
+import { vectorRepository } from '@modules/vector/public/repositories';
+import type { SearchResult } from '@modules/vector/public/types';
 import type { EmbeddingProviderType } from '@groundpath/shared/types';
-import { knowledgeBaseService } from '@modules/knowledge-base';
-import { documentRepository } from '@modules/document';
 
 const logger = createLogger('search.service');
 

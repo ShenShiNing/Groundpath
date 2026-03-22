@@ -74,7 +74,7 @@ vi.mock('@modules/knowledge-base/controllers/knowledge-base.controller', () => (
   knowledgeBaseController: knowledgeBaseControllerMock,
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/documents', () => ({
   documentService: documentServiceMock,
 }));
 

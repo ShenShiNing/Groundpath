@@ -69,10 +69,22 @@ module.exports = {
       name: 'no-cross-module-deep-import',
       severity: 'warn',
       comment:
-        'Cross-module imports should go through the target module barrel, not deep into internal services or repositories.',
+        'Cross-module imports should go through the target module public/* API, not deep into internal services or repositories.',
       from: { path: '^packages/server/src/modules/([^/]+)/' },
       to: {
         path: '^packages/server/src/modules/(?!$1/)[^/]+/(services|repositories)/.+\\.ts$',
+      },
+    },
+
+    // ── Rule 7: Cross-module imports must not use legacy root barrels ──
+    {
+      name: 'no-cross-module-root-barrel-import',
+      severity: 'error',
+      comment:
+        'Cross-module imports must go through the target module public/* API, not the module root barrel.',
+      from: { path: '^packages/server/src/' },
+      to: {
+        path: '^packages/server/src/modules/(document|knowledge-base|vector|logs|document-index)/index\\.ts$',
       },
     },
   ],

@@ -2,16 +2,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { documentConfig } from '@config/env';
 import type { EmbeddingProviderType } from '@modules/embedding';
 import { getEmbeddingProviderByType } from '@modules/embedding';
-import { documentChunkRepository, documentRepository } from '@modules/document';
+import { documentChunkRepository, documentRepository } from '@modules/document/public/repositories';
 import { documentIndexService } from '@modules/document-index/public/indexing';
 import type { ParsedDocumentStructure } from '@modules/document-index/public/parsers';
 import { chunkingService } from './chunking.service';
-import { vectorRepository } from '@modules/vector';
+import { vectorRepository } from '@modules/vector/public/repositories';
 import type { NewDocumentChunk } from '@core/db/schema/document/document-chunks.schema';
 import { withTransaction } from '@core/db/db.utils';
 import { createLogger } from '@core/logger';
 import { structuredRagMetrics } from '@core/observability';
-import type { VectorPoint } from '@modules/vector';
+import type { VectorPoint } from '@modules/vector/public/types';
 import type {
   ChunkProcessingArtifacts,
   DocumentProcessingResult,
