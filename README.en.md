@@ -138,6 +138,8 @@ The repository is organized as a `pnpm` monorepo:
 Shortest path:
 
 ```bash
+Copy-Item .env.example .env
+# Fill in strong passwords, application secrets, and the key for your selected embedding provider
 pnpm docker:up
 ```
 
@@ -147,6 +149,12 @@ Default URLs after startup:
 - Backend API: `http://localhost:3000`
 - Swagger: `http://localhost:8080/api-docs`
 - Health check: `http://localhost:8080/health/live`
+
+Docker Compose notes:
+
+- `mysql`, `redis`, `qdrant`, and `server` bind to `127.0.0.1` by default so they are not published directly to the public network
+- `client` remains the public entrypoint and reverse proxy
+- The boot flow runs database migrations first and starts `server` only after the migration job completes successfully
 
 ### Option B: Local Development
 
@@ -171,18 +179,24 @@ Default development URLs:
 - `ENCRYPTION_KEY`
 - `EMAIL_VERIFICATION_SECRET`
 - `QDRANT_URL`
+- The API key for the selected `EMBEDDING_PROVIDER` (for example `ZHIPU_API_KEY` or `OPENAI_API_KEY`)
 
 </details>
 
 <details>
 <summary>Common optional configuration</summary>
 
-- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `ZHIPU_API_KEY`
 - `TAVILY_API_KEY`
 - `STORAGE_TYPE=local|r2`
 - `STRUCTURED_RAG_ENABLED`
 - `STRUCTURED_RAG_ROLLOUT_MODE`
 - `IMAGE_DESCRIPTION_ENABLED`
+
+Conditionally required configuration:
+
+- `OPENAI_API_KEY`: required when `EMBEDDING_PROVIDER=openai`
+- `ZHIPU_API_KEY`: required when `EMBEDDING_PROVIDER=zhipu`
+- `VLM_API_KEY`: required when `IMAGE_DESCRIPTION_ENABLED=true`
 
 </details>
 

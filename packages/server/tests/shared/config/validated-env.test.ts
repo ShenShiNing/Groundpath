@@ -93,4 +93,73 @@ describe('shared/config/env/validated-env', () => {
       },
     });
   });
+
+  it('should throw when production secrets still use known placeholder values', async () => {
+    const loadModule = () =>
+      importValidatedEnvModule({
+        envDir: '/workspace/config',
+        nodeEnv: 'production',
+        safeParseResult: {
+          success: true,
+          data: {
+            NODE_ENV: 'production',
+            STORAGE_TYPE: 'local',
+            EMBEDDING_PROVIDER: 'ollama',
+            IMAGE_DESCRIPTION_ENABLED: false,
+            JWT_SECRET: 'change-this-jwt-secret-at-least-32-characters',
+            ENCRYPTION_KEY: 'change-this-encryption-key-at-least-32',
+            EMAIL_VERIFICATION_SECRET: 'change-this-email-secret',
+          },
+        },
+      });
+
+    const actual = await loadModule().catch((error) => error);
+
+    expect(actual).toMatchObject({
+      name: 'AppError',
+      code: 'VALIDATION_ERROR',
+      details: {
+        fieldErrors: {
+          JWT_SECRET: ['JWT_SECRET must be replaced with a unique production secret.'],
+          ENCRYPTION_KEY: ['ENCRYPTION_KEY must be replaced with a unique production secret.'],
+          EMAIL_VERIFICATION_SECRET: [
+            'EMAIL_VERIFICATION_SECRET must be replaced with a unique production secret.',
+          ],
+        },
+      },
+    });
+  });
+
+  it('should throw when the selected embedding provider is missing its required API key', async () => {
+    const loadModule = () =>
+      importValidatedEnvModule({
+        envDir: '/workspace/config',
+        nodeEnv: 'production',
+        safeParseResult: {
+          success: true,
+          data: {
+            NODE_ENV: 'production',
+            STORAGE_TYPE: 'local',
+            EMBEDDING_PROVIDER: 'zhipu',
+            IMAGE_DESCRIPTION_ENABLED: false,
+            JWT_SECRET: 'x'.repeat(32),
+            ENCRYPTION_KEY: 'y'.repeat(32),
+            EMAIL_VERIFICATION_SECRET: 'prod-email-verification-secret',
+            ZHIPU_API_KEY: '',
+          },
+        },
+      });
+
+    const actual = await loadModule().catch((error) => error);
+
+    expect(actual).toMatchObject({
+      name: 'AppError',
+      code: 'VALIDATION_ERROR',
+      details: {
+        fieldErrors: {
+          ZHIPU_API_KEY: ['ZHIPU_API_KEY is required when EMBEDDING_PROVIDER=zhipu.'],
+        },
+      },
+    });
+  });
 });

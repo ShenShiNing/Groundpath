@@ -138,6 +138,8 @@ flowchart LR
 最短路径：
 
 ```bash
+Copy-Item .env.example .env
+# 填写强密码、应用 secret，以及所选 embedding provider 的 Key
 pnpm docker:up
 ```
 
@@ -147,6 +149,12 @@ pnpm docker:up
 - 后端 API：`http://localhost:3000`
 - Swagger：`http://localhost:8080/api-docs`
 - 健康检查：`http://localhost:8080/health/live`
+
+Docker Compose 说明：
+
+- `mysql` / `redis` / `qdrant` / `server` 端口默认只绑定到 `127.0.0.1`，避免直接暴露到公网
+- `client` 仍对外监听，用作统一入口和反向代理
+- 启动流程会先执行一次数据库迁移，迁移成功后才拉起 `server`
 
 ### 方式 B：本地开发
 
@@ -171,18 +179,24 @@ pnpm dev
 - `ENCRYPTION_KEY`
 - `EMAIL_VERIFICATION_SECRET`
 - `QDRANT_URL`
+- `EMBEDDING_PROVIDER` 对应的 provider key（如 `ZHIPU_API_KEY` 或 `OPENAI_API_KEY`）
 
 </details>
 
 <details>
 <summary>常见可选配置</summary>
 
-- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `ZHIPU_API_KEY`
 - `TAVILY_API_KEY`
 - `STORAGE_TYPE=local|r2`
 - `STRUCTURED_RAG_ENABLED`
 - `STRUCTURED_RAG_ROLLOUT_MODE`
 - `IMAGE_DESCRIPTION_ENABLED`
+
+条件必填配置：
+
+- `OPENAI_API_KEY`：当 `EMBEDDING_PROVIDER=openai` 时必填
+- `ZHIPU_API_KEY`：当 `EMBEDDING_PROVIDER=zhipu` 时必填
+- `VLM_API_KEY`：当 `IMAGE_DESCRIPTION_ENABLED=true` 时必填
 
 </details>
 

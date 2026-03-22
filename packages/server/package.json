@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "db:migrate:prod": "node dist/scripts/db-migrate.js",
     "db:generate": "drizzle-kit generate",
     "db:drift-check": "tsx src/scripts/db-drift-check.ts",
     "db:migrate": "tsx src/scripts/db-migrate.ts",

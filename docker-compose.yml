@@ -1,16 +1,36 @@
 name: groundpath
 
+x-server-build: &server-build
+  context: .
+  dockerfile: Dockerfile.server
+
+x-server-env: &server-env
+  NODE_ENV: production
+  PORT: 3000
+  TRUST_PROXY: ${TRUST_PROXY:-1}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+  DATABASE_URL: mysql://${MYSQL_USER:-knowledge_agent}:${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}@mysql:3306/${MYSQL_DATABASE:-knowledge_agent}
+  REDIS_URL: redis://redis:6379
+  REDIS_PREFIX: ${REDIS_PREFIX:-groundpath}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+  EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:?EMAIL_VERIFICATION_SECRET is required}
+  STORAGE_TYPE: ${STORAGE_TYPE:-local}
+  LOCAL_STORAGE_PATH: /data/uploads
+  QDRANT_URL: http://qdrant:6333
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
 services:
   mysql:
     image: mysql:8.4
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-knowledge_agent}
       MYSQL_USER: ${MYSQL_USER:-knowledge_agent}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-knowledge_agent}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
     ports:
-      - '${MYSQL_PORT:-3306}:3306'
+      - '127.0.0.1:${MYSQL_PORT:-3306}:3306'
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -29,7 +49,7 @@ services:
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - '${REDIS_PORT:-6379}:6379'
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
     volumes:
       - redis-data:/data
     healthcheck:
@@ -42,38 +62,37 @@ services:
     image: qdrant/qdrant:latest
     restart: unless-stopped
     ports:
-      - '${QDRANT_PORT:-6333}:6333'
-      - '${QDRANT_GRPC_PORT:-6334}:6334'
+      - '127.0.0.1:${QDRANT_PORT:-6333}:6333'
+      - '127.0.0.1:${QDRANT_GRPC_PORT:-6334}:6334'
     volumes:
       - qdrant-data:/qdrant/storage
 
+  migrate:
+    build: *server-build
+    restart: 'no'
+    depends_on:
+      mysql:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment: *server-env
+    command: ['pnpm', '--filter', '@groundpath/server', 'db:migrate:prod']
+
   server:
-    build:
-      context: .
-      dockerfile: Dockerfile.server
+    build: *server-build
     restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_healthy
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      TRUST_PROXY: ${TRUST_PROXY:-1}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
-      DATABASE_URL: mysql://${MYSQL_USER:-knowledge_agent}:${MYSQL_PASSWORD:-knowledge_agent}@mysql:3306/${MYSQL_DATABASE:-knowledge_agent}
-      REDIS_URL: redis://redis:6379
-      REDIS_PREFIX: ${REDIS_PREFIX:-groundpath}
-      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-at-least-32-characters}
-      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-change-this-encryption-key-at-least-32}
-      EMAIL_VERIFICATION_SECRET: ${EMAIL_VERIFICATION_SECRET:-change-this-email-secret}
-      STORAGE_TYPE: ${STORAGE_TYPE:-local}
-      LOCAL_STORAGE_PATH: /data/uploads
-      QDRANT_URL: http://qdrant:6333
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment: *server-env
     ports:
-      - '${SERVER_PORT:-3000}:3000'
+      - '127.0.0.1:${SERVER_PORT:-3000}:3000'
     volumes:
       - uploads-data:/data/uploads
 
