@@ -28,7 +28,7 @@
     ·
     <a href="./docs/architecture-guardrails.md">Architecture Guardrails</a>
     ·
-    <a href="./docs/codebase-analysis-2026-03-21.md">Codebase Analysis</a>
+    <a href="./docs/codebase-analysis-2026-03-22.md">Codebase Analysis</a>
   </p>
 </div>
 
@@ -122,14 +122,14 @@ The repository is organized as a `pnpm` monorepo:
 
 ## Tech Stack
 
-| Layer | Stack |
-| ----- | ----- |
-| Frontend | React 19, Vite, TanStack Router, TanStack Query, i18next |
-| Backend | Express, TypeScript, Drizzle ORM, BullMQ, Pino |
-| Data and Cache | MySQL, Redis, Qdrant |
+| Layer           | Stack                                                       |
+| --------------- | ----------------------------------------------------------- |
+| Frontend        | React 19, Vite, TanStack Router, TanStack Query, i18next    |
+| Backend         | Express, TypeScript, Drizzle ORM, BullMQ, Pino              |
+| Data and Cache  | MySQL, Redis, Qdrant                                        |
 | AI Capabilities | OpenAI, Anthropic, Zhipu, DeepSeek, Ollama, Custom Provider |
-| Storage | Local, Cloudflare R2 |
-| Operations | Docker Compose, Swagger, GitHub Actions |
+| Storage         | Local, Cloudflare R2                                        |
+| Operations      | Docker Compose, Swagger, GitHub Actions                     |
 
 ## Quick Start
 
@@ -190,16 +190,16 @@ For full configuration details, see [docs/env-variables.md](./docs/env-variables
 
 ## Common Commands
 
-| Command | Purpose |
-| ------- | ------- |
-| `pnpm dev` | Start frontend and backend development servers together |
-| `pnpm build` | Build the entire monorepo |
-| `pnpm test` | Run tests |
-| `pnpm lint` | Run ESLint |
-| `pnpm architecture:check` | Validate backend module boundaries |
-| `pnpm -F @groundpath/server db:push` | Sync schema for development |
-| `pnpm -F @groundpath/server db:migrate` | Run production migrations |
-| `pnpm -F @groundpath/server db:drift-check` | Check schema and migration consistency |
+| Command                                     | Purpose                                                 |
+| ------------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                                  | Start frontend and backend development servers together |
+| `pnpm build`                                | Build the entire monorepo                               |
+| `pnpm test`                                 | Run tests                                               |
+| `pnpm lint`                                 | Run ESLint                                              |
+| `pnpm architecture:check`                   | Validate backend module boundaries                      |
+| `pnpm -F @groundpath/server db:push`        | Sync schema for development                             |
+| `pnpm -F @groundpath/server db:migrate`     | Run production migrations                               |
+| `pnpm -F @groundpath/server db:drift-check` | Check schema and migration consistency                  |
 
 ## Engineering Constraints
 
@@ -224,7 +224,7 @@ See [AGENTS.md](./AGENTS.md) and [docs/architecture-guardrails.md](./docs/archit
 ├─ docs/
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md
-│  └─ codebase-analysis-2026-03-21.md
+│  └─ codebase-analysis-2026-03-22.md
 ├─ docker-compose.yml
 └─ package.json
 ```
@@ -233,8 +233,7 @@ See [AGENTS.md](./AGENTS.md) and [docs/architecture-guardrails.md](./docs/archit
 
 - [docs/env-variables.md](./docs/env-variables.md): Environment variable reference
 - [docs/architecture-guardrails.md](./docs/architecture-guardrails.md): Architecture boundaries and guardrails
-- [docs/codebase-analysis-2026-03-21.md](./docs/codebase-analysis-2026-03-21.md): Codebase analysis
-- [docs/architecture-review-2026-03-15.md](./docs/architecture-review-2026-03-15.md): Architecture review notes
+- [docs/codebase-analysis-2026-03-22.md](./docs/codebase-analysis-2026-03-22.md): Codebase analysis
 
 ## Current Status
 
