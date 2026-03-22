@@ -7,8 +7,6 @@ import {
   structuredRagDashboardQuerySchema,
   structuredRagLongTermReportSchema,
   structuredRagReportQuerySchema,
-  structuredRagDashboardSummarySchema,
-  structuredRagLongTermReportSchema,
 } from '@groundpath/shared/schemas';
 import { paginatedResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
