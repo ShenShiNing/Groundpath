@@ -22,8 +22,24 @@ type OpenApiParameter = {
   schema?: OpenApiSchema;
 };
 
+type OpenApiMediaType = {
+  schema?: OpenApiSchema;
+};
+
+type OpenApiRequestBody = {
+  content?: Record<string, OpenApiMediaType>;
+};
+
 function asSchema(value: unknown): OpenApiSchema | undefined {
   return value && typeof value === 'object' ? (value as OpenApiSchema) : undefined;
+}
+
+function asRequestBody(value: unknown): OpenApiRequestBody | undefined {
+  if (!value || typeof value !== 'object' || '$ref' in value) {
+    return undefined;
+  }
+
+  return value as OpenApiRequestBody;
 }
 
 function getResponseSchema(
@@ -44,7 +60,8 @@ function getRequestBodySchema(
   mediaType: string = 'application/json'
 ): OpenApiSchema | undefined {
   const document = buildOpenApiDocument();
-  return asSchema(document.paths[path]?.[method]?.requestBody?.content?.[mediaType]?.schema);
+  const requestBody = asRequestBody(document.paths[path]?.[method]?.requestBody);
+  return asSchema(requestBody?.content?.[mediaType]?.schema);
 }
 
 function getOperationParameters(path: string, method: HttpMethod): OpenApiParameter[] {
