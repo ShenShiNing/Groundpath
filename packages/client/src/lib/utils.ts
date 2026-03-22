@@ -24,9 +24,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
   const formattedValue = parseFloat((bytes / Math.pow(k, i)).toFixed(dm));
   const unit =
-    i === 0 && formattedValue === 1
-      ? i18n.t('fileSize.units.byte', { ns: 'common' })
-      : sizes[i];
+    i === 0 && formattedValue === 1 ? i18n.t('fileSize.units.byte', { ns: 'common' }) : sizes[i];
 
   return `${formattedValue} ${unit}`;
 }

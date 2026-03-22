@@ -96,9 +96,9 @@ const {
 
   const cloneKnowledgeBase = (kb: StoredKnowledgeBase): StoredKnowledgeBase => ({ ...kb });
   const cloneDocument = (doc: StoredDocument): StoredDocument => ({ ...doc });
-  const cloneDocumentVersion = (
-    version: StoredDocumentVersion
-  ): StoredDocumentVersion => ({ ...version });
+  const cloneDocumentVersion = (version: StoredDocumentVersion): StoredDocumentVersion => ({
+    ...version,
+  });
 
   const passthroughMiddleware: RequestHandler = (_req, _res, next) => next();
   const authenticate: RequestHandler = (req, res, next) => {
@@ -139,10 +139,7 @@ const {
     if (mimetype === 'application/pdf') {
       return { fileExtension: extension || 'pdf', documentType: 'pdf' };
     }
-    if (
-      mimetype ===
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ) {
+    if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       return { fileExtension: extension || 'docx', documentType: 'docx' };
     }
 
@@ -224,28 +221,30 @@ vi.mock('@modules/document/ports/document-processing.port', () => ({
 
 vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => ({
   knowledgeBaseRepository: {
-    create: vi.fn(async (data: Omit<StoredKnowledgeBase, 'createdAt' | 'updatedAt' | 'deletedAt'>) => {
-      const now = new Date();
-      const kb: StoredKnowledgeBase = {
-        id: data.id,
-        userId: data.userId,
-        name: data.name,
-        description: data.description ?? null,
-        embeddingProvider: data.embeddingProvider,
-        embeddingModel: data.embeddingModel,
-        embeddingDimensions: data.embeddingDimensions,
-        documentCount: 0,
-        totalChunks: 0,
-        createdBy: data.createdBy,
-        createdAt: now,
-        updatedBy: data.createdBy,
-        updatedAt: now,
-        deletedBy: null,
-        deletedAt: null,
-      };
-      knowledgeBases.set(kb.id, kb);
-      return cloneKnowledgeBase(kb);
-    }),
+    create: vi.fn(
+      async (data: Omit<StoredKnowledgeBase, 'createdAt' | 'updatedAt' | 'deletedAt'>) => {
+        const now = new Date();
+        const kb: StoredKnowledgeBase = {
+          id: data.id,
+          userId: data.userId,
+          name: data.name,
+          description: data.description ?? null,
+          embeddingProvider: data.embeddingProvider,
+          embeddingModel: data.embeddingModel,
+          embeddingDimensions: data.embeddingDimensions,
+          documentCount: 0,
+          totalChunks: 0,
+          createdBy: data.createdBy,
+          createdAt: now,
+          updatedBy: data.createdBy,
+          updatedAt: now,
+          deletedBy: null,
+          deletedAt: null,
+        };
+        knowledgeBases.set(kb.id, kb);
+        return cloneKnowledgeBase(kb);
+      }
+    ),
     findById: vi.fn(async (id: string) => {
       const kb = knowledgeBases.get(id);
       return kb && kb.deletedAt === null ? cloneKnowledgeBase(kb) : undefined;
@@ -365,7 +364,9 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
     }),
     findByIdAndUser: vi.fn(async (id: string, userId: string) => {
       const doc = documents.get(id);
-      return doc && doc.userId === userId && doc.deletedAt === null ? cloneDocument(doc) : undefined;
+      return doc && doc.userId === userId && doc.deletedAt === null
+        ? cloneDocument(doc)
+        : undefined;
     }),
     listByKnowledgeBaseId: vi.fn(
       async (knowledgeBaseId: string, options?: { includeDeleted?: boolean }) => {
@@ -438,7 +439,10 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
       async (
         id: string,
         data: Partial<
-          Pick<StoredDocument, 'title' | 'description' | 'chunkCount' | 'processingStatus' | 'updatedBy'>
+          Pick<
+            StoredDocument,
+            'title' | 'description' | 'chunkCount' | 'processingStatus' | 'updatedBy'
+          >
         >
       ) => {
         const doc = documents.get(id);
@@ -497,28 +501,29 @@ vi.mock('@modules/document/repositories/document-version.repository', () => ({
 
 vi.mock('@modules/document/services/document-storage.service', () => ({
   documentStorageService: {
-    validateFile: vi.fn(
-      (file: { mimetype: string }) => {
-        const allowed = new Set([
-          'text/plain',
-          'text/markdown',
-          'application/pdf',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ]);
+    validateFile: vi.fn((file: { mimetype: string }) => {
+      const allowed = new Set([
+        'text/plain',
+        'text/markdown',
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ]);
 
-        if (!allowed.has(file.mimetype)) {
-          return {
-            valid: false,
-            error: `Invalid file type. Unsupported MIME type: ${file.mimetype}`,
-          };
-        }
-
-        return { valid: true };
+      if (!allowed.has(file.mimetype)) {
+        return {
+          valid: false,
+          error: `Invalid file type. Unsupported MIME type: ${file.mimetype}`,
+        };
       }
-    ),
+
+      return { valid: true };
+    }),
     uploadDocument: vi.fn(
       async (userId: string, file: { originalname: string; mimetype: string }) => {
-        const { fileExtension, documentType } = resolveDocumentKind(file.originalname, file.mimetype);
+        const { fileExtension, documentType } = resolveDocumentKind(
+          file.originalname,
+          file.mimetype
+        );
         return {
           storageKey: nextStorageKey(userId, file.originalname),
           fileExtension,

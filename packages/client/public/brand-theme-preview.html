@@ -29,11 +29,7 @@
 
       body {
         font-family:
-          Aptos,
-          "Segoe UI Variable Text",
-          "PingFang SC",
-          "Hiragino Sans GB",
-          "Microsoft YaHei UI",
+          Aptos, 'Segoe UI Variable Text', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI',
           sans-serif;
         background:
           radial-gradient(circle at top left, rgba(29, 158, 117, 0.18), transparent 28%),
@@ -42,7 +38,7 @@
         color: var(--text);
       }
 
-      body[data-theme="dark"] {
+      body[data-theme='dark'] {
         color-scheme: dark;
         --bg: #06120f;
         --bg-strong: #091a15;
@@ -125,13 +121,12 @@
         backdrop-filter: blur(18px);
       }
 
-      body[data-theme="dark"] .theme-switch,
-      body[data-theme="dark"] .hero,
-      body[data-theme="dark"] .panel {
+      body[data-theme='dark'] .theme-switch,
+      body[data-theme='dark'] .hero,
+      body[data-theme='dark'] .panel {
         border-color: rgba(219, 243, 233, 0.08);
         background:
-          linear-gradient(180deg, rgba(16, 31, 26, 0.94), rgba(9, 19, 16, 0.96)),
-          var(--surface);
+          linear-gradient(180deg, rgba(16, 31, 26, 0.94), rgba(9, 19, 16, 0.96)), var(--surface);
       }
 
       .hero {
@@ -143,7 +138,7 @@
 
       .hero::before,
       .panel::before {
-        content: "";
+        content: '';
         position: absolute;
         inset: 0;
         background:
@@ -152,8 +147,8 @@
         pointer-events: none;
       }
 
-      body[data-theme="dark"] .hero::before,
-      body[data-theme="dark"] .panel::before {
+      body[data-theme='dark'] .hero::before,
+      body[data-theme='dark'] .panel::before {
         background:
           linear-gradient(120deg, rgba(29, 158, 117, 0.12), transparent 28%),
           linear-gradient(300deg, rgba(225, 245, 238, 0.04), transparent 30%);
@@ -178,13 +173,13 @@
         text-transform: uppercase;
       }
 
-      body[data-theme="dark"] .eyebrow {
+      body[data-theme='dark'] .eyebrow {
         background: rgba(29, 158, 117, 0.16);
         color: #d6f6e8;
       }
 
       .eyebrow::before {
-        content: "";
+        content: '';
         width: 8px;
         height: 8px;
         border-radius: 50%;
@@ -234,8 +229,8 @@
         font-weight: 600;
       }
 
-      body[data-theme="dark"] .chip,
-      body[data-theme="dark"] .mini-chip {
+      body[data-theme='dark'] .chip,
+      body[data-theme='dark'] .mini-chip {
         border-color: rgba(219, 243, 233, 0.08);
         background: rgba(255, 255, 255, 0.05);
         color: #d7eee5;
@@ -268,17 +263,17 @@
         background: rgba(255, 255, 255, 0.84);
       }
 
-      body[data-theme="dark"] .logo-stage,
-      body[data-theme="dark"] .surface-card,
-      body[data-theme="dark"] .anchor-card,
-      body[data-theme="dark"] .swatch-card,
-      body[data-theme="dark"] .semantic-card,
-      body[data-theme="dark"] .app-shell,
-      body[data-theme="dark"] .sidebar-shell,
-      body[data-theme="dark"] .sidebar-card,
-      body[data-theme="dark"] .stat-box,
-      body[data-theme="dark"] .message-card,
-      body[data-theme="dark"] .search-box {
+      body[data-theme='dark'] .logo-stage,
+      body[data-theme='dark'] .surface-card,
+      body[data-theme='dark'] .anchor-card,
+      body[data-theme='dark'] .swatch-card,
+      body[data-theme='dark'] .semantic-card,
+      body[data-theme='dark'] .app-shell,
+      body[data-theme='dark'] .sidebar-shell,
+      body[data-theme='dark'] .sidebar-card,
+      body[data-theme='dark'] .stat-box,
+      body[data-theme='dark'] .message-card,
+      body[data-theme='dark'] .search-box {
         border-color: rgba(219, 243, 233, 0.08);
         background: rgba(15, 29, 24, 0.84);
       }
@@ -294,21 +289,21 @@
           linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(226, 242, 236, 0.82));
       }
 
-      body[data-theme="dark"] .logo-tile {
+      body[data-theme='dark'] .logo-tile {
         background:
           radial-gradient(circle at 30% 20%, rgba(29, 158, 117, 0.2), rgba(29, 158, 117, 0.03)),
           linear-gradient(160deg, rgba(8, 18, 15, 0.96), rgba(15, 33, 27, 0.84));
       }
 
       .logo-tile::after {
-        content: "";
+        content: '';
         position: absolute;
         inset: 12px;
         border: 1px dashed rgba(14, 92, 73, 0.12);
         border-radius: 18px;
       }
 
-      body[data-theme="dark"] .logo-tile::after {
+      body[data-theme='dark'] .logo-tile::after {
         border-color: rgba(219, 243, 233, 0.12);
       }
 
@@ -331,13 +326,11 @@
 
       .surface-card {
         border: 1px solid rgba(8, 80, 65, 0.08);
-        background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 248, 0.92));
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 248, 0.92));
       }
 
-      body[data-theme="dark"] .surface-card {
-        background:
-          linear-gradient(180deg, rgba(19, 38, 31, 0.98), rgba(12, 23, 19, 0.92));
+      body[data-theme='dark'] .surface-card {
+        background: linear-gradient(180deg, rgba(19, 38, 31, 0.98), rgba(12, 23, 19, 0.92));
       }
 
       .dark-card {
@@ -367,13 +360,13 @@
         font-size: 14px;
       }
 
-      body[data-theme="dark"] .metric-note,
-      body[data-theme="dark"] .hero p,
-      body[data-theme="dark"] .section-head p,
-      body[data-theme="dark"] .anchor-use,
-      body[data-theme="dark"] .swatch-desc,
-      body[data-theme="dark"] .stat-label,
-      body[data-theme="dark"] .page-toolbar-copy {
+      body[data-theme='dark'] .metric-note,
+      body[data-theme='dark'] .hero p,
+      body[data-theme='dark'] .section-head p,
+      body[data-theme='dark'] .anchor-use,
+      body[data-theme='dark'] .swatch-desc,
+      body[data-theme='dark'] .stat-label,
+      body[data-theme='dark'] .page-toolbar-copy {
         color: var(--text-muted);
       }
 
@@ -497,7 +490,7 @@
         font-weight: 700;
       }
 
-      body[data-theme="dark"] .swatch-copy {
+      body[data-theme='dark'] .swatch-copy {
         color: #9feacb;
       }
 
@@ -556,7 +549,7 @@
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 242, 0.9));
       }
 
-      body[data-theme="dark"] .app-toolbar {
+      body[data-theme='dark'] .app-toolbar {
         border-color: rgba(219, 243, 233, 0.08);
         background: linear-gradient(180deg, rgba(18, 35, 29, 0.98), rgba(12, 23, 19, 0.9));
       }
@@ -598,7 +591,7 @@
         color: var(--brand-700);
       }
 
-      body[data-theme="dark"] .button-soft {
+      body[data-theme='dark'] .button-soft {
         border-color: rgba(29, 158, 117, 0.22);
         background: rgba(29, 158, 117, 0.14);
         color: #d9f6ea;
@@ -610,7 +603,7 @@
         color: #29433a;
       }
 
-      body[data-theme="dark"] .button-ghost {
+      body[data-theme='dark'] .button-ghost {
         border-color: rgba(219, 243, 233, 0.08);
         background: rgba(255, 255, 255, 0.04);
         color: #d2ebe1;
@@ -623,7 +616,7 @@
         background: linear-gradient(180deg, rgba(247, 251, 249, 1), rgba(241, 247, 244, 0.96));
       }
 
-      body[data-theme="dark"] .app-content {
+      body[data-theme='dark'] .app-content {
         background: linear-gradient(180deg, rgba(9, 18, 15, 1), rgba(11, 23, 19, 0.98));
       }
 
@@ -667,7 +660,7 @@
         background: linear-gradient(180deg, rgba(225, 245, 238, 0.9), rgba(244, 252, 248, 0.98));
       }
 
-      body[data-theme="dark"] .message-card.primary {
+      body[data-theme='dark'] .message-card.primary {
         background: linear-gradient(180deg, rgba(14, 52, 41, 0.92), rgba(10, 27, 22, 0.98));
       }
 
@@ -695,7 +688,7 @@
         font-weight: 700;
       }
 
-      body[data-theme="dark"] .badge {
+      body[data-theme='dark'] .badge {
         background: rgba(255, 255, 255, 0.06);
         color: #d3ede3;
       }
@@ -705,7 +698,7 @@
         color: var(--brand-700);
       }
 
-      body[data-theme="dark"] .badge.success {
+      body[data-theme='dark'] .badge.success {
         background: rgba(29, 158, 117, 0.18);
         color: #dff8ec;
       }
@@ -733,7 +726,7 @@
         background: linear-gradient(90deg, rgba(8, 80, 65, 0.14), rgba(8, 80, 65, 0.03));
       }
 
-      body[data-theme="dark"] .search-line {
+      body[data-theme='dark'] .search-line {
         background: linear-gradient(90deg, rgba(225, 245, 238, 0.2), rgba(225, 245, 238, 0.04));
       }
 
@@ -744,7 +737,7 @@
           linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 249, 246, 0.98));
       }
 
-      body[data-theme="dark"] .sidebar-shell {
+      body[data-theme='dark'] .sidebar-shell {
         background:
           radial-gradient(circle at top left, rgba(29, 158, 117, 0.16), transparent 36%),
           linear-gradient(180deg, rgba(11, 23, 19, 0.98), rgba(8, 17, 14, 0.98));
@@ -850,8 +843,17 @@
           切换主题后，整页背景、语义 token 和组件预览都会跟着切到对应模式。
         </div>
         <div class="theme-switch" role="tablist" aria-label="主题模式切换">
-          <button class="theme-button active" type="button" data-theme-mode="light" aria-pressed="true">Light</button>
-          <button class="theme-button" type="button" data-theme-mode="dark" aria-pressed="false">Dark</button>
+          <button
+            class="theme-button active"
+            type="button"
+            data-theme-mode="light"
+            aria-pressed="true"
+          >
+            Light
+          </button>
+          <button class="theme-button" type="button" data-theme-mode="dark" aria-pressed="false">
+            Dark
+          </button>
         </div>
       </div>
 
@@ -860,7 +862,8 @@
           <div class="eyebrow">Groundpath Theme Study</div>
           <h1>根据 icon 提炼一套能落地的溯知 / Groundpath 主题色</h1>
           <p>
-            这个预览页以 logo 的四个锚点色为起点：答案高光、品牌主绿、结构深绿、根系深色。主色阶与中性阶都在页面内自动生成，方便直接观察浅色界面、深色卡片、按钮与数据卡的实际效果。
+            这个预览页以 logo
+            的四个锚点色为起点：答案高光、品牌主绿、结构深绿、根系深色。主色阶与中性阶都在页面内自动生成，方便直接观察浅色界面、深色卡片、按钮与数据卡的实际效果。
           </p>
           <div class="chip-row">
             <span class="chip">主色建议：#1D9E75</span>
@@ -868,7 +871,9 @@
             <span class="chip">深根强调：#085041</span>
             <span class="chip">浅底高光：#E1F5EE</span>
           </div>
-          <div class="theme-context" id="theme-context">当前展示 Light 模式。适合观察默认页面底色、普通卡片和主按钮的对比关系。</div>
+          <div class="theme-context" id="theme-context">
+            当前展示 Light 模式。适合观察默认页面底色、普通卡片和主按钮的对比关系。
+          </div>
         </div>
         <div class="hero-preview">
           <div class="logo-stage">
@@ -879,7 +884,9 @@
               <div class="surface-card">
                 <div class="card-title">Brand Direction</div>
                 <div class="metric">溯源而知，一问即达</div>
-                <div class="metric-note">主色不是“科技蓝”，而是偏可信、可验证、带组织记忆感的林地绿。</div>
+                <div class="metric-note">
+                  主色不是“科技蓝”，而是偏可信、可验证、带组织记忆感的林地绿。
+                </div>
               </div>
               <div class="dark-card">
                 <div class="card-title">On Dark Surface</div>
@@ -901,7 +908,10 @@
         <div class="section-head">
           <div>
             <h2>Icon 锚点色</h2>
-            <p>先固定图形里真正有语义的颜色，再从这些锚点延展成完整主题。这样后续 UI 不会长成另一套语言。</p>
+            <p>
+              先固定图形里真正有语义的颜色，再从这些锚点延展成完整主题。这样后续 UI
+              不会长成另一套语言。
+            </p>
           </div>
         </div>
         <div id="anchor-grid" class="anchor-grid"></div>
@@ -911,9 +921,14 @@
         <div class="section-head">
           <div>
             <h2>Brand 色阶</h2>
-            <p>这组是主品牌色阶，适合按钮、选中态、品牌图形、强调块和关键状态。推荐 `500` 作为默认主题色，`600/700` 用于 hover 和 active。</p>
+            <p>
+              这组是主品牌色阶，适合按钮、选中态、品牌图形、强调块和关键状态。推荐 `500`
+              作为默认主题色，`600/700` 用于 hover 和 active。
+            </p>
           </div>
-          <p>生成逻辑：`50/100` 取 icon 高光系，`500` 取主品牌绿，`800` 取根系深色，之间做分段插值。</p>
+          <p>
+            生成逻辑：`50/100` 取 icon 高光系，`500` 取主品牌绿，`800` 取根系深色，之间做分段插值。
+          </p>
         </div>
         <div id="brand-scale" class="palette-grid"></div>
       </section>
@@ -922,7 +937,9 @@
         <div class="section-head">
           <div>
             <h2>Sage 中性色阶</h2>
-            <p>这组是偏绿灰的中性阶，不抢品牌主色，适合背景、边框、正文、分割线和静态模块。它决定的是“整体气质”，不是按钮颜色。</p>
+            <p>
+              这组是偏绿灰的中性阶，不抢品牌主色，适合背景、边框、正文、分割线和静态模块。它决定的是“整体气质”，不是按钮颜色。
+            </p>
           </div>
           <p>建议浅色界面默认落在 `50-200`，正文和标题主要使用 `700-950`。</p>
         </div>
@@ -933,7 +950,10 @@
         <div class="section-head">
           <div>
             <h2>语义 Token</h2>
-            <p id="semantic-description">主题最终要落到语义层，而不是页面里到处手写 `green-500`。这里给的是更适合产品 UI 的推荐分工。</p>
+            <p id="semantic-description">
+              主题最终要落到语义层，而不是页面里到处手写 `green-500`。这里给的是更适合产品 UI
+              的推荐分工。
+            </p>
           </div>
         </div>
         <div id="semantic-grid" class="semantic-grid"></div>
@@ -943,7 +963,9 @@
         <div class="section-head">
           <div>
             <h2>组件效果</h2>
-            <p>同一套色阶放进真实组件里，才能看出是否“稳”。这里重点看按钮层级、浅底信息卡、深色摘要卡和检索输入区的关系。</p>
+            <p>
+              同一套色阶放进真实组件里，才能看出是否“稳”。这里重点看按钮层级、浅底信息卡、深色摘要卡和检索输入区的关系。
+            </p>
           </div>
         </div>
 
@@ -987,7 +1009,8 @@
                   </div>
                 </div>
                 <div class="metric-note">
-                  主按钮用 `brand-500`，hover 进入 `brand-600`。不要把 `700/800` 当默认按钮，否则整体会过重。
+                  主按钮用 `brand-500`，hover 进入 `brand-600`。不要把 `700/800`
+                  当默认按钮，否则整体会过重。
                 </div>
                 <div class="badge-row">
                   <span class="badge success">可信来源</span>
@@ -1025,7 +1048,9 @@
             <div class="sidebar-card dark" style="margin-top: 14px">
               <div class="card-title">Dark Module</div>
               <div class="metric">适合导航、洞察卡、摘要区</div>
-              <div class="metric-note">深色区要让高光与数值浮出来，所以图标里的亮芯和主绿会非常有用。</div>
+              <div class="metric-note">
+                深色区要让高光与数值浮出来，所以图标里的亮芯和主绿会非常有用。
+              </div>
               <div class="mini-chip-row" style="margin-top: 14px">
                 <span class="mini-chip">#0E5C49</span>
                 <span class="mini-chip">#085041</span>
@@ -1043,156 +1068,162 @@
       const shadeLabels = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 
       const iconAnchors = [
-        { name: "Answer Glow", hex: "#E1F5EE", use: "答案高光、轻提示背景、浅色状态底。" },
-        { name: "Brand Core", hex: "#1D9E75", use: "主按钮、选中态、主品牌识别色。" },
-        { name: "Branch Stem", hex: "#167E61", use: "hover、图标主干、比主色更稳的强调层。" },
-        { name: "Root Depth", hex: "#085041", use: "深色模块、导航高亮、权威感数据块。" }
+        { name: 'Answer Glow', hex: '#E1F5EE', use: '答案高光、轻提示背景、浅色状态底。' },
+        { name: 'Brand Core', hex: '#1D9E75', use: '主按钮、选中态、主品牌识别色。' },
+        { name: 'Branch Stem', hex: '#167E61', use: 'hover、图标主干、比主色更稳的强调层。' },
+        { name: 'Root Depth', hex: '#085041', use: '深色模块、导航高亮、权威感数据块。' },
       ];
 
       const brandAnchors = {
-        50: "#F4FCF8",
-        100: "#E1F5EE",
-        500: "#1D9E75",
-        600: "#167E61",
-        800: "#085041",
-        950: "#031B16"
+        50: '#F4FCF8',
+        100: '#E1F5EE',
+        500: '#1D9E75',
+        600: '#167E61',
+        800: '#085041',
+        950: '#031B16',
       };
 
       const neutralAnchors = {
-        50: "#F7FBF9",
-        100: "#EFF5F2",
-        500: "#63786F",
-        700: "#394C44",
-        900: "#15211C",
-        950: "#09110D"
+        50: '#F7FBF9',
+        100: '#EFF5F2',
+        500: '#63786F',
+        700: '#394C44',
+        900: '#15211C',
+        950: '#09110D',
       };
 
       const lightSemanticTokens = [
         {
-          name: "App Background",
-          token: "neutral-50",
-          color: () => getCssVar("--neutral-50"),
-          desc: "页面底色，建议永远不要用纯白铺满整页。"
+          name: 'App Background',
+          token: 'neutral-50',
+          color: () => getCssVar('--neutral-50'),
+          desc: '页面底色，建议永远不要用纯白铺满整页。',
         },
         {
-          name: "Surface",
-          token: "surface",
-          color: "#FFFFFF",
-          desc: "卡片、弹层、表格主体底色。"
+          name: 'Surface',
+          token: 'surface',
+          color: '#FFFFFF',
+          desc: '卡片、弹层、表格主体底色。',
         },
         {
-          name: "Soft Surface",
-          token: "neutral-100",
-          color: () => getCssVar("--neutral-100"),
-          desc: "浅提示区、hover 背景、分组容器。"
+          name: 'Soft Surface',
+          token: 'neutral-100',
+          color: () => getCssVar('--neutral-100'),
+          desc: '浅提示区、hover 背景、分组容器。',
         },
         {
-          name: "Primary Action",
-          token: "brand-500",
-          color: () => getCssVar("--brand-500"),
-          desc: "默认主按钮、主操作、关键品牌点。"
+          name: 'Primary Action',
+          token: 'brand-500',
+          color: () => getCssVar('--brand-500'),
+          desc: '默认主按钮、主操作、关键品牌点。',
         },
         {
-          name: "Primary Hover",
-          token: "brand-600",
-          color: () => getCssVar("--brand-600"),
-          desc: "按钮 hover、选中态、图标主干。"
+          name: 'Primary Hover',
+          token: 'brand-600',
+          color: () => getCssVar('--brand-600'),
+          desc: '按钮 hover、选中态、图标主干。',
         },
         {
-          name: "Focus Ring",
-          token: "brand-300",
-          color: () => getCssVar("--brand-300"),
-          desc: "输入框聚焦、键盘导航可见性。"
+          name: 'Focus Ring',
+          token: 'brand-300',
+          color: () => getCssVar('--brand-300'),
+          desc: '输入框聚焦、键盘导航可见性。',
         },
         {
-          name: "Border",
-          token: "neutral-200",
-          color: () => getCssVar("--neutral-200"),
-          desc: "边框、分割线、弱结构信息。"
+          name: 'Border',
+          token: 'neutral-200',
+          color: () => getCssVar('--neutral-200'),
+          desc: '边框、分割线、弱结构信息。',
         },
         {
-          name: "Text Strong",
-          token: "neutral-900",
-          color: () => getCssVar("--neutral-900"),
-          desc: "正文标题、主要指标、核心信息。"
+          name: 'Text Strong',
+          token: 'neutral-900',
+          color: () => getCssVar('--neutral-900'),
+          desc: '正文标题、主要指标、核心信息。',
         },
         {
-          name: "Text Muted",
-          token: "neutral-500",
-          color: () => getCssVar("--neutral-500"),
-          desc: "辅助说明、元数据、次级标签。"
-        }
+          name: 'Text Muted',
+          token: 'neutral-500',
+          color: () => getCssVar('--neutral-500'),
+          desc: '辅助说明、元数据、次级标签。',
+        },
       ];
 
       const darkSemanticTokens = [
         {
-          name: "App Background",
-          token: "dark-bg",
-          color: "#06120F",
-          desc: "暗色页面底色，建议保持深但不死黑。"
+          name: 'App Background',
+          token: 'dark-bg',
+          color: '#06120F',
+          desc: '暗色页面底色，建议保持深但不死黑。',
         },
         {
-          name: "Surface",
-          token: "dark-surface",
-          color: "#0F221C",
-          desc: "主卡片、内容面板、默认容器底色。"
+          name: 'Surface',
+          token: 'dark-surface',
+          color: '#0F221C',
+          desc: '主卡片、内容面板、默认容器底色。',
         },
         {
-          name: "Elevated Surface",
-          token: "dark-surface-raised",
-          color: "#173128",
-          desc: "浮层、hover 卡片、次级强调容器。"
+          name: 'Elevated Surface',
+          token: 'dark-surface-raised',
+          color: '#173128',
+          desc: '浮层、hover 卡片、次级强调容器。',
         },
         {
-          name: "Primary Action",
-          token: "brand-400",
-          color: () => getCssVar("--brand-400"),
-          desc: "暗色里推荐更亮一点的主操作色。"
+          name: 'Primary Action',
+          token: 'brand-400',
+          color: () => getCssVar('--brand-400'),
+          desc: '暗色里推荐更亮一点的主操作色。',
         },
         {
-          name: "Primary Hover",
-          token: "brand-500",
-          color: () => getCssVar("--brand-500"),
-          desc: "按钮 hover、活跃状态、关键响应。"
+          name: 'Primary Hover',
+          token: 'brand-500',
+          color: () => getCssVar('--brand-500'),
+          desc: '按钮 hover、活跃状态、关键响应。',
         },
         {
-          name: "Focus Ring",
-          token: "brand-300",
-          color: () => getCssVar("--brand-300"),
-          desc: "深背景里更容易看见的聚焦轮廓。"
+          name: 'Focus Ring',
+          token: 'brand-300',
+          color: () => getCssVar('--brand-300'),
+          desc: '深背景里更容易看见的聚焦轮廓。',
         },
         {
-          name: "Border",
-          token: "dark-border",
-          color: "#24443A",
-          desc: "弱边框、表格线、暗色结构层。"
+          name: 'Border',
+          token: 'dark-border',
+          color: '#24443A',
+          desc: '弱边框、表格线、暗色结构层。',
         },
         {
-          name: "Text Strong",
-          token: "dark-text",
-          color: "#EFFAF5",
-          desc: "深背景上的主标题、数值和关键文案。"
+          name: 'Text Strong',
+          token: 'dark-text',
+          color: '#EFFAF5',
+          desc: '深背景上的主标题、数值和关键文案。',
         },
         {
-          name: "Text Muted",
-          token: "dark-text-muted",
-          color: "#A5BBB3",
-          desc: "暗色模式下的辅助说明和弱信息。"
-        }
+          name: 'Text Muted',
+          token: 'dark-text-muted',
+          color: '#A5BBB3',
+          desc: '暗色模式下的辅助说明和弱信息。',
+        },
       ];
 
       function hexToRgb(hex) {
-        const raw = hex.replace("#", "");
-        const value = raw.length === 3 ? raw.split("").map((v) => v + v).join("") : raw;
+        const raw = hex.replace('#', '');
+        const value =
+          raw.length === 3
+            ? raw
+                .split('')
+                .map((v) => v + v)
+                .join('')
+            : raw;
         return {
           r: parseInt(value.slice(0, 2), 16),
           g: parseInt(value.slice(2, 4), 16),
-          b: parseInt(value.slice(4, 6), 16)
+          b: parseInt(value.slice(4, 6), 16),
         };
       }
 
       function rgbToHex({ r, g, b }) {
-        const toHex = (value) => value.toString(16).padStart(2, "0");
+        const toHex = (value) => value.toString(16).padStart(2, '0');
         return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
       }
 
@@ -1203,7 +1234,7 @@
         return rgbToHex({
           r: Math.round(from.r + (to.r - from.r) * ratio),
           g: Math.round(from.g + (to.g - from.g) * ratio),
-          b: Math.round(from.b + (to.b - from.b) * ratio)
+          b: Math.round(from.b + (to.b - from.b) * ratio),
         });
       }
 
@@ -1245,16 +1276,14 @@
         const { r, g, b } = hexToRgb(hex);
         const srgb = [r, g, b].map((channel) => {
           const normalized = channel / 255;
-          return normalized <= 0.03928
-            ? normalized / 12.92
-            : ((normalized + 0.055) / 1.055) ** 2.4;
+          return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
         });
 
         return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
       }
 
       function textColorFor(hex) {
-        return relativeLuminance(hex) > 0.58 ? "#10211C" : "#F4FCF8";
+        return relativeLuminance(hex) > 0.58 ? '#10211C' : '#F4FCF8';
       }
 
       function setCssScale(prefix, scale) {
@@ -1264,25 +1293,25 @@
       }
 
       function swatchDescription(prefix, label) {
-        if (prefix === "brand") {
-          if (label <= 100) return "浅提示背景、选区高亮、轻量状态底。";
-          if (label <= 300) return "focus、hover、弱强调、可视反馈。";
-          if (label === 400) return "次主按钮、活跃标签、图标强调。";
-          if (label === 500) return "默认主题色、主按钮、关键识别点。";
-          if (label === 600) return "hover、主动作强化、图标主干。";
-          if (label <= 800) return "深模块、选中导航、强调块。";
-          return "深色背景、权威信息、极深文本或底色。";
+        if (prefix === 'brand') {
+          if (label <= 100) return '浅提示背景、选区高亮、轻量状态底。';
+          if (label <= 300) return 'focus、hover、弱强调、可视反馈。';
+          if (label === 400) return '次主按钮、活跃标签、图标强调。';
+          if (label === 500) return '默认主题色、主按钮、关键识别点。';
+          if (label === 600) return 'hover、主动作强化、图标主干。';
+          if (label <= 800) return '深模块、选中导航、强调块。';
+          return '深色背景、权威信息、极深文本或底色。';
         }
 
-        if (label <= 100) return "页面背景、浅分组背景、画布底色。";
-        if (label <= 300) return "边框、分隔线、容器浅底。";
-        if (label <= 500) return "辅助文案、说明文本、弱标签。";
-        if (label <= 700) return "正文、正文强调、结构标题。";
-        return "主标题、数据、最高对比文字。";
+        if (label <= 100) return '页面背景、浅分组背景、画布底色。';
+        if (label <= 300) return '边框、分隔线、容器浅底。';
+        if (label <= 500) return '辅助文案、说明文本、弱标签。';
+        if (label <= 700) return '正文、正文强调、结构标题。';
+        return '主标题、数据、最高对比文字。';
       }
 
       function renderAnchors() {
-        const container = document.getElementById("anchor-grid");
+        const container = document.getElementById('anchor-grid');
         container.innerHTML = iconAnchors
           .map(
             (anchor) => `
@@ -1296,7 +1325,7 @@
               </article>
             `
           )
-          .join("");
+          .join('');
       }
 
       function renderScale(containerId, prefix, scale) {
@@ -1311,21 +1340,21 @@
                   <span>${label}</span>
                 </div>
                 <div class="swatch-info">
-                  <div class="swatch-label">${prefix === "brand" ? "Brand" : "Neutral"} ${label}</div>
+                  <div class="swatch-label">${prefix === 'brand' ? 'Brand' : 'Neutral'} ${label}</div>
                   <div class="swatch-desc">${hex} · ${swatchDescription(prefix, label)}</div>
                 </div>
                 <div class="swatch-copy">Click to copy</div>
               </article>
             `;
           })
-          .join("");
+          .join('');
       }
 
       function renderSemantics(tokens) {
-        const container = document.getElementById("semantic-grid");
+        const container = document.getElementById('semantic-grid');
         container.innerHTML = tokens
           .map((token) => {
-            const color = typeof token.color === "function" ? token.color() : token.color;
+            const color = typeof token.color === 'function' ? token.color() : token.color;
             const onColor = textColorFor(color);
 
             return `
@@ -1338,41 +1367,41 @@
               </article>
             `;
           })
-          .join("");
+          .join('');
       }
 
       function updateThemeContent(mode) {
-        const context = document.getElementById("theme-context");
-        const description = document.getElementById("semantic-description");
+        const context = document.getElementById('theme-context');
+        const description = document.getElementById('semantic-description');
 
-        if (mode === "dark") {
+        if (mode === 'dark') {
           context.textContent =
-            "当前展示 Dark 模式。重点观察深背景下的品牌绿亮度、文本层次，以及卡片边界是否还能保持清晰。";
+            '当前展示 Dark 模式。重点观察深背景下的品牌绿亮度、文本层次，以及卡片边界是否还能保持清晰。';
           description.textContent =
-            "这里展示的是暗色模式推荐 token。暗色不是简单反相，而是重新分配背景、文字、交互高亮和边框层级。";
+            '这里展示的是暗色模式推荐 token。暗色不是简单反相，而是重新分配背景、文字、交互高亮和边框层级。';
           renderSemantics(darkSemanticTokens);
           return;
         }
 
         context.textContent =
-          "当前展示 Light 模式。适合观察默认页面底色、普通卡片和主按钮的对比关系。";
+          '当前展示 Light 模式。适合观察默认页面底色、普通卡片和主按钮的对比关系。';
         description.textContent =
-          "主题最终要落到语义层，而不是页面里到处手写 `green-500`。这里给的是更适合产品 UI 的推荐分工。";
+          '主题最终要落到语义层，而不是页面里到处手写 `green-500`。这里给的是更适合产品 UI 的推荐分工。';
         renderSemantics(lightSemanticTokens);
       }
 
       function setTheme(mode, options = {}) {
         const { persist = true } = options;
         document.body.dataset.theme = mode;
-        document.querySelectorAll("[data-theme-mode]").forEach((button) => {
+        document.querySelectorAll('[data-theme-mode]').forEach((button) => {
           const isActive = button.dataset.themeMode === mode;
-          button.classList.toggle("active", isActive);
-          button.setAttribute("aria-pressed", String(isActive));
+          button.classList.toggle('active', isActive);
+          button.setAttribute('aria-pressed', String(isActive));
         });
         updateThemeContent(mode);
 
         if (persist) {
-          window.localStorage.setItem("suzhi.theme-preview.mode", mode);
+          window.localStorage.setItem('suzhi.theme-preview.mode', mode);
         }
       }
 
@@ -1388,36 +1417,36 @@
       let toastTimer = null;
 
       function showToast(message) {
-        const toast = document.getElementById("copy-toast");
+        const toast = document.getElementById('copy-toast');
         toast.textContent = message;
-        toast.classList.add("show");
+        toast.classList.add('show');
 
         window.clearTimeout(toastTimer);
         toastTimer = window.setTimeout(() => {
-          toast.classList.remove("show");
+          toast.classList.remove('show');
         }, 1600);
       }
 
       const brandScale = generateScale(shadeLabels, brandAnchors);
       const neutralScale = generateScale(shadeLabels, neutralAnchors);
-      const savedTheme = window.localStorage.getItem("suzhi.theme-preview.mode");
-      const initialTheme = savedTheme === "dark" ? "dark" : "light";
+      const savedTheme = window.localStorage.getItem('suzhi.theme-preview.mode');
+      const initialTheme = savedTheme === 'dark' ? 'dark' : 'light';
 
-      setCssScale("brand", brandScale);
-      setCssScale("neutral", neutralScale);
+      setCssScale('brand', brandScale);
+      setCssScale('neutral', neutralScale);
       renderAnchors();
-      renderScale("brand-scale", "brand", brandScale);
-      renderScale("neutral-scale", "neutral", neutralScale);
+      renderScale('brand-scale', 'brand', brandScale);
+      renderScale('neutral-scale', 'neutral', neutralScale);
       setTheme(initialTheme, { persist: false });
 
-      document.addEventListener("click", (event) => {
-        const themeButton = event.target.closest("[data-theme-mode]");
+      document.addEventListener('click', (event) => {
+        const themeButton = event.target.closest('[data-theme-mode]');
         if (themeButton) {
           setTheme(themeButton.dataset.themeMode);
           return;
         }
 
-        const target = event.target.closest("[data-copy]");
+        const target = event.target.closest('[data-copy]');
         if (!target) return;
         copyToClipboard(target.dataset.copy);
       });
