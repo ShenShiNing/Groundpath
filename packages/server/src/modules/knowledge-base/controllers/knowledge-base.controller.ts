@@ -4,8 +4,10 @@ import type {
   CreateKnowledgeBaseRequest,
   UpdateKnowledgeBaseRequest,
   KnowledgeBaseListParams,
+  DocumentListParams,
 } from '@groundpath/shared/types';
 import { knowledgeBaseService } from '../services/knowledge-base.service';
+import { documentService } from '@modules/document';
 import { sendSuccessResponse } from '@core/errors';
 import { AppError } from '@core/errors/app-error';
 import { asyncHandler } from '@core/errors/async-handler';
@@ -28,6 +30,26 @@ function getRequestContext(req: Request) {
     ipAddress: getClientIp(req),
     userAgent: req.headers['user-agent'] ?? null,
   };
+}
+
+/**
+ * Decode filename from latin1 to UTF-8 (multer encodes non-ASCII filenames as latin1)
+ */
+function decodeFilename(filename: string): string {
+  try {
+    return Buffer.from(filename, 'latin1').toString('utf-8');
+  } catch {
+    return filename;
+  }
+}
+
+function requireKnowledgeBaseId(req: Request): string {
+  const kbId = getParamId(req, 'id');
+  if (!kbId || !isValidUuid(kbId)) {
+    throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
+  }
+
+  return kbId;
 }
 
 export const knowledgeBaseController = {
@@ -56,11 +78,7 @@ export const knowledgeBaseController = {
    */
   getById: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const kbId = getParamId(req, 'id');
-    if (!kbId || !isValidUuid(kbId)) {
-      throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
-    }
-
+    const kbId = requireKnowledgeBaseId(req);
     const kb = await knowledgeBaseService.getById(kbId, userId);
     sendSuccessResponse(res, kb);
   }),
@@ -70,11 +88,7 @@ export const knowledgeBaseController = {
    */
   update: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const kbId = getParamId(req, 'id');
-    if (!kbId || !isValidUuid(kbId)) {
-      throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
-    }
-
+    const kbId = requireKnowledgeBaseId(req);
     const data = getValidatedBody<UpdateKnowledgeBaseRequest>(res);
     const kb = await knowledgeBaseService.update(kbId, userId, data, getRequestContext(req));
     sendSuccessResponse(res, kb);
@@ -85,12 +99,56 @@ export const knowledgeBaseController = {
    */
   delete: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
-    const kbId = getParamId(req, 'id');
-    if (!kbId || !isValidUuid(kbId)) {
-      throw new AppError('VALIDATION_ERROR', 'Valid knowledge base ID is required', 400);
-    }
-
+    const kbId = requireKnowledgeBaseId(req);
     await knowledgeBaseService.delete(kbId, userId, getRequestContext(req));
     sendSuccessResponse(res, { message: 'Knowledge base deleted successfully' });
+  }),
+
+  /**
+   * POST /api/knowledge-bases/:id/documents
+   */
+  uploadDocument: asyncHandler(async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const kbId = requireKnowledgeBaseId(req);
+    const file = req.file;
+
+    if (!file) {
+      throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
+    }
+
+    const { title, description } = req.body as {
+      title?: string;
+      description?: string;
+    };
+
+    const document = await documentService.upload(
+      userId,
+      {
+        buffer: file.buffer,
+        mimetype: file.mimetype,
+        originalname: decodeFilename(file.originalname),
+        size: file.size,
+      },
+      { title, description, knowledgeBaseId: kbId },
+      getRequestContext(req)
+    );
+
+    sendSuccessResponse(
+      res,
+      { document, message: 'Document uploaded successfully' },
+      HTTP_STATUS.CREATED
+    );
+  }),
+
+  /**
+   * GET /api/knowledge-bases/:id/documents
+   */
+  listDocuments: asyncHandler(async (req: Request, res: Response) => {
+    const userId = requireUserId(req);
+    const kbId = requireKnowledgeBaseId(req);
+    const params = getValidatedQuery<DocumentListParams>(res);
+
+    const result = await documentService.list(userId, { ...params, knowledgeBaseId: kbId });
+    sendSuccessResponse(res, result);
   }),
 };

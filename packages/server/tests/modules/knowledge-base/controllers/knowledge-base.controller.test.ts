@@ -14,6 +14,13 @@ vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   },
 }));
 
+vi.mock('@modules/document', () => ({
+  documentService: {
+    upload: vi.fn(),
+    list: vi.fn(),
+  },
+}));
+
 vi.mock('@core/errors', async (importOriginal) => {
   const original = await importOriginal<typeof import('@core/errors')>();
   return {
@@ -24,26 +31,34 @@ vi.mock('@core/errors', async (importOriginal) => {
 
 import { knowledgeBaseController } from '@modules/knowledge-base/controllers/knowledge-base.controller';
 import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
+import { documentService } from '@modules/document';
 
 const mockUserId = 'user-123';
 const mockKbId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
 
-function createMockRequest(params: Record<string, string> = {}, body: object = {}): Request {
+function createMockRequest(partial: Partial<Request> = {}): Request {
   return {
     user: { sub: mockUserId },
-    params,
-    body,
-    ip: '127.0.0.1',
+    params: {},
+    body: {},
     headers: { 'user-agent': 'vitest' },
+    ip: '127.0.0.1',
     socket: { remoteAddress: null },
+    ...partial,
   } as unknown as Request;
 }
 
-function createMockResponse(body: object = {}): Response {
+function createMockResponse({
+  body = {},
+  query,
+}: {
+  body?: object;
+  query?: object;
+} = {}): Response {
   return {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
-    locals: { validated: { body } },
+    locals: { validated: { body, query } },
   } as unknown as Response;
 }
 
@@ -65,8 +80,8 @@ describe('knowledgeBaseController', () => {
       mockResult as Awaited<ReturnType<typeof knowledgeBaseService.create>>
     );
 
-    const req = createMockRequest({}, { name: 'KB 1', embeddingProvider: 'openai' });
-    const res = createMockResponse({ name: 'KB 1', embeddingProvider: 'openai' });
+    const req = createMockRequest({ body: { name: 'KB 1', embeddingProvider: 'openai' } });
+    const res = createMockResponse({ body: { name: 'KB 1', embeddingProvider: 'openai' } });
     const next = await invokeHandler(knowledgeBaseController.create, req, res);
 
     expect(next).not.toHaveBeenCalled();
@@ -97,7 +112,7 @@ describe('knowledgeBaseController', () => {
   });
 
   it('should call next with validation error when kb id is invalid', async () => {
-    const req = createMockRequest({ id: 'invalid-id' });
+    const req = createMockRequest({ params: { id: 'invalid-id' } });
     const res = createMockResponse();
     const next = await invokeHandler(knowledgeBaseController.getById, req, res);
 
@@ -115,8 +130,8 @@ describe('knowledgeBaseController', () => {
       mockUpdated as Awaited<ReturnType<typeof knowledgeBaseService.update>>
     );
 
-    const req = createMockRequest({ id: mockKbId }, { name: 'Renamed' });
-    const res = createMockResponse({ name: 'Renamed' });
+    const req = createMockRequest({ params: { id: mockKbId }, body: { name: 'Renamed' } });
+    const res = createMockResponse({ body: { name: 'Renamed' } });
     const next = await invokeHandler(knowledgeBaseController.update, req, res);
 
     expect(next).not.toHaveBeenCalled();
@@ -132,7 +147,7 @@ describe('knowledgeBaseController', () => {
   it('should delete knowledge base and return success message', async () => {
     vi.mocked(knowledgeBaseService.delete).mockResolvedValue(undefined);
 
-    const req = createMockRequest({ id: mockKbId });
+    const req = createMockRequest({ params: { id: mockKbId } });
     const res = createMockResponse();
     const next = await invokeHandler(knowledgeBaseController.delete, req, res);
 
@@ -144,5 +159,99 @@ describe('knowledgeBaseController', () => {
     expect(sendSuccessResponseMock).toHaveBeenCalledWith(res, {
       message: 'Knowledge base deleted successfully',
     });
+  });
+
+  it('should upload knowledge-base document with decoded filename and request context', async () => {
+    vi.mocked(documentService.upload).mockResolvedValue(
+      { id: 'doc-1' } as Awaited<ReturnType<typeof documentService.upload>>
+    );
+
+    const encodedName = Buffer.from('测试.txt', 'utf-8').toString('latin1');
+    const req = createMockRequest({
+      params: { id: mockKbId },
+      body: { title: 'Doc', description: 'Desc' },
+      file: {
+        buffer: Buffer.from('file'),
+        mimetype: 'text/plain',
+        originalname: encodedName,
+        size: 4,
+      } as Request['file'],
+    });
+    const res = createMockResponse();
+    const next = await invokeHandler(knowledgeBaseController.uploadDocument, req, res);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(documentService.upload).toHaveBeenCalledWith(
+      mockUserId,
+      expect.objectContaining({
+        mimetype: 'text/plain',
+        originalname: '测试.txt',
+        size: 4,
+      }),
+      {
+        title: 'Doc',
+        description: 'Desc',
+        knowledgeBaseId: mockKbId,
+      },
+      { ipAddress: '127.0.0.1', userAgent: 'vitest' }
+    );
+    expect(sendSuccessResponseMock).toHaveBeenCalledWith(
+      res,
+      { document: { id: 'doc-1' }, message: 'Document uploaded successfully' },
+      HTTP_STATUS.CREATED
+    );
+  });
+
+  it('should call next with validation error when upload document has invalid kb id', async () => {
+    const req = createMockRequest({
+      params: { id: 'invalid-id' },
+      file: {
+        buffer: Buffer.from('file'),
+        mimetype: 'text/plain',
+        originalname: 'test.txt',
+        size: 4,
+      } as Request['file'],
+    });
+    const res = createMockResponse();
+    const next = await invokeHandler(knowledgeBaseController.uploadDocument, req, res);
+
+    expect(documentService.upload).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next.mock.calls[0]?.[0]).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      statusCode: 400,
+    });
+  });
+
+  it('should call next with validation error when upload document file is missing', async () => {
+    const req = createMockRequest({ params: { id: mockKbId } });
+    const res = createMockResponse();
+    const next = await invokeHandler(knowledgeBaseController.uploadDocument, req, res);
+
+    expect(documentService.upload).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(next.mock.calls[0]?.[0]).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      statusCode: 400,
+    });
+  });
+
+  it('should list documents in knowledge base with validated query', async () => {
+    const query = { page: 2, pageSize: 10 };
+    const mockResult = { items: [{ id: 'doc-1' }], pagination: { total: 1 } };
+    vi.mocked(documentService.list).mockResolvedValue(
+      mockResult as Awaited<ReturnType<typeof documentService.list>>
+    );
+
+    const req = createMockRequest({ params: { id: mockKbId } });
+    const res = createMockResponse({ query });
+    const next = await invokeHandler(knowledgeBaseController.listDocuments, req, res);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(documentService.list).toHaveBeenCalledWith(mockUserId, {
+      ...query,
+      knowledgeBaseId: mockKbId,
+    });
+    expect(sendSuccessResponseMock).toHaveBeenCalledWith(res, mockResult);
   });
 });

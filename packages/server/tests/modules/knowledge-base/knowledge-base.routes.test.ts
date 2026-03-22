@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Request, Response, NextFunction } from 'express';
+import { describe, expect, it, vi } from 'vitest';
+import type { NextFunction, Request, Response } from 'express';
 
 const {
   mockRouter,
@@ -8,15 +8,12 @@ const {
   generalRateLimiterMock,
   validateBodyMock,
   validateQueryMock,
-  getValidatedQueryMock,
   createSanitizeMiddlewareMock,
   sanitizeMultipartFieldsMock,
-  asyncHandlerMock,
   multerFactoryMock,
   multerMemoryStorageMock,
   multerSingleMock,
   MulterErrorMock,
-  AppErrorMock,
   knowledgeBaseControllerMock,
   createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchemaMock,
@@ -26,11 +23,6 @@ const {
   updateKbValidatorMock,
   documentListValidatorMock,
   knowledgeBaseListValidatorMock,
-  documentServiceMock,
-  sendSuccessResponseMock,
-  requireUserIdMock,
-  getParamIdMock,
-  getClientIpMock,
   documentConfigMock,
 } = vi.hoisted(() => {
   const hoistedRouter = {
@@ -43,8 +35,10 @@ const {
 
   const hoistedMulterSingle = vi.fn();
   const hoistedMulterMemoryStorage = vi.fn(() => ({ type: 'memory-storage' }));
+
   class HoistedMulterError extends Error {
     code: string;
+
     constructor(code: string, message?: string) {
       super(message);
       this.code = code;
@@ -65,33 +59,11 @@ const {
   const updateKbSchema = { type: 'update-kb-schema' };
   const listParamsSchema = { type: 'document-list-schema' };
   const knowledgeBaseListSchema = { type: 'knowledge-base-list-schema' };
-
   const createKbValidator = vi.fn();
   const updateKbValidator = vi.fn();
   const listValidator = vi.fn();
   const knowledgeBaseListValidator = vi.fn();
   const sanitizeMultipartFields = vi.fn();
-  const getValidatedQuery = vi.fn();
-  const sendSuccessResponse = vi.fn();
-  const requireUserId = vi.fn();
-  const getParamId = vi.fn();
-  const getClientIp = vi.fn();
-
-  class HoistedAppError extends Error {
-    code: string;
-    statusCode: number;
-
-    constructor(code: string, message: string, statusCode: number) {
-      super(message);
-      this.code = code;
-      this.statusCode = statusCode;
-    }
-  }
-
-  const documentService = {
-    upload: vi.fn(),
-    list: vi.fn(),
-  };
 
   return {
     mockRouter: hoistedRouter,
@@ -116,21 +88,20 @@ const {
       }
       return vi.fn();
     }),
-    getValidatedQueryMock: getValidatedQuery,
     createSanitizeMiddlewareMock: vi.fn(() => sanitizeMultipartFields),
     sanitizeMultipartFieldsMock: sanitizeMultipartFields,
-    asyncHandlerMock: vi.fn((handler: unknown) => handler),
     multerFactoryMock: hoistedMulterFactory,
     multerMemoryStorageMock: hoistedMulterMemoryStorage,
     multerSingleMock: hoistedMulterSingle,
     MulterErrorMock: HoistedMulterError,
-    AppErrorMock: HoistedAppError,
     knowledgeBaseControllerMock: {
       create: vi.fn(),
       list: vi.fn(),
       getById: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
+      uploadDocument: vi.fn(),
+      listDocuments: vi.fn(),
     },
     createKnowledgeBaseSchemaMock: createKbSchema,
     updateKnowledgeBaseSchemaMock: updateKbSchema,
@@ -140,11 +111,6 @@ const {
     updateKbValidatorMock: updateKbValidator,
     documentListValidatorMock: listValidator,
     knowledgeBaseListValidatorMock: knowledgeBaseListValidator,
-    documentServiceMock: documentService,
-    sendSuccessResponseMock: sendSuccessResponse,
-    requireUserIdMock: requireUserId,
-    getParamIdMock: getParamId,
-    getClientIpMock: getClientIp,
     documentConfigMock: {
       maxSize: 5 * 1024 * 1024,
     },
@@ -174,7 +140,6 @@ vi.mock('@core/middleware', () => ({
   validateBody: validateBodyMock,
   validateQuery: validateQueryMock,
   createSanitizeMiddleware: createSanitizeMiddlewareMock,
-  getValidatedQuery: getValidatedQueryMock,
 }));
 
 vi.mock('@groundpath/shared/schemas', () => ({
@@ -184,39 +149,7 @@ vi.mock('@groundpath/shared/schemas', () => ({
   knowledgeBaseListParamsSchema: knowledgeBaseListParamsSchemaMock,
 }));
 
-vi.mock('@modules/document', () => ({
-  documentService: documentServiceMock,
-}));
-
-vi.mock('@core/errors', () => ({
-  sendSuccessResponse: sendSuccessResponseMock,
-}));
-
-vi.mock('@core/errors/app-error', () => ({
-  AppError: AppErrorMock,
-}));
-
-vi.mock('@core/errors/async-handler', () => ({
-  asyncHandler: asyncHandlerMock,
-}));
-
-vi.mock('@core/utils', () => ({
-  requireUserId: requireUserIdMock,
-  getParamId: getParamIdMock,
-  getClientIp: getClientIpMock,
-}));
-
-vi.mock('@groundpath/shared', () => ({
-  HTTP_STATUS: {
-    CREATED: 201,
-  },
-}));
-
 import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
-import { documentService } from '@modules/document';
-import { sendSuccessResponse } from '@core/errors';
-import { requireUserId, getParamId, getClientIp } from '@core/utils';
-import { getValidatedQuery } from '@core/middleware';
 
 function createMockResponse(): Response {
   return {
@@ -225,23 +158,11 @@ function createMockResponse(): Response {
   } as unknown as Response;
 }
 
-function createMockRequest(partial: Partial<Request> = {}): Request {
-  return {
-    body: {},
-    params: {},
-    headers: {},
-    ...partial,
-  } as unknown as Request;
-}
-
-function getDocumentUploadHandler() {
+function getDocumentUploadMiddleware() {
   const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-  return uploadRouteCall?.[4] as ((req: Request, res: Response) => Promise<void>) | undefined;
-}
-
-function getDocumentListHandler() {
-  const listRouteCall = mockRouter.get.mock.calls.find((call) => call[0] === '/:id/documents');
-  return listRouteCall?.[2] as ((req: Request, res: Response) => Promise<void>) | undefined;
+  return uploadRouteCall?.[2] as
+    | ((req: Request, res: Response, next: NextFunction) => void)
+    | undefined;
 }
 
 describe('knowledge-base.routes', () => {
@@ -265,7 +186,6 @@ describe('knowledge-base.routes', () => {
   it('should register knowledge base crud routes with validators', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(createKnowledgeBaseSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(updateKnowledgeBaseSchemaMock);
-    expect(validateQueryMock).toHaveBeenCalledWith(documentListParamsSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseListParamsSchemaMock);
 
     expect(mockRouter.post).toHaveBeenCalledWith(
@@ -287,28 +207,24 @@ describe('knowledge-base.routes', () => {
     expect(mockRouter.delete).toHaveBeenCalledWith('/:id', knowledgeBaseControllerMock.delete);
   });
 
-  it('should register document routes with async handlers', () => {
+  it('should register document routes with controller handlers', () => {
+    expect(validateQueryMock).toHaveBeenCalledWith(documentListParamsSchemaMock);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/documents',
       generalRateLimiterMock,
       expect.any(Function),
       sanitizeMultipartFieldsMock,
-      expect.any(Function)
+      knowledgeBaseControllerMock.uploadDocument
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/:id/documents',
       documentListValidatorMock,
-      expect.any(Function)
+      knowledgeBaseControllerMock.listDocuments
     );
-    expect(asyncHandlerMock).toHaveBeenCalledTimes(2);
   });
 
   it('should return file-size error when multer emits LIMIT_FILE_SIZE', () => {
-    const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-    const uploadMiddleware = uploadRouteCall?.[2] as
-      | ((req: Request, res: Response, next: NextFunction) => void)
-      | undefined;
-
+    const uploadMiddleware = getDocumentUploadMiddleware();
     expect(uploadMiddleware).toBeTypeOf('function');
 
     multerSingleMock.mockReturnValueOnce(
@@ -335,11 +251,7 @@ describe('knowledge-base.routes', () => {
   });
 
   it('should return upload error payload for other multer errors', () => {
-    const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-    const uploadMiddleware = uploadRouteCall?.[2] as
-      | ((req: Request, res: Response, next: NextFunction) => void)
-      | undefined;
-
+    const uploadMiddleware = getDocumentUploadMiddleware();
     expect(uploadMiddleware).toBeTypeOf('function');
 
     multerSingleMock.mockReturnValueOnce(
@@ -362,152 +274,5 @@ describe('knowledge-base.routes', () => {
       },
     });
     expect(next).not.toHaveBeenCalled();
-  });
-
-  describe('business handlers', () => {
-    const validKbId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-
-    beforeEach(() => {
-      vi.mocked(documentService.upload).mockReset();
-      vi.mocked(documentService.list).mockReset();
-      vi.mocked(sendSuccessResponse).mockReset();
-      vi.mocked(requireUserId).mockReset();
-      vi.mocked(getParamId).mockReset();
-      vi.mocked(getClientIp).mockReset();
-      vi.mocked(getValidatedQuery).mockReset();
-    });
-
-    it('should upload document successfully with decoded filename and request context', async () => {
-      const handler = getDocumentUploadHandler();
-      expect(handler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue(validKbId);
-      vi.mocked(getClientIp).mockReturnValue('127.0.0.1');
-      vi.mocked(documentService.upload).mockResolvedValue({ id: 'doc-1' } as never);
-
-      const encodedName = Buffer.from('测试.txt', 'utf-8').toString('latin1');
-      const req = createMockRequest({
-        params: { id: validKbId },
-        file: {
-          buffer: Buffer.from('file'),
-          mimetype: 'text/plain',
-          originalname: encodedName,
-          size: 4,
-        } as Request['file'],
-        body: {
-          title: 't',
-          description: 'd',
-        },
-        headers: { 'user-agent': 'vitest-agent' },
-      });
-      const res = createMockResponse();
-
-      await handler!(req, res);
-
-      expect(documentService.upload).toHaveBeenCalledWith(
-        'user-1',
-        expect.objectContaining({
-          mimetype: 'text/plain',
-          originalname: '测试.txt',
-          size: 4,
-        }),
-        {
-          title: 't',
-          description: 'd',
-          knowledgeBaseId: validKbId,
-        },
-        { ipAddress: '127.0.0.1', userAgent: 'vitest-agent' }
-      );
-      expect(sendSuccessResponse).toHaveBeenCalledWith(
-        res,
-        { document: { id: 'doc-1' }, message: 'Document uploaded successfully' },
-        201
-      );
-    });
-
-    it('should throw validation error when upload has invalid kb id', async () => {
-      const handler = getDocumentUploadHandler();
-      expect(handler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue('invalid-id');
-
-      const req = createMockRequest({
-        params: { id: 'invalid-id' },
-        file: {
-          buffer: Buffer.from('x'),
-          mimetype: 'text/plain',
-          originalname: 'x.txt',
-          size: 1,
-        } as Request['file'],
-      });
-      const res = createMockResponse();
-
-      await expect(handler!(req, res)).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR',
-        statusCode: 400,
-      });
-      expect(documentService.upload).not.toHaveBeenCalled();
-    });
-
-    it('should throw validation error when upload has no file', async () => {
-      const handler = getDocumentUploadHandler();
-      expect(handler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue(validKbId);
-
-      const req = createMockRequest({ params: { id: validKbId } });
-      const res = createMockResponse();
-
-      await expect(handler!(req, res)).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR',
-        statusCode: 400,
-      });
-      expect(documentService.upload).not.toHaveBeenCalled();
-    });
-
-    it('should list documents successfully', async () => {
-      const handler = getDocumentListHandler();
-      expect(handler).toBeTypeOf('function');
-
-      const query = { page: 2, pageSize: 10 };
-      const result = { data: [{ id: 'doc-1' }], total: 1 };
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue(validKbId);
-      vi.mocked(getValidatedQuery).mockReturnValue(query);
-      vi.mocked(documentService.list).mockResolvedValue(result as never);
-
-      const req = createMockRequest({ params: { id: validKbId } });
-      const res = createMockResponse();
-
-      await handler!(req, res);
-
-      expect(getValidatedQuery).toHaveBeenCalledWith(res);
-      expect(documentService.list).toHaveBeenCalledWith('user-1', {
-        ...query,
-        knowledgeBaseId: validKbId,
-      });
-      expect(sendSuccessResponse).toHaveBeenCalledWith(res, result);
-    });
-
-    it('should throw validation error when listing documents with invalid kb id', async () => {
-      const handler = getDocumentListHandler();
-      expect(handler).toBeTypeOf('function');
-
-      vi.mocked(requireUserId).mockReturnValue('user-1');
-      vi.mocked(getParamId).mockReturnValue('invalid-id');
-
-      const req = createMockRequest({ params: { id: 'invalid-id' } });
-      const res = createMockResponse();
-
-      await expect(handler!(req, res)).rejects.toMatchObject({
-        code: 'VALIDATION_ERROR',
-        statusCode: 400,
-      });
-      expect(documentService.list).not.toHaveBeenCalled();
-    });
   });
 });
