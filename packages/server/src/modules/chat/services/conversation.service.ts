@@ -8,7 +8,7 @@ import type {
 import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
 import { conversationRepository } from '../repositories/conversation.repository';
 import { messageRepository } from '../repositories/message.repository';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 import { Errors } from '@core/errors';
 import type { Conversation } from '@core/db/schema/ai/conversations.schema';
 

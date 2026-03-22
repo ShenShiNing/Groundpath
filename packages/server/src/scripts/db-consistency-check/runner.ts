@@ -1,4 +1,4 @@
-import { counterSyncService } from '@modules/knowledge-base';
+import { counterSyncService } from '@modules/knowledge-base/public/counters';
 import { closeDatabase } from '@core/db';
 import { runDatabaseConsistencyChecks } from './checks';
 import {

@@ -84,10 +84,13 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  vi.doMock('@modules/logs', () => ({
+  vi.doMock('@modules/logs/public/cleanup', () => ({
     logCleanupService: {
       runCleanup: logCleanupRunMock,
     },
+  }));
+
+  vi.doMock('@modules/logs/public/alerts', () => ({
     structuredRagAlertService: {
       checkAndNotify: structuredRagAlertCheckMock,
     },
@@ -99,13 +102,13 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  vi.doMock('@modules/knowledge-base', () => ({
+  vi.doMock('@modules/knowledge-base/public/counters', () => ({
     counterSyncService: {
       syncAll: counterSyncAllMock,
     },
   }));
 
-  vi.doMock('@modules/vector', () => ({
+  vi.doMock('@modules/vector/public/cleanup', () => ({
     vectorCleanupService: {
       runCleanup: vectorCleanupRunMock,
     },
@@ -117,10 +120,13 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  vi.doMock('@modules/document-index', () => ({
+  vi.doMock('@modules/document-index/public/backfill', () => ({
     documentIndexBackfillService: {
       runScheduledBackfill: vi.fn(),
     },
+  }));
+
+  vi.doMock('@modules/document-index/public/cleanup', () => ({
     documentIndexArtifactCleanupService: {
       cleanup: documentIndexArtifactCleanupMock,
     },

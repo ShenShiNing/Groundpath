@@ -54,7 +54,7 @@ vi.mock('@modules/document/repositories', () => ({
   },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentChunkRepository: {
     countByIndexVersionId: countByIndexVersionIdMock,
   },
@@ -72,13 +72,13 @@ vi.mock('@modules/knowledge-base/services', () => ({
   },
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: {
     getEmbeddingConfig: getEmbeddingConfigMock,
   },
 }));
 
-vi.mock('@modules/vector', () => ({
+vi.mock('@modules/vector/public/repositories', () => ({
   vectorRepository: {
     deleteByIndexVersionId: deleteByIndexVersionIdMock,
   },

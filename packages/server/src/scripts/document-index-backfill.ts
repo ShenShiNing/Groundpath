@@ -31,7 +31,7 @@ if (!databaseConfig.url) {
 }
 
 import { DOCUMENT_TYPES, type DocumentType } from '@groundpath/shared/types';
-import { documentIndexBackfillService } from '@modules/document-index';
+import { documentIndexBackfillService } from '@modules/document-index/public/backfill';
 import { closeDatabase } from '@core/db';
 
 function getArg(args: string[], flag: string): string | undefined {

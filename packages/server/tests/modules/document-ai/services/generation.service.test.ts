@@ -24,7 +24,7 @@ vi.mock('@core/logger', () => ({
   })),
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/content', () => ({
   documentContentService: {
     getContent: vi.fn(),
   },
@@ -45,7 +45,7 @@ vi.mock('@modules/rag', () => ({
 
 // Import after mocks
 import { generationService } from '@modules/document-ai/services/generation.service';
-import { documentContentService } from '@modules/document';
+import { documentContentService } from '@modules/document/public/content';
 import { llmService } from '@modules/llm';
 import { searchService } from '@modules/rag';
 

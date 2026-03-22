@@ -76,7 +76,7 @@ vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   },
 }));
 
-vi.mock('@modules/vector', () => ({
+vi.mock('@modules/vector/public/repositories', () => ({
   vectorRepository: {
     deleteByDocumentId: vi.fn(() => Promise.resolve()),
   },
@@ -109,10 +109,12 @@ vi.mock('@core/logger', () => ({
 }));
 
 // Import after mocks
-import { documentService } from '@modules/document';
-import { documentRepository } from '@modules/document';
-import { documentVersionRepository } from '@modules/document';
-import { documentStorageService } from '@modules/document';
+import { documentService } from '@modules/document/public/documents';
+import {
+  documentRepository,
+  documentVersionRepository,
+} from '@modules/document/public/repositories';
+import { documentStorageService } from '@modules/document/public/storage';
 import { documentTrashService } from '@modules/document/services/document-trash.service';
 
 // ==================== listTrash ====================

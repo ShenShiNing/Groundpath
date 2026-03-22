@@ -91,7 +91,7 @@ vi.mock('@modules/document-index/services/document-index-cache.service', () => (
 }));
 
 import { AppError } from '@core/errors/app-error';
-import { documentIndexActivationService } from '@modules/document-index';
+import { documentIndexActivationService } from '@modules/document-index/public/activation';
 
 describe('documentIndexActivationService', () => {
   beforeEach(() => {

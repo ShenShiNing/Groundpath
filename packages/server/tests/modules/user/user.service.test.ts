@@ -36,7 +36,7 @@ vi.mock('@core/utils', () => ({
   })),
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/storage', () => ({
   storageService: {
     validateFile: vi.fn(),
     deleteByUrl: vi.fn(),
@@ -47,7 +47,7 @@ vi.mock('@modules/document', () => ({
 import { userService } from '@modules/user';
 import { userRepository } from '@modules/user/repositories/user.repository';
 import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
-import { storageService } from '@modules/document';
+import { storageService } from '@modules/document/public/storage';
 
 describe('userService > changeEmail', () => {
   beforeEach(() => {

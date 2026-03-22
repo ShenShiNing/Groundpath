@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { healthConfig } from '@config/env';
 import { db } from '@core/db';
 import { getRedisClient } from '@core/redis';
-import { getQdrantClient } from '@modules/vector';
+import { getQdrantClient } from '@modules/vector/public/qdrant';
 
 export type HealthStatus = 'up' | 'down';
 export type ReadinessStatus = 'ready' | 'not_ready';

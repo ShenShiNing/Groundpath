@@ -99,11 +99,11 @@ vi.mock('@modules/rag/queue', () => ({
   enqueueDocumentProcessing: enqueueDocumentProcessingMock,
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: documentRepositoryMock,
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 

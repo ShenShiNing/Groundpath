@@ -11,7 +11,7 @@ import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
 import { dispatchDocumentProcessing } from '../ports/document-processing.port';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 
 const logger = createLogger('document-upload.service');
 

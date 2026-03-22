@@ -1,5 +1,8 @@
 import { createLogger } from '@core/logger';
-import { operationLogRepository, type CreateOperationLogInput } from '@modules/logs';
+import {
+  operationLogRepository,
+  type CreateOperationLogInput,
+} from '@modules/logs/public/repositories';
 import type { ResourceType, OperationAction } from '@core/db/schema/system/operation-logs.schema';
 
 const logger = createLogger('operation-logger');

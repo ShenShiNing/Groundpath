@@ -8,14 +8,13 @@ import {
 } from '@core/config/env';
 import { createLogger } from '@core/logger';
 import { systemLogger } from '@core/logger/system-logger';
-import { logCleanupService, structuredRagAlertService } from '@modules/logs';
-import {
-  documentIndexArtifactCleanupService,
-  documentIndexBackfillService,
-} from '@modules/document-index';
+import { structuredRagAlertService } from '@modules/logs/public/alerts';
+import { logCleanupService } from '@modules/logs/public/cleanup';
+import { documentIndexBackfillService } from '@modules/document-index/public/backfill';
+import { documentIndexArtifactCleanupService } from '@modules/document-index/public/cleanup';
 import { tokenCleanupService } from '@modules/auth';
-import { counterSyncService } from '@modules/knowledge-base';
-import { vectorCleanupService } from '@modules/vector';
+import { counterSyncService } from '@modules/knowledge-base/public/counters';
+import { vectorCleanupService } from '@modules/vector/public/cleanup';
 import { processingRecoveryService } from '@modules/rag';
 
 const logger = createLogger('scheduler');

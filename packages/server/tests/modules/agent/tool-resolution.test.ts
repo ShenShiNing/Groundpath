@@ -27,7 +27,7 @@ vi.mock('@modules/rag', () => ({
   searchService: {},
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: {},
 }));
 

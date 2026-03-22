@@ -10,7 +10,7 @@ import { Errors } from '@core/errors';
 import { userRepository } from '../repositories/user.repository';
 import { normalizeEmail, toUserPublicInfo } from '@core/utils';
 import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
-import { storageService } from '@modules/document';
+import { storageService } from '@modules/document/public/storage';
 
 /**
  * User service for profile management and cross-module user operations

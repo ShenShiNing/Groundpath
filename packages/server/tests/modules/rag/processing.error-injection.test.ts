@@ -87,7 +87,7 @@ const {
   },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: documentRepositoryMock,
   documentVersionRepository: documentVersionRepositoryMock,
   documentChunkRepository: documentChunkRepositoryMock,
@@ -105,7 +105,7 @@ vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
   documentChunkRepository: documentChunkRepositoryMock,
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 
@@ -113,8 +113,11 @@ vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 
-vi.mock('@modules/vector', () => ({
+vi.mock('@modules/vector/public/repositories', () => ({
   vectorRepository: vectorRepositoryMock,
+}));
+
+vi.mock('@modules/vector/public/qdrant', () => ({
   ensureCollection: ensureCollectionMock,
 }));
 
