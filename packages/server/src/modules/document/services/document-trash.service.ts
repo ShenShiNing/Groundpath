@@ -21,6 +21,10 @@ import { vectorRepository } from '@modules/vector/public/repositories';
 
 const logger = createLogger('document-trash.service');
 
+function documentNotFoundInTrashError(message: string = 'Document not found in trash') {
+  return Errors.auth(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND', message, 404);
+}
+
 /**
  * Request context for logging
  */
@@ -106,27 +110,32 @@ export const documentTrashService = {
    */
   async restore(documentId: string, userId: string, ctx?: RequestContext): Promise<DocumentInfo> {
     const startTime = Date.now();
-    const document = await documentRepository.findDeletedByIdAndUser(documentId, userId);
-    if (!document) {
-      throw Errors.auth(
-        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-        'Document not found in trash',
-        404
-      );
+    const ownedDocument = await documentRepository.findByIdAndUserIncludingDeleted(
+      documentId,
+      userId
+    );
+    if (!ownedDocument) {
+      throw documentNotFoundInTrashError();
     }
 
-    // Idempotency check: already restored
-    if (!document.deletedAt) {
-      return toDocumentInfo(document);
-    }
+    const restoration = await withTransaction(async (tx) => {
+      // Match knowledge-base-first locking to avoid deadlocks with KB-level orchestration.
+      await knowledgeBaseService.lockOwnership(ownedDocument.knowledgeBaseId, userId, tx);
 
-    // All MySQL operations in a single transaction
-    const restored = await withTransaction(async (tx) => {
-      // 1. Restore document
-      const restoredDoc = await documentRepository.restore(documentId, tx);
+      const lockedDocument = await documentRepository.lockByIdAndUser(documentId, userId, tx);
+      if (!lockedDocument) {
+        throw documentNotFoundInTrashError();
+      }
 
-      // 2. Reset processing status (chunkCount was already set to 0 on soft delete)
-      await documentRepository.update(
+      if (!lockedDocument.deletedAt) {
+        return {
+          restored: false as const,
+          document: lockedDocument,
+        };
+      }
+
+      await documentRepository.restore(documentId, tx);
+      const updatedDocument = await documentRepository.update(
         documentId,
         {
           processingStatus: 'pending',
@@ -135,15 +144,21 @@ export const documentTrashService = {
         tx
       );
 
-      // 3. Increment document count
-      await knowledgeBaseService.incrementDocumentCount(document.knowledgeBaseId, 1, tx);
+      await knowledgeBaseService.incrementDocumentCount(lockedDocument.knowledgeBaseId, 1, tx);
 
-      return restoredDoc;
+      return {
+        restored: true as const,
+        document: updatedDocument ?? { ...lockedDocument, deletedAt: null, deletedBy: null },
+      };
     });
+
+    if (!restoration.restored) {
+      return toDocumentInfo(restoration.document);
+    }
 
     // 4. Enqueue reprocessing (will update totalChunks via delta calculation)
     dispatchDocumentProcessing(documentId, userId, {
-      targetDocumentVersion: document.currentVersion,
+      targetDocumentVersion: restoration.document.currentVersion,
       reason: 'restore',
     }).catch((err) => {
       logger.warn({ documentId, err }, 'Failed to enqueue processing after restore');
@@ -154,15 +169,15 @@ export const documentTrashService = {
       userId,
       resourceType: 'document',
       resourceId: documentId,
-      resourceName: document.title,
+      resourceName: restoration.document.title,
       action: 'document.restore',
-      description: `Restored document from trash: ${document.title}`,
+      description: `Restored document from trash: ${restoration.document.title}`,
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,
       durationMs: Date.now() - startTime,
     });
 
-    return toDocumentInfo(restored!);
+    return toDocumentInfo(restoration.document);
   },
 
   /**

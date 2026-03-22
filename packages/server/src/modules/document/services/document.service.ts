@@ -30,6 +30,10 @@ import { toDocumentInfo } from './document-upload.service';
 
 const logger = createLogger('document.service');
 
+function documentNotFoundError(message: string = 'Document not found') {
+  return Errors.auth(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND', message, 404);
+}
+
 /**
  * Convert database document to list item
  */
@@ -161,46 +165,69 @@ export const documentService = {
    */
   async delete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();
-    const document = await documentRepository.findByIdAndUser(documentId, userId);
-    if (!document) {
-      throw Errors.auth(
-        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-        'Document not found',
-        404
-      );
+    const ownedDocument = await documentRepository.findByIdAndUserIncludingDeleted(
+      documentId,
+      userId
+    );
+    if (!ownedDocument) {
+      throw documentNotFoundError();
     }
 
-    const currentChunkCount = document.chunkCount;
+    const deletion = await withTransaction(async (tx) => {
+      // Keep the lock order aligned with knowledge base deletion/upload flows.
+      await knowledgeBaseService.lockOwnership(ownedDocument.knowledgeBaseId, userId, tx);
 
-    // All MySQL operations in a single transaction
-    await withTransaction(async (tx) => {
-      // 1. Soft delete document and reset chunkCount
+      const lockedDocument = await documentRepository.lockByIdAndUser(documentId, userId, tx);
+      if (!lockedDocument) {
+        throw documentNotFoundError();
+      }
+
+      if (lockedDocument.deletedAt) {
+        return {
+          deleted: false as const,
+          chunkCount: 0,
+          document: lockedDocument,
+        };
+      }
+
+      const currentChunkCount = lockedDocument.chunkCount;
+
+      if (currentChunkCount > 0) {
+        await documentRepository.update(documentId, { chunkCount: 0 }, tx);
+      }
+
       await documentRepository.softDelete(documentId, userId, tx);
-      await documentRepository.update(documentId, { chunkCount: 0 }, tx);
-
-      // 2. Delete chunks from MySQL
       await documentChunkRepository.deleteByDocumentId(documentId, tx);
+      await knowledgeBaseService.incrementDocumentCount(lockedDocument.knowledgeBaseId, -1, tx);
 
-      // 3. Update knowledge base counters
-      await knowledgeBaseService.incrementDocumentCount(document.knowledgeBaseId, -1, tx);
       if (currentChunkCount > 0) {
         await knowledgeBaseService.incrementTotalChunks(
-          document.knowledgeBaseId,
+          lockedDocument.knowledgeBaseId,
           -currentChunkCount,
           tx
         );
       }
+
+      return {
+        deleted: true as const,
+        chunkCount: currentChunkCount,
+        document: lockedDocument,
+      };
     });
+
+    if (!deletion.deleted) {
+      return;
+    }
 
     // 4. Delete vectors from Qdrant (outside transaction - eventual consistency)
     try {
       const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(
-        document.knowledgeBaseId
+        deletion.document.knowledgeBaseId
       );
       await vectorRepository.deleteByDocumentId(embeddingConfig.collectionName, documentId);
     } catch (err) {
       logger.warn(
-        { documentId, chunkCount: currentChunkCount, err },
+        { documentId, chunkCount: deletion.chunkCount, err },
         'Vector deletion failed - vectors marked as deleted for search exclusion'
       );
     }
@@ -210,11 +237,11 @@ export const documentService = {
       userId,
       resourceType: 'document',
       resourceId: documentId,
-      resourceName: document.title,
+      resourceName: deletion.document.title,
       action: 'document.delete',
-      description: `Moved document to trash: ${document.title}`,
+      description: `Moved document to trash: ${deletion.document.title}`,
       metadata: {
-        chunksDeleted: currentChunkCount,
+        chunksDeleted: deletion.chunkCount,
       },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,

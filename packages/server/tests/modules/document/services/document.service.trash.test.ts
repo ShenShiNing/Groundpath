@@ -26,6 +26,8 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
   documentRepository: {
     create: vi.fn(),
     findByIdAndUser: vi.fn(),
+    findByIdAndUserIncludingDeleted: vi.fn(),
+    lockByIdAndUser: vi.fn(),
     list: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
@@ -63,9 +65,10 @@ vi.mock('@modules/document/services/document-storage.service', () => ({
   },
 }));
 
-vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: {
     validateOwnership: vi.fn(),
+    lockOwnership: vi.fn(() => Promise.resolve()),
     getEmbeddingConfig: vi.fn(() =>
       Promise.resolve({
         collectionName: 'test-collection',
@@ -216,11 +219,19 @@ describe('documentService > restore', () => {
   });
 
   // 场景 1：成功恢复文档
-  // 应从 findDeletedByIdAndUser 查找，然后清空 deletedAt/deletedBy
+  // 应在事务内锁定文档，再恢复 deletedAt/deletedBy
   it('should restore document from trash', async () => {
     const restoredDoc = { ...mockDocument, deletedAt: null, deletedBy: null };
-    vi.mocked(documentRepository.findDeletedByIdAndUser).mockResolvedValue(mockDeletedDocument);
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(
+      mockDeletedDocument
+    );
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDeletedDocument);
     vi.mocked(documentRepository.restore).mockResolvedValue(restoredDoc);
+    vi.mocked(documentRepository.update).mockResolvedValue({
+      ...restoredDoc,
+      processingStatus: 'pending',
+      processingError: null,
+    });
 
     const result = await documentService.restore('doc-deleted-1', mockUserId);
 
@@ -230,7 +241,7 @@ describe('documentService > restore', () => {
       { restored: true, id: result.id }
     );
 
-    expect(documentRepository.findDeletedByIdAndUser).toHaveBeenCalledWith(
+    expect(documentRepository.findByIdAndUserIncludingDeleted).toHaveBeenCalledWith(
       'doc-deleted-1',
       mockUserId
     );
@@ -240,7 +251,7 @@ describe('documentService > restore', () => {
 
   // 场景 2：回收站中找不到文档
   it('should throw DOCUMENT_NOT_FOUND when document not in trash', async () => {
-    vi.mocked(documentRepository.findDeletedByIdAndUser).mockResolvedValue(undefined);
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(undefined);
 
     let actual: { code: string; statusCode: number } | null = null;
     try {
@@ -258,6 +269,19 @@ describe('documentService > restore', () => {
     expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND);
     expect(actual?.statusCode).toBe(404);
     expect(documentRepository.restore).not.toHaveBeenCalled();
+  });
+
+  // 场景 3：并发重复恢复在拿到锁后发现已恢复，应直接返回
+  it('should no-op when document is already restored after acquiring the lock', async () => {
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(
+      mockDeletedDocument
+    );
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDocument);
+
+    const result = await documentService.restore('doc-deleted-1', mockUserId);
+
+    expect(documentRepository.restore).not.toHaveBeenCalled();
+    expect(result.id).toBe(mockDocument.id);
   });
 });
 

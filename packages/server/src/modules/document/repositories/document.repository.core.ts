@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNotNull, isNull, like } from 'drizzle-orm';
+import { and, asc, count, desc, eq, isNotNull, isNull, like, sql } from 'drizzle-orm';
 import type { DocumentListParams, TrashListParams } from '@groundpath/shared/types';
 import { db } from '@core/db';
 import { getDbContext, now, type Transaction } from '@core/db/db.utils';
@@ -18,6 +18,46 @@ async function findActiveDocumentById(id: string, tx?: Transaction): Promise<Doc
     .limit(1);
 
   return result[0];
+}
+
+type DocumentDeletedState = 'active' | 'deleted' | 'any';
+
+function buildDeletedStateFilter(deletedState: DocumentDeletedState) {
+  if (deletedState === 'active') {
+    return isNull(documents.deletedAt);
+  }
+
+  if (deletedState === 'deleted') {
+    return isNotNull(documents.deletedAt);
+  }
+
+  return undefined;
+}
+
+async function findOwnedDocumentById(
+  id: string,
+  userId: string,
+  deletedState: DocumentDeletedState,
+  tx?: Transaction
+): Promise<Document | undefined> {
+  const ctx = getDbContext(tx);
+  const conditions = [eq(documents.id, id), eq(documents.userId, userId)];
+  const deletedStateFilter = buildDeletedStateFilter(deletedState);
+  if (deletedStateFilter) {
+    conditions.push(deletedStateFilter);
+  }
+
+  const result = await ctx
+    .select()
+    .from(documents)
+    .where(and(...conditions))
+    .limit(1);
+
+  return result[0];
+}
+
+function extractRows<T>(result: unknown): T[] {
+  return (result as [T[]])[0] ?? [];
 }
 
 function buildDocumentOrderBy(sortBy: DocumentListParams['sortBy']) {
@@ -48,14 +88,40 @@ export const documentRepositoryCore = {
 
   findById: findActiveDocumentById,
 
-  async findByIdAndUser(id: string, userId: string): Promise<Document | undefined> {
-    const result = await db
-      .select()
-      .from(documents)
-      .where(and(eq(documents.id, id), eq(documents.userId, userId), isNull(documents.deletedAt)))
-      .limit(1);
+  findByIdAndUser(id: string, userId: string, tx?: Transaction): Promise<Document | undefined> {
+    return findOwnedDocumentById(id, userId, 'active', tx);
+  },
 
-    return result[0];
+  findByIdAndUserIncludingDeleted(
+    id: string,
+    userId: string,
+    tx?: Transaction
+  ): Promise<Document | undefined> {
+    return findOwnedDocumentById(id, userId, 'any', tx);
+  },
+
+  async lockByIdAndUser(
+    id: string,
+    userId: string,
+    tx: Transaction
+  ): Promise<Document | undefined> {
+    const ctx = getDbContext(tx);
+    const rows = extractRows<{ id: string }>(
+      await ctx.execute(sql`
+        SELECT id
+        FROM documents
+        WHERE id = ${id}
+          AND user_id = ${userId}
+        LIMIT 1
+        FOR UPDATE
+      `)
+    );
+
+    if (rows.length === 0) {
+      return undefined;
+    }
+
+    return findOwnedDocumentById(id, userId, 'any', tx);
   },
 
   async listByKnowledgeBaseId(
@@ -137,16 +203,12 @@ export const documentRepositoryCore = {
       .where(eq(documents.id, id));
   },
 
-  async findDeletedByIdAndUser(id: string, userId: string): Promise<Document | undefined> {
-    const result = await db
-      .select()
-      .from(documents)
-      .where(
-        and(eq(documents.id, id), eq(documents.userId, userId), isNotNull(documents.deletedAt))
-      )
-      .limit(1);
-
-    return result[0];
+  findDeletedByIdAndUser(
+    id: string,
+    userId: string,
+    tx?: Transaction
+  ): Promise<Document | undefined> {
+    return findOwnedDocumentById(id, userId, 'deleted', tx);
   },
 
   async listDeleted(

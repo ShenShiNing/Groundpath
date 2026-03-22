@@ -21,6 +21,10 @@ import { toDocumentInfo } from './document-upload.service';
 
 const logger = createLogger('document-content.service');
 
+function documentNotFoundError(message: string = 'Document not found') {
+  return Errors.auth(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND', message, 404);
+}
+
 /**
  * Document content service for handling content read/write and download operations
  */
@@ -95,11 +99,7 @@ export const documentContentService = {
     const startTime = Date.now();
     const document = await documentRepository.findByIdAndUser(documentId, userId);
     if (!document) {
-      throw Errors.auth(
-        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-        'Document not found',
-        404
-      );
+      throw documentNotFoundError();
     }
 
     const isEditable = document.documentType === 'markdown' || document.documentType === 'text';
@@ -141,16 +141,44 @@ export const documentContentService = {
       originalname: fileName,
     });
 
-    const newVersion = document.currentVersion + 1;
     const fileSize = buffer.length;
 
     let updated: Document | undefined;
+    let versionContext:
+      | {
+          previousVersion: number;
+          newVersion: number;
+          title: string;
+        }
+      | undefined;
     try {
       updated = await withTransaction(async (tx) => {
+        const lockedDocument = await documentRepository.lockByIdAndUser(documentId, userId, tx);
+        if (!lockedDocument || lockedDocument.deletedAt) {
+          throw documentNotFoundError();
+        }
+
+        const lockedIsEditable =
+          lockedDocument.documentType === 'markdown' || lockedDocument.documentType === 'text';
+        if (!lockedIsEditable) {
+          throw Errors.auth(
+            DOCUMENT_ERROR_CODES.ACCESS_DENIED as 'ACCESS_DENIED',
+            'Document type does not support editing',
+            400
+          );
+        }
+
+        const newVersion = lockedDocument.currentVersion + 1;
+        versionContext = {
+          previousVersion: lockedDocument.currentVersion,
+          newVersion,
+          title: lockedDocument.title,
+        };
+
         await documentVersionRepository.create(
           {
             id: uuidv4(),
-            documentId: document.id,
+            documentId: lockedDocument.id,
             version: newVersion,
             fileName,
             mimeType: resolvedMimeType,
@@ -198,12 +226,12 @@ export const documentContentService = {
       userId,
       resourceType: 'document',
       resourceId: documentId,
-      resourceName: document.title,
+      resourceName: versionContext?.title ?? document.title,
       action: 'document.update',
-      description: `Edited document content: ${document.title}`,
+      description: `Edited document content: ${versionContext?.title ?? document.title}`,
       metadata: {
-        previousVersion: document.currentVersion,
-        newVersion,
+        previousVersion: versionContext?.previousVersion ?? document.currentVersion,
+        newVersion: versionContext?.newVersion ?? document.currentVersion + 1,
         fileName,
         fileSize,
         changeNote: data.changeNote ?? null,
@@ -214,7 +242,7 @@ export const documentContentService = {
     });
 
     dispatchDocumentProcessing(documentId, userId, {
-      targetDocumentVersion: newVersion,
+      targetDocumentVersion: versionContext?.newVersion ?? document.currentVersion + 1,
       reason: 'edit',
     }).catch((err) => {
       logger.warn({ documentId, err }, 'Failed to enqueue document processing after edit');
