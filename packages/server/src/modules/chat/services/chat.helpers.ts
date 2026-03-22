@@ -1,7 +1,7 @@
 import type { Response } from 'express';
 import type { Citation, MessageMetadata, SSEEvent } from '@groundpath/shared/types';
 import type { SearchResult } from '@modules/vector';
-import { documentRepository } from '@modules/document';
+import { documentRepository } from '@modules/document/public/repositories';
 import { messageService } from './message.service';
 import type { EnrichedSearchResult, PersistAssistantMessageInput } from './chat.types';
 

@@ -87,7 +87,7 @@ const {
   },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: documentRepositoryMock,
   documentVersionRepository: documentVersionRepositoryMock,
   documentChunkRepository: documentChunkRepositoryMock,
@@ -105,7 +105,7 @@ vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
   documentChunkRepository: documentChunkRepositoryMock,
 }));
 
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: knowledgeBaseServiceMock,
 }));
 

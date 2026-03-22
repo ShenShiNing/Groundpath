@@ -42,37 +42,13 @@ vi.mock('@modules/document-index/repositories/document-index-version.repository'
   },
 }));
 
-vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentChunkRepository: {
     countByIndexVersionId: countByIndexVersionIdMock,
   },
 }));
 
-vi.mock('@modules/document/repositories', () => ({
-  documentChunkRepository: {
-    countByIndexVersionId: countByIndexVersionIdMock,
-  },
-}));
-
-vi.mock('@modules/document', () => ({
-  documentChunkRepository: {
-    countByIndexVersionId: countByIndexVersionIdMock,
-  },
-}));
-
-vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
-  knowledgeBaseService: {
-    getEmbeddingConfig: getEmbeddingConfigMock,
-  },
-}));
-
-vi.mock('@modules/knowledge-base/services', () => ({
-  knowledgeBaseService: {
-    getEmbeddingConfig: getEmbeddingConfigMock,
-  },
-}));
-
-vi.mock('@modules/knowledge-base', () => ({
+vi.mock('@modules/knowledge-base/public/management', () => ({
   knowledgeBaseService: {
     getEmbeddingConfig: getEmbeddingConfigMock,
   },

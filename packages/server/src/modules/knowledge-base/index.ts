@@ -1,7 +1,4 @@
-// Services
-export * from './services/knowledge-base.service';
-export { getCollectionName } from './services/knowledge-base.service';
-export * from './services/counter-sync.service';
-
-// Repositories
-export * from './repositories/knowledge-base.repository';
+// Legacy compatibility barrel. Cross-module callers must use public/* exports directly.
+export * from './public/management';
+export * from './public/counters';
+export * from './public/repositories';

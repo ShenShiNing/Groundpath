@@ -20,7 +20,7 @@ import { documentChunkRepository } from '../repositories/document-chunk.reposito
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
 import { vectorRepository } from '@modules/vector';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 import { documentTrashService } from './document-trash.service';
 import { documentVersionService } from './document-version.service';
 import { documentUploadService } from './document-upload.service';

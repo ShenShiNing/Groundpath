@@ -24,7 +24,31 @@
 - 推荐：`packages/server/src/modules/document-index/public/routing.ts`
 - 不推荐：直接导入 `packages/server/src/modules/document/services/...`
 
-### 2.2 public 入口变宽时
+### 2.2 不要拿 root barrel 代替 `public/*`
+
+对于已经拆出能力级出口的模块，跨模块调用不要再写成：
+
+- `@modules/document`
+- `@modules/knowledge-base`
+- `@modules/logs`
+- `@modules/document-index`
+
+改成对应能力出口，例如：
+
+- `@modules/document/public/management`
+- `@modules/document/public/repositories`
+- `@modules/document/public/storage`
+- `@modules/knowledge-base/public/management`
+- `@modules/knowledge-base/public/counters`
+- `@modules/logs/public/maintenance`
+- `@modules/logs/public/repositories`
+- `@modules/document-index/public/backfill`
+- `@modules/document-index/public/artifact-cleanup`
+- `@modules/document-index/public/indexing`
+
+仓库里的 `dependency-cruiser` 已经对以上 4 个模块的跨模块 root barrel import 报错，避免“文档要求走 `public/*`，代码却还能偷走根出口”的回退。
+
+### 2.3 public 入口变宽时
 
 出现下面任一信号，就应该继续拆小：
 
@@ -57,6 +81,7 @@ pnpm architecture:check:all
 review 后端跨模块改动时，默认检查下面三件事：
 
 1. 新增复用是否经过 `public/*`
+   不是直接走 `@modules/<module>` root barrel
 2. `public/*` 是否仍然是能力分组，而不是新的 mega barrel
 3. `pnpm architecture:check` 是否为绿
 

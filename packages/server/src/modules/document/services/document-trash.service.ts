@@ -17,7 +17,7 @@ import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
 import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 import { vectorRepository } from '@modules/vector';
-import { knowledgeBaseService } from '@modules/knowledge-base';
+import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 
 const logger = createLogger('document-trash.service');
 

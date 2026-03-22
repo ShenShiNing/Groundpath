@@ -19,7 +19,7 @@ vi.mock('@modules/rag', () => ({
   searchService: { searchInKnowledgeBase: searchInKnowledgeBaseMock },
 }));
 
-vi.mock('@modules/document', () => ({
+vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: { getTitlesByIds: getTitlesByIdsMock },
 }));
 

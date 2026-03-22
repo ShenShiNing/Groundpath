@@ -1,5 +1,8 @@
 import type { EmbeddingProvider } from '@modules/embedding';
-import { documentRepository, documentVersionRepository } from '@modules/document';
+import {
+  documentRepository,
+  documentVersionRepository,
+} from '@modules/document/public/repositories';
 import type {
   DocumentRouteMode,
   DocumentRouteReason,

@@ -28,7 +28,7 @@ module.exports = {
       name: 'no-cross-module-controller-import',
       severity: 'error',
       comment:
-        'Controllers are module boundaries. Cross-module access should go through the target module barrel or a public service API.',
+        'Controllers are module boundaries. Cross-module access should go through the target module public/* API.',
       from: { path: '^packages/server/src/modules/([^/]+)/' },
       to: {
         path: '^packages/server/src/modules/(?!$1/)[^/]+/controllers/.+\\.ts$',
@@ -69,10 +69,60 @@ module.exports = {
       name: 'no-cross-module-deep-import',
       severity: 'warn',
       comment:
-        'Cross-module imports should go through the target module barrel, not deep into internal services or repositories.',
+        'Cross-module imports should go through the target module public/* API, not deep into internal services or repositories.',
       from: { path: '^packages/server/src/modules/([^/]+)/' },
       to: {
         path: '^packages/server/src/modules/(?!$1/)[^/]+/(services|repositories)/.+\\.ts$',
+      },
+    },
+
+    // ── Rule 7: Selected modules must not be imported via root barrel across modules ──
+    {
+      name: 'no-document-root-barrel',
+      severity: 'error',
+      comment:
+        'Cross-module imports for document must use @modules/document/public/* capability exports.',
+      from: {
+        pathNot: '^packages/server/src/modules/document/',
+      },
+      to: {
+        path: '^packages/server/src/modules/document/index\\.ts$',
+      },
+    },
+    {
+      name: 'no-knowledge-base-root-barrel',
+      severity: 'error',
+      comment:
+        'Cross-module imports for knowledge-base must use @modules/knowledge-base/public/* capability exports.',
+      from: {
+        pathNot: '^packages/server/src/modules/knowledge-base/',
+      },
+      to: {
+        path: '^packages/server/src/modules/knowledge-base/index\\.ts$',
+      },
+    },
+    {
+      name: 'no-logs-root-barrel',
+      severity: 'error',
+      comment:
+        'Cross-module imports for logs must use @modules/logs/public/* capability exports.',
+      from: {
+        pathNot: '^packages/server/src/modules/logs/',
+      },
+      to: {
+        path: '^packages/server/src/modules/logs/index\\.ts$',
+      },
+    },
+    {
+      name: 'no-document-index-root-barrel',
+      severity: 'error',
+      comment:
+        'Cross-module imports for document-index must use @modules/document-index/public/* capability exports.',
+      from: {
+        pathNot: '^packages/server/src/modules/document-index/',
+      },
+      to: {
+        path: '^packages/server/src/modules/document-index/index\\.ts$',
       },
     },
   ],

@@ -32,9 +32,9 @@ if (!databaseConfig.url) {
   process.exit(1);
 }
 
-import { counterSyncService, type SyncResult } from '@modules/knowledge-base';
-import { knowledgeBaseRepository } from '@modules/knowledge-base';
-import { documentRepository } from '@modules/document';
+import { counterSyncService, type SyncResult } from '@modules/knowledge-base/public/counters';
+import { knowledgeBaseRepository } from '@modules/knowledge-base/public/repositories';
+import { documentRepository } from '@modules/document/public/repositories';
 
 async function main() {
   const args = process.argv.slice(2);
