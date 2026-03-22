@@ -13,6 +13,7 @@ export * from './auth/user-token-states.schema';
 export * from './system/login-logs.schema';
 export * from './system/operation-logs.schema';
 export * from './system/system-logs.schema';
+export * from './system/structured-rag-metric-rollups.schema';
 
 // Document schemas
 export * from './document/knowledge-bases.schema';

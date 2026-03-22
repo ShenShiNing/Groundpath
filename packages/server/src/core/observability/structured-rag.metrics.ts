@@ -1,19 +1,21 @@
 import type { AgentStopReason } from '@groundpath/shared/types';
 import { createLogger } from '@core/logger';
+import type { RecordStructuredRagMetricInput } from '@modules/logs/public/structured-rag-observability';
 
 const logger = createLogger('structured-rag.metrics');
 
-function persistMetric(
-  params: Parameters<typeof import('@core/logger/system-logger').logSystemEvent>[0]
-): void {
+function persistMetric(params: RecordStructuredRagMetricInput): void {
   if (process.env.NODE_ENV === 'test') return;
 
-  void import('@core/logger/system-logger')
-    .then(({ logSystemEvent }) => {
-      logSystemEvent(params);
+  void import('@modules/logs/public/structured-rag-observability')
+    .then(({ recordStructuredRagMetric }) => {
+      return recordStructuredRagMetric(params);
     })
     .catch((error) => {
-      logger.warn({ err: error, event: params.event }, 'Failed to persist structured RAG metric');
+      logger.warn(
+        { err: error, event: params.log.event },
+        'Failed to persist structured RAG metric'
+      );
     });
 }
 
@@ -110,13 +112,29 @@ export const structuredRagMetrics = {
       'Structured RAG agent execution metric'
     );
     persistMetric({
-      level: 'info',
-      category: 'performance',
-      event: 'structured_rag.agent_execution',
-      message: 'Structured RAG agent execution metric',
-      source: 'structured-rag',
-      durationMs: input.durationMs,
-      metadata,
+      log: {
+        level: 'info',
+        category: 'performance',
+        event: 'structured_rag.agent_execution',
+        message: 'Structured RAG agent execution metric',
+        source: 'structured-rag',
+        durationMs: input.durationMs,
+        metadata,
+      },
+      rollup: {
+        eventType: 'agent_execution',
+        userId: input.userId,
+        knowledgeBaseId: input.knowledgeBaseId,
+        totalCount: 1,
+        fallbackCount: input.fallbackToolCalls > 0 ? 1 : 0,
+        budgetExhaustedCount: input.stopReason === 'budget_exhausted' ? 1 : 0,
+        toolTimeoutCount: input.stopReason === 'tool_timeout' ? 1 : 0,
+        providerErrorCount: input.stopReason === 'provider_error' ? 1 : 0,
+        insufficientEvidenceCount: input.stopReason === 'insufficient_evidence' ? 1 : 0,
+        totalDurationMs: input.durationMs,
+        totalFinalCitationCount: input.finalCitationCount,
+        totalRetrievedCitationCount: input.retrievedCitationCount,
+      },
     });
   },
 
@@ -139,12 +157,14 @@ export const structuredRagMetrics = {
       'Structured RAG chat completion metric'
     );
     persistMetric({
-      level: 'info',
-      category: 'performance',
-      event: 'structured_rag.chat_completion',
-      message: 'Structured RAG chat completion metric',
-      source: 'structured-rag',
-      metadata,
+      log: {
+        level: 'info',
+        category: 'performance',
+        event: 'structured_rag.chat_completion',
+        message: 'Structured RAG chat completion metric',
+        source: 'structured-rag',
+        metadata,
+      },
     });
   },
 
@@ -171,15 +191,28 @@ export const structuredRagMetrics = {
       'Structured RAG index build metric'
     );
     persistMetric({
-      level: input.success ? 'info' : 'warn',
-      category: 'performance',
-      event: 'structured_rag.index_build',
-      message: input.success
-        ? 'Structured RAG index build metric'
-        : 'Structured RAG index build failure metric',
-      source: 'structured-rag',
-      durationMs: input.parseDurationMs ?? null,
-      metadata,
+      log: {
+        level: input.success ? 'info' : 'warn',
+        category: 'performance',
+        event: 'structured_rag.index_build',
+        message: input.success
+          ? 'Structured RAG index build metric'
+          : 'Structured RAG index build failure metric',
+        source: 'structured-rag',
+        durationMs: input.parseDurationMs ?? null,
+        metadata,
+      },
+      rollup: {
+        eventType: 'index_build',
+        userId: input.userId,
+        knowledgeBaseId: input.knowledgeBaseId,
+        totalCount: 1,
+        successCount: input.success ? 1 : 0,
+        structuredRequestedCount: input.routeMode === 'structured' ? 1 : 0,
+        structuredParsedCount: input.parseMethod === 'structured' ? 1 : 0,
+        totalDurationMs: input.parseDurationMs ?? 0,
+        totalFreshnessLagMs: input.indexFreshnessLagMs ?? 0,
+      },
     });
   },
 
@@ -197,12 +230,22 @@ export const structuredRagMetrics = {
       'Structured RAG index graph metric'
     );
     persistMetric({
-      level: 'info',
-      category: 'performance',
-      event: 'structured_rag.index_graph',
-      message: 'Structured RAG index graph metric',
-      source: 'structured-rag',
-      metadata,
+      log: {
+        level: 'info',
+        category: 'performance',
+        event: 'structured_rag.index_graph',
+        message: 'Structured RAG index graph metric',
+        source: 'structured-rag',
+        metadata,
+      },
+      rollup: {
+        eventType: 'index_graph',
+        userId: input.userId,
+        knowledgeBaseId: input.knowledgeBaseId,
+        totalCount: 1,
+        totalNodes: input.nodeCount,
+        totalEdges: input.edgeCount,
+      },
     });
   },
 
@@ -226,13 +269,15 @@ export const structuredRagMetrics = {
       'Structured RAG image description metric'
     );
     persistMetric({
-      level: 'info',
-      category: 'performance',
-      event: 'structured_rag.image_description',
-      message: 'Structured RAG image description metric',
-      source: 'structured-rag',
-      durationMs: input.totalLatencyMs,
-      metadata,
+      log: {
+        level: 'info',
+        category: 'performance',
+        event: 'structured_rag.image_description',
+        message: 'Structured RAG image description metric',
+        source: 'structured-rag',
+        durationMs: input.totalLatencyMs,
+        metadata,
+      },
     });
   },
 };

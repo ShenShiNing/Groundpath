@@ -1,6 +1,3 @@
-import { and, desc, eq, gte, sql } from 'drizzle-orm';
-import { db } from '@core/db';
-import { systemLogs } from '@core/db/schema/system/system-logs.schema';
 import { structuredRagObservabilityConfig } from '@config/env';
 import type {
   StructuredRagDashboardAlert,
@@ -8,12 +5,27 @@ import type {
   StructuredRagDashboardSummary,
   StructuredRagDashboardTrendPoint,
 } from '@groundpath/shared/types';
+import type { StructuredRagMetricEventType } from '@core/db/schema/system/structured-rag-metric-rollups.schema';
+import {
+  structuredRagMetricRollupRepository,
+  type StructuredRagMetricBucketRow,
+  type StructuredRagMetricKnowledgeBaseRow,
+  type StructuredRagMetricSummaryRow,
+} from '../repositories/structured-rag-metric-rollup.repository';
+import { systemLogRepository } from '../repositories/system-log.repository';
 
 export interface StructuredRagDashboardParams {
   userId?: string;
   hours: number;
   recentLimit: number;
   knowledgeBaseId?: string;
+}
+
+interface TrendAccumulator {
+  agentExecutions: number;
+  fallbackCount: number;
+  indexBuilds: number;
+  structuredParsedCount: number;
 }
 
 function round(value: number): number {
@@ -31,10 +43,14 @@ function numeric(value: unknown): number {
   return 0;
 }
 
-function buildKnowledgeBaseFilter(knowledgeBaseId?: string) {
-  if (!knowledgeBaseId) return sql``;
+function floorToRollupBucket(date: Date): Date {
+  const bucket = new Date(date);
+  const bucketMinutes = structuredRagObservabilityConfig.rollupBucketMinutes;
 
-  return sql`AND JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) = ${knowledgeBaseId}`;
+  bucket.setUTCSeconds(0, 0);
+  bucket.setUTCMinutes(bucket.getUTCMinutes() - (bucket.getUTCMinutes() % bucketMinutes));
+
+  return bucket;
 }
 
 function buildTrendLabels(bucketStart: Date, bucketEnd: Date, bucketHours: number): string {
@@ -128,120 +144,130 @@ function getTrendConfig(hours: number): {
   };
 }
 
+function emptySummaryRow(eventType: StructuredRagMetricEventType): StructuredRagMetricSummaryRow {
+  return {
+    eventType,
+    totalCount: 0,
+    fallbackCount: 0,
+    budgetExhaustedCount: 0,
+    toolTimeoutCount: 0,
+    providerErrorCount: 0,
+    insufficientEvidenceCount: 0,
+    totalDurationMs: 0,
+    totalFinalCitationCount: 0,
+    totalRetrievedCitationCount: 0,
+    successCount: 0,
+    structuredRequestedCount: 0,
+    structuredParsedCount: 0,
+    totalFreshnessLagMs: 0,
+    totalNodes: 0,
+    totalEdges: 0,
+  };
+}
+
+function getSummaryRow(
+  rows: StructuredRagMetricSummaryRow[],
+  eventType: StructuredRagMetricEventType
+): StructuredRagMetricSummaryRow {
+  return rows.find((row) => row.eventType === eventType) ?? emptySummaryRow(eventType);
+}
+
+function findBucketIndex(
+  bucketStartMs: number,
+  windowStartMs: number,
+  bucketMs: number,
+  bucketCount: number
+): number {
+  const offset = bucketStartMs - windowStartMs;
+  if (offset < 0) return -1;
+
+  const index = Math.floor(offset / bucketMs);
+  return index >= bucketCount ? bucketCount - 1 : index;
+}
+
+function applyTrendRow(acc: TrendAccumulator, row: StructuredRagMetricBucketRow): void {
+  if (row.eventType === 'agent_execution') {
+    acc.agentExecutions += numeric(row.totalCount);
+    acc.fallbackCount += numeric(row.fallbackCount);
+    return;
+  }
+
+  if (row.eventType === 'index_build') {
+    acc.indexBuilds += numeric(row.totalCount);
+    acc.structuredParsedCount += numeric(row.structuredParsedCount);
+  }
+}
+
+function applyKnowledgeBaseRow(
+  breakdownByKb: Map<string, StructuredRagDashboardKnowledgeBaseBreakdown>,
+  row: StructuredRagMetricKnowledgeBaseRow
+): void {
+  const knowledgeBaseId = row.knowledgeBaseId;
+  if (!knowledgeBaseId) return;
+
+  const current = breakdownByKb.get(knowledgeBaseId) ?? {
+    knowledgeBaseId,
+    agentExecutions: 0,
+    fallbackRatio: 0,
+    providerErrorRate: 0,
+    structuredCoverage: 0,
+    avgFreshnessLagMs: 0,
+  };
+
+  if (row.eventType === 'agent_execution') {
+    const agentExecutions = numeric(row.totalCount);
+    current.agentExecutions = agentExecutions;
+    current.fallbackRatio = percentage(numeric(row.fallbackCount), agentExecutions);
+    current.providerErrorRate = percentage(numeric(row.providerErrorCount), agentExecutions);
+  }
+
+  if (row.eventType === 'index_build') {
+    const totalBuilds = numeric(row.totalCount);
+    current.structuredCoverage = percentage(numeric(row.structuredParsedCount), totalBuilds);
+    current.avgFreshnessLagMs =
+      totalBuilds > 0 ? round(numeric(row.totalFreshnessLagMs) / totalBuilds) : 0;
+  }
+
+  breakdownByKb.set(knowledgeBaseId, current);
+}
+
 export const structuredRagDashboardService = {
   async getSummary(params: StructuredRagDashboardParams): Promise<StructuredRagDashboardSummary> {
     const since = new Date(Date.now() - params.hours * 60 * 60 * 1000);
-    const knowledgeBaseFilter = buildKnowledgeBaseFilter(params.knowledgeBaseId);
-    const userFilter = params.userId
-      ? sql`AND JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.userId')) = ${params.userId}`
-      : sql``;
-
-    const [agentRows, indexRows, graphRows, recentEvents, agentBreakdownRows, indexBreakdownRows] =
-      await Promise.all([
-        db.execute(sql`
-        SELECT
-          COUNT(*) AS totalExecutions,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.usedFallback')) = 'true' THEN 1 ELSE 0 END), 0) AS fallbackCount,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.stopReason')) = 'budget_exhausted' THEN 1 ELSE 0 END), 0) AS budgetExhaustedCount,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.stopReason')) = 'tool_timeout' THEN 1 ELSE 0 END), 0) AS toolTimeoutCount,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.stopReason')) = 'provider_error' THEN 1 ELSE 0 END), 0) AS providerErrorCount,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.stopReason')) = 'insufficient_evidence' THEN 1 ELSE 0 END), 0) AS insufficientEvidenceCount,
-          COALESCE(AVG(${systemLogs.durationMs}), 0) AS avgDurationMs,
-          COALESCE(AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.finalCitationCount')) AS DECIMAL(12, 2))), 0) AS avgFinalCitationCount,
-          COALESCE(AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.retrievedCitationCount')) AS DECIMAL(12, 2))), 0) AS avgRetrievedCitationCount
-        FROM ${systemLogs}
-        WHERE ${systemLogs.event} = 'structured_rag.agent_execution'
-          AND ${systemLogs.createdAt} >= ${since}
-          ${userFilter}
-          ${knowledgeBaseFilter}
-      `),
-        db.execute(sql`
-        SELECT
-          COUNT(*) AS totalBuilds,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.success')) = 'true' THEN 1 ELSE 0 END), 0) AS successCount,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.structuredRequested')) = 'true' THEN 1 ELSE 0 END), 0) AS structuredRequestedCount,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.structuredParsed')) = 'true' THEN 1 ELSE 0 END), 0) AS structuredParsedCount,
-          COALESCE(AVG(${systemLogs.durationMs}), 0) AS avgParseDurationMs,
-          COALESCE(AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.indexFreshnessLagMs')) AS DECIMAL(16, 2))), 0) AS avgFreshnessLagMs
-        FROM ${systemLogs}
-        WHERE ${systemLogs.event} = 'structured_rag.index_build'
-          AND ${systemLogs.createdAt} >= ${since}
-          ${userFilter}
-          ${knowledgeBaseFilter}
-      `),
-        db.execute(sql`
-        SELECT
-          COUNT(*) AS graphBuilds,
-          COALESCE(SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.nodeCount')) AS UNSIGNED)), 0) AS totalNodes,
-          COALESCE(SUM(CAST(JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.edgeCount')) AS UNSIGNED)), 0) AS totalEdges
-        FROM ${systemLogs}
-        WHERE ${systemLogs.event} = 'structured_rag.index_graph'
-          AND ${systemLogs.createdAt} >= ${since}
-          ${userFilter}
-          ${knowledgeBaseFilter}
-      `),
-        db
-          .select({
-            id: systemLogs.id,
-            event: systemLogs.event,
-            message: systemLogs.message,
-            createdAt: systemLogs.createdAt,
-            durationMs: systemLogs.durationMs,
-            metadata: systemLogs.metadata,
-          })
-          .from(systemLogs)
-          .where(
-            and(
-              eq(systemLogs.category, 'performance'),
-              gte(systemLogs.createdAt, since),
-              params.userId
-                ? sql`JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.userId')) = ${params.userId}`
-                : undefined,
-              params.knowledgeBaseId
-                ? sql`JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) = ${params.knowledgeBaseId}`
-                : undefined,
-              sql`${systemLogs.event} IN ('structured_rag.agent_execution', 'structured_rag.chat_completion', 'structured_rag.index_build', 'structured_rag.index_graph')`
-            )
-          )
-          .orderBy(desc(systemLogs.createdAt))
-          .limit(params.recentLimit),
-        db.execute(sql`
-        SELECT
-          JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) AS knowledgeBaseId,
-          COUNT(*) AS totalExecutions,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.usedFallback')) = 'true' THEN 1 ELSE 0 END), 0) AS fallbackCount,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.stopReason')) = 'provider_error' THEN 1 ELSE 0 END), 0) AS providerErrorCount
-        FROM ${systemLogs}
-        WHERE ${systemLogs.event} = 'structured_rag.agent_execution'
-          AND ${systemLogs.createdAt} >= ${since}
-          ${userFilter}
-          AND JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) IS NOT NULL
-          ${knowledgeBaseFilter}
-        GROUP BY JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId'))
-      `),
-        db.execute(sql`
-        SELECT
-          JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) AS knowledgeBaseId,
-          COUNT(*) AS totalBuilds,
-          COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.structuredParsed')) = 'true' THEN 1 ELSE 0 END), 0) AS structuredParsedCount,
-          COALESCE(AVG(CAST(JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.indexFreshnessLagMs')) AS DECIMAL(16, 2))), 0) AS avgFreshnessLagMs
-        FROM ${systemLogs}
-        WHERE ${systemLogs.event} = 'structured_rag.index_build'
-          AND ${systemLogs.createdAt} >= ${since}
-          ${userFilter}
-          AND JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId')) IS NOT NULL
-          ${knowledgeBaseFilter}
-        GROUP BY JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.knowledgeBaseId'))
-      `),
-      ]);
-
-    const agent = ((agentRows as unknown as [Array<Record<string, unknown>>])[0] ?? [])[0] ?? {};
-    const index = ((indexRows as unknown as [Array<Record<string, unknown>>])[0] ?? [])[0] ?? {};
-    const graph = ((graphRows as unknown as [Array<Record<string, unknown>>])[0] ?? [])[0] ?? {};
-
-    const totalExecutions = numeric(agent.totalExecutions);
-    const totalBuilds = numeric(index.totalBuilds);
+    const effectiveSince = floorToRollupBucket(since);
     const trendConfig = getTrendConfig(params.hours);
+
+    const [summaryRows, trendRows, knowledgeBaseRows, recentEvents] = await Promise.all([
+      structuredRagMetricRollupRepository.getSummaryRows({
+        since: effectiveSince,
+        userId: params.userId,
+        knowledgeBaseId: params.knowledgeBaseId,
+      }),
+      structuredRagMetricRollupRepository.getBucketRows({
+        since: effectiveSince,
+        userId: params.userId,
+        knowledgeBaseId: params.knowledgeBaseId,
+      }),
+      structuredRagMetricRollupRepository.getKnowledgeBaseRows({
+        since: effectiveSince,
+        userId: params.userId,
+        knowledgeBaseId: params.knowledgeBaseId,
+      }),
+      systemLogRepository.listStructuredRagRecentEvents({
+        since: effectiveSince,
+        userId: params.userId,
+        knowledgeBaseId: params.knowledgeBaseId,
+        limit: params.recentLimit,
+      }),
+    ]);
+
+    const agent = getSummaryRow(summaryRows, 'agent_execution');
+    const index = getSummaryRow(summaryRows, 'index_build');
+    const graph = getSummaryRow(summaryRows, 'index_graph');
+
+    const totalExecutions = numeric(agent.totalCount);
+    const totalBuilds = numeric(index.totalCount);
+
     const summary: StructuredRagDashboardSummary = {
       windowHours: params.hours,
       trendGranularity: trendConfig.granularity,
@@ -258,131 +284,79 @@ export const structuredRagDashboardService = {
           numeric(agent.insufficientEvidenceCount),
           totalExecutions
         ),
-        avgDurationMs: round(numeric(agent.avgDurationMs)),
-        avgFinalCitationCount: round(numeric(agent.avgFinalCitationCount)),
-        avgRetrievedCitationCount: round(numeric(agent.avgRetrievedCitationCount)),
+        avgDurationMs:
+          totalExecutions > 0 ? round(numeric(agent.totalDurationMs) / totalExecutions) : 0,
+        avgFinalCitationCount:
+          totalExecutions > 0 ? round(numeric(agent.totalFinalCitationCount) / totalExecutions) : 0,
+        avgRetrievedCitationCount:
+          totalExecutions > 0
+            ? round(numeric(agent.totalRetrievedCitationCount) / totalExecutions)
+            : 0,
       },
       index: {
         totalBuilds,
         parseSuccessRate: percentage(numeric(index.successCount), totalBuilds),
         structuredRequestRate: percentage(numeric(index.structuredRequestedCount), totalBuilds),
         structuredCoverage: percentage(numeric(index.structuredParsedCount), totalBuilds),
-        avgParseDurationMs: round(numeric(index.avgParseDurationMs)),
-        avgFreshnessLagMs: round(numeric(index.avgFreshnessLagMs)),
-        graphBuilds: numeric(graph.graphBuilds),
+        avgParseDurationMs:
+          totalBuilds > 0 ? round(numeric(index.totalDurationMs) / totalBuilds) : 0,
+        avgFreshnessLagMs:
+          totalBuilds > 0 ? round(numeric(index.totalFreshnessLagMs) / totalBuilds) : 0,
+        graphBuilds: numeric(graph.totalCount),
         totalNodes: numeric(graph.totalNodes),
         totalEdges: numeric(graph.totalEdges),
       },
       alerts: [],
       trend: [],
       knowledgeBaseBreakdown: [],
-      recentEvents: recentEvents.map((event) => ({
-        id: event.id,
-        event: event.event,
-        message: event.message,
-        createdAt: event.createdAt,
-        durationMs: event.durationMs,
-        metadata:
-          event.metadata && typeof event.metadata === 'object'
-            ? (event.metadata as Record<string, unknown>)
-            : null,
-      })),
+      recentEvents,
     };
 
     const bucketCount = trendConfig.bucketCount;
     const bucketHours = trendConfig.bucketSizeHours;
-    const trend: StructuredRagDashboardTrendPoint[] = [];
-    const windowStartMs = Date.now() - params.hours * 60 * 60 * 1000;
     const bucketMs = bucketHours * 60 * 60 * 1000;
+    const windowStartMs = effectiveSince.getTime();
+    const trendAccumulators: TrendAccumulator[] = Array.from({ length: bucketCount }, () => ({
+      agentExecutions: 0,
+      fallbackCount: 0,
+      indexBuilds: 0,
+      structuredParsedCount: 0,
+    }));
 
-    for (let idx = 0; idx < bucketCount; idx++) {
+    for (const row of trendRows) {
+      const bucketIndex = findBucketIndex(
+        row.bucketStart.getTime(),
+        windowStartMs,
+        bucketMs,
+        bucketCount
+      );
+
+      if (bucketIndex < 0) continue;
+      applyTrendRow(trendAccumulators[bucketIndex]!, row);
+    }
+
+    summary.trend = trendAccumulators.map((acc, idx) => {
       const bucketStart = new Date(windowStartMs + idx * bucketMs);
       const bucketEnd =
         idx === bucketCount - 1 ? new Date() : new Date(windowStartMs + (idx + 1) * bucketMs);
 
-      const [bucketAgentRows, bucketIndexRows] = await Promise.all([
-        db.execute(sql`
-          SELECT
-            COUNT(*) AS totalExecutions,
-            COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.usedFallback')) = 'true' THEN 1 ELSE 0 END), 0) AS fallbackCount
-          FROM ${systemLogs}
-          WHERE ${systemLogs.event} = 'structured_rag.agent_execution'
-            AND ${systemLogs.createdAt} >= ${bucketStart}
-            AND ${systemLogs.createdAt} < ${bucketEnd}
-            ${userFilter}
-            ${knowledgeBaseFilter}
-        `),
-        db.execute(sql`
-          SELECT
-            COUNT(*) AS totalBuilds,
-            COALESCE(SUM(CASE WHEN JSON_UNQUOTE(JSON_EXTRACT(${systemLogs.metadata}, '$.structuredParsed')) = 'true' THEN 1 ELSE 0 END), 0) AS structuredParsedCount
-          FROM ${systemLogs}
-          WHERE ${systemLogs.event} = 'structured_rag.index_build'
-            AND ${systemLogs.createdAt} >= ${bucketStart}
-            AND ${systemLogs.createdAt} < ${bucketEnd}
-            ${userFilter}
-            ${knowledgeBaseFilter}
-        `),
-      ]);
-
-      const bucketAgent =
-        ((bucketAgentRows as unknown as [Array<Record<string, unknown>>])[0] ?? [])[0] ?? {};
-      const bucketIndex =
-        ((bucketIndexRows as unknown as [Array<Record<string, unknown>>])[0] ?? [])[0] ?? {};
-      const bucketExecutions = numeric(bucketAgent.totalExecutions);
-      const bucketBuilds = numeric(bucketIndex.totalBuilds);
-
-      trend.push({
+      return {
         label: buildTrendLabels(bucketStart, bucketEnd, bucketHours),
         bucketStart,
         bucketEnd,
-        agentExecutions: bucketExecutions,
-        fallbackRatio: percentage(numeric(bucketAgent.fallbackCount), bucketExecutions),
-        structuredCoverage: percentage(numeric(bucketIndex.structuredParsedCount), bucketBuilds),
-        indexBuilds: bucketBuilds,
-      });
-    }
+        agentExecutions: acc.agentExecutions,
+        fallbackRatio: percentage(acc.fallbackCount, acc.agentExecutions),
+        structuredCoverage: percentage(acc.structuredParsedCount, acc.indexBuilds),
+        indexBuilds: acc.indexBuilds,
+      } satisfies StructuredRagDashboardTrendPoint;
+    });
 
-    const agentBreakdown = ((
-      agentBreakdownRows as unknown as [Array<Record<string, unknown>>]
-    )[0] ?? []) as Array<Record<string, unknown>>;
-    const indexBreakdown = ((
-      indexBreakdownRows as unknown as [Array<Record<string, unknown>>]
-    )[0] ?? []) as Array<Record<string, unknown>>;
     const breakdownByKb = new Map<string, StructuredRagDashboardKnowledgeBaseBreakdown>();
 
-    for (const row of agentBreakdown) {
-      const knowledgeBaseId = String(row.knowledgeBaseId ?? '');
-      if (!knowledgeBaseId) continue;
-      const agentExecutions = numeric(row.totalExecutions);
-      breakdownByKb.set(knowledgeBaseId, {
-        knowledgeBaseId,
-        agentExecutions,
-        fallbackRatio: percentage(numeric(row.fallbackCount), agentExecutions),
-        providerErrorRate: percentage(numeric(row.providerErrorCount), agentExecutions),
-        structuredCoverage: 0,
-        avgFreshnessLagMs: 0,
-      });
+    for (const row of knowledgeBaseRows) {
+      applyKnowledgeBaseRow(breakdownByKb, row);
     }
 
-    for (const row of indexBreakdown) {
-      const knowledgeBaseId = String(row.knowledgeBaseId ?? '');
-      if (!knowledgeBaseId) continue;
-      const current = breakdownByKb.get(knowledgeBaseId) ?? {
-        knowledgeBaseId,
-        agentExecutions: 0,
-        fallbackRatio: 0,
-        providerErrorRate: 0,
-        structuredCoverage: 0,
-        avgFreshnessLagMs: 0,
-      };
-      const totalBuildsForKb = numeric(row.totalBuilds);
-      current.structuredCoverage = percentage(numeric(row.structuredParsedCount), totalBuildsForKb);
-      current.avgFreshnessLagMs = round(numeric(row.avgFreshnessLagMs));
-      breakdownByKb.set(knowledgeBaseId, current);
-    }
-
-    summary.trend = trend;
     summary.alerts = buildAlerts(summary);
     summary.knowledgeBaseBreakdown = [...breakdownByKb.values()]
       .sort((a, b) => b.agentExecutions - a.agentExecutions)
