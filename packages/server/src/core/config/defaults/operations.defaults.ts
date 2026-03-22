@@ -29,6 +29,7 @@ export const loggingDefaults = {
 
 /** Structured-RAG alert windows, thresholds, and report period */
 export const structuredRagObservabilityDefaults = {
+  rollupBucketMinutes: 15,
   alertWindowHours: 24,
   alertCooldownHours: 6,
   alertReminderHours: 24,

@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { hostname } from 'os';
 import { desc, eq, and, lt, sql, inArray } from 'drizzle-orm';
 import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
   systemLogs,
   type NewSystemLog,
@@ -9,6 +10,7 @@ import {
   type LogLevel,
   type LogCategory,
 } from '@core/db/schema/system/system-logs.schema';
+import type { StructuredRagDashboardRecentEvent } from '@groundpath/shared/types';
 
 export interface SystemLogListParams {
   page: number;
@@ -30,6 +32,7 @@ export interface CreateSystemLogInput {
   errorStack?: string | null;
   durationMs?: number | null;
   metadata?: unknown;
+  createdAt?: Date;
 }
 
 export interface StructuredRagAlertLogEntry {
@@ -40,11 +43,20 @@ export interface StructuredRagAlertLogEntry {
   createdAt: Date;
 }
 
+export interface StructuredRagRecentEventListParams {
+  since: Date;
+  userId?: string;
+  knowledgeBaseId?: string;
+  limit: number;
+}
+
 export const systemLogRepository = {
   /**
    * Create a new system log entry
    */
-  async create(input: CreateSystemLogInput): Promise<SystemLog> {
+  async create(input: CreateSystemLogInput, tx?: Transaction): Promise<SystemLog> {
+    const ctx = getDbContext(tx);
+    const createdAt = input.createdAt ?? new Date();
     const logEntry: NewSystemLog = {
       id: uuidv4(),
       level: input.level,
@@ -59,13 +71,13 @@ export const systemLogRepository = {
       metadata: input.metadata ?? null,
       hostname: hostname(),
       processId: process.pid,
+      createdAt,
     };
 
-    await db.insert(systemLogs).values(logEntry);
+    await ctx.insert(systemLogs).values(logEntry);
 
     return {
       ...logEntry,
-      createdAt: new Date(),
     } as SystemLog;
   },
 
@@ -179,6 +191,53 @@ export const systemLogRepository = {
     await db.delete(systemLogs).where(inArray(systemLogs.id, ids));
 
     return ids.length;
+  },
+
+  async listStructuredRagRecentEvents(
+    params: StructuredRagRecentEventListParams
+  ): Promise<StructuredRagDashboardRecentEvent[]> {
+    const structuredRagEvents = [
+      'structured_rag.agent_execution',
+      'structured_rag.chat_completion',
+      'structured_rag.index_build',
+      'structured_rag.index_graph',
+    ] as const;
+
+    const rows = await db
+      .select({
+        id: systemLogs.id,
+        event: systemLogs.event,
+        message: systemLogs.message,
+        createdAt: systemLogs.createdAt,
+        durationMs: systemLogs.durationMs,
+        metadata: systemLogs.metadata,
+      })
+      .from(systemLogs)
+      .where(
+        and(
+          eq(systemLogs.category, 'performance'),
+          sql`${systemLogs.createdAt} >= ${params.since}`,
+          params.userId ? eq(systemLogs.metadataUserId, params.userId) : undefined,
+          params.knowledgeBaseId
+            ? eq(systemLogs.metadataKnowledgeBaseId, params.knowledgeBaseId)
+            : undefined,
+          inArray(systemLogs.event, [...structuredRagEvents])
+        )
+      )
+      .orderBy(desc(systemLogs.createdAt))
+      .limit(params.limit);
+
+    return rows.map((event) => ({
+      id: event.id,
+      event: event.event,
+      message: event.message,
+      createdAt: event.createdAt,
+      durationMs: event.durationMs,
+      metadata:
+        event.metadata && typeof event.metadata === 'object'
+          ? (event.metadata as Record<string, unknown>)
+          : null,
+    }));
   },
 
   async getLatestStructuredRagAlertEvents(codes: string[]): Promise<StructuredRagAlertLogEntry[]> {

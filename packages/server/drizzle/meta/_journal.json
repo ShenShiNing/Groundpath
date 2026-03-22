@@ -64,6 +64,13 @@
       "when": 1774176942045,
       "tag": "0008_last_mysterio",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1774193426562,
+      "tag": "0009_clammy_kingpin",
+      "breakpoints": true
     }
   ]
 }
