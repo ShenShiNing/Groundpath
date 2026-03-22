@@ -3,6 +3,8 @@
 > 生成日期: 2026-03-13
 >
 > 来源: `packages/server/.env.example` + `packages/server/src/core/config/env/schema.ts`
+>
+> 注: 本文仅覆盖服务端运行时变量, 不包含根目录 Docker Compose 使用的 `CLIENT_PORT`、`MYSQL_ROOT_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD` 等编排变量。
 
 ## 架构概览
 

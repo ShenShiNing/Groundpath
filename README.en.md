@@ -137,23 +137,40 @@ The repository is organized as a `pnpm` monorepo:
 
 Shortest path:
 
-```bash
-Copy-Item .env.example .env
-# Fill in strong passwords, application secrets, and the key for your selected embedding provider
-pnpm docker:up
+1. Create a `.env` file in the repository root.
+2. Fill in the required values from the example below.
+3. Run `pnpm docker:up`.
+
+```dotenv
+CLIENT_PORT=18080
+FRONTEND_URL=http://localhost:18080
+
+MYSQL_ROOT_PASSWORD=change-me-root-password
+MYSQL_DATABASE=groundpath
+MYSQL_USER=groundpath
+MYSQL_PASSWORD=change-me-app-password
+
+JWT_SECRET=change-me-jwt-secret-at-least-32-chars
+ENCRYPTION_KEY=change-me-encryption-key-at-least-32-chars
+EMAIL_VERIFICATION_SECRET=change-me-email-verification-secret
+
+EMBEDDING_PROVIDER=zhipu
+ZHIPU_API_KEY=change-me-zhipu-api-key
 ```
+
+If you change `CLIENT_PORT`, update `FRONTEND_URL` to match.
 
 Default URLs after startup:
 
-- Frontend: `http://localhost:8080`
-- Backend API: `http://localhost:3000`
-- Swagger: `http://localhost:8080/api-docs`
-- Health check: `http://localhost:8080/health/live`
+- Frontend entrypoint: `http://localhost:18080`
+- Backend API (via the `client` reverse proxy): `http://localhost:18080/api`
+- Swagger: `http://localhost:18080/api-docs`
+- Health check: `http://localhost:18080/health/live`
 
 Docker Compose notes:
 
-- `mysql`, `redis`, `qdrant`, and `server` bind to `127.0.0.1` by default so they are not published directly to the public network
-- `client` remains the public entrypoint and reverse proxy
+- `mysql`, `redis`, `qdrant`, and `server` stay on the internal Compose network and are not published to the host
+- `client` is the only host-facing entrypoint and acts as the reverse proxy
 - The boot flow runs database migrations first and starts `server` only after the migration job completes successfully
 
 ### Option B: Local Development
@@ -200,7 +217,7 @@ Conditionally required configuration:
 
 </details>
 
-For full configuration details, see [docs/env-variables.md](./docs/env-variables.md) and [packages/server/.env.example](./packages/server/.env.example).
+For full server-side configuration details, see [docs/env-variables.md](./docs/env-variables.md) and [packages/server/.env.example](./packages/server/.env.example). When using Docker Compose, the root `.env` file also needs the orchestration variables `CLIENT_PORT` and `MYSQL_*`.
 
 ## Common Commands
 

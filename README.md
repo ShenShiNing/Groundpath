@@ -137,23 +137,40 @@ flowchart LR
 
 最短路径：
 
-```bash
-Copy-Item .env.example .env
-# 填写强密码、应用 secret，以及所选 embedding provider 的 Key
-pnpm docker:up
+1. 在仓库根目录创建 `.env`
+2. 参考下面示例填入必填值
+3. 运行 `pnpm docker:up`
+
+```dotenv
+CLIENT_PORT=18080
+FRONTEND_URL=http://localhost:18080
+
+MYSQL_ROOT_PASSWORD=change-me-root-password
+MYSQL_DATABASE=groundpath
+MYSQL_USER=groundpath
+MYSQL_PASSWORD=change-me-app-password
+
+JWT_SECRET=change-me-jwt-secret-at-least-32-chars
+ENCRYPTION_KEY=change-me-encryption-key-at-least-32-chars
+EMAIL_VERIFICATION_SECRET=change-me-email-verification-secret
+
+EMBEDDING_PROVIDER=zhipu
+ZHIPU_API_KEY=change-me-zhipu-api-key
 ```
+
+如果修改 `CLIENT_PORT`，同步修改 `FRONTEND_URL`。
 
 启动后默认地址：
 
-- 前端：`http://localhost:8080`
-- 后端 API：`http://localhost:3000`
-- Swagger：`http://localhost:8080/api-docs`
-- 健康检查：`http://localhost:8080/health/live`
+- 前端入口：`http://localhost:18080`
+- 后端 API（经 `client` 反向代理）：`http://localhost:18080/api`
+- Swagger：`http://localhost:18080/api-docs`
+- 健康检查：`http://localhost:18080/health/live`
 
 Docker Compose 说明：
 
-- `mysql` / `redis` / `qdrant` / `server` 端口默认只绑定到 `127.0.0.1`，避免直接暴露到公网
-- `client` 仍对外监听，用作统一入口和反向代理
+- `mysql` / `redis` / `qdrant` / `server` 默认只在 Compose 内网暴露，不再映射宿主机端口
+- `client` 是唯一对宿主机开放的入口，用作统一入口和反向代理
 - 启动流程会先执行一次数据库迁移，迁移成功后才拉起 `server`
 
 ### 方式 B：本地开发
@@ -200,7 +217,7 @@ pnpm dev
 
 </details>
 
-更完整的配置说明见 [docs/env-variables.md](./docs/env-variables.md) 和 [packages/server/.env.example](./packages/server/.env.example)。
+更完整的服务端配置说明见 [docs/env-variables.md](./docs/env-variables.md) 和 [packages/server/.env.example](./packages/server/.env.example)。使用 Docker Compose 时，还需要在根目录 `.env` 中提供 `CLIENT_PORT` 与 `MYSQL_*` 这组编排变量。
 
 ## 常用命令
 
