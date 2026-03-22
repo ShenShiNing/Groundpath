@@ -3,6 +3,7 @@ import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
+import type { DocumentListResponse } from '@groundpath/shared/types';
 
 const { authenticateMock, createSanitizeMiddlewareMock } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
@@ -80,6 +81,19 @@ vi.mock('@core/middleware', async () => {
 import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
 import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge-base.service';
 import { documentService } from '@modules/document';
+
+const mockListedDocument = {
+  id: 'doc-1',
+  title: 'Doc 1',
+  description: null,
+  fileName: 'doc-1.txt',
+  fileSize: 128,
+  fileExtension: 'txt',
+  documentType: 'text' as const,
+  processingStatus: 'completed' as const,
+  createdAt: new Date('2026-03-22T00:00:00.000Z'),
+  updatedAt: new Date('2026-03-22T00:00:00.000Z'),
+};
 
 describe('knowledge-base.routes http behavior', () => {
   let server: Server;
@@ -283,12 +297,11 @@ describe('knowledge-base.routes http behavior', () => {
   });
 
   it('should return documents for valid list-documents request', async () => {
-    vi.mocked(documentService.list).mockResolvedValue(
-      {
-        items: [{ id: 'doc-1' }],
-        pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
-      } as Awaited<ReturnType<typeof documentService.list>>
-    );
+    const mockResult: DocumentListResponse = {
+      documents: [mockListedDocument],
+      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+    };
+    vi.mocked(documentService.list).mockResolvedValue(mockResult);
 
     const response = await fetch(
       `${baseUrl}/knowledge-bases/123e4567-e89b-12d3-a456-426614174000/documents?page=1&pageSize=20`,
@@ -297,13 +310,13 @@ describe('knowledge-base.routes http behavior', () => {
       }
     );
     const body = (await response.json()) as HttpTestBody<{
-      items: Array<{ id: string }>;
+      documents: Array<{ id: string }>;
       pagination: { total: number };
     }>;
 
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(body.data?.items).toHaveLength(1);
+    expect(body.data.documents).toHaveLength(1);
     expect(documentService.list).toHaveBeenCalledTimes(1);
   });
 });

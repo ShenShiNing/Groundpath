@@ -80,7 +80,7 @@ vi.mock('@modules/document', () => ({
       processingStatus: 'pending',
     })),
     list: vi.fn(async () => ({
-      items: [],
+      documents: [],
       pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
     })),
   },

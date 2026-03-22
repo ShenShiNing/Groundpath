@@ -6,9 +6,9 @@
  * without narrowing — a failed access will throw at runtime, which is the
  * desired behaviour in a test.
  */
-export interface HttpTestBody {
+export interface HttpTestBody<TData = Record<string, unknown>> {
   success: boolean;
-  data: Record<string, unknown>;
+  data: TData;
   error: {
     code: string;
     message: string;

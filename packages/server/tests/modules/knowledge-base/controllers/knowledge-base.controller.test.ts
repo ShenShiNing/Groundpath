@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Request, Response, RequestHandler } from 'express';
 import { HTTP_STATUS } from '@groundpath/shared';
+import type { DocumentListResponse } from '@groundpath/shared/types';
 
 const sendSuccessResponseMock = vi.hoisted(() => vi.fn());
 
@@ -35,6 +36,18 @@ import { documentService } from '@modules/document';
 
 const mockUserId = 'user-123';
 const mockKbId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+const mockListedDocument = {
+  id: 'doc-1',
+  title: 'Doc 1',
+  description: null,
+  fileName: 'doc-1.txt',
+  fileSize: 128,
+  fileExtension: 'txt',
+  documentType: 'text' as const,
+  processingStatus: 'completed' as const,
+  createdAt: new Date('2026-03-22T00:00:00.000Z'),
+  updatedAt: new Date('2026-03-22T00:00:00.000Z'),
+};
 
 function createMockRequest(partial: Partial<Request> = {}): Request {
   return {
@@ -238,9 +251,12 @@ describe('knowledgeBaseController', () => {
 
   it('should list documents in knowledge base with validated query', async () => {
     const query = { page: 2, pageSize: 10 };
-    const mockResult = { items: [{ id: 'doc-1' }], pagination: { total: 1 } };
+    const mockResult: DocumentListResponse = {
+      documents: [mockListedDocument],
+      pagination: { page: 2, pageSize: 10, total: 1, totalPages: 1 },
+    };
     vi.mocked(documentService.list).mockResolvedValue(
-      mockResult as Awaited<ReturnType<typeof documentService.list>>
+      mockResult
     );
 
     const req = createMockRequest({ params: { id: mockKbId } });
