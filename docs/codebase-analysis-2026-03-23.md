@@ -134,6 +134,11 @@
 - 保持 README 链接与实际文档文件名同步。
 - 如果文档按日期输出，建议保留一个稳定入口，例如 `docs/codebase-analysis.md`，日期版作为归档。
 
+**后续处理进展（2026-03-23）**
+
+- 已新增稳定入口 `docs/codebase-analysis.md`。
+- `README.md` 与 `README.en.md` 已改为链接稳定入口，日期版文档保留为归档。
+
 ## 5. 正向观察
 
 ### 架构

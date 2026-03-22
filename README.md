@@ -28,7 +28,7 @@
     ·
     <a href="./docs/architecture-guardrails.md">架构门禁</a>
     ·
-    <a href="./docs/codebase-analysis-2026-03-23.md">代码分析</a>
+    <a href="./docs/codebase-analysis.md">代码分析</a>
   </p>
 </div>
 
@@ -224,6 +224,7 @@ pnpm dev
 ├─ docs/
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md
+│  ├─ codebase-analysis.md
 │  └─ codebase-analysis-2026-03-23.md
 ├─ docker-compose.yml
 └─ package.json
@@ -233,7 +234,7 @@ pnpm dev
 
 - [docs/env-variables.md](./docs/env-variables.md)：环境变量总览
 - [docs/architecture-guardrails.md](./docs/architecture-guardrails.md)：架构边界与门禁
-- [docs/codebase-analysis-2026-03-23.md](./docs/codebase-analysis-2026-03-23.md)：代码库分析
+- [docs/codebase-analysis.md](./docs/codebase-analysis.md)：代码库分析稳定入口（最新报告与归档）
 
 ## 当前状态
 
