@@ -1,0 +1,22 @@
+# Minimal Hysteria 2 client sidecar config for Docker Compose.
+# Copy to deploy/hysteria/client.yaml and replace the placeholder with your real share URI.
+#
+# Hi_Hysteria can export a hysteria2:// URI directly. If you prefer the original client
+# format, uncomment the alternative block below and remove the URI form.
+server: hysteria2://REPLACE_WITH_YOUR_HYSTERIA2_URI
+
+http:
+  # Must listen on 0.0.0.0 so sibling containers can reach the proxy by service name.
+  listen: 0.0.0.0:8080
+
+# Establish the tunnel eagerly so startup failures are visible in container logs.
+lazy: false
+
+# Alternative original-client format:
+# server: your.server.example:443
+# auth: your_auth_string
+# tls:
+#   sni: your.server.example
+# http:
+#   listen: 0.0.0.0:8080
+# lazy: false

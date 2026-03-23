@@ -16,7 +16,7 @@ x-server-env: &server-env
   # Requires a recent Node 22.x image with NODE_USE_ENV_PROXY=1 enabled.
   HTTP_PROXY: ${HTTP_PROXY:-}
   HTTPS_PROXY: ${HTTPS_PROXY:-}
-  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,mysql,redis,qdrant,server,client}
+  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,mysql,redis,qdrant,server,client,hy2-client}
   NODE_USE_ENV_PROXY: ${NODE_USE_ENV_PROXY:-}
   DATABASE_URL: mysql://${MYSQL_USER:-groundpath}:${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}@mysql:3306/${MYSQL_DATABASE:-groundpath}
   DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
@@ -139,6 +139,14 @@ services:
     restart: unless-stopped
     volumes:
       - qdrant-data:/qdrant/storage
+
+  hy2-client:
+    image: tobyxdd/hysteria:latest
+    restart: unless-stopped
+    profiles: ['proxy']
+    volumes:
+      - ./deploy/hysteria/client.yaml:/etc/hysteria.yaml:ro
+    command: ['client', '-c', '/etc/hysteria.yaml']
 
   migrate:
     build: *server-build

@@ -178,7 +178,7 @@ Docker Compose 说明：
 ```dotenv
 HTTP_PROXY=http://your-proxy-host:port
 HTTPS_PROXY=http://your-proxy-host:port
-NO_PROXY=localhost,127.0.0.1,::1,mysql,redis,qdrant,server,client
+NO_PROXY=localhost,127.0.0.1,::1,mysql,redis,qdrant,server,client,hy2-client
 NODE_USE_ENV_PROXY=1
 ```
 
@@ -196,6 +196,30 @@ docker compose exec server node -e "fetch('https://oauth2.googleapis.com/token',
 ```
 
 如代理生效，这条命令应快速返回一个 HTTP 状态码（通常是 `400`），而不是 `ETIMEDOUT`。
+
+如你已有海外 `Hysteria 2 / Hi_Hysteria` 节点，可直接使用内置 sidecar：
+
+1. 复制样例配置：`cp deploy/hysteria/client.yaml.example deploy/hysteria/client.yaml`
+2. 将 `deploy/hysteria/client.yaml` 中的 `server` 改为真实的 `hysteria2://...` 分享链接，或改填原生 client 配置
+3. 在根目录 `.env` 设置：
+
+```dotenv
+HTTP_PROXY=http://hy2-client:8080
+HTTPS_PROXY=http://hy2-client:8080
+NO_PROXY=localhost,127.0.0.1,::1,mysql,redis,qdrant,server,client,hy2-client
+NODE_USE_ENV_PROXY=1
+```
+
+4. 启动 sidecar：`docker compose --profile proxy up -d hy2-client`
+5. 重建服务端：`docker compose up -d --build server`
+
+检查 sidecar 是否连通：
+
+```bash
+docker compose logs -f hy2-client
+```
+
+若日志出现连接建立成功，再重新执行上面的 `fetch('https://oauth2.googleapis.com/token')` 验证。注意 Hysteria 2 依赖 UDP 出站，若国内机房本身无法出站 UDP 到海外节点，sidecar 也无法建立隧道。
 
 ### 方式 B：本地开发
 
