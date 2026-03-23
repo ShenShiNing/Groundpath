@@ -69,12 +69,12 @@ export function ChatInput({
 
   return (
     <div>
-      <div className="flex items-end gap-2 rounded-3xl border bg-background px-3 py-2 shadow-sm">
+      <div className="flex items-end gap-2 rounded-[1.75rem] border border-black/8 bg-background px-3.5 py-2.5 shadow-[0_14px_36px_-24px_rgba(0,0,0,0.45)] ring-1 ring-transparent transition-shadow focus-within:ring-[#10a37f]/18 dark:border-white/10 dark:bg-[#303030]">
         <textarea
           ref={textareaRef}
           placeholder={placeholder ?? t('input.defaultPlaceholder')}
           className={cn(
-            'flex-1 bg-transparent px-2 py-1.5 resize-none',
+            'flex-1 resize-none bg-transparent px-2 py-1.5',
             'focus:outline-none text-sm',
             'min-h-9 max-h-37.5'
           )}
@@ -87,7 +87,10 @@ export function ChatInput({
         <Button
           type="button"
           size="icon"
-          className="size-8 rounded-full shrink-0 cursor-pointer"
+          className={cn(
+            'size-9 shrink-0 rounded-full cursor-pointer border-0 text-white shadow-none',
+            canStop ? 'bg-foreground hover:bg-foreground/90' : 'bg-[#10a37f] hover:bg-[#0d8c6d]'
+          )}
           onClick={handlePrimaryAction}
           disabled={canStop ? false : !hasInput || disabled}
           title={canStop ? t('input.stop') : t('input.send')}

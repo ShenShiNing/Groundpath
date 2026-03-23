@@ -33,9 +33,18 @@ vi.mock('@/lib/logger', () => ({
   logClientWarning: vi.fn(),
 }));
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { ns?: string }) => `${options?.ns ? `${options.ns}:` : ''}${key}`,
+  }),
+}));
+
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
     navigate: mocks.navigate,
+  }),
+  useLocation: () => ({
+    pathname: '/dashboard',
   }),
 }));
 
@@ -58,6 +67,10 @@ vi.mock('@/components/layout/AppSidebar', () => ({
       </button>
     </div>
   ),
+}));
+
+vi.mock('@/components/layout/UserMenu', () => ({
+  UserMenu: () => <div data-testid="user-menu">user-menu</div>,
 }));
 
 import { AppLayout } from '../../../src/components/layout/AppLayout';

@@ -1,6 +1,7 @@
 {
   "nav": {
     "dashboard": "控制台",
+    "chat": "对话",
     "knowledgeBases": "知识库",
     "trash": "回收站"
   },
@@ -27,5 +28,10 @@
     "searchEmpty": "没有匹配的聊天记录",
     "workspace": "工作区",
     "chatHistory": "聊天记录"
+  },
+  "mobile": {
+    "openNavigation": "打开导航",
+    "navigationTitle": "移动端导航",
+    "navigationDescription": "快速切换工作区、聊天和账号工具"
   }
 }

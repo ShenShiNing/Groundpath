@@ -1,59 +1,33 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useRouter } from '@tanstack/react-router';
-import {
-  Brain,
-  PanelLeft,
-  PanelLeftClose,
-  LayoutDashboard,
-  Database,
-  Trash2,
-  Search,
-  Plus,
-} from 'lucide-react';
+import { Brain, PanelLeft, PanelLeftClose, Plus, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
 import { ChatSearchDialog, ConversationList } from '@/components/chat';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useAuthStore, useChatPanelStore } from '@/stores';
+import { matchesNavPath, sidebarNavItems, type AppNavItem } from './appNavigation';
 import { UserMenu } from './UserMenu';
-
-type NavItemLabelKey = 'nav.dashboard' | 'nav.knowledgeBases' | 'nav.trash';
-
-interface NavItem {
-  labelKey: NavItemLabelKey;
-  to: string;
-  icon: React.ReactNode;
-}
 
 interface AppSidebarProps {
   isCollapsed: boolean;
   onLogout: () => void;
-  onToggleCollapse: () => void;
+  onToggleCollapse?: () => void;
+  onNavigate?: () => void;
+  variant?: 'desktop' | 'mobile';
 }
-
-const mainNavItems: NavItem[] = [
-  { labelKey: 'nav.dashboard', to: '/dashboard', icon: <LayoutDashboard className="size-4" /> },
-  {
-    labelKey: 'nav.knowledgeBases',
-    to: '/knowledge-bases',
-    icon: <Database className="size-4" />,
-  },
-  {
-    labelKey: 'nav.trash',
-    to: '/trash',
-    icon: <Trash2 className="size-4" />,
-  },
-];
 
 function SidebarNavItem({
   item,
   isCollapsed,
   isActive,
+  onNavigate,
 }: {
-  item: NavItem;
+  item: AppNavItem;
   isCollapsed: boolean;
   isActive: boolean;
+  onNavigate?: () => void;
 }) {
   const { t } = useTranslation(['app', 'document']);
   const label =
@@ -65,18 +39,20 @@ function SidebarNavItem({
           })
         )
       : String(t(item.labelKey, { ns: 'app' }));
+
   const content = (
     <Link
       to={item.to}
+      onClick={onNavigate}
       className={cn(
-        'flex items-center rounded-lg text-sm transition-colors',
+        'flex items-center rounded-xl text-sm transition-colors',
         isCollapsed ? 'h-9 w-full justify-center px-0 py-0' : 'gap-2 px-2.5 py-2',
         isActive
-          ? 'bg-muted text-foreground'
-          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+          ? 'bg-background text-foreground shadow-sm'
+          : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
       )}
     >
-      {item.icon}
+      <item.icon className="size-4" />
       {!isCollapsed && <span>{label}</span>}
     </Link>
   );
@@ -93,7 +69,13 @@ function SidebarNavItem({
   return content;
 }
 
-export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSidebarProps) {
+export function AppSidebar({
+  isCollapsed,
+  onLogout,
+  onToggleCollapse,
+  onNavigate,
+  variant = 'desktop',
+}: AppSidebarProps) {
   const { t } = useTranslation(['app', 'common']);
   const router = useRouter();
   const location = useLocation();
@@ -103,9 +85,12 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
   const startNewConversation = useChatPanelStore((state) => state.startNewConversation);
   const isChatPage = location.pathname === '/chat' || location.pathname.startsWith('/chat/');
   const [chatSearchOpen, setChatSearchOpen] = useState(false);
+  const isDesktop = variant === 'desktop';
+  const collapsed = isDesktop && isCollapsed;
 
-  const isActive = (path: string) =>
-    location.pathname === path || location.pathname.startsWith(path + '/');
+  const handleNavigate = () => {
+    onNavigate?.();
+  };
 
   const handleSelectConversation = async (
     selectedConversationId: string,
@@ -118,6 +103,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
     if (!isChatPage) {
       await router.navigate({ to: '/chat' });
     }
+    onNavigate?.();
   };
 
   const handleNewConversation = () => {
@@ -125,6 +111,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
     if (!isChatPage) {
       void router.navigate({ to: '/chat' });
     }
+    onNavigate?.();
   };
 
   const handleCurrentConversationDeleted = () => {
@@ -150,17 +137,24 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
   return (
     <aside
       className={cn(
-        'flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-200',
-        isCollapsed ? 'w-14' : 'w-72'
+        'flex min-h-0 flex-col text-foreground',
+        isDesktop
+          ? cn(
+              'h-full border-r border-border/60 bg-[#f7f7f8] transition-[width] duration-200 dark:bg-[#171717]',
+              collapsed ? 'w-14' : 'w-72'
+            )
+          : 'h-full bg-[#f7f7f8] dark:bg-[#171717]'
       )}
     >
       <div
         className={cn(
-          'flex items-center px-2 pt-2',
-          isCollapsed ? 'justify-center' : 'justify-between'
+          'flex items-center',
+          isDesktop
+            ? cn('px-2 pt-2', collapsed ? 'justify-center' : 'justify-between')
+            : 'border-b px-4 pb-3 pt-4 pr-12'
         )}
       >
-        {isCollapsed ? (
+        {collapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -176,28 +170,50 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
           <>
             <Link
               to="/chat"
-              className="flex items-center gap-2 px-2 text-sm font-medium transition-colors hover:text-foreground/90"
+              onClick={handleNavigate}
+              className={cn(
+                'flex items-center gap-2 text-sm font-medium transition-colors hover:text-foreground/90',
+                isDesktop ? 'px-2' : 'min-w-0 flex-1'
+              )}
             >
-              <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <Brain className="size-3.5" />
+              <div
+                className={cn(
+                  'flex items-center justify-center rounded-xl bg-[#10a37f] text-white',
+                  isDesktop ? 'size-6' : 'size-10'
+                )}
+              >
+                <Brain className={cn(isDesktop ? 'size-3.5' : 'size-5')} />
               </div>
-              <span>{t('brand', { ns: 'common' })}</span>
+              <div className="min-w-0">
+                <p className="truncate">{t('brand', { ns: 'common' })}</p>
+                {!isDesktop && (
+                  <p className="truncate text-xs font-normal text-muted-foreground">
+                    {t('mobile.navigationDescription')}
+                  </p>
+                )}
+              </div>
             </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 rounded-lg"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeftClose className="size-4" />
-            </Button>
+            {isDesktop && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-lg"
+                onClick={onToggleCollapse}
+              >
+                <PanelLeftClose className="size-4" />
+              </Button>
+            )}
           </>
         )}
       </div>
 
-      {!isCollapsed ? (
-        <div className="px-2 pb-1 pt-2">
-          <Button className="h-10 w-full justify-start rounded-lg" onClick={handleNewConversation}>
+      {!collapsed ? (
+        <div className={cn(isDesktop ? 'px-2 pb-1 pt-2' : 'px-4 pb-2 pt-4')}>
+          <Button
+            variant="outline"
+            className="h-10 w-full justify-start rounded-xl border-border/70 bg-background shadow-sm hover:bg-background"
+            onClick={handleNewConversation}
+          >
             <Plus className="mr-2 size-4" />
             {t('sidebar.newChat')}
           </Button>
@@ -220,18 +236,20 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
         </div>
       )}
 
-      {!isCollapsed ? (
-        <div className="px-2 pb-2">
+      {!collapsed ? (
+        <div className={cn(isDesktop ? 'px-2 pb-2' : 'px-4 pb-4')}>
           <Button
             variant="ghost"
-            className="h-10 w-full justify-start rounded-lg font-normal text-muted-foreground hover:bg-muted/60"
+            className="h-10 w-full justify-start rounded-xl border border-transparent bg-background/65 font-normal text-muted-foreground hover:bg-background"
             onClick={() => setChatSearchOpen(true)}
           >
             <Search className="mr-2 size-4" />
             {t('sidebar.searchChat')}
-            <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-              <span className="text-xs">⌘</span>K
-            </kbd>
+            {isDesktop && (
+              <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            )}
           </Button>
         </div>
       ) : (
@@ -252,24 +270,30 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
         </div>
       )}
 
-      <div className="px-2 pb-2">
-        {!isCollapsed && (
+      <div className={cn(isDesktop ? 'px-2 pb-2' : 'px-4 pb-3')}>
+        {!collapsed && (
           <p className="px-2 pb-1 text-xs text-muted-foreground">{t('sidebar.workspace')}</p>
         )}
-        <nav className={cn('space-y-1', isCollapsed && 'space-y-0')}>
-          {mainNavItems.map((item) => (
+        <nav className={cn('space-y-1', collapsed && 'space-y-0')}>
+          {sidebarNavItems.map((item) => (
             <SidebarNavItem
               key={item.to}
               item={item}
-              isCollapsed={isCollapsed}
-              isActive={isActive(item.to)}
+              isCollapsed={collapsed}
+              isActive={matchesNavPath(location.pathname, item.to)}
+              onNavigate={handleNavigate}
             />
           ))}
         </nav>
       </div>
 
-      <div className={cn('min-h-0 flex-1', isCollapsed ? 'p-2' : 'px-2 pb-2')}>
-        {isCollapsed ? (
+      <div
+        className={cn(
+          'min-h-0 flex-1',
+          collapsed ? 'p-2' : isDesktop ? 'px-2 pb-2' : 'px-4 pb-4'
+        )}
+      >
+        {collapsed ? (
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -283,7 +307,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
             <div className="px-2 pb-2 pt-1 text-xs text-muted-foreground">
               {t('sidebar.chatHistory')}
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-border/60 bg-background/70">
               <ConversationList
                 knowledgeBaseId={undefined}
                 currentConversationId={conversationId}
@@ -297,8 +321,8 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
         )}
       </div>
 
-      <div className="border-t p-2">
-        <UserMenu onLogout={onLogout} isCollapsed={isCollapsed} />
+      <div className={cn('border-t', isDesktop ? 'p-2' : 'px-4 py-3')}>
+        <UserMenu onLogout={onLogout} isCollapsed={collapsed} />
       </div>
 
       <ChatSearchDialog

@@ -1,6 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
+    "chat": "Chat",
     "knowledgeBases": "Knowledge Bases",
     "trash": "Trash"
   },
@@ -27,5 +28,10 @@
     "searchEmpty": "No matching chats found",
     "workspace": "Workspace",
     "chatHistory": "Chat history"
+  },
+  "mobile": {
+    "openNavigation": "Open navigation",
+    "navigationTitle": "Mobile navigation",
+    "navigationDescription": "Switch quickly between workspace, chats, and account tools"
   }
 }

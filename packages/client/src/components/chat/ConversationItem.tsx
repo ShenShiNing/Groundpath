@@ -37,10 +37,10 @@ export function ConversationItem({
       role="button"
       tabIndex={0}
       className={cn(
-        'group flex items-center gap-2 rounded-lg px-2.5 py-2 cursor-pointer transition-colors',
+        'group flex items-center gap-2 rounded-xl px-2.5 py-2 cursor-pointer transition-colors',
         isActive
-          ? 'bg-muted text-foreground'
-          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+          ? 'bg-background text-foreground shadow-sm'
+          : 'text-muted-foreground hover:bg-background/80 hover:text-foreground'
       )}
       onClick={onClick}
       onKeyDown={(e) => {
