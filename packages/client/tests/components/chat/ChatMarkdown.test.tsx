@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   markdownRenderer: vi.fn(),
   toastSuccess: vi.fn(),
 }));
+const themeState = vi.hoisted(() => ({
+  theme: 'dark' as 'dark' | 'light' | 'system',
+}));
 
 vi.mock('@uiw/react-md-editor/nohighlight', () => ({
   default: {
@@ -41,6 +44,10 @@ vi.mock('sonner', () => ({
   toast: {
     success: mocks.toastSuccess,
   },
+}));
+
+vi.mock('@/components/theme/theme-provider', () => ({
+  useTheme: () => themeState,
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -83,6 +90,7 @@ describe('ChatMarkdown', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    themeState.theme = 'dark';
   });
 
   it('renders markdown progressively while streaming and keeps the cursor visible', async () => {
@@ -119,6 +127,27 @@ describe('ChatMarkdown', () => {
       expect(view.container.querySelector('[data-testid="markdown-renderer"]')?.textContent).toBe(
         expectedSource
       );
+    });
+
+    await view.unmount();
+  });
+
+  it('updates markdown color mode when the theme changes', async () => {
+    const view = await render(
+      <ChatMarkdown content="Theme aware" citations={[citation]} onCitationClick={vi.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-color-mode="dark"]')).not.toBeNull();
+    });
+
+    themeState.theme = 'light';
+    await view.rerender(
+      <ChatMarkdown content="Theme aware" citations={[citation]} onCitationClick={vi.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(view.container.querySelector('[data-color-mode="light"]')).not.toBeNull();
     });
 
     await view.unmount();

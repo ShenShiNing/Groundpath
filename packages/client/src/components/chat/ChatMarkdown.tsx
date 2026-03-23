@@ -13,6 +13,7 @@ import type { Citation } from '@/stores';
 import { CitationInline } from './CitationInline';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@/components/theme/theme-provider';
 
 interface ChatMarkdownProps {
   content: string;
@@ -71,6 +72,7 @@ export function ChatMarkdown({
   isStreaming = false,
 }: ChatMarkdownProps) {
   const { t } = useTranslation('chat');
+  const { theme } = useTheme();
   const deferredContent = useDeferredValue(content);
   const markdownContent = isStreaming ? deferredContent : content;
   const source = useMemo(() => injectCitationLinks(markdownContent), [markdownContent]);
@@ -118,6 +120,17 @@ export function ChatMarkdown({
     () => new Map((citations ?? []).map((citation, index) => [index + 1, citation])),
     [citations]
   );
+  const colorMode = useMemo(() => {
+    if (theme === 'dark' || theme === 'light') {
+      return theme;
+    }
+
+    if (typeof document !== 'undefined') {
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    }
+
+    return 'light';
+  }, [theme]);
   const MarkdownRenderer =
     hasFencedCodeBlock && highlightRenderer ? highlightRenderer : baseRenderer;
   const handleCopyToast = useCallback(
@@ -131,11 +144,15 @@ export function ChatMarkdown({
   );
 
   return (
-    <div className="min-w-0" onClickCapture={handleCopyToast}>
+    <div
+      className="chat-markdown min-w-0"
+      data-color-mode={colorMode}
+      onClickCapture={handleCopyToast}
+    >
       {MarkdownRenderer ? (
         <MarkdownRenderer
           source={source}
-          className="bg-transparent! p-0! text-sm leading-6 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1.5 [&_hr]:my-4"
+          className="bg-transparent! p-0! text-sm leading-6 text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-2 [&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-3 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:border [&_pre]:p-3 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-left [&_td]:border [&_td]:px-2 [&_td]:py-1.5 [&_hr]:my-4"
           components={{
             a: ({ href, children, ...props }: ComponentPropsWithoutRef<'a'>) => {
               const citationIndex = getCitationIndex(href);
@@ -184,7 +201,7 @@ export function ChatMarkdown({
           }}
         />
       ) : (
-        <div className="text-sm whitespace-pre-wrap">{content}</div>
+        <div className="text-sm whitespace-pre-wrap text-foreground">{content}</div>
       )}
       {isStreaming && (
         <span
