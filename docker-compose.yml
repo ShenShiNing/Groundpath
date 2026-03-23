@@ -12,6 +12,12 @@ x-server-env: &server-env
   SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-10000}
   TRUST_PROXY: ${TRUST_PROXY:-1}
   FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
+  # Node.js builtin outbound proxy support for fetch()/http(s).
+  # Requires a recent Node 22.x image with NODE_USE_ENV_PROXY=1 enabled.
+  HTTP_PROXY: ${HTTP_PROXY:-}
+  HTTPS_PROXY: ${HTTPS_PROXY:-}
+  NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,mysql,redis,qdrant,server,client}
+  NODE_USE_ENV_PROXY: ${NODE_USE_ENV_PROXY:-}
   DATABASE_URL: mysql://${MYSQL_USER:-groundpath}:${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}@mysql:3306/${MYSQL_DATABASE:-groundpath}
   DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-10}
   DB_QUEUE_LIMIT: ${DB_QUEUE_LIMIT:-0}

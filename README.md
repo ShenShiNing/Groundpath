@@ -173,6 +173,30 @@ Docker Compose 说明：
 - `client` 是唯一对宿主机开放的入口，用作统一入口和反向代理
 - 启动流程会先执行一次数据库迁移，迁移成功后才拉起 `server`
 
+国内机房如需访问 Google OAuth、OpenAI 等海外服务，可在根目录 `.env` 为 `server` 容器增加出站代理：
+
+```dotenv
+HTTP_PROXY=http://your-proxy-host:port
+HTTPS_PROXY=http://your-proxy-host:port
+NO_PROXY=localhost,127.0.0.1,::1,mysql,redis,qdrant,server,client
+NODE_USE_ENV_PROXY=1
+```
+
+说明：
+
+- 这些变量会透传到 `server` 容器，用于 Node.js 内置 `fetch()` / `http(s)` 客户端代理出站
+- `NO_PROXY` 至少保留本机与 Compose 内部服务名，避免健康检查和内网请求被错误转发
+- 变更后需重建 `server` 容器使新的 Node 运行环境生效：`docker compose up -d --build server`
+- 若 `docker compose exec server node -v` 小于 `v22.21.0`，请先重建镜像拉取较新的 `node:22-alpine`
+
+验证方式：
+
+```bash
+docker compose exec server node -e "fetch('https://oauth2.googleapis.com/token',{method:'POST'}).then(r=>console.log('status',r.status)).catch(console.error)"
+```
+
+如代理生效，这条命令应快速返回一个 HTTP 状态码（通常是 `400`），而不是 `ETIMEDOUT`。
+
 ### 方式 B：本地开发
 
 ```bash
