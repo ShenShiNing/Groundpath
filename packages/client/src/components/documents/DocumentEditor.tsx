@@ -42,7 +42,7 @@ export function DocumentEditor({
   className,
 }: DocumentEditorProps) {
   const { t } = useTranslation('document');
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const draftKey = useMemo(() => `document-draft:${documentId}`, [documentId]);
   const initialState = useMemo(() => {
     const fallback = initialContent ?? '';
@@ -71,13 +71,6 @@ export function DocumentEditor({
   const [isDirty, setIsDirty] = useState(initialState.isDirty);
   const [draftRestored, setDraftRestored] = useState(initialState.draftRestored);
   const savedContentRef = useRef(initialContent ?? '');
-  const colorMode = useMemo(() => {
-    if (theme === 'dark' || theme === 'light') return theme;
-    if (typeof document !== 'undefined') {
-      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-    }
-    return 'light';
-  }, [theme]);
 
   useEffect(() => {
     savedContentRef.current = initialContent ?? '';
@@ -152,7 +145,7 @@ export function DocumentEditor({
 
       {documentType === 'markdown' ? (
         <Suspense fallback={<div className="h-120 animate-pulse rounded-md bg-muted" />}>
-          <div data-color-mode={colorMode}>
+          <div data-color-mode={resolvedTheme}>
             <MDEditor
               value={content}
               onChange={(value) => updateContent(value ?? '')}

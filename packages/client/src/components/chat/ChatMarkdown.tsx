@@ -13,6 +13,7 @@ import type { Citation } from '@/stores';
 import { CitationInline } from './CitationInline';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@/components/theme/theme-provider';
 
 interface ChatMarkdownProps {
   content: string;
@@ -71,6 +72,7 @@ export function ChatMarkdown({
   isStreaming = false,
 }: ChatMarkdownProps) {
   const { t } = useTranslation('chat');
+  const { resolvedTheme } = useTheme();
   const deferredContent = useDeferredValue(content);
   const markdownContent = isStreaming ? deferredContent : content;
   const source = useMemo(() => injectCitationLinks(markdownContent), [markdownContent]);
@@ -131,7 +133,7 @@ export function ChatMarkdown({
   );
 
   return (
-    <div className="min-w-0" onClickCapture={handleCopyToast}>
+    <div className="min-w-0" data-color-mode={resolvedTheme} onClickCapture={handleCopyToast}>
       {MarkdownRenderer ? (
         <MarkdownRenderer
           source={source}
