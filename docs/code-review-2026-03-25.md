@@ -39,17 +39,19 @@
 - **修复**: 新增 `lockById` 方法，`incrementDocumentCount` 和 `incrementTotalChunks` 在事务内自动执行 `SELECT FOR UPDATE` 行级锁，序列化并发更新。已持有锁的调用方（upload/delete/restore）重入锁零成本，未加锁的调用方（index activation）自动获得保护。
 - **提交**: `fix/counter-race-condition` 分支
 
-### H-2: 前端大列表缺少虚拟滚动
+### ~~H-2: 前端大列表缺少虚拟滚动~~ ✅ 已修复
 
 - **文件**: `KnowledgeBaseDetailPage.tsx`, `ChatPageConversation`, `useChatPageController.ts`
 - **描述**: 多处使用 `pageSize: 100` 一次加载所有数据，DOM 节点过多导致性能下降。
-- **建议**: 引入 `@tanstack/react-virtual` 实现虚拟列表。
+- **修复**: 引入 `@tanstack/react-virtual` 为三个核心列表实现虚拟滚动：知识库文档列表、知识库列表页、聊天消息列表，同时重构了滚动/高亮逻辑。
+- **提交**: `perf/virtual-scroll` 分支，`8aa7f51`、`e123905`、`0c35694`
 
-### H-3: 模块公共 API 导出不完整
+### ~~H-3: 模块公共 API 导出不完整~~ ✅ 已修复
 
-- **文件**: 各模块 `index.ts`
+- **文件**: 各模块 `index.ts`、`.dependency-cruiser.cjs`
 - **描述**: 仅 `rag/index.ts` 有完整的公共 API，其他模块允许跨模块深入导入，绕过 dependency-cruiser 规则。
-- **建议**: 为每个模块建立统一的公共 API 导出规范，所有跨模块引用必须通过 `index.ts`。
+- **修复**: 修复 3 处跨模块深入导入（chat→agent、user→auth、document-index→rag），统一改为通过模块 barrel/public API。加强 dependency-cruiser Rule 6：覆盖所有子目录（不限于 services/repositories），严重级别 warn→error。保留 llm→agent/tools/tool.interface 类型导入例外以避免循环依赖。
+- **提交**: `refactor/module-public-api` 分支，`e636c57`
 
 ### H-4: API 缺少版本控制
 
@@ -200,7 +202,7 @@
 | 优先级 | 建议                                 | 说明                      |
 | ------ | ------------------------------------ | ------------------------- |
 | 高     | ~~DocumentReader 改用 DOMPurify~~ ✅ | 已引入 DOMPurify 纵深防御 |
-| 高     | 大列表引入虚拟滚动                   | @tanstack/react-virtual   |
+| 高     | ~~大列表引入虚拟滚动~~ ✅            | @tanstack/react-virtual   |
 | 中     | ChatMessage 添加 React.memo          | 重型组件性能优化          |
 | 中     | Zustand 选择器合并                   | useShallow 减少订阅       |
 | 中     | 空 catch 块添加用户反馈              | 删除操作静默失败          |
@@ -243,11 +245,11 @@
 
 - [ ] 添加 API 版本前缀 `/api/v1/`
 - [ ] 统一控制器实现风格（asyncHandler）
-- [ ] 大列表引入虚拟滚动
+- [x] 大列表引入虚拟滚动 ✅
 
 ### 第 3 周 — 架构优化
 
-- [ ] 完善各模块 index.ts 公共 API 导出
+- [x] 完善各模块 index.ts 公共 API 导出 ✅
 - [ ] ChatMessage 添加 memo + Zustand 选择器合并
 - [ ] messages 表创建 FULLTEXT 索引
 

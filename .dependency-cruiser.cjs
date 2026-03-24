@@ -67,12 +67,16 @@ module.exports = {
     // ── Rule 6: No cross-module deep imports (bypass barrel) ──
     {
       name: 'no-cross-module-deep-import',
-      severity: 'warn',
+      severity: 'error',
       comment:
-        'Cross-module imports should go through the target module public/* API, not deep into internal services or repositories.',
+        'Cross-module imports must go through the target module public/* API or root barrel (index.ts), not into internal files.',
       from: { path: '^packages/server/src/modules/([^/]+)/' },
       to: {
-        path: '^packages/server/src/modules/(?!$1/)[^/]+/(services|repositories)/.+\\.ts$',
+        path: '^packages/server/src/modules/(?!$1/)[^/]+/(?!public/|index\\.ts$).+\\.ts$',
+        pathNot: [
+          // type-only import: avoids llm ↔ agent circular dependency
+          '^packages/server/src/modules/agent/tools/tool\\.interface\\.ts$',
+        ],
       },
     },
 

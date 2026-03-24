@@ -1,6 +1,5 @@
 import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
-import { resolveTools, executeAgentLoop } from '@modules/agent';
-import { toPlainChatMessages } from '@modules/agent/agent-executor.runtime';
+import { resolveTools, executeAgentLoop, toPlainChatMessages } from '@modules/agent';
 import { agentConfig } from '@core/config/env';
 import { structuredRagMetrics } from '@core/observability';
 import { createLogger } from '@core/logger';
