@@ -15,6 +15,7 @@
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:server": "pnpm -F @groundpath/server test",
+    "test:server:real-integration": "pnpm -F @groundpath/server test:integration:real",
     "test:shared": "pnpm -F @groundpath/shared test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

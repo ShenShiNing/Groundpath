@@ -1,0 +1,83 @@
+name: Server Real Integration
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+jobs:
+  real-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+
+    env:
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      REDIS_URL: redis://127.0.0.1:6379
+      AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      USER_UNIQUENESS_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      USER_AUTHS_FK_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      BACKFILL_FK_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      BACKFILL_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      BACKFILL_REAL_REDIS_URL: redis://127.0.0.1:6379
+      DOCUMENT_LIFECYCLE_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      DOCUMENT_LIFECYCLE_REAL_REDIS_URL: redis://127.0.0.1:6379
+      DOCUMENT_INDEX_LIFECYCLE_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
+      DOCUMENT_INDEX_LIFECYCLE_REAL_REDIS_URL: redis://127.0.0.1:6379
+      RUN_REAL_AUTH_SCHEMA_MIGRATIONS_INTEGRATION: '1'
+      RUN_REAL_USER_UNIQUENESS_INTEGRATION: '1'
+      RUN_REAL_USER_AUTHS_FK_INTEGRATION: '1'
+      RUN_REAL_BACKFILL_FK_INTEGRATION: '1'
+      RUN_REAL_BACKFILL_INTEGRATION: '1'
+      RUN_REAL_BACKFILL_WORKER_INTEGRATION: '1'
+      RUN_REAL_DOCUMENT_LIFECYCLE_INTEGRATION: '1'
+      RUN_REAL_DOCUMENT_INDEX_LIFECYCLE_INTEGRATION: '1'
+      JWT_SECRET: test-jwt-secret-at-least-32-characters-long
+      ENCRYPTION_KEY: test-encryption-key-at-least-32-chars
+      EMAIL_VERIFICATION_SECRET: test-email-verification-secret
+      LOG_LEVEL: silent
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run database migrations
+        run: pnpm --dir packages/server db:migrate
+
+      - name: Run server real integration suites
+        run: pnpm test:server:real-integration
