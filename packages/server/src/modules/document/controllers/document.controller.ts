@@ -109,7 +109,7 @@ export const documentController = {
 
     const { title, description, knowledgeBaseId } = getValidatedBody<{
       title?: string;
-      description?: string;
+      description?: string | null;
       knowledgeBaseId?: string;
     }>(res);
 
