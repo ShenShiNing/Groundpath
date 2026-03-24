@@ -1,4 +1,6 @@
+import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
 import mysql from 'mysql2/promise';
 import type { Connection, RowDataPacket } from 'mysql2/promise';
 import { afterAll, beforeAll, expect, it } from 'vitest';
