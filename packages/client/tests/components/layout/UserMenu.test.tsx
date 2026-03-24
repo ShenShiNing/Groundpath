@@ -52,6 +52,7 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('@/components/theme/theme-provider', () => ({
   useTheme: () => ({
     theme: 'system',
+    resolvedTheme: 'light',
     setTheme: vi.fn(),
   }),
 }));
