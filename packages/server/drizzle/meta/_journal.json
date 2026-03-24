@@ -78,6 +78,13 @@
       "when": 1774339659776,
       "tag": "0010_user_active_uniqueness",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1774342273261,
+      "tag": "0011_user_auths_foreign_key",
+      "breakpoints": true
     }
   ]
 }
