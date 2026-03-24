@@ -15,6 +15,8 @@ import {
   documentListParamsSchema,
   trashListParamsSchema,
   saveDocumentContentSchema,
+  documentUploadMetadataSchema,
+  documentVersionUploadMetadataSchema,
 } from '@groundpath/shared/schemas';
 
 const router = express.Router();
@@ -137,7 +139,13 @@ router.delete('/:id/permanent', documentController.permanentDelete);
 // ==================== Document Routes ====================
 
 // Upload document
-router.post('/', generalRateLimiter, uploadWithErrorHandling('file'), documentController.upload);
+router.post(
+  '/',
+  generalRateLimiter,
+  uploadWithErrorHandling('file'),
+  validateBody(documentUploadMetadataSchema),
+  documentController.upload
+);
 
 // List documents
 router.get('/', validateQuery(documentListParamsSchema), documentController.list);
@@ -176,6 +184,7 @@ router.post(
   '/:id/versions',
   generalRateLimiter,
   uploadWithErrorHandling('file'),
+  validateBody(documentVersionUploadMetadataSchema),
   documentController.uploadNewVersion
 );
 

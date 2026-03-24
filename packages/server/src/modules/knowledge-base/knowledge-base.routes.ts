@@ -15,6 +15,7 @@ import {
   updateKnowledgeBaseSchema,
   knowledgeBaseDocumentListParamsSchema,
   knowledgeBaseListParamsSchema,
+  knowledgeBaseDocumentUploadMetadataSchema,
 } from '@groundpath/shared/schemas';
 
 const router = express.Router();
@@ -99,6 +100,7 @@ router.post(
   '/:id/documents',
   generalRateLimiter,
   ...uploadWithErrorHandling('file'),
+  validateBody(knowledgeBaseDocumentUploadMetadataSchema),
   knowledgeBaseController.uploadDocument
 );
 

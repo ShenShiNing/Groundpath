@@ -19,10 +19,12 @@ const {
   updateKnowledgeBaseSchemaMock,
   knowledgeBaseDocumentListParamsSchemaMock,
   knowledgeBaseListParamsSchemaMock,
+  knowledgeBaseDocumentUploadMetadataSchemaMock,
   createKbValidatorMock,
   updateKbValidatorMock,
   documentListValidatorMock,
   knowledgeBaseListValidatorMock,
+  uploadDocumentValidatorMock,
   documentConfigMock,
 } = vi.hoisted(() => {
   const hoistedRouter = {
@@ -59,10 +61,14 @@ const {
   const updateKbSchema = { type: 'update-kb-schema' };
   const listParamsSchema = { type: 'knowledge-base-document-list-schema' };
   const knowledgeBaseListSchema = { type: 'knowledge-base-list-schema' };
+  const knowledgeBaseDocumentUploadMetadataSchema = {
+    type: 'knowledge-base-document-upload-metadata-schema',
+  };
   const createKbValidator = vi.fn();
   const updateKbValidator = vi.fn();
   const listValidator = vi.fn();
   const knowledgeBaseListValidator = vi.fn();
+  const uploadDocumentValidator = vi.fn();
   const sanitizeMultipartFields = vi.fn();
 
   return {
@@ -76,6 +82,9 @@ const {
       }
       if (schema === updateKbSchema) {
         return updateKbValidator;
+      }
+      if (schema === knowledgeBaseDocumentUploadMetadataSchema) {
+        return uploadDocumentValidator;
       }
       return vi.fn();
     }),
@@ -107,10 +116,12 @@ const {
     updateKnowledgeBaseSchemaMock: updateKbSchema,
     knowledgeBaseDocumentListParamsSchemaMock: listParamsSchema,
     knowledgeBaseListParamsSchemaMock: knowledgeBaseListSchema,
+    knowledgeBaseDocumentUploadMetadataSchemaMock: knowledgeBaseDocumentUploadMetadataSchema,
     createKbValidatorMock: createKbValidator,
     updateKbValidatorMock: updateKbValidator,
     documentListValidatorMock: listValidator,
     knowledgeBaseListValidatorMock: knowledgeBaseListValidator,
+    uploadDocumentValidatorMock: uploadDocumentValidator,
     documentConfigMock: {
       maxSize: 5 * 1024 * 1024,
     },
@@ -147,6 +158,7 @@ vi.mock('@groundpath/shared/schemas', () => ({
   updateKnowledgeBaseSchema: updateKnowledgeBaseSchemaMock,
   knowledgeBaseDocumentListParamsSchema: knowledgeBaseDocumentListParamsSchemaMock,
   knowledgeBaseListParamsSchema: knowledgeBaseListParamsSchemaMock,
+  knowledgeBaseDocumentUploadMetadataSchema: knowledgeBaseDocumentUploadMetadataSchemaMock,
 }));
 
 import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
@@ -186,6 +198,7 @@ describe('knowledge-base.routes', () => {
   it('should register knowledge base crud routes with validators', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(createKnowledgeBaseSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(updateKnowledgeBaseSchemaMock);
+    expect(validateBodyMock).toHaveBeenCalledWith(knowledgeBaseDocumentUploadMetadataSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseDocumentListParamsSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseListParamsSchemaMock);
 
@@ -215,6 +228,7 @@ describe('knowledge-base.routes', () => {
       generalRateLimiterMock,
       expect.any(Function),
       sanitizeMultipartFieldsMock,
+      uploadDocumentValidatorMock,
       knowledgeBaseControllerMock.uploadDocument
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
