@@ -6,7 +6,9 @@ import {
   index,
   uniqueIndex,
   json,
+  foreignKey,
 } from 'drizzle-orm/mysql-core';
+import { users } from '../user/users.schema';
 
 // ==================== 用户认证方式表 ====================
 export const userAuths = mysqlTable(
@@ -37,6 +39,11 @@ export const userAuths = mysqlTable(
     index('user_id_idx').on(table.userId),
     // 同一个认证方式的authId必须唯一（比如同一个GitHub账号只能绑定一个用户）
     uniqueIndex('auth_type_id_idx').on(table.authType, table.authId),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.id],
+      name: 'user_auths_user_id_fk',
+    }).onDelete('cascade'),
   ]
 );
 

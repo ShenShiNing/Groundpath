@@ -135,6 +135,27 @@ describe('OpenAPI route auto-discovery', () => {
     );
     expect(getProperty(entitiesRequestSchema, 'maxEntities')).toBeDefined();
     expect(getProperty(entitiesRequestSchema, 'language')).toBeDefined();
+
+    const keywordsResponseSchema = getResponseSchema(
+      '/api/document-ai/{id}/analyze/keywords',
+      'post',
+      200
+    );
+    const keywordsData = getProperty(keywordsResponseSchema, 'data');
+    const keywordItem = getItems(getProperty(keywordsData, 'keywords'));
+    expect(getProperty(keywordItem, 'word')).toBeDefined();
+    expect(getProperty(keywordItem, 'relevance')).toBeDefined();
+
+    const entitiesResponseSchema = getResponseSchema(
+      '/api/document-ai/{id}/analyze/entities',
+      'post',
+      200
+    );
+    const entitiesData = getProperty(entitiesResponseSchema, 'data');
+    const entityItem = getItems(getProperty(entitiesData, 'entities'));
+    expect(getProperty(entityItem, 'text')).toBeDefined();
+    expect(getProperty(entityItem, 'confidence')).toBeDefined();
+    expect(getProperty(entityItem, 'type')?.enum).toContain('organization');
   });
 
   it('keeps knowledge base and document contracts aligned with live API payloads', () => {

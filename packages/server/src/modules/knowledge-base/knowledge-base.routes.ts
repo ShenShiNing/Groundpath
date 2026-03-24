@@ -13,6 +13,7 @@ import {
 import {
   createKnowledgeBaseSchema,
   knowledgeBaseDocumentListParamsSchema,
+  knowledgeBaseDocumentUploadMetadataSchema,
   updateKnowledgeBaseSchema,
   knowledgeBaseListParamsSchema,
 } from '@groundpath/shared/schemas';
@@ -21,7 +22,7 @@ import { sendSuccessResponse } from '@core/errors';
 import { AppError } from '@core/errors/app-error';
 import { asyncHandler } from '@core/errors/async-handler';
 import { requireUserId, getParamId, getClientIp } from '@core/utils';
-import { getValidatedQuery } from '@core/middleware';
+import { getValidatedBody, getValidatedQuery } from '@core/middleware';
 import { HTTP_STATUS } from '@groundpath/shared';
 import type { DocumentListParams } from '@groundpath/shared/types';
 
@@ -136,6 +137,7 @@ router.post(
   '/:id/documents',
   generalRateLimiter,
   ...uploadWithErrorHandling('file'),
+  validateBody(knowledgeBaseDocumentUploadMetadataSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
     const kbId = getParamId(req, 'id');
@@ -149,10 +151,10 @@ router.post(
       throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
     }
 
-    const { title, description } = req.body as {
+    const { title, description } = getValidatedBody<{
       title?: string;
       description?: string;
-    };
+    }>(res);
 
     const document = await documentService.upload(
       userId,

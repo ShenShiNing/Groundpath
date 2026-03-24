@@ -168,6 +168,7 @@ describe('E2E Smoke: Trash Journey', () => {
   it('should upload a document', async () => {
     const formData = new FormData();
     formData.set('file', new Blob(['test content'], { type: 'text/plain' }), 'test.txt');
+    formData.set('knowledgeBaseId', '123e4567-e89b-12d3-a456-426614174000');
 
     const response = await fetch(`${baseUrl}/api/documents`, {
       method: 'POST',

@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   text,
 } from 'drizzle-orm/mysql-core';
+import { sql } from 'drizzle-orm';
 
 export const users = mysqlTable(
   'users',
@@ -19,6 +20,14 @@ export const users = mysqlTable(
     username: varchar('username', { length: 50 }).notNull(),
     email: varchar('email', { length: 255 }).notNull(),
     password: varchar('password', { length: 255 }), // 可为null，第三方登录用户无密码
+    activeUsername: varchar('active_username', { length: 50 }).generatedAlwaysAs(
+      sql`(case when deleted_at is null then username else null end)`,
+      { mode: 'stored' }
+    ),
+    activeEmail: varchar('active_email', { length: 255 }).generatedAlwaysAs(
+      sql`(case when deleted_at is null then email else null end)`,
+      { mode: 'stored' }
+    ),
 
     // Profile
     avatarUrl: text('avatar_url'),
@@ -47,8 +56,8 @@ export const users = mysqlTable(
     index('status_idx').on(table.status),
     index('deleted_at_idx').on(table.deletedAt),
     index('email_verified_idx').on(table.emailVerified),
-    uniqueIndex('username_deleted_idx').on(table.username, table.deletedAt),
-    uniqueIndex('email_deleted_idx').on(table.email, table.deletedAt),
+    uniqueIndex('users_active_username_idx').on(table.activeUsername),
+    uniqueIndex('users_active_email_idx').on(table.activeEmail),
   ]
 );
 

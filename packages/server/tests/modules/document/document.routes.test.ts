@@ -14,10 +14,14 @@ const {
   documentListParamsSchemaMock,
   trashListParamsSchemaMock,
   saveDocumentContentSchemaMock,
+  documentUploadMetadataSchemaMock,
+  documentVersionUploadMetadataSchemaMock,
   updateValidatorMock,
   listValidatorMock,
   trashListValidatorMock,
   saveContentValidatorMock,
+  uploadValidatorMock,
+  versionUploadValidatorMock,
   documentControllerMock,
   multerFactoryMock,
   multerMemoryStorageMock,
@@ -38,11 +42,15 @@ const {
   const documentListParamsSchema = { type: 'document-list-schema' };
   const trashListParamsSchema = { type: 'trash-list-schema' };
   const saveDocumentContentSchema = { type: 'save-document-content-schema' };
+  const documentUploadMetadataSchema = { type: 'document-upload-metadata-schema' };
+  const documentVersionUploadMetadataSchema = { type: 'document-version-upload-metadata-schema' };
 
   const updateValidator = vi.fn();
   const listValidator = vi.fn();
   const trashListValidator = vi.fn();
   const saveContentValidator = vi.fn();
+  const uploadValidator = vi.fn();
+  const versionUploadValidator = vi.fn();
 
   const sanitizeMultipartFields = vi.fn();
   const sanitizeInlineContent = vi.fn();
@@ -80,6 +88,8 @@ const {
     validateBodyMock: vi.fn((schema: unknown) => {
       if (schema === updateDocumentRequestSchema) return updateValidator;
       if (schema === saveDocumentContentSchema) return saveContentValidator;
+      if (schema === documentUploadMetadataSchema) return uploadValidator;
+      if (schema === documentVersionUploadMetadataSchema) return versionUploadValidator;
       return vi.fn();
     }),
     validateQueryMock: vi.fn((schema: unknown) => {
@@ -94,10 +104,14 @@ const {
     documentListParamsSchemaMock: documentListParamsSchema,
     trashListParamsSchemaMock: trashListParamsSchema,
     saveDocumentContentSchemaMock: saveDocumentContentSchema,
+    documentUploadMetadataSchemaMock: documentUploadMetadataSchema,
+    documentVersionUploadMetadataSchemaMock: documentVersionUploadMetadataSchema,
     updateValidatorMock: updateValidator,
     listValidatorMock: listValidator,
     trashListValidatorMock: trashListValidator,
     saveContentValidatorMock: saveContentValidator,
+    uploadValidatorMock: uploadValidator,
+    versionUploadValidatorMock: versionUploadValidator,
     documentControllerMock: {
       listTrash: vi.fn(),
       clearTrash: vi.fn(),
@@ -156,6 +170,8 @@ vi.mock('@groundpath/shared/schemas', () => ({
   documentListParamsSchema: documentListParamsSchemaMock,
   trashListParamsSchema: trashListParamsSchemaMock,
   saveDocumentContentSchema: saveDocumentContentSchemaMock,
+  documentUploadMetadataSchema: documentUploadMetadataSchemaMock,
+  documentVersionUploadMetadataSchema: documentVersionUploadMetadataSchemaMock,
 }));
 
 import documentRoutes from '@modules/document/document.routes';
@@ -169,10 +185,7 @@ function createMockResponse(): Response {
 
 function getUploadMiddlewareByPath(path: string) {
   const routeCall = mockRouter.post.mock.calls.find((call) => call[0] === path);
-  const middlewareArray = routeCall?.[2] as
-    | [(req: Request, res: Response, next: NextFunction) => void, unknown]
-    | undefined;
-  return middlewareArray?.[0];
+  return routeCall?.[2] as ((req: Request, res: Response, next: NextFunction) => void) | undefined;
 }
 
 describe('document.routes', () => {
@@ -198,6 +211,8 @@ describe('document.routes', () => {
 
     expect(validateBodyMock).toHaveBeenCalledWith(updateDocumentRequestSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(saveDocumentContentSchemaMock);
+    expect(validateBodyMock).toHaveBeenCalledWith(documentUploadMetadataSchemaMock);
+    expect(validateBodyMock).toHaveBeenCalledWith(documentVersionUploadMetadataSchemaMock);
     expect(createSanitizeMiddlewareMock).toHaveBeenCalledWith(['changeNote']);
   });
 
@@ -219,7 +234,9 @@ describe('document.routes', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/',
       expect.any(Function),
-      [expect.any(Function), sanitizeMultipartFieldsMock],
+      expect.any(Function),
+      sanitizeMultipartFieldsMock,
+      uploadValidatorMock,
       documentControllerMock.upload
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
@@ -253,7 +270,9 @@ describe('document.routes', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/versions',
       expect.any(Function),
-      [expect.any(Function), sanitizeMultipartFieldsMock],
+      expect.any(Function),
+      sanitizeMultipartFieldsMock,
+      versionUploadValidatorMock,
       documentControllerMock.uploadNewVersion
     );
     expect(mockRouter.post).toHaveBeenCalledWith(

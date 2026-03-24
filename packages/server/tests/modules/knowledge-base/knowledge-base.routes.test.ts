@@ -9,6 +9,7 @@ const {
   validateBodyMock,
   validateQueryMock,
   getValidatedQueryMock,
+  getValidatedBodyMock,
   createSanitizeMiddlewareMock,
   sanitizeMultipartFieldsMock,
   asyncHandlerMock,
@@ -21,11 +22,13 @@ const {
   createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchemaMock,
   knowledgeBaseDocumentListParamsSchemaMock,
+  knowledgeBaseDocumentUploadMetadataSchemaMock,
   knowledgeBaseListParamsSchemaMock,
   createKbValidatorMock,
   updateKbValidatorMock,
   documentListValidatorMock,
   knowledgeBaseListValidatorMock,
+  uploadMetadataValidatorMock,
   documentServiceMock,
   sendSuccessResponseMock,
   requireUserIdMock,
@@ -64,14 +67,17 @@ const {
   const createKbSchema = { type: 'create-kb-schema' };
   const updateKbSchema = { type: 'update-kb-schema' };
   const listParamsSchema = { type: 'knowledge-base-document-list-schema' };
+  const uploadMetadataSchema = { type: 'knowledge-base-document-upload-metadata-schema' };
   const knowledgeBaseListSchema = { type: 'knowledge-base-list-schema' };
 
   const createKbValidator = vi.fn();
   const updateKbValidator = vi.fn();
   const listValidator = vi.fn();
   const knowledgeBaseListValidator = vi.fn();
+  const uploadMetadataValidator = vi.fn();
   const sanitizeMultipartFields = vi.fn();
   const getValidatedQuery = vi.fn();
+  const getValidatedBody = vi.fn();
   const sendSuccessResponse = vi.fn();
   const requireUserId = vi.fn();
   const getParamId = vi.fn();
@@ -105,6 +111,9 @@ const {
       if (schema === updateKbSchema) {
         return updateKbValidator;
       }
+      if (schema === uploadMetadataSchema) {
+        return uploadMetadataValidator;
+      }
       return vi.fn();
     }),
     validateQueryMock: vi.fn((schema: unknown) => {
@@ -117,6 +126,7 @@ const {
       return vi.fn();
     }),
     getValidatedQueryMock: getValidatedQuery,
+    getValidatedBodyMock: getValidatedBody,
     createSanitizeMiddlewareMock: vi.fn(() => sanitizeMultipartFields),
     sanitizeMultipartFieldsMock: sanitizeMultipartFields,
     asyncHandlerMock: vi.fn((handler: unknown) => handler),
@@ -135,11 +145,13 @@ const {
     createKnowledgeBaseSchemaMock: createKbSchema,
     updateKnowledgeBaseSchemaMock: updateKbSchema,
     knowledgeBaseDocumentListParamsSchemaMock: listParamsSchema,
+    knowledgeBaseDocumentUploadMetadataSchemaMock: uploadMetadataSchema,
     knowledgeBaseListParamsSchemaMock: knowledgeBaseListSchema,
     createKbValidatorMock: createKbValidator,
     updateKbValidatorMock: updateKbValidator,
     documentListValidatorMock: listValidator,
     knowledgeBaseListValidatorMock: knowledgeBaseListValidator,
+    uploadMetadataValidatorMock: uploadMetadataValidator,
     documentServiceMock: documentService,
     sendSuccessResponseMock: sendSuccessResponse,
     requireUserIdMock: requireUserId,
@@ -175,12 +187,14 @@ vi.mock('@core/middleware', () => ({
   validateQuery: validateQueryMock,
   createSanitizeMiddleware: createSanitizeMiddlewareMock,
   getValidatedQuery: getValidatedQueryMock,
+  getValidatedBody: getValidatedBodyMock,
 }));
 
 vi.mock('@groundpath/shared/schemas', () => ({
   createKnowledgeBaseSchema: createKnowledgeBaseSchemaMock,
   updateKnowledgeBaseSchema: updateKnowledgeBaseSchemaMock,
   knowledgeBaseDocumentListParamsSchema: knowledgeBaseDocumentListParamsSchemaMock,
+  knowledgeBaseDocumentUploadMetadataSchema: knowledgeBaseDocumentUploadMetadataSchemaMock,
   knowledgeBaseListParamsSchema: knowledgeBaseListParamsSchemaMock,
 }));
 
@@ -216,7 +230,7 @@ import knowledgeBaseRoutes from '@modules/knowledge-base/knowledge-base.routes';
 import { documentService } from '@modules/document';
 import { sendSuccessResponse } from '@core/errors';
 import { requireUserId, getParamId, getClientIp } from '@core/utils';
-import { getValidatedQuery } from '@core/middleware';
+import { getValidatedBody, getValidatedQuery } from '@core/middleware';
 
 function createMockResponse(): Response {
   return {
@@ -236,7 +250,7 @@ function createMockRequest(partial: Partial<Request> = {}): Request {
 
 function getDocumentUploadHandler() {
   const uploadRouteCall = mockRouter.post.mock.calls.find((call) => call[0] === '/:id/documents');
-  return uploadRouteCall?.[4] as ((req: Request, res: Response) => Promise<void>) | undefined;
+  return uploadRouteCall?.[5] as ((req: Request, res: Response) => Promise<void>) | undefined;
 }
 
 function getDocumentListHandler() {
@@ -265,6 +279,7 @@ describe('knowledge-base.routes', () => {
   it('should register knowledge base crud routes with validators', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(createKnowledgeBaseSchemaMock);
     expect(validateBodyMock).toHaveBeenCalledWith(updateKnowledgeBaseSchemaMock);
+    expect(validateBodyMock).toHaveBeenCalledWith(knowledgeBaseDocumentUploadMetadataSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseDocumentListParamsSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseListParamsSchemaMock);
 
@@ -293,6 +308,7 @@ describe('knowledge-base.routes', () => {
       generalRateLimiterMock,
       expect.any(Function),
       sanitizeMultipartFieldsMock,
+      uploadMetadataValidatorMock,
       expect.any(Function)
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
@@ -374,6 +390,7 @@ describe('knowledge-base.routes', () => {
       vi.mocked(requireUserId).mockReset();
       vi.mocked(getParamId).mockReset();
       vi.mocked(getClientIp).mockReset();
+      vi.mocked(getValidatedBody).mockReset();
       vi.mocked(getValidatedQuery).mockReset();
     });
 
@@ -384,6 +401,7 @@ describe('knowledge-base.routes', () => {
       vi.mocked(requireUserId).mockReturnValue('user-1');
       vi.mocked(getParamId).mockReturnValue(validKbId);
       vi.mocked(getClientIp).mockReturnValue('127.0.0.1');
+      vi.mocked(getValidatedBody).mockReturnValue({ title: 't', description: 'd' });
       vi.mocked(documentService.upload).mockResolvedValue({ id: 'doc-1' } as never);
 
       const encodedName = Buffer.from('测试.txt', 'utf-8').toString('latin1');
@@ -405,6 +423,7 @@ describe('knowledge-base.routes', () => {
 
       await handler!(req, res);
 
+      expect(getValidatedBody).toHaveBeenCalledWith(res);
       expect(documentService.upload).toHaveBeenCalledWith(
         'user-1',
         expect.objectContaining({
