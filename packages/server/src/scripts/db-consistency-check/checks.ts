@@ -12,6 +12,7 @@ import {
   checkDuplicateActiveUsernames,
   checkOrphanUserAuths,
 } from './auth.checks';
+import { checkOrphanBackfillItems, checkOrphanBackfillRuns } from './backfill.checks';
 import type { CheckResult } from './types';
 
 function extractRows<T>(result: unknown): T[] {
@@ -428,6 +429,8 @@ const checks = [
   checkDuplicateActiveUserEmails,
   checkDuplicateActiveUsernames,
   checkOrphanUserAuths,
+  checkOrphanBackfillRuns,
+  checkOrphanBackfillItems,
 ] as const;
 
 export async function runDatabaseConsistencyChecks(): Promise<CheckResult[]> {

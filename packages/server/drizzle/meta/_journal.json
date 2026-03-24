@@ -85,6 +85,13 @@
       "when": 1774342273261,
       "tag": "0011_user_auths_foreign_key",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1774361727258,
+      "tag": "0012_slim_wonder_man",
+      "breakpoints": true
     }
   ]
 }
