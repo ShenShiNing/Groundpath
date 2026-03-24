@@ -5,11 +5,60 @@ import mysql from 'mysql2/promise';
 import type { Connection, RowDataPacket } from 'mysql2/promise';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+function readEnvFile(filePath: string): Record<string, string> {
+  const env: Record<string, string> = {};
+
+  if (!fs.existsSync(filePath)) {
+    return env;
+  }
+
+  for (const rawLine of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    const separatorIndex = line.indexOf('=');
+    if (separatorIndex === -1) continue;
+
+    const key = line.slice(0, separatorIndex).trim();
+    let value = line.slice(separatorIndex + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    env[key] = value;
+  }
+
+  return env;
+}
+
+function shouldRunRealIntegration(): boolean {
+  if (process.env.RUN_REAL_AUTH_SCHEMA_MIGRATIONS_INTEGRATION === '1') {
+    return true;
+  }
+
+  const testEnv = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
+  return testEnv.RUN_REAL_AUTH_SCHEMA_MIGRATIONS_INTEGRATION === '1';
+}
+
+const describeRealIntegration = shouldRunRealIntegration() ? describe : describe.skip;
+
 function getDatabaseUrl(): URL {
-  const rawUrl = process.env.TEST_DATABASE_URL ?? process.env.DATABASE_URL;
+  const testEnv = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
+  const developmentEnv = readEnvFile(
+    path.resolve(import.meta.dirname, '../../../.env.development.local')
+  );
+  const rawUrl =
+    process.env.AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL ??
+    testEnv.TEST_DATABASE_URL ??
+    testEnv.DATABASE_URL ??
+    developmentEnv.DATABASE_URL;
+
   if (!rawUrl) {
     throw new Error(
-      'DATABASE_URL or TEST_DATABASE_URL is required for migration integration tests'
+      'Real auth schema migration integration test requires AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL or packages/server/.env.development.local'
     );
   }
 
@@ -57,7 +106,7 @@ async function expectMysqlError(
   await expect(operation).rejects.toMatchObject({ code });
 }
 
-describe('auth schema migrations integration', () => {
+describeRealIntegration('auth schema migrations integration', () => {
   let adminConnection: Connection;
   let testConnection: Connection;
   let databaseName: string;
