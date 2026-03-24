@@ -45,10 +45,7 @@ async function waitFor(condition: () => boolean) {
   throw new Error('Condition was not met');
 }
 
-function getFileState(
-  queue: ReturnType<typeof useUploadQueue> | undefined,
-  name: string
-) {
+function getFileState(queue: ReturnType<typeof useUploadQueue> | undefined, name: string) {
   return queue?.files.find((file) => file.file.name === name);
 }
 
