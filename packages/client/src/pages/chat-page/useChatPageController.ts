@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useStreamBuffer } from '@/hooks/useStreamBuffer';
@@ -75,12 +75,19 @@ export function useChatPageController() {
     [messages]
   );
   const streamBuffer = useStreamBuffer(appendToLastMessage);
+
+  const ensureMessageVisibleRef = useRef<((messageId: string) => void) | null>(null);
+  const ensureMessageVisible = useCallback((messageId: string) => {
+    ensureMessageVisibleRef.current?.(messageId);
+  }, []);
+
   const { messagesEndRef, prepareForAssistantStream } = useChatPageScrollFocus({
     messages,
     isLoading,
     focusMessageId,
     focusKeyword,
     clearFocusMessageId,
+    ensureMessageVisible,
   });
 
   useEffect(() => {
@@ -232,6 +239,7 @@ export function useChatPageController() {
     setScopeSwitchDialogOpen: handleScopeSwitchDialogOpenChange,
     pendingKnowledgeBaseName,
     messagesEndRef,
+    ensureMessageVisibleRef,
     stopGeneration: handleStopGeneration,
     setDocumentScope,
     startNewConversation,
