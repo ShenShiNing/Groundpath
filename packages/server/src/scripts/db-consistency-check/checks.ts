@@ -7,6 +7,11 @@ import { documentChunks } from '@core/db/schema/document/document-chunks.schema'
 import { documentIndexVersions } from '@core/db/schema/document/document-index-versions.schema';
 import { documentNodes } from '@core/db/schema/document/document-nodes.schema';
 import { knowledgeBases } from '@core/db/schema/document/knowledge-bases.schema';
+import {
+  checkDuplicateActiveUserEmails,
+  checkDuplicateActiveUsernames,
+  checkOrphanUserAuths,
+} from './auth.checks';
 import type { CheckResult } from './types';
 
 function extractRows<T>(result: unknown): T[] {
@@ -407,64 +412,6 @@ async function checkStaleDocumentIndexBacklog(): Promise<CheckResult> {
   };
 }
 
-async function checkDuplicateActiveUserEmails(): Promise<CheckResult> {
-  const name = '13. Duplicate active user emails';
-  const rows = await db.execute(sql`
-    SELECT
-      email,
-      COUNT(*) AS cnt,
-      GROUP_CONCAT(id ORDER BY created_at SEPARATOR ',') AS user_ids
-    FROM users
-    WHERE deleted_at IS NULL
-    GROUP BY email
-    HAVING COUNT(*) > 1
-    LIMIT 100
-  `);
-
-  const results = extractRows<{
-    email: string;
-    cnt: number;
-    user_ids: string;
-  }>(rows);
-
-  return {
-    name,
-    passed: results.length === 0,
-    count: results.length,
-    details: results.map((row) => `email=${row.email} count=${row.cnt} users=${row.user_ids}`),
-  };
-}
-
-async function checkDuplicateActiveUsernames(): Promise<CheckResult> {
-  const name = '14. Duplicate active usernames';
-  const rows = await db.execute(sql`
-    SELECT
-      username,
-      COUNT(*) AS cnt,
-      GROUP_CONCAT(id ORDER BY created_at SEPARATOR ',') AS user_ids
-    FROM users
-    WHERE deleted_at IS NULL
-    GROUP BY username
-    HAVING COUNT(*) > 1
-    LIMIT 100
-  `);
-
-  const results = extractRows<{
-    username: string;
-    cnt: number;
-    user_ids: string;
-  }>(rows);
-
-  return {
-    name,
-    passed: results.length === 0,
-    count: results.length,
-    details: results.map(
-      (row) => `username=${row.username} count=${row.cnt} users=${row.user_ids}`
-    ),
-  };
-}
-
 const checks = [
   checkOrphanDocuments,
   checkOrphanDocumentVersions,
@@ -480,6 +427,7 @@ const checks = [
   checkStaleDocumentIndexBacklog,
   checkDuplicateActiveUserEmails,
   checkDuplicateActiveUsernames,
+  checkOrphanUserAuths,
 ] as const;
 
 export async function runDatabaseConsistencyChecks(): Promise<CheckResult[]> {
