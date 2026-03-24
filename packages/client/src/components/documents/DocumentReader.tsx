@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import { Loader2, FileWarning } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { DocumentType } from '@groundpath/shared/types';
@@ -198,6 +199,29 @@ function renderMarkdownSafe(markdown: string): string {
   return html.join('\n');
 }
 
+/** DOMPurify 配置：仅允许 renderMarkdownSafe 生成的标签和属性 */
+const PURIFY_CONFIG: DOMPurify.Config = {
+  ALLOWED_TAGS: [
+    'p',
+    'br',
+    'strong',
+    'em',
+    'code',
+    'pre',
+    'a',
+    'ul',
+    'li',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'hr',
+  ],
+  ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'aria-hidden'],
+};
+
 export function DocumentReader({
   documentType,
   textContent,
@@ -207,7 +231,7 @@ export function DocumentReader({
 }: DocumentReaderProps) {
   const { t } = useTranslation('document');
   const rendered = useMemo(
-    () => (textContent ? renderMarkdownSafe(textContent) : null),
+    () => (textContent ? DOMPurify.sanitize(renderMarkdownSafe(textContent), PURIFY_CONFIG) : null),
     [textContent]
   );
 
