@@ -187,3 +187,40 @@
 .PdfHighlighter__mouse-selection {
   position: absolute !important;
 }
+
+.chat-markdown :where(.wmde-markdown, .wmde-markdown-color) {
+  color: var(--foreground);
+  background-color: transparent;
+}
+
+.chat-markdown
+  :where(
+    .wmde-markdown h1,
+    .wmde-markdown h2,
+    .wmde-markdown h3,
+    .wmde-markdown h4,
+    .wmde-markdown h5,
+    .wmde-markdown h6,
+    .wmde-markdown p,
+    .wmde-markdown li,
+    .wmde-markdown blockquote,
+    .wmde-markdown td,
+    .wmde-markdown th
+  ) {
+  color: inherit;
+}
+
+.chat-markdown :where(.wmde-markdown a) {
+  color: inherit;
+}
+
+.chat-markdown
+  :where(
+    .wmde-markdown blockquote,
+    .wmde-markdown hr,
+    .wmde-markdown pre,
+    .wmde-markdown table th,
+    .wmde-markdown table td
+  ) {
+  border-color: var(--border);
+}

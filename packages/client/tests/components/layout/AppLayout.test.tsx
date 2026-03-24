@@ -12,17 +12,31 @@ const authState = {
   isAuthenticated: true,
   clearAuth: mocks.clearAuth,
 };
+const locationState = {
+  pathname: '/chat',
+};
 
-vi.mock('@/api', async () => {
-  const actual = await vi.importActual<typeof import('@/api')>('@/api');
-  return {
-    ...actual,
-    authApi: {
-      ...actual.authApi,
-      logout: mocks.logout,
-    },
-  };
-});
+function mockMatchMedia(matches: boolean) {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches,
+      media: '(max-width: 767px)',
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      onchange: null,
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
+vi.mock('@/api', () => ({
+  authApi: {
+    logout: mocks.logout,
+  },
+}));
 
 vi.mock('@/stores', () => ({
   useAuthStore: (selector: (state: typeof authState) => unknown) => selector(authState),
@@ -37,6 +51,7 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({
     navigate: mocks.navigate,
   }),
+  useLocation: () => locationState,
 }));
 
 vi.mock('@/components/layout/AppSidebar', () => ({
@@ -60,6 +75,16 @@ vi.mock('@/components/layout/AppSidebar', () => ({
   ),
 }));
 
+vi.mock('react-i18next', () => ({
+  initReactI18next: {
+    type: '3rdParty',
+    init: () => undefined,
+  },
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
 import { AppLayout } from '../../../src/components/layout/AppLayout';
 
 describe('AppLayout', () => {
@@ -67,6 +92,8 @@ describe('AppLayout', () => {
     vi.clearAllMocks();
     localStorage.clear();
     authState.isAuthenticated = true;
+    locationState.pathname = '/chat';
+    mockMatchMedia(false);
   });
 
   it('should render a simple shell without sidebar when unauthenticated', async () => {
@@ -131,6 +158,25 @@ describe('AppLayout', () => {
     expect(mocks.logClientError).toHaveBeenCalledWith('AppLayout.handleLogout', expect.any(Error));
     expect(mocks.clearAuth).toHaveBeenCalledTimes(1);
     expect(mocks.navigate).toHaveBeenCalledWith({ to: '/auth/login' });
+
+    await view.unmount();
+  });
+
+  it('should render a mobile navigation trigger instead of the desktop sidebar on small screens', async () => {
+    mockMatchMedia(true);
+
+    const view = await render(
+      <AppLayout>
+        <div>content</div>
+      </AppLayout>
+    );
+
+    expect(view.container.querySelector('[data-testid="app-sidebar"]')).toBeNull();
+    expect(
+      Array.from(view.container.querySelectorAll('button')).some(
+        (button) => button.getAttribute('aria-label') === 'sidebar.openNavigation'
+      )
+    ).toBe(true);
 
     await view.unmount();
   });

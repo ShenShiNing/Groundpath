@@ -30,6 +30,9 @@ interface AppSidebarProps {
   isCollapsed: boolean;
   onLogout: () => void;
   onToggleCollapse: () => void;
+  isMobile?: boolean;
+  className?: string;
+  onNavigate?: () => void;
 }
 
 const mainNavItems: NavItem[] = [
@@ -50,10 +53,12 @@ function SidebarNavItem({
   item,
   isCollapsed,
   isActive,
+  onSelect,
 }: {
   item: NavItem;
   isCollapsed: boolean;
   isActive: boolean;
+  onSelect?: () => void;
 }) {
   const { t } = useTranslation(['app', 'document']);
   const label =
@@ -68,6 +73,7 @@ function SidebarNavItem({
   const content = (
     <Link
       to={item.to}
+      onClick={onSelect}
       className={cn(
         'flex items-center rounded-lg text-sm transition-colors',
         isCollapsed ? 'h-9 w-full justify-center px-0 py-0' : 'gap-2 px-2.5 py-2',
@@ -93,7 +99,14 @@ function SidebarNavItem({
   return content;
 }
 
-export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSidebarProps) {
+export function AppSidebar({
+  isCollapsed,
+  onLogout,
+  onToggleCollapse,
+  isMobile = false,
+  className,
+  onNavigate,
+}: AppSidebarProps) {
   const { t } = useTranslation(['app', 'common']);
   const router = useRouter();
   const location = useLocation();
@@ -103,6 +116,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
   const startNewConversation = useChatPanelStore((state) => state.startNewConversation);
   const isChatPage = location.pathname === '/chat' || location.pathname.startsWith('/chat/');
   const [chatSearchOpen, setChatSearchOpen] = useState(false);
+  const collapsed = isMobile ? false : isCollapsed;
 
   const isActive = (path: string) =>
     location.pathname === path || location.pathname.startsWith(path + '/');
@@ -118,6 +132,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
     if (!isChatPage) {
       await router.navigate({ to: '/chat' });
     }
+    onNavigate?.();
   };
 
   const handleNewConversation = () => {
@@ -125,10 +140,12 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
     if (!isChatPage) {
       void router.navigate({ to: '/chat' });
     }
+    onNavigate?.();
   };
 
   const handleCurrentConversationDeleted = () => {
     startNewConversation();
+    onNavigate?.();
   };
 
   useEffect(() => {
@@ -150,17 +167,19 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
   return (
     <aside
       className={cn(
-        'flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-200',
-        isCollapsed ? 'w-14' : 'w-72'
+        'flex min-h-0 flex-col bg-sidebar text-sidebar-foreground transition-all duration-200',
+        collapsed ? 'w-14 border-r' : 'w-72 border-r',
+        isMobile && 'w-full',
+        className
       )}
     >
       <div
         className={cn(
           'flex items-center px-2 pt-2',
-          isCollapsed ? 'justify-center' : 'justify-between'
+          collapsed ? 'justify-center' : 'justify-between'
         )}
       >
-        {isCollapsed ? (
+        {collapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -176,6 +195,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
           <>
             <Link
               to="/chat"
+              onClick={onNavigate}
               className="flex items-center gap-2 px-2 text-sm font-medium transition-colors hover:text-foreground/90"
             >
               <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -183,19 +203,21 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
               </div>
               <span>{t('brand', { ns: 'common' })}</span>
             </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 rounded-lg"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeftClose className="size-4" />
-            </Button>
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-lg"
+                onClick={onToggleCollapse}
+              >
+                <PanelLeftClose className="size-4" />
+              </Button>
+            )}
           </>
         )}
       </div>
 
-      {!isCollapsed ? (
+      {!collapsed ? (
         <div className="px-2 pb-1 pt-2">
           <Button className="h-10 w-full justify-start rounded-lg" onClick={handleNewConversation}>
             <Plus className="mr-2 size-4" />
@@ -220,7 +242,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
         </div>
       )}
 
-      {!isCollapsed ? (
+      {!collapsed ? (
         <div className="px-2 pb-2">
           <Button
             variant="ghost"
@@ -253,23 +275,24 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
       )}
 
       <div className="px-2 pb-2">
-        {!isCollapsed && (
+        {!collapsed && (
           <p className="px-2 pb-1 text-xs text-muted-foreground">{t('sidebar.workspace')}</p>
         )}
-        <nav className={cn('space-y-1', isCollapsed && 'space-y-0')}>
+        <nav className={cn('space-y-1', collapsed && 'space-y-0')}>
           {mainNavItems.map((item) => (
             <SidebarNavItem
               key={item.to}
               item={item}
-              isCollapsed={isCollapsed}
+              isCollapsed={collapsed}
               isActive={isActive(item.to)}
+              onSelect={onNavigate}
             />
           ))}
         </nav>
       </div>
 
-      <div className={cn('min-h-0 flex-1', isCollapsed ? 'p-2' : 'px-2 pb-2')}>
-        {isCollapsed ? (
+      <div className={cn('min-h-0 flex-1', collapsed ? 'p-2' : 'px-2 pb-2')}>
+        {collapsed ? (
           <button
             type="button"
             onClick={onToggleCollapse}
@@ -298,7 +321,7 @@ export function AppSidebar({ isCollapsed, onLogout, onToggleCollapse }: AppSideb
       </div>
 
       <div className="border-t p-2">
-        <UserMenu onLogout={onLogout} isCollapsed={isCollapsed} />
+        <UserMenu onLogout={onLogout} isCollapsed={collapsed} />
       </div>
 
       <ChatSearchDialog

@@ -17,7 +17,14 @@ export {
 export type { PaginationMeta } from './pagination';
 export { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, buildPagination, getOffsetLimit } from './pagination';
 
-export { normalizeEmail, getClientIp, requireUserId, getParamId } from './request.utils';
+export {
+  normalizeEmail,
+  normalizeIpAddress,
+  isPrivateIpAddress,
+  getClientIp,
+  requireUserId,
+  getParamId,
+} from './request.utils';
 
 export { toUserPublicInfo, buildAccessTokenSubject } from './user.mappers';
 

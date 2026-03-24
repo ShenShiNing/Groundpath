@@ -1,6 +1,17 @@
 import { createLogger } from '@core/logger';
+import { isPrivateIpAddress, normalizeIpAddress } from '@core/utils';
 
 const logger = createLogger('geo-location.service');
+
+const GEO_LOOKUP_TIMEOUT_MS = 5000;
+const EMPTY_GEO_LOCATION: GeoLocationInfo = {
+  country: null,
+  countryName: null,
+  region: null,
+  city: null,
+  timezone: null,
+  isp: null,
+};
 
 export interface GeoLocationInfo {
   country: string | null;
@@ -22,23 +33,84 @@ interface IpApiResponse {
   message?: string;
 }
 
-// Private IP ranges
-const PRIVATE_IP_PATTERNS = [
-  /^127\./, // Loopback
-  /^10\./, // Class A private
-  /^172\.(1[6-9]|2[0-9]|3[01])\./, // Class B private
-  /^192\.168\./, // Class C private
-  /^::1$/, // IPv6 loopback
-  /^fe80:/, // IPv6 link-local
-  /^fc00:/, // IPv6 unique local
-  /^fd/, // IPv6 unique local
-];
+interface IpWhoIsResponse {
+  success?: boolean;
+  country?: string;
+  country_code?: string;
+  region?: string;
+  city?: string;
+  timezone?: string | { id?: string };
+  connection?: { isp?: string };
+}
 
-/**
- * Check if an IP address is private/local
- */
-function isPrivateIp(ip: string): boolean {
-  return PRIVATE_IP_PATTERNS.some((pattern) => pattern.test(ip));
+function hasResolvedLocation(info: GeoLocationInfo): boolean {
+  return Boolean(info.country || info.countryName || info.region || info.city);
+}
+
+function mapIpWhoIsResponse(data: IpWhoIsResponse): GeoLocationInfo | null {
+  if (data.success === false) {
+    return null;
+  }
+
+  return {
+    country: data.country_code ?? null,
+    countryName: data.country ?? null,
+    region: data.region ?? null,
+    city: data.city ?? null,
+    timezone: typeof data.timezone === 'string' ? data.timezone : (data.timezone?.id ?? null),
+    isp: data.connection?.isp ?? null,
+  };
+}
+
+function mapIpApiResponse(data: IpApiResponse): GeoLocationInfo | null {
+  if (data.status !== 'success') {
+    return null;
+  }
+
+  return {
+    country: data.countryCode ?? null,
+    countryName: data.country ?? null,
+    region: data.regionName ?? null,
+    city: data.city ?? null,
+    timezone: data.timezone ?? null,
+    isp: data.isp ?? null,
+  };
+}
+
+async function fetchProviderGeoLocation(
+  provider: 'ipwho.is' | 'ip-api',
+  url: string,
+  ipAddress: string
+): Promise<GeoLocationInfo | null> {
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(GEO_LOOKUP_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      logger.warn(
+        { ip: ipAddress, provider, status: response.status },
+        'Geo-location API returned non-OK status'
+      );
+      return null;
+    }
+
+    const data = (await response.json()) as IpWhoIsResponse | IpApiResponse;
+    const mapped =
+      provider === 'ipwho.is'
+        ? mapIpWhoIsResponse(data as IpWhoIsResponse)
+        : mapIpApiResponse(data as IpApiResponse);
+
+    if (!mapped || !hasResolvedLocation(mapped)) {
+      logger.debug({ ip: ipAddress, provider, data }, 'Geo-location lookup returned no result');
+      return null;
+    }
+
+    return mapped;
+  } catch (error) {
+    logger.debug({ ip: ipAddress, provider, error }, 'Geo-location provider failed');
+    return null;
+  }
 }
 
 /**
@@ -48,62 +120,37 @@ function isPrivateIp(ip: string): boolean {
  * - Returns null fields for private IPs or errors
  */
 export async function getGeoLocation(ipAddress: string | null): Promise<GeoLocationInfo> {
-  const emptyResult: GeoLocationInfo = {
-    country: null,
-    countryName: null,
-    region: null,
-    city: null,
-    timezone: null,
-    isp: null,
-  };
+  const normalizedIp = normalizeIpAddress(ipAddress);
 
-  if (!ipAddress) {
-    return emptyResult;
+  if (!normalizedIp) {
+    return EMPTY_GEO_LOCATION;
   }
 
   // Skip private IPs
-  if (isPrivateIp(ipAddress)) {
-    logger.debug({ ip: ipAddress }, 'Skipping geo-location lookup for private IP');
-    return emptyResult;
+  if (isPrivateIpAddress(normalizedIp)) {
+    logger.debug({ ip: normalizedIp }, 'Skipping geo-location lookup for private IP');
+    return EMPTY_GEO_LOCATION;
   }
 
-  try {
-    // ip-api.com free endpoint (HTTP only for free tier)
-    const response = await fetch(
-      `http://ip-api.com/json/${ipAddress}?fields=status,message,country,countryCode,regionName,city,timezone,isp`,
-      {
-        signal: AbortSignal.timeout(5000), // 5 second timeout
-      }
-    );
-
-    if (!response.ok) {
-      logger.warn(
-        { ip: ipAddress, status: response.status },
-        'Geo-location API returned non-OK status'
-      );
-      return emptyResult;
-    }
-
-    const data = (await response.json()) as IpApiResponse;
-
-    if (data.status !== 'success') {
-      logger.debug({ ip: ipAddress, message: data.message }, 'Geo-location lookup failed');
-      return emptyResult;
-    }
-
-    return {
-      country: data.countryCode ?? null,
-      countryName: data.country ?? null,
-      region: data.regionName ?? null,
-      city: data.city ?? null,
-      timezone: data.timezone ?? null,
-      isp: data.isp ?? null,
-    };
-  } catch (error) {
-    // Don't let geo-location errors affect the main flow
-    logger.debug({ ip: ipAddress, error }, 'Failed to get geo-location');
-    return emptyResult;
+  const ipWhoIsResult = await fetchProviderGeoLocation(
+    'ipwho.is',
+    `https://ipwho.is/${normalizedIp}`,
+    normalizedIp
+  );
+  if (ipWhoIsResult) {
+    return ipWhoIsResult;
   }
+
+  const ipApiResult = await fetchProviderGeoLocation(
+    'ip-api',
+    `http://ip-api.com/json/${normalizedIp}?fields=status,message,country,countryCode,regionName,city,timezone,isp`,
+    normalizedIp
+  );
+  if (ipApiResult) {
+    return ipApiResult;
+  }
+
+  return EMPTY_GEO_LOCATION;
 }
 
 /**
@@ -113,13 +160,6 @@ export async function getGeoLocation(ipAddress: string | null): Promise<GeoLocat
 export function getGeoLocationAsync(ipAddress: string | null): Promise<GeoLocationInfo> {
   return getGeoLocation(ipAddress).catch((error) => {
     logger.debug({ error }, 'Async geo-location lookup failed');
-    return {
-      country: null,
-      countryName: null,
-      region: null,
-      city: null,
-      timezone: null,
-      isp: null,
-    };
+    return EMPTY_GEO_LOCATION;
   });
 }

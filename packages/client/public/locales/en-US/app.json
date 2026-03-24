@@ -18,6 +18,8 @@
     "logOut": "Log out"
   },
   "sidebar": {
+    "navigation": "Navigation",
+    "openNavigation": "Open navigation",
     "expand": "Expand sidebar",
     "newChat": "New chat",
     "searchChat": "Search chats",

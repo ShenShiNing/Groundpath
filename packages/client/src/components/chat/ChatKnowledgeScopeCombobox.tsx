@@ -10,6 +10,7 @@ import {
   ComboboxList,
 } from '@/components/ui/combobox';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 import { CHAT_SELECTOR_INPUT_CLASSNAME } from './chatSelectorStyles';
 
 export interface ChatKnowledgeScopeComboboxProps {
@@ -17,6 +18,7 @@ export interface ChatKnowledgeScopeComboboxProps {
   value: string | null;
   disabled?: boolean;
   onValueChange: (knowledgeBaseId: string | null) => void;
+  className?: string;
 }
 
 const GENERAL_SCOPE_VALUE = '__general__';
@@ -33,6 +35,7 @@ export function ChatKnowledgeScopeCombobox({
   value,
   disabled = false,
   onValueChange,
+  className,
 }: ChatKnowledgeScopeComboboxProps) {
   const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
@@ -112,7 +115,7 @@ export function ChatKnowledgeScopeCombobox({
         }}
         disabled={disabled}
         showTrigger
-        className={CHAT_SELECTOR_INPUT_CLASSNAME}
+        className={cn(CHAT_SELECTOR_INPUT_CLASSNAME, className)}
       />
       <ComboboxContent className="p-0">
         <ComboboxList>

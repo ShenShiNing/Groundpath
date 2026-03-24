@@ -49,12 +49,13 @@ export function ChatPageToolbar({
   const { t } = useTranslation('chat');
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3 md:px-6">
+    <div className="flex flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center md:px-6">
       <ChatKnowledgeScopeCombobox
         knowledgeBases={knowledgeBases}
         value={selectedKnowledgeBaseId}
         disabled={isGenerating}
         onValueChange={onKnowledgeBaseChange}
+        className="w-full sm:w-auto"
       />
 
       {selectedKnowledgeBaseId ? (
@@ -62,13 +63,14 @@ export function ChatPageToolbar({
           documents={searchableDocuments}
           selectedIds={selectedDocumentIds}
           onChange={onDocumentScopeChange}
+          className="w-full sm:w-auto"
         />
       ) : (
         <span className="text-xs text-muted-foreground">{t('mode.general')}</span>
       )}
 
       <span
-        className={`text-xs ${
+        className={`min-w-0 text-xs ${
           selectedKnowledgeBaseId && searchableDocuments.length === 0
             ? 'text-amber-600'
             : 'text-muted-foreground'
@@ -93,7 +95,7 @@ export function ChatPageToolbar({
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto size-8 cursor-pointer"
+            className="size-8 self-end cursor-pointer sm:ml-auto sm:self-auto"
             title={t('actions.title')}
           >
             <Ellipsis className="size-4" />

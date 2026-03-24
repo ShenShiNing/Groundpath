@@ -1,1 +1,1 @@
-export const CHAT_SELECTOR_INPUT_CLASSNAME = 'min-w-64 md:min-w-72';
+export const CHAT_SELECTOR_INPUT_CLASSNAME = 'w-full min-w-0 sm:min-w-52 md:min-w-72';

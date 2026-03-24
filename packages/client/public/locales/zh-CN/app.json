@@ -18,6 +18,8 @@
     "logOut": "退出登录"
   },
   "sidebar": {
+    "navigation": "导航菜单",
+    "openNavigation": "打开导航菜单",
     "expand": "展开侧边栏",
     "newChat": "新聊天",
     "searchChat": "搜索聊天",
