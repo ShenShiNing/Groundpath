@@ -22,6 +22,13 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
+export interface CursorPaginationMeta {
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
 /**
  * Build pagination metadata from total count and request params
  */
@@ -34,6 +41,24 @@ export function buildPagination(total: number, page: number, pageSize: number): 
   };
 }
 
+export function buildCursorPagination(
+  total: number,
+  pageSize: number,
+  hasMore: boolean,
+  nextCursor: string | null
+): CursorPaginationMeta {
+  return {
+    pageSize,
+    total,
+    hasMore,
+    nextCursor,
+  };
+}
+
+export function normalizePageSize(pageSize: number): number {
+  return Math.min(MAX_PAGE_SIZE, Math.max(1, pageSize));
+}
+
 /**
  * Calculate SQL offset and limit from pagination params
  * Also normalizes params to safe values
@@ -43,7 +68,7 @@ export function getOffsetLimit(params: { page: number; pageSize: number }): {
   limit: number;
 } {
   const page = Math.max(1, params.page);
-  const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, params.pageSize));
+  const pageSize = normalizePageSize(params.pageSize);
 
   return {
     offset: (page - 1) * pageSize,

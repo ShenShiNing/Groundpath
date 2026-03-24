@@ -76,7 +76,7 @@ async function main() {
     } else if (userId) {
       console.log(`Syncing all knowledge bases for user: ${userId}\n`);
       if (dryRun) {
-        const kbs = await knowledgeBaseRepository.listByUser(userId);
+        const kbs = await knowledgeBaseRepository.listAllByUser(userId);
         if (kbs.length === 0) {
           console.log('  No knowledge bases found for this user.');
         }

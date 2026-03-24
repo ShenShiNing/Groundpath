@@ -1,7 +1,9 @@
-import { and, asc, count, desc, eq, isNotNull, isNull, like, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, isNotNull, isNull, like, lt, or, sql } from 'drizzle-orm';
 import type { DocumentListParams, TrashListParams } from '@groundpath/shared/types';
 import { db } from '@core/db';
 import { getDbContext, now, type Transaction } from '@core/db/db.utils';
+import { AppError } from '@core/errors/app-error';
+import { Errors } from '@core/errors';
 import {
   documents,
   type Document,
@@ -60,6 +62,18 @@ function extractRows<T>(result: unknown): T[] {
   return (result as [T[]])[0] ?? [];
 }
 
+type DocumentSortBy = DocumentListParams['sortBy'];
+type TrashSortBy = TrashListParams['sortBy'];
+type SortOrder = 'asc' | 'desc';
+type CursorValue = string | number | Date;
+
+interface CursorPayload<TSortBy extends string> {
+  id: string;
+  sortBy: TSortBy;
+  sortOrder: SortOrder;
+  value: string | number;
+}
+
 function buildDocumentOrderBy(sortBy: DocumentListParams['sortBy']) {
   return {
     createdAt: documents.createdAt,
@@ -95,6 +109,138 @@ function buildStableTrashOrder(
 ) {
   const orderByFn = sortOrder === 'asc' ? asc : desc;
   return [orderByFn(sortColumn), orderByFn(documents.id)] as const;
+}
+
+function encodeCursor<TSortBy extends string>(payload: CursorPayload<TSortBy>): string {
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function invalidCursorError() {
+  return Errors.validation('Invalid pagination cursor');
+}
+
+function decodeCursor<TSortBy extends string>(
+  cursor: string,
+  expectedSortBy: TSortBy,
+  expectedSortOrder: SortOrder
+): CursorPayload<TSortBy> {
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(cursor, 'base64url').toString('utf8')
+    ) as CursorPayload<TSortBy>;
+    if (
+      !decoded ||
+      typeof decoded !== 'object' ||
+      typeof decoded.id !== 'string' ||
+      decoded.id.length === 0 ||
+      decoded.sortBy !== expectedSortBy ||
+      decoded.sortOrder !== expectedSortOrder ||
+      (typeof decoded.value !== 'string' && typeof decoded.value !== 'number')
+    ) {
+      throw invalidCursorError();
+    }
+    return decoded;
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw invalidCursorError();
+  }
+}
+
+function parseDocumentCursorValue(sortBy: DocumentSortBy, value: string | number): CursorValue {
+  switch (sortBy) {
+    case 'fileSize':
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw invalidCursorError();
+      }
+      return value;
+    case 'createdAt':
+    case 'updatedAt': {
+      if (typeof value !== 'string') {
+        throw invalidCursorError();
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        throw invalidCursorError();
+      }
+      return parsed;
+    }
+    case 'title':
+      if (typeof value !== 'string') {
+        throw invalidCursorError();
+      }
+      return value;
+  }
+}
+
+function parseTrashCursorValue(sortBy: TrashSortBy, value: string | number): CursorValue {
+  if (sortBy === 'fileSize') {
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+      throw invalidCursorError();
+    }
+    return value;
+  }
+
+  if (typeof value !== 'string') {
+    throw invalidCursorError();
+  }
+
+  if (sortBy === 'deletedAt') {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw invalidCursorError();
+    }
+    return parsed;
+  }
+
+  return value;
+}
+
+function getDocumentCursorValue(document: Document, sortBy: DocumentSortBy): string | number {
+  switch (sortBy) {
+    case 'createdAt':
+      return document.createdAt.toISOString();
+    case 'updatedAt':
+      return document.updatedAt.toISOString();
+    case 'title':
+      return document.title;
+    case 'fileSize':
+      return document.fileSize;
+  }
+}
+
+function getTrashCursorValue(document: Document, sortBy: TrashSortBy): string | number {
+  switch (sortBy) {
+    case 'deletedAt':
+      return document.deletedAt!.toISOString();
+    case 'title':
+      return document.title;
+    case 'fileSize':
+      return document.fileSize;
+  }
+}
+
+function buildCursorCondition(
+  column:
+    | typeof documents.createdAt
+    | typeof documents.updatedAt
+    | typeof documents.deletedAt
+    | typeof documents.title
+    | typeof documents.fileSize,
+  cursorValue: CursorValue,
+  cursorId: string,
+  sortOrder: SortOrder
+) {
+  const compare = sortOrder === 'asc' ? gt : lt;
+  const condition = or(
+    compare(column, cursorValue),
+    and(eq(column, cursorValue), compare(documents.id, cursorId))
+  );
+  if (!condition) {
+    throw Errors.internal('Failed to build pagination cursor condition');
+  }
+  return condition;
 }
 
 export const documentRepositoryCore = {
@@ -164,36 +310,67 @@ export const documentRepositoryCore = {
   async list(
     userId: string,
     params: DocumentListParams
-  ): Promise<{ documents: Document[]; total: number }> {
-    const { page, pageSize, knowledgeBaseId, documentType, search, sortBy, sortOrder } = params;
-    const offset = (page - 1) * pageSize;
-    const conditions = [eq(documents.userId, userId), isNull(documents.deletedAt)];
+  ): Promise<{
+    documents: Document[];
+    total: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  }> {
+    const { pageSize, cursor, knowledgeBaseId, documentType, search, sortBy, sortOrder } = params;
+    const baseConditions = [eq(documents.userId, userId), isNull(documents.deletedAt)];
 
     if (knowledgeBaseId) {
-      conditions.push(eq(documents.knowledgeBaseId, knowledgeBaseId));
+      baseConditions.push(eq(documents.knowledgeBaseId, knowledgeBaseId));
     }
 
     if (documentType) {
-      conditions.push(eq(documents.documentType, documentType));
+      baseConditions.push(eq(documents.documentType, documentType));
     }
 
     if (search) {
-      conditions.push(like(documents.title, `%${search}%`));
+      baseConditions.push(like(documents.title, `%${search}%`));
     }
 
-    const whereClause = and(...conditions);
-    const countResult = await db.select({ count: count() }).from(documents).where(whereClause);
+    const countWhereClause = and(...baseConditions);
+    const countResult = await db.select({ count: count() }).from(documents).where(countWhereClause);
     const total = countResult[0]?.count ?? 0;
+    const sortColumn = buildDocumentOrderBy(sortBy);
+    const listConditions = [...baseConditions];
+
+    if (cursor) {
+      const decodedCursor = decodeCursor(cursor, sortBy, sortOrder);
+      listConditions.push(
+        buildCursorCondition(
+          sortColumn,
+          parseDocumentCursorValue(sortBy, decodedCursor.value),
+          decodedCursor.id,
+          sortOrder
+        )
+      );
+    }
+
     const orderBy = buildStableDocumentOrder(buildDocumentOrderBy(sortBy), sortOrder);
     const result = await db
       .select()
       .from(documents)
-      .where(whereClause)
+      .where(and(...listConditions))
       .orderBy(...orderBy)
-      .limit(pageSize)
-      .offset(offset);
+      .limit(pageSize + 1);
 
-    return { documents: result, total };
+    const hasMore = result.length > pageSize;
+    const pageDocuments = hasMore ? result.slice(0, pageSize) : result;
+    const lastDocument = pageDocuments.at(-1);
+    const nextCursor =
+      hasMore && lastDocument
+        ? encodeCursor({
+            id: lastDocument.id,
+            sortBy,
+            sortOrder,
+            value: getDocumentCursorValue(lastDocument, sortBy),
+          })
+        : null;
+
+    return { documents: pageDocuments, total, hasMore, nextCursor };
   },
 
   async update(
@@ -235,28 +412,59 @@ export const documentRepositoryCore = {
   async listDeleted(
     userId: string,
     params: TrashListParams
-  ): Promise<{ documents: Document[]; total: number }> {
-    const { page, pageSize, search, sortBy, sortOrder } = params;
-    const offset = (page - 1) * pageSize;
-    const conditions = [eq(documents.userId, userId), isNotNull(documents.deletedAt)];
+  ): Promise<{
+    documents: Document[];
+    total: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  }> {
+    const { pageSize, cursor, search, sortBy, sortOrder } = params;
+    const baseConditions = [eq(documents.userId, userId), isNotNull(documents.deletedAt)];
 
     if (search) {
-      conditions.push(like(documents.title, `%${search}%`));
+      baseConditions.push(like(documents.title, `%${search}%`));
     }
 
-    const whereClause = and(...conditions);
-    const countResult = await db.select({ count: count() }).from(documents).where(whereClause);
+    const countWhereClause = and(...baseConditions);
+    const countResult = await db.select({ count: count() }).from(documents).where(countWhereClause);
     const total = countResult[0]?.count ?? 0;
+    const sortColumn = buildTrashOrderBy(sortBy);
+    const listConditions = [...baseConditions];
+
+    if (cursor) {
+      const decodedCursor = decodeCursor(cursor, sortBy, sortOrder);
+      listConditions.push(
+        buildCursorCondition(
+          sortColumn,
+          parseTrashCursorValue(sortBy, decodedCursor.value),
+          decodedCursor.id,
+          sortOrder
+        )
+      );
+    }
+
     const orderBy = buildStableTrashOrder(buildTrashOrderBy(sortBy), sortOrder);
     const result = await db
       .select()
       .from(documents)
-      .where(whereClause)
+      .where(and(...listConditions))
       .orderBy(...orderBy)
-      .limit(pageSize)
-      .offset(offset);
+      .limit(pageSize + 1);
 
-    return { documents: result, total };
+    const hasMore = result.length > pageSize;
+    const pageDocuments = hasMore ? result.slice(0, pageSize) : result;
+    const lastDocument = pageDocuments.at(-1);
+    const nextCursor =
+      hasMore && lastDocument
+        ? encodeCursor({
+            id: lastDocument.id,
+            sortBy,
+            sortOrder,
+            value: getTrashCursorValue(lastDocument, sortBy),
+          })
+        : null;
+
+    return { documents: pageDocuments, total, hasMore, nextCursor };
   },
 
   async listDeletedIds(userId: string): Promise<string[]> {

@@ -80,10 +80,10 @@ const documentListFixture: DocumentListResponse = {
     },
   ],
   pagination: {
-    page: 1,
     pageSize: 20,
     total: 1,
-    totalPages: 1,
+    hasMore: false,
+    nextCursor: null,
   },
 };
 
@@ -113,10 +113,10 @@ const trashFixture: TrashListResponse = {
     },
   ],
   pagination: {
-    page: 1,
     pageSize: 20,
     total: 1,
-    totalPages: 1,
+    hasMore: false,
+    nextCursor: null,
   },
 };
 

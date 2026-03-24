@@ -97,10 +97,10 @@ const documentsFixture: DocumentListResponse = {
     },
   ],
   pagination: {
-    page: 1,
     pageSize: 20,
     total: 1,
-    totalPages: 1,
+    hasMore: false,
+    nextCursor: null,
   },
 };
 
@@ -191,7 +191,7 @@ describe('useKnowledgeBases hooks', () => {
 
   it('should stop polling when documents are stable and poll while processing', async () => {
     const queryClient = createQueryClient();
-    const params = { page: 1 };
+    const params = { pageSize: 50 };
 
     function QueryProbe() {
       useKBDocuments(knowledgeBaseFixture.id, params);

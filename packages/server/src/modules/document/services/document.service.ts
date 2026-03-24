@@ -14,7 +14,7 @@ import type {
 import type { Document } from '@core/db/schema/document/documents.schema';
 import { withTransaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';
-import { buildPagination } from '@core/utils';
+import { buildCursorPagination, normalizePageSize } from '@core/utils';
 import { documentRepository } from '../repositories/document.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
 import { createLogger } from '@core/logger';
@@ -98,11 +98,15 @@ export const documentService = {
    * List documents with pagination and filtering
    */
   async list(userId: string, params: DocumentListParams): Promise<DocumentListResponse> {
-    const { documents, total } = await documentRepository.list(userId, params);
+    const pageSize = normalizePageSize(params.pageSize);
+    const { documents, total, hasMore, nextCursor } = await documentRepository.list(userId, {
+      ...params,
+      pageSize,
+    });
 
     return {
       documents: documents.map(toDocumentListItem),
-      pagination: buildPagination(total, params.page, params.pageSize),
+      pagination: buildCursorPagination(total, pageSize, hasMore, nextCursor),
     };
   },
 

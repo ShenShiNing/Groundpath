@@ -48,9 +48,25 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
+export interface CursorPaginationParams {
+  cursor?: string;
+  pageSize: number;
+}
+
+export interface CursorPaginationMeta {
+  pageSize: number;
+  total: number;
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
 /**
  * 分页响应类型
  */
 export type PaginatedResponse<T> =
   | { success: true; data: T[]; pagination: PaginationMeta; error?: never }
+  | { success: false; data?: never; pagination?: never; error: ApiError };
+
+export type CursorPaginatedResponse<T> =
+  | { success: true; data: T[]; pagination: CursorPaginationMeta; error?: never }
   | { success: false; data?: never; pagination?: never; error: ApiError };

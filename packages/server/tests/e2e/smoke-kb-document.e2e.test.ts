@@ -259,16 +259,17 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
       const kb = knowledgeBases.get(id);
       return Boolean(kb && kb.userId === userId && kb.deletedAt === null);
     }),
-    listByUser: vi.fn(async (userId: string, options?: { page?: number; pageSize?: number }) => {
-      const page = options?.page ?? 1;
+    listByUser: vi.fn(async (userId: string, options?: { cursor?: string; pageSize?: number }) => {
       const pageSize = options?.pageSize ?? 20;
       const items = [...knowledgeBases.values()]
         .filter((kb) => kb.userId === userId && kb.deletedAt === null)
-        .sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
+        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
 
-      return items
-        .slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize)
-        .map(cloneKnowledgeBase);
+      return {
+        knowledgeBases: items.slice(0, pageSize).map(cloneKnowledgeBase),
+        hasMore: items.length > pageSize,
+        nextCursor: null,
+      };
     }),
     countByUser: vi.fn(async (userId: string) => {
       return [...knowledgeBases.values()].filter(
@@ -384,8 +385,8 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
       async (
         userId: string,
         params: {
-          page?: number;
           pageSize?: number;
+          cursor?: string;
           knowledgeBaseId?: string;
           documentType?: StoredDocument['documentType'];
           search?: string;
@@ -393,7 +394,6 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
           sortOrder?: 'asc' | 'desc';
         }
       ) => {
-        const page = params.page ?? 1;
         const pageSize = params.pageSize ?? 20;
         const sortBy = params.sortBy ?? 'createdAt';
         const sortOrder = params.sortOrder ?? 'desc';
@@ -428,10 +428,10 @@ vi.mock('@modules/document/repositories/document.repository', () => ({
         });
 
         return {
-          documents: items
-            .slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize)
-            .map(cloneDocument),
+          documents: items.slice(0, pageSize).map(cloneDocument),
           total: items.length,
+          hasMore: items.length > pageSize,
+          nextCursor: null,
         };
       }
     ),
@@ -685,10 +685,10 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
     expect(listResult.knowledgeBases[0]?.name).toBe('E2E Test KB');
     expect((data.knowledgeBases as Array<Record<string, unknown>>)[0]?.userId).toBeUndefined();
     expect(listResult.pagination).toMatchObject({
-      page: 1,
       pageSize: 20,
       total: 1,
-      totalPages: 1,
+      hasMore: false,
+      nextCursor: null,
     });
   });
 
@@ -777,10 +777,10 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
     expect(firstDocument?.userId).toBeUndefined();
     expect(firstDocument?.mimeType).toBeUndefined();
     expect(listResult.pagination).toMatchObject({
-      page: 1,
       pageSize: 20,
       total: 1,
-      totalPages: 1,
+      hasMore: false,
+      nextCursor: null,
     });
   });
 

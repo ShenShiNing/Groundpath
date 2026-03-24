@@ -35,7 +35,7 @@ const { authenticateMock, generalRateLimiterMock, documentServiceMock } = vi.hoi
       upload: vi.fn(async () => ({ id: 'doc-1', title: 'Uploaded KB Document' })),
       list: vi.fn(async () => ({
         documents: [],
-        pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 },
+        pagination: { pageSize: 20, total: 0, hasMore: false, nextCursor: null },
       })),
     },
   };

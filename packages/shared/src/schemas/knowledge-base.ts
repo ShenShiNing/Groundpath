@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dateTimeStringSchema, paginationMetaSchema } from './common';
+import { cursorPaginationMetaSchema, dateTimeStringSchema } from './common';
 
 // ==================== Knowledge Base Schemas ====================
 
@@ -32,8 +32,8 @@ export const updateKnowledgeBaseSchema = z.object({
 });
 
 export const knowledgeBaseListParamsSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
+  cursor: z.string().min(1).optional(),
 });
 
 // ==================== Response Schemas ====================
@@ -67,7 +67,7 @@ export const knowledgeBaseListItemResponseSchema = z.object({
 
 export const knowledgeBaseListResponseSchema = z.object({
   knowledgeBases: z.array(knowledgeBaseListItemResponseSchema),
-  pagination: paginationMetaSchema,
+  pagination: cursorPaginationMetaSchema,
 });
 
 // ==================== Inferred Types ====================

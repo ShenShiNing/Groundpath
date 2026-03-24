@@ -16,6 +16,7 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
   knowledgeBaseRepository: {
     findById: vi.fn(),
     listByUser: vi.fn(),
+    listAllByUser: vi.fn(),
     listAll: vi.fn(),
     updateCounters: vi.fn(),
     countDocumentsByKnowledgeBaseId: vi.fn(),
@@ -110,7 +111,7 @@ describe('counterSyncService', () => {
   });
 
   it('should continue syncing user knowledge bases when one fails', async () => {
-    vi.mocked(knowledgeBaseRepository.listByUser).mockResolvedValue([kb1, kb2]);
+    vi.mocked(knowledgeBaseRepository.listAllByUser).mockResolvedValue([kb1, kb2]);
 
     const spy = vi.spyOn(counterSyncService, 'syncKnowledgeBase');
     spy.mockResolvedValueOnce({

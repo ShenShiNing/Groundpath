@@ -11,6 +11,7 @@ import type { KnowledgeBase } from '@core/db/schema/document/knowledge-bases.sch
 import type { Transaction } from '@core/db/db.utils';
 import { withTransaction } from '@core/db/db.utils';
 import { createLogger } from '@core/logger';
+import { buildCursorPagination, normalizePageSize } from '@core/utils';
 import { documentNodeRepository } from '@modules/document-index/public/repositories';
 import {
   documentRepository,
@@ -128,22 +129,16 @@ export const knowledgeBaseService = {
    * List all knowledge bases for a user (paginated)
    */
   async list(userId: string, params?: KnowledgeBaseListParams): Promise<KnowledgeBaseListResponse> {
-    const page = params?.page ?? 1;
-    const pageSize = params?.pageSize ?? 20;
+    const pageSize = normalizePageSize(params?.pageSize ?? 20);
 
-    const [kbs, total] = await Promise.all([
-      knowledgeBaseRepository.listByUser(userId, { page, pageSize }),
+    const [{ knowledgeBases, hasMore, nextCursor }, total] = await Promise.all([
+      knowledgeBaseRepository.listByUser(userId, { cursor: params?.cursor, pageSize }),
       knowledgeBaseRepository.countByUser(userId),
     ]);
 
     return {
-      knowledgeBases: kbs.map(toKnowledgeBaseListItem),
-      pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages: Math.ceil(total / pageSize),
-      },
+      knowledgeBases: knowledgeBases.map(toKnowledgeBaseListItem),
+      pagination: buildCursorPagination(total, pageSize, hasMore, nextCursor),
     };
   },
 

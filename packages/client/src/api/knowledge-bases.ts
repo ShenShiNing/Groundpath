@@ -7,10 +7,12 @@ import type {
   DocumentListResponse,
   DocumentListParams,
   DocumentInfo,
+  KnowledgeBaseListParams,
 } from '@groundpath/shared/types';
 import type { ApiResponse } from '@groundpath/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
 import type { UploadOptions } from './documents';
+import { collectCursorPages } from './cursor-pagination';
 
 export const knowledgeBasesApi = {
   /**
@@ -27,10 +29,30 @@ export const knowledgeBasesApi = {
   /**
    * List all knowledge bases
    */
+  async listPage(params?: Partial<KnowledgeBaseListParams>): Promise<KnowledgeBaseListResponse> {
+    const response = await apiClient.get<ApiResponse<KnowledgeBaseListResponse>>(
+      '/api/knowledge-bases',
+      { params }
+    );
+    return unwrapResponse(response.data);
+  },
+
   async list(): Promise<KnowledgeBaseListItem[]> {
-    const response =
-      await apiClient.get<ApiResponse<KnowledgeBaseListResponse>>('/api/knowledge-bases');
-    return unwrapResponse(response.data).knowledgeBases;
+    const response = await collectCursorPages({
+      fetchPage: (cursor) => knowledgeBasesApi.listPage({ pageSize: 100, cursor }),
+      mergePages: (pages) => {
+        const firstPage = pages[0]!;
+        return {
+          knowledgeBases: pages.flatMap((page) => page.knowledgeBases),
+          pagination: {
+            ...firstPage.pagination,
+            hasMore: false,
+            nextCursor: null,
+          },
+        };
+      },
+    });
+    return response.knowledgeBases;
   },
 
   /**
@@ -67,7 +89,7 @@ export const knowledgeBasesApi = {
   /**
    * List documents in a knowledge base
    */
-  async listDocuments(
+  async listDocumentsPage(
     kbId: string,
     params?: Partial<DocumentListParams>
   ): Promise<DocumentListResponse> {
@@ -76,6 +98,26 @@ export const knowledgeBasesApi = {
       { params }
     );
     return unwrapResponse(response.data);
+  },
+
+  async listDocuments(
+    kbId: string,
+    params?: Partial<DocumentListParams>
+  ): Promise<DocumentListResponse> {
+    return collectCursorPages({
+      fetchPage: (cursor) => knowledgeBasesApi.listDocumentsPage(kbId, { ...params, cursor }),
+      mergePages: (pages) => {
+        const firstPage = pages[0]!;
+        return {
+          documents: pages.flatMap((page) => page.documents),
+          pagination: {
+            ...firstPage.pagination,
+            hasMore: false,
+            nextCursor: null,
+          },
+        };
+      },
+    });
   },
 
   /**

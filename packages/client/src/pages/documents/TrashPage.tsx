@@ -56,7 +56,6 @@ export function TrashPage() {
 
   const queryParams = useMemo(
     () => ({
-      page: 1,
       pageSize: 20,
       search: debouncedSearch || undefined,
       sortBy,
@@ -71,7 +70,12 @@ export function TrashPage() {
   const clearTrashMutation = useClearTrash();
 
   const trashDocuments = trashData?.documents ?? [];
-  const pagination = trashData?.pagination ?? { page: 1, pageSize: 20, total: 0, totalPages: 0 };
+  const pagination = trashData?.pagination ?? {
+    pageSize: 20,
+    total: 0,
+    hasMore: false,
+    nextCursor: null,
+  };
   const currentPageSize = trashDocuments.reduce((sum, doc) => sum + doc.fileSize, 0);
 
   const handleRestore = (document: TrashDocumentListItem) => {

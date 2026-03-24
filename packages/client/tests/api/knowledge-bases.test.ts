@@ -31,21 +31,23 @@ describe('knowledgeBasesApi', () => {
         { id: 'kb-1', name: 'KB 1' },
         { id: 'kb-2', name: 'KB 2' },
       ],
-      pagination: { page: 1, pageSize: 20, total: 2, totalPages: 1 },
+      pagination: { pageSize: 100, total: 2, hasMore: false, nextCursor: null },
     };
     mocks.get.mockResolvedValue({ data: { success: true, data: responsePayload } });
     mocks.unwrapResponse.mockReturnValue(responsePayload);
 
     const result = await knowledgeBasesApi.list();
 
-    expect(mocks.get).toHaveBeenCalledWith('/api/knowledge-bases');
+    expect(mocks.get).toHaveBeenCalledWith('/api/knowledge-bases', {
+      params: { pageSize: 100, cursor: undefined },
+    });
     expect(result).toEqual(responsePayload.knowledgeBases);
   });
 
   it('should list knowledge base documents with query params', async () => {
     const responsePayload = {
       documents: [{ id: 'doc-1', title: 'Doc 1' }],
-      pagination: { page: 1, pageSize: 50, total: 1, totalPages: 1 },
+      pagination: { pageSize: 50, total: 1, hasMore: false, nextCursor: null },
     };
     mocks.get.mockResolvedValue({ data: { success: true, data: responsePayload } });
     mocks.unwrapResponse.mockReturnValue(responsePayload);
@@ -53,7 +55,7 @@ describe('knowledgeBasesApi', () => {
     const result = await knowledgeBasesApi.listDocuments('kb-1', { pageSize: 50, search: 'doc' });
 
     expect(mocks.get).toHaveBeenCalledWith('/api/knowledge-bases/kb-1/documents', {
-      params: { pageSize: 50, search: 'doc' },
+      params: { pageSize: 50, search: 'doc', cursor: undefined },
     });
     expect(result).toEqual(responsePayload);
   });

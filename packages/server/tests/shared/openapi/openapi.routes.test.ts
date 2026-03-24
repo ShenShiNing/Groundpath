@@ -221,9 +221,9 @@ describe('OpenAPI route auto-discovery', () => {
     const knowledgeBaseDocumentsData = getProperty(knowledgeBaseDocumentsSchema, 'data');
     expect(getProperty(knowledgeBaseDocumentsData, 'documents')).toBeDefined();
     expect(getProperty(knowledgeBaseDocumentsData, 'pagination')).toBeDefined();
-    expect(getQueryParameter('/api/knowledge-bases/{id}/documents', 'get', 'page')?.required).toBe(
-      false
-    );
+    expect(
+      getQueryParameter('/api/knowledge-bases/{id}/documents', 'get', 'cursor')?.required
+    ).toBe(false);
     expect(
       getQueryParameter('/api/knowledge-bases/{id}/documents', 'get', 'knowledgeBaseId')
     ).toBeUndefined();

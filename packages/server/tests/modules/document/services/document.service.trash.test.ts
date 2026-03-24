@@ -132,10 +132,11 @@ describe('documentService > listTrash', () => {
     vi.mocked(documentRepository.listDeleted).mockResolvedValue({
       documents: [mockDeletedDocument],
       total: 1,
+      hasMore: false,
+      nextCursor: null,
     });
 
     const params = {
-      page: 1,
       pageSize: 20,
       sortBy: 'deletedAt' as const,
       sortOrder: 'desc' as const,
@@ -143,19 +144,20 @@ describe('documentService > listTrash', () => {
     const result = await documentService.listTrash(mockUserId, params);
 
     logTestInfo(
-      { page: 1, pageSize: 20 },
-      { documentCount: 1, total: 1, totalPages: 1 },
+      { pageSize: 20 },
+      { documentCount: 1, total: 1, hasMore: false },
       {
         documentCount: result.documents.length,
         total: result.pagination.total,
-        totalPages: result.pagination.totalPages,
+        hasMore: result.pagination.hasMore,
       }
     );
 
     expect(result.documents).toHaveLength(1);
     expect(result.documents[0]!.deletedAt).toEqual(new Date('2024-01-15'));
     expect(result.pagination.total).toBe(1);
-    expect(result.pagination.totalPages).toBe(1);
+    expect(result.pagination.hasMore).toBe(false);
+    expect(result.pagination.nextCursor).toBeNull();
   });
 
   // 场景 2：回收站为空
@@ -163,10 +165,11 @@ describe('documentService > listTrash', () => {
     vi.mocked(documentRepository.listDeleted).mockResolvedValue({
       documents: [],
       total: 0,
+      hasMore: false,
+      nextCursor: null,
     });
 
     const params = {
-      page: 1,
       pageSize: 20,
       sortBy: 'deletedAt' as const,
       sortOrder: 'desc' as const,
@@ -175,12 +178,13 @@ describe('documentService > listTrash', () => {
 
     logTestInfo(
       { userId: mockUserId },
-      { documentCount: 0, totalPages: 0 },
-      { documentCount: result.documents.length, totalPages: result.pagination.totalPages }
+      { documentCount: 0, hasMore: false },
+      { documentCount: result.documents.length, hasMore: result.pagination.hasMore }
     );
 
     expect(result.documents).toHaveLength(0);
-    expect(result.pagination.totalPages).toBe(0);
+    expect(result.pagination.hasMore).toBe(false);
+    expect(result.pagination.nextCursor).toBeNull();
   });
 
   // 场景 3：TrashDocumentListItem 应包含 deletedAt
@@ -188,10 +192,11 @@ describe('documentService > listTrash', () => {
     vi.mocked(documentRepository.listDeleted).mockResolvedValue({
       documents: [mockDeletedDocument],
       total: 1,
+      hasMore: false,
+      nextCursor: null,
     });
 
     const params = {
-      page: 1,
       pageSize: 20,
       sortBy: 'deletedAt' as const,
       sortOrder: 'desc' as const,

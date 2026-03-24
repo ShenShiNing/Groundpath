@@ -152,7 +152,11 @@ describe('knowledgeBaseService', () => {
     vi.mocked(knowledgeBaseRepository.findById).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseRepository.lockByIdAndUser).mockResolvedValue(true);
     vi.mocked(knowledgeBaseRepository.update).mockResolvedValue(mockKnowledgeBase);
-    vi.mocked(knowledgeBaseRepository.listByUser).mockResolvedValue([mockKnowledgeBase]);
+    vi.mocked(knowledgeBaseRepository.listByUser).mockResolvedValue({
+      knowledgeBases: [mockKnowledgeBase],
+      hasMore: false,
+      nextCursor: null,
+    });
     vi.mocked(knowledgeBaseRepository.countByUser).mockResolvedValue(1);
     vi.mocked(documentRepository.listByKnowledgeBaseId).mockResolvedValue([]);
     vi.mocked(documentRepository.hardDeleteByKnowledgeBaseId).mockResolvedValue(undefined);
@@ -264,8 +268,8 @@ describe('knowledgeBaseService', () => {
     const result = await knowledgeBaseService.list(mockUserId);
 
     expect(knowledgeBaseRepository.listByUser).toHaveBeenCalledWith(mockUserId, {
-      page: 1,
       pageSize: 20,
+      cursor: undefined,
     });
     expect(knowledgeBaseRepository.countByUser).toHaveBeenCalledWith(mockUserId);
     expect(result).toMatchObject({
@@ -277,10 +281,10 @@ describe('knowledgeBaseService', () => {
         },
       ],
       pagination: {
-        page: 1,
         pageSize: 20,
         total: 1,
-        totalPages: 1,
+        hasMore: false,
+        nextCursor: null,
       },
     });
   });

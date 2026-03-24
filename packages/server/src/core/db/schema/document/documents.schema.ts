@@ -69,10 +69,47 @@ export const documents = mysqlTable(
     index('active_index_version_id_idx').on(table.activeIndexVersionId),
     index('deleted_at_idx').on(table.deletedAt),
     index('created_at_idx').on(table.createdAt),
+    index('documents_user_deleted_created_id_idx').on(
+      table.userId,
+      table.deletedAt,
+      table.createdAt,
+      table.id
+    ),
+    index('documents_user_deleted_title_id_idx').on(
+      table.userId,
+      table.deletedAt,
+      table.title,
+      table.id
+    ),
+    index('documents_user_deleted_file_size_id_idx').on(
+      table.userId,
+      table.deletedAt,
+      table.fileSize,
+      table.id
+    ),
+    index('documents_user_deleted_at_id_idx').on(table.userId, table.deletedAt, table.id),
     index('documents_user_deleted_updated_id_idx').on(
       table.userId,
       table.deletedAt,
       table.updatedAt,
+      table.id
+    ),
+    index('documents_kb_deleted_created_id_idx').on(
+      table.knowledgeBaseId,
+      table.deletedAt,
+      table.createdAt,
+      table.id
+    ),
+    index('documents_kb_deleted_title_id_idx').on(
+      table.knowledgeBaseId,
+      table.deletedAt,
+      table.title,
+      table.id
+    ),
+    index('documents_kb_deleted_file_size_id_idx').on(
+      table.knowledgeBaseId,
+      table.deletedAt,
+      table.fileSize,
       table.id
     ),
     index('documents_kb_deleted_updated_id_idx').on(

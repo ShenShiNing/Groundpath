@@ -11,6 +11,7 @@ import type {
 } from '@groundpath/shared/types';
 import type { ApiResponse } from '@groundpath/shared/types';
 import { apiClient, unwrapResponse } from '@/lib/http';
+import { collectCursorPages } from './cursor-pagination';
 
 export interface UploadOptions {
   onUploadProgress?: (loaded: number, total: number) => void;
@@ -42,11 +43,28 @@ export const documentsApi = {
   /**
    * List documents with pagination and filtering
    */
-  async list(params?: Partial<DocumentListParams>): Promise<DocumentListResponse> {
+  async listPage(params?: Partial<DocumentListParams>): Promise<DocumentListResponse> {
     const response = await apiClient.get<ApiResponse<DocumentListResponse>>('/api/documents', {
       params,
     });
     return unwrapResponse(response.data);
+  },
+
+  async list(params?: Partial<DocumentListParams>): Promise<DocumentListResponse> {
+    return collectCursorPages({
+      fetchPage: (cursor) => documentsApi.listPage({ ...params, cursor }),
+      mergePages: (pages) => {
+        const firstPage = pages[0]!;
+        return {
+          documents: pages.flatMap((page) => page.documents),
+          pagination: {
+            ...firstPage.pagination,
+            hasMore: false,
+            nextCursor: null,
+          },
+        };
+      },
+    });
   },
 
   /**
@@ -114,11 +132,28 @@ export const documentsApi = {
   /**
    * List trash documents
    */
-  async listTrash(params?: Partial<TrashListParams>): Promise<TrashListResponse> {
+  async listTrashPage(params?: Partial<TrashListParams>): Promise<TrashListResponse> {
     const response = await apiClient.get<ApiResponse<TrashListResponse>>('/api/documents/trash', {
       params,
     });
     return unwrapResponse(response.data);
+  },
+
+  async listTrash(params?: Partial<TrashListParams>): Promise<TrashListResponse> {
+    return collectCursorPages({
+      fetchPage: (cursor) => documentsApi.listTrashPage({ ...params, cursor }),
+      mergePages: (pages) => {
+        const firstPage = pages[0]!;
+        return {
+          documents: pages.flatMap((page) => page.documents),
+          pagination: {
+            ...firstPage.pagination,
+            hasMore: false,
+            nextCursor: null,
+          },
+        };
+      },
+    });
   },
 
   /**

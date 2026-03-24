@@ -8,7 +8,7 @@ import type {
 import type { Document } from '@core/db/schema/document/documents.schema';
 import { withTransaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';
-import { buildPagination } from '@core/utils';
+import { buildCursorPagination, normalizePageSize } from '@core/utils';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentChunkRepository } from '../repositories/document-chunk.repository';
@@ -96,11 +96,15 @@ export const documentTrashService = {
    * List deleted documents (trash)
    */
   async listTrash(userId: string, params: TrashListParams): Promise<TrashListResponse> {
-    const { documents, total } = await documentRepository.listDeleted(userId, params);
+    const pageSize = normalizePageSize(params.pageSize);
+    const { documents, total, hasMore, nextCursor } = await documentRepository.listDeleted(userId, {
+      ...params,
+      pageSize,
+    });
 
     return {
       documents: documents.map(toTrashDocumentListItem),
-      pagination: buildPagination(total, params.page, params.pageSize),
+      pagination: buildCursorPagination(total, pageSize, hasMore, nextCursor),
     };
   },
 

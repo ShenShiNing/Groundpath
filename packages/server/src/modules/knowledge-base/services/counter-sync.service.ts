@@ -69,7 +69,7 @@ export const counterSyncService = {
    * Sync counters for all knowledge bases owned by a user
    */
   async syncUserKnowledgeBases(userId: string): Promise<SyncResult[]> {
-    const kbs = await knowledgeBaseRepository.listByUser(userId);
+    const kbs = await knowledgeBaseRepository.listAllByUser(userId);
     const results: SyncResult[] = [];
 
     for (const kb of kbs) {

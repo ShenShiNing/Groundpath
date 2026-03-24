@@ -102,7 +102,8 @@ function clearTrashCache(current: TrashListResponse): TrashListResponse {
     pagination: {
       ...current.pagination,
       total: 0,
-      totalPages: 0,
+      hasMore: false,
+      nextCursor: null,
     },
   };
 }

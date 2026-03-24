@@ -7,7 +7,6 @@ const {
   selectWhereMock,
   selectLimitMock,
   selectOrderByMock,
-  selectOffsetMock,
   updateSetMock,
   updateWhereMock,
   executeMock,
@@ -27,7 +26,6 @@ const {
   const selectWhere = vi.fn();
   const selectLimit = vi.fn();
   const selectOrderBy = vi.fn();
-  const selectOffset = vi.fn();
   const updateSet = vi.fn();
   const updateWhere = vi.fn();
 
@@ -51,7 +49,6 @@ const {
     selectWhereMock: selectWhere,
     selectLimitMock: selectLimit,
     selectOrderByMock: selectOrderBy,
-    selectOffsetMock: selectOffset,
     updateSetMock: updateSet,
     updateWhereMock: updateWhere,
     executeMock: db.execute,
@@ -141,7 +138,6 @@ describe('knowledgeBaseRepository', () => {
     selectWhereMock.mockReset();
     selectLimitMock.mockReset();
     selectOrderByMock.mockReset();
-    selectOffsetMock.mockReset();
     updateSetMock.mockReset();
     updateWhereMock.mockReset();
     executeMock.mockReset();
@@ -227,8 +223,7 @@ describe('knowledgeBaseRepository', () => {
     selectFromMock.mockReturnValueOnce({ where: selectWhereMock });
     selectWhereMock.mockReturnValueOnce({ orderBy: selectOrderByMock });
     selectOrderByMock.mockReturnValueOnce({ limit: selectLimitMock });
-    selectLimitMock.mockReturnValueOnce({ offset: selectOffsetMock });
-    selectOffsetMock.mockResolvedValueOnce([mockKnowledgeBase]);
+    selectLimitMock.mockResolvedValueOnce([mockKnowledgeBase]);
 
     const result = await knowledgeBaseRepository.listByUser('user-1');
 
@@ -241,9 +236,12 @@ describe('knowledgeBaseRepository', () => {
       { type: 'desc', value: knowledgeBasesMock.createdAt },
       { type: 'desc', value: knowledgeBasesMock.id }
     );
-    expect(selectLimitMock).toHaveBeenCalledWith(20);
-    expect(selectOffsetMock).toHaveBeenCalledWith(0);
-    expect(result).toEqual([mockKnowledgeBase]);
+    expect(selectLimitMock).toHaveBeenCalledWith(21);
+    expect(result).toEqual({
+      knowledgeBases: [mockKnowledgeBase],
+      hasMore: false,
+      nextCursor: null,
+    });
   });
 
   it('should update knowledge base and return refreshed record', async () => {

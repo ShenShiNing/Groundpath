@@ -1,4 +1,5 @@
 import { KNOWLEDGE_BASE_ERROR_CODES } from '../constants';
+import type { CursorPaginationMeta } from './api';
 
 // ==================== Embedding Provider Types ====================
 
@@ -49,12 +50,7 @@ export type {
 /** Paginated knowledge base list response */
 export interface KnowledgeBaseListResponse {
   knowledgeBases: KnowledgeBaseListItem[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: CursorPaginationMeta;
 }
 
 // ==================== Error Types ====================

@@ -259,7 +259,7 @@ describe('E2E Smoke: Trash Journey', () => {
 
   // Step 7: Validate query params
   it('should reject invalid list query parameters', async () => {
-    const response = await fetch(`${baseUrl}/api/documents?page=0&pageSize=20`, {
+    const response = await fetch(`${baseUrl}/api/documents?pageSize=0`, {
       headers: { authorization: 'Bearer valid-access' },
     });
 

@@ -1,6 +1,8 @@
-import { eq, and, isNull, sql, count, desc } from 'drizzle-orm';
+import { eq, and, isNull, sql, count, desc, lt, or } from 'drizzle-orm';
 import { db } from '@core/db';
 import { now, getDbContext, type Transaction } from '@core/db/db.utils';
+import { AppError } from '@core/errors/app-error';
+import { Errors } from '@core/errors';
 import {
   knowledgeBases,
   type KnowledgeBase,
@@ -10,6 +12,65 @@ import { documents } from '@core/db/schema/document/documents.schema';
 
 function extractRows<T>(result: unknown): T[] {
   return (result as [T[]])[0] ?? [];
+}
+
+type SortOrder = 'asc' | 'desc';
+
+interface KnowledgeBaseCursorPayload {
+  id: string;
+  sortBy: 'createdAt';
+  sortOrder: SortOrder;
+  value: string;
+}
+
+function invalidCursorError() {
+  return Errors.validation('Invalid pagination cursor');
+}
+
+function encodeCursor(payload: KnowledgeBaseCursorPayload): string {
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+function decodeCursor(cursor: string): { id: string; value: Date } {
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(cursor, 'base64url').toString('utf8')
+    ) as KnowledgeBaseCursorPayload;
+    if (
+      !decoded ||
+      typeof decoded !== 'object' ||
+      decoded.sortBy !== 'createdAt' ||
+      decoded.sortOrder !== 'desc' ||
+      typeof decoded.id !== 'string' ||
+      decoded.id.length === 0 ||
+      typeof decoded.value !== 'string'
+    ) {
+      throw invalidCursorError();
+    }
+
+    const parsed = new Date(decoded.value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw invalidCursorError();
+    }
+
+    return { id: decoded.id, value: parsed };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    throw invalidCursorError();
+  }
+}
+
+function buildCursorCondition(cursor: { id: string; value: Date }) {
+  const condition = or(
+    lt(knowledgeBases.createdAt, cursor.value),
+    and(eq(knowledgeBases.createdAt, cursor.value), lt(knowledgeBases.id, cursor.id))
+  );
+  if (!condition) {
+    throw Errors.internal('Failed to build pagination cursor condition');
+  }
+  return condition;
 }
 
 /**
@@ -84,17 +145,48 @@ export const knowledgeBaseRepository = {
    */
   async listByUser(
     userId: string,
-    options?: { page?: number; pageSize?: number }
-  ): Promise<KnowledgeBase[]> {
-    const page = options?.page ?? 1;
+    options?: { pageSize?: number; cursor?: string }
+  ): Promise<{ knowledgeBases: KnowledgeBase[]; hasMore: boolean; nextCursor: string | null }> {
     const pageSize = options?.pageSize ?? 20;
+    const conditions = [eq(knowledgeBases.userId, userId), isNull(knowledgeBases.deletedAt)];
+
+    if (options?.cursor) {
+      conditions.push(buildCursorCondition(decodeCursor(options.cursor)));
+    }
+
+    const rows = await db
+      .select()
+      .from(knowledgeBases)
+      .where(and(...conditions))
+      .orderBy(desc(knowledgeBases.createdAt), desc(knowledgeBases.id))
+      .limit(pageSize + 1);
+
+    const hasMore = rows.length > pageSize;
+    const pageRows = hasMore ? rows.slice(0, pageSize) : rows;
+    const lastKnowledgeBase = pageRows.at(-1);
+    const nextCursor =
+      hasMore && lastKnowledgeBase
+        ? encodeCursor({
+            id: lastKnowledgeBase.id,
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+            value: lastKnowledgeBase.createdAt.toISOString(),
+          })
+        : null;
+
+    return {
+      knowledgeBases: pageRows,
+      hasMore,
+      nextCursor,
+    };
+  },
+
+  async listAllByUser(userId: string): Promise<KnowledgeBase[]> {
     return db
       .select()
       .from(knowledgeBases)
       .where(and(eq(knowledgeBases.userId, userId), isNull(knowledgeBases.deletedAt)))
-      .orderBy(desc(knowledgeBases.createdAt), desc(knowledgeBases.id))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize);
+      .orderBy(desc(knowledgeBases.createdAt), desc(knowledgeBases.id));
   },
 
   /**

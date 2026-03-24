@@ -14,8 +14,15 @@ export {
   extractBearerToken,
 } from './jwt.utils';
 
-export type { PaginationMeta } from './pagination';
-export { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, buildPagination, getOffsetLimit } from './pagination';
+export type { CursorPaginationMeta, PaginationMeta } from './pagination';
+export {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  buildCursorPagination,
+  buildPagination,
+  getOffsetLimit,
+  normalizePageSize,
+} from './pagination';
 
 export {
   normalizeEmail,

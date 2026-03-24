@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dateTimeStringSchema, paginationMetaSchema } from './common';
+import { cursorPaginationMetaSchema, dateTimeStringSchema } from './common';
 
 // ==================== Document Schemas ====================
 
@@ -47,8 +47,8 @@ export const documentVersionUploadMetadataSchema = z.object({
 // ==================== Query Schemas ====================
 
 export const documentListParamsSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
+  cursor: z.string().min(1).optional(),
   knowledgeBaseId: z.string().uuid().optional(),
   documentType: documentTypeSchema.optional(),
   search: z.string().max(100).optional(),
@@ -63,8 +63,8 @@ export const knowledgeBaseDocumentListParamsSchema = documentListParamsSchema.om
 // ==================== Trash Schemas ====================
 
 export const trashListParamsSchema = z.object({
-  page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20),
+  cursor: z.string().min(1).optional(),
   search: z.string().max(100).optional(),
   sortBy: z.enum(['deletedAt', 'title', 'fileSize']).default('deletedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
@@ -108,12 +108,12 @@ export const trashDocumentListItemResponseSchema = documentListItemResponseSchem
 
 export const documentListResponseSchema = z.object({
   documents: z.array(documentListItemResponseSchema),
-  pagination: paginationMetaSchema,
+  pagination: cursorPaginationMetaSchema,
 });
 
 export const trashListResponseSchema = z.object({
   documents: z.array(trashDocumentListItemResponseSchema),
-  pagination: paginationMetaSchema,
+  pagination: cursorPaginationMetaSchema,
 });
 
 export const documentMutationResponseSchema = z.object({

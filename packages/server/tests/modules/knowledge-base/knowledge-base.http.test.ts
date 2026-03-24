@@ -284,7 +284,7 @@ describe('knowledge-base.routes http behavior', () => {
 
   it('should validate list-documents query parameters', async () => {
     const response = await fetch(
-      `${baseUrl}/knowledge-bases/123e4567-e89b-12d3-a456-426614174000/documents?page=0&pageSize=20`,
+      `${baseUrl}/knowledge-bases/123e4567-e89b-12d3-a456-426614174000/documents?pageSize=0`,
       {
         headers: { authorization: 'Bearer valid-access' },
       }
@@ -299,12 +299,12 @@ describe('knowledge-base.routes http behavior', () => {
   it('should return documents for valid list-documents request', async () => {
     const mockResult: DocumentListResponse = {
       documents: [mockListedDocument],
-      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      pagination: { pageSize: 20, total: 1, hasMore: false, nextCursor: null },
     };
     vi.mocked(documentService.list).mockResolvedValue(mockResult);
 
     const response = await fetch(
-      `${baseUrl}/knowledge-bases/123e4567-e89b-12d3-a456-426614174000/documents?page=1&pageSize=20`,
+      `${baseUrl}/knowledge-bases/123e4567-e89b-12d3-a456-426614174000/documents?pageSize=20`,
       {
         headers: { authorization: 'Bearer valid-access' },
       }

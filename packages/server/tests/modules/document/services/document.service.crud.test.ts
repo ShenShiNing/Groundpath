@@ -170,10 +170,11 @@ describe('documentService > list', () => {
     vi.mocked(documentRepository.list).mockResolvedValue({
       documents: docs,
       total: 15,
+      hasMore: true,
+      nextCursor: 'cursor-2',
     });
 
     const params = {
-      page: 1,
       pageSize: 10,
       sortBy: 'createdAt' as const,
       sortOrder: 'desc' as const,
@@ -181,20 +182,20 @@ describe('documentService > list', () => {
     const result = await documentService.list(mockUserId, params);
 
     logTestInfo(
-      { page: 1, pageSize: 10, total: 15 },
-      { documentCount: 2, totalPages: 2, page: 1 },
+      { pageSize: 10, total: 15 },
+      { documentCount: 2, hasMore: true, nextCursor: 'cursor-2' },
       {
         documentCount: result.documents.length,
-        totalPages: result.pagination.totalPages,
-        page: result.pagination.page,
+        hasMore: result.pagination.hasMore,
+        nextCursor: result.pagination.nextCursor,
       }
     );
 
     expect(result.documents).toHaveLength(2);
     expect(result.pagination.total).toBe(15);
-    expect(result.pagination.totalPages).toBe(2);
-    expect(result.pagination.page).toBe(1);
     expect(result.pagination.pageSize).toBe(10);
+    expect(result.pagination.hasMore).toBe(true);
+    expect(result.pagination.nextCursor).toBe('cursor-2');
   });
 
   // 场景 2：空结果
@@ -202,10 +203,11 @@ describe('documentService > list', () => {
     vi.mocked(documentRepository.list).mockResolvedValue({
       documents: [],
       total: 0,
+      hasMore: false,
+      nextCursor: null,
     });
 
     const params = {
-      page: 1,
       pageSize: 20,
       sortBy: 'createdAt' as const,
       sortOrder: 'desc' as const,
@@ -214,12 +216,13 @@ describe('documentService > list', () => {
 
     logTestInfo(
       { total: 0 },
-      { documentCount: 0, totalPages: 0 },
-      { documentCount: result.documents.length, totalPages: result.pagination.totalPages }
+      { documentCount: 0, hasMore: false },
+      { documentCount: result.documents.length, hasMore: result.pagination.hasMore }
     );
 
     expect(result.documents).toHaveLength(0);
-    expect(result.pagination.totalPages).toBe(0);
+    expect(result.pagination.hasMore).toBe(false);
+    expect(result.pagination.nextCursor).toBeNull();
   });
 
   // 场景 3：返回的 DocumentListItem 应只包含列表必需字段
@@ -227,10 +230,11 @@ describe('documentService > list', () => {
     vi.mocked(documentRepository.list).mockResolvedValue({
       documents: [mockDocument],
       total: 1,
+      hasMore: false,
+      nextCursor: null,
     });
 
     const params = {
-      page: 1,
       pageSize: 20,
       sortBy: 'createdAt' as const,
       sortOrder: 'desc' as const,

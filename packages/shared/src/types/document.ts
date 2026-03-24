@@ -1,4 +1,5 @@
 import { DOCUMENT_ERROR_CODES } from '../constants';
+import type { CursorPaginationMeta } from './api';
 
 // ==================== Document Types ====================
 
@@ -64,12 +65,7 @@ export type {
 /** Paginated document list response */
 export interface DocumentListResponse {
   documents: DocumentListItem[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: CursorPaginationMeta;
 }
 
 /** Upload document response */
@@ -81,12 +77,7 @@ export interface UploadDocumentResponse {
 /** Trash document list response */
 export interface TrashListResponse {
   documents: TrashDocumentListItem[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-  };
+  pagination: CursorPaginationMeta;
 }
 
 // ==================== Version Interfaces ====================

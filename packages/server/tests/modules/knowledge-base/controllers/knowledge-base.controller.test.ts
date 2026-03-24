@@ -109,7 +109,7 @@ describe('knowledgeBaseController', () => {
   it('should list user knowledge bases', async () => {
     const mockResult = {
       knowledgeBases: [{ id: mockKbId, name: 'KB 1' }],
-      pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+      pagination: { pageSize: 20, total: 1, hasMore: false, nextCursor: null },
     };
     vi.mocked(knowledgeBaseService.list).mockResolvedValue(
       mockResult as Awaited<ReturnType<typeof knowledgeBaseService.list>>
@@ -250,10 +250,10 @@ describe('knowledgeBaseController', () => {
   });
 
   it('should list documents in knowledge base with validated query', async () => {
-    const query = { page: 2, pageSize: 10 };
+    const query = { pageSize: 10, cursor: 'cursor-1' };
     const mockResult: DocumentListResponse = {
       documents: [mockListedDocument],
-      pagination: { page: 2, pageSize: 10, total: 1, totalPages: 1 },
+      pagination: { pageSize: 10, total: 1, hasMore: false, nextCursor: null },
     };
     vi.mocked(documentService.list).mockResolvedValue(mockResult);
 

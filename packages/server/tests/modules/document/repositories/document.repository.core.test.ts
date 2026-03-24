@@ -9,7 +9,6 @@ const {
   listSelectWhereMock,
   listSelectOrderByMock,
   listSelectLimitMock,
-  listSelectOffsetMock,
   eqMock,
   andMock,
   isNullMock,
@@ -26,7 +25,6 @@ const {
   const listSelectWhere = vi.fn();
   const listSelectOrderBy = vi.fn();
   const listSelectLimit = vi.fn();
-  const listSelectOffset = vi.fn();
   const select = vi.fn();
 
   const db = {
@@ -42,7 +40,6 @@ const {
     listSelectWhereMock: listSelectWhere,
     listSelectOrderByMock: listSelectOrderBy,
     listSelectLimitMock: listSelectLimit,
-    listSelectOffsetMock: listSelectOffset,
     eqMock: vi.fn((left: unknown, right: unknown) => ({ type: 'eq', left, right })),
     andMock: vi.fn((...conditions: unknown[]) => ({ type: 'and', conditions })),
     isNullMock: vi.fn((value: unknown) => ({ type: 'isNull', value })),
@@ -108,8 +105,7 @@ function prepareListMocks() {
   listSelectFromMock.mockReturnValueOnce({ where: listSelectWhereMock });
   listSelectWhereMock.mockReturnValueOnce({ orderBy: listSelectOrderByMock });
   listSelectOrderByMock.mockReturnValueOnce({ limit: listSelectLimitMock });
-  listSelectLimitMock.mockReturnValueOnce({ offset: listSelectOffsetMock });
-  listSelectOffsetMock.mockResolvedValueOnce([mockDocument]);
+  listSelectLimitMock.mockResolvedValueOnce([mockDocument]);
 }
 
 describe('documentRepositoryCore list ordering', () => {
@@ -122,14 +118,12 @@ describe('documentRepositoryCore list ordering', () => {
     listSelectWhereMock.mockReset();
     listSelectOrderByMock.mockReset();
     listSelectLimitMock.mockReset();
-    listSelectOffsetMock.mockReset();
   });
 
   it('applies a stable secondary id sort for document lists', async () => {
     prepareListMocks();
 
     const result = await documentRepository.list('user-1', {
-      page: 1,
       pageSize: 20,
       sortBy: 'updatedAt',
       sortOrder: 'desc',
@@ -141,14 +135,19 @@ describe('documentRepositoryCore list ordering', () => {
       { type: 'desc', value: documentsMock.updatedAt },
       { type: 'desc', value: documentsMock.id }
     );
-    expect(result).toEqual({ documents: [mockDocument], total: 1 });
+    expect(listSelectLimitMock).toHaveBeenCalledWith(21);
+    expect(result).toEqual({
+      documents: [mockDocument],
+      total: 1,
+      hasMore: false,
+      nextCursor: null,
+    });
   });
 
   it('applies a stable secondary id sort for trash lists', async () => {
     prepareListMocks();
 
     const result = await documentRepository.listDeleted('user-1', {
-      page: 2,
       pageSize: 10,
       sortBy: 'title',
       sortOrder: 'asc',
@@ -160,6 +159,12 @@ describe('documentRepositoryCore list ordering', () => {
       { type: 'asc', value: documentsMock.title },
       { type: 'asc', value: documentsMock.id }
     );
-    expect(result).toEqual({ documents: [mockDocument], total: 1 });
+    expect(listSelectLimitMock).toHaveBeenCalledWith(11);
+    expect(result).toEqual({
+      documents: [mockDocument],
+      total: 1,
+      hasMore: false,
+      nextCursor: null,
+    });
   });
 });

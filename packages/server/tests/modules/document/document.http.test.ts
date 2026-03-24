@@ -132,7 +132,7 @@ describe('document.routes http behavior', () => {
   });
 
   it('should validate list query parameters', async () => {
-    const response = await fetch(`${baseUrl}/documents?page=0&pageSize=20`, {
+    const response = await fetch(`${baseUrl}/documents?pageSize=0`, {
       headers: { authorization: 'Bearer valid-access' },
     });
     const body = (await response.json()) as HttpTestBody;
@@ -143,7 +143,7 @@ describe('document.routes http behavior', () => {
   });
 
   it('should call list controller for valid query', async () => {
-    const response = await fetch(`${baseUrl}/documents?page=1&pageSize=20`, {
+    const response = await fetch(`${baseUrl}/documents?pageSize=20`, {
       headers: { authorization: 'Bearer valid-access' },
     });
     const body = (await response.json()) as HttpTestBody;

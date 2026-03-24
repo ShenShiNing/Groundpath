@@ -16,4 +16,11 @@ export const paginationMetaSchema = z.object({
   totalPages: z.number().int().min(0),
 });
 
+export const cursorPaginationMetaSchema = z.object({
+  pageSize: z.number().int().positive(),
+  total: z.number().int().min(0),
+  hasMore: z.boolean(),
+  nextCursor: z.string().nullable(),
+});
+
 export type IdParam = z.infer<typeof idParamSchema>;
