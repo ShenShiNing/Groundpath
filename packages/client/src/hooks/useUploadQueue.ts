@@ -40,20 +40,18 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
   const abortControllersRef = useRef<Map<string, AbortController>>(new Map());
   const uploadOptionsRef = useRef<StartUploadOptions>({});
 
-  // Sync state to ref
-  const updateFilesState = useCallback((updater: (prev: QueueFileState[]) => QueueFileState[]) => {
-    setFiles((prev) => {
-      const next = updater(prev);
-      filesRef.current = next;
-      return next;
-    });
+  const syncFilesState = useCallback((updater: (prev: QueueFileState[]) => QueueFileState[]) => {
+    const next = updater(filesRef.current);
+    filesRef.current = next;
+    setFiles(next);
+    return next;
   }, []);
 
   const updateFileById = useCallback(
     (fileId: string, updates: Partial<QueueFileState>) => {
-      updateFilesState((prev) => prev.map((f) => (f.id === fileId ? { ...f, ...updates } : f)));
+      syncFilesState((prev) => prev.map((f) => (f.id === fileId ? { ...f, ...updates } : f)));
     },
-    [updateFilesState]
+    [syncFilesState]
   );
 
   const processNext = useCallback(() => {
@@ -74,13 +72,6 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
     const abortController = new AbortController();
     abortControllersRef.current.set(nextFile.id, abortController);
 
-    // Synchronously update filesRef to prevent duplicate processing
-    // (React's setState is async, so filesRef wouldn't update in time for concurrent processNext calls)
-    filesRef.current = filesRef.current.map((f) =>
-      f.id === nextFile.id
-        ? { ...f, status: 'uploading' as const, progress: 0, error: undefined }
-        : f
-    );
     updateFileById(nextFile.id, { status: 'uploading', progress: 0, error: undefined });
 
     // Build FormData in hooks layer
@@ -123,7 +114,7 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
         });
       })
       .finally(() => {
-        activeCountRef.current--;
+        activeCountRef.current = Math.max(0, activeCountRef.current - 1);
         abortControllersRef.current.delete(nextFile.id);
         processNext();
       });
@@ -140,9 +131,9 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
         progress: 0,
         status: 'pending' as const,
       }));
-      updateFilesState((prev) => [...prev, ...newFileStates]);
+      syncFilesState((prev) => [...prev, ...newFileStates]);
     },
-    [updateFilesState]
+    [syncFilesState]
   );
 
   const removeFile = useCallback(
@@ -152,11 +143,10 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
       if (controller) {
         controller.abort();
         abortControllersRef.current.delete(fileId);
-        activeCountRef.current--;
       }
-      updateFilesState((prev) => prev.filter((f) => f.id !== fileId));
+      syncFilesState((prev) => prev.filter((f) => f.id !== fileId));
     },
-    [updateFilesState]
+    [syncFilesState]
   );
 
   const startUpload = useCallback(
@@ -167,8 +157,12 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
       if (filesToUpload.length === 0) return;
 
       // Reset error files to pending
-      updateFilesState((prev) =>
-        prev.map((f) => (f.status === 'error' ? { ...f, status: 'pending' as const } : f))
+      syncFilesState((prev) =>
+        prev.map((f) =>
+          f.status === 'error'
+            ? { ...f, status: 'pending' as const, progress: 0, error: undefined }
+            : f
+        )
       );
 
       uploadOptionsRef.current = options;
@@ -179,12 +173,12 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
         processNext();
       }
     },
-    [maxConcurrent, processNext, updateFilesState]
+    [maxConcurrent, processNext, syncFilesState]
   );
 
   const clearCompleted = useCallback(() => {
-    updateFilesState((prev) => prev.filter((f) => f.status !== 'completed'));
-  }, [updateFilesState]);
+    syncFilesState((prev) => prev.filter((f) => f.status !== 'completed'));
+  }, [syncFilesState]);
 
   const clear = useCallback(() => {
     // Cancel all active uploads
@@ -192,8 +186,8 @@ export function useUploadQueue({ maxConcurrent = 3 }: UseUploadQueueOptions = {}
     abortControllersRef.current.clear();
     activeCountRef.current = 0;
     setIsUploading(false);
-    updateFilesState(() => []);
-  }, [updateFilesState]);
+    syncFilesState(() => []);
+  }, [syncFilesState]);
 
   // Computed values
   const totalProgress =
