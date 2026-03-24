@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { RequestHandler } from 'express';
 import { startTestServer, stopTestServer } from './helpers/e2e.helpers';
 
+const VALID_KB_ID = '123e4567-e89b-12d3-a456-426614174000';
+
 const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock } = vi.hoisted(
   () => {
     const authenticate: RequestHandler = (req, res, next) => {
@@ -168,6 +170,7 @@ describe('E2E Smoke: Trash Journey', () => {
   it('should upload a document', async () => {
     const formData = new FormData();
     formData.set('file', new Blob(['test content'], { type: 'text/plain' }), 'test.txt');
+    formData.set('knowledgeBaseId', VALID_KB_ID);
 
     const response = await fetch(`${baseUrl}/api/documents`, {
       method: 'POST',

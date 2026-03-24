@@ -116,10 +116,10 @@ export const knowledgeBaseController = {
       throw new AppError('VALIDATION_ERROR', 'No file uploaded', 400);
     }
 
-    const { title, description } = req.body as {
+    const { title, description } = getValidatedBody<{
       title?: string;
-      description?: string;
-    };
+      description?: string | null;
+    }>(res);
 
     const document = await documentService.upload(
       userId,

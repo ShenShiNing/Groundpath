@@ -190,7 +190,7 @@ describe('knowledgeBaseController', () => {
         size: 4,
       } as Request['file'],
     });
-    const res = createMockResponse();
+    const res = createMockResponse({ body: { title: 'Doc', description: 'Desc' } });
     const next = await invokeHandler(knowledgeBaseController.uploadDocument, req, res);
 
     expect(next).not.toHaveBeenCalled();
