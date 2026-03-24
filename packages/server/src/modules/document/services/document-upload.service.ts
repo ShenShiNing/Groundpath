@@ -89,8 +89,11 @@ export const documentUploadService = {
     }
     const knowledgeBaseId = options.knowledgeBaseId;
 
-    // Validate knowledge base exists and belongs to user
-    await knowledgeBaseService.validateOwnership(knowledgeBaseId, userId);
+    // NOTE: Ownership is validated atomically by lockOwnership() inside the
+    // transaction below (SELECT ... FOR UPDATE). A separate pre-check here
+    // would create a TOCTOU window — the KB could be deleted or transferred
+    // between the check and the lock, wasting upload work at best and
+    // allowing a race-condition bypass at worst.
 
     // Validate file
     const validation = documentStorageService.validateFile(file);
