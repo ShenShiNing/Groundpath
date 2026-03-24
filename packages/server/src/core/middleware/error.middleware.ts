@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '@core/errors/app-error';
+import { sendErrorResponse } from '@core/errors/response';
 import { logger } from '@core/logger';
 import { serverConfig } from '@config/env';
 
@@ -24,12 +25,9 @@ export function errorMiddleware(
       logger.warn({ err, requestId, method: req.method, url: req.url }, err.message);
     }
 
-    res.status(err.statusCode).json({
-      success: false,
-      error: {
-        ...err.toJSON(),
-        requestId,
-      },
+    sendErrorResponse(res, err.statusCode, err.code, err.message, {
+      details: err.details,
+      requestId,
     });
     return;
   }
@@ -46,12 +44,7 @@ export function errorMiddleware(
     logger.error({ err, requestId, method: req.method, url: req.url }, 'Unhandled error');
   }
 
-  res.status(500).json({
-    success: false,
-    error: {
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
-      requestId,
-    },
+  sendErrorResponse(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred', {
+    requestId,
   });
 }

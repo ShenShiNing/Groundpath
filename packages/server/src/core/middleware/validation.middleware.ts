@@ -1,20 +1,7 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { HTTP_STATUS, ERROR_CODES } from '@groundpath/shared';
-import type { ApiResponse } from '@groundpath/shared';
-import type { ZodError, ZodType } from '@groundpath/shared/schemas';
-
-/**
- * Format Zod validation errors into a structured object
- */
-function formatZodErrors(error: ZodError): Record<string, string[]> {
-  const details: Record<string, string[]> = {};
-  for (const issue of error.issues) {
-    const path = issue.path.join('.') || 'root';
-    if (!details[path]) details[path] = [];
-    details[path].push(issue.message);
-  }
-  return details;
-}
+import type { ZodType } from '@groundpath/shared/schemas';
+import { formatZodErrorDetails, sendErrorResponse } from '@core/errors/response';
 
 /**
  * Middleware factory to validate request body against a Zod schema
@@ -23,15 +10,15 @@ export function validateBody<T extends ZodType>(schema: T): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const response: ApiResponse = {
-        success: false,
-        error: {
-          code: ERROR_CODES.VALIDATION_ERROR,
-          message: 'Validation failed',
-          details: formatZodErrors(result.error),
-        },
-      };
-      res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+      sendErrorResponse(
+        res,
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        'Validation failed',
+        {
+          details: formatZodErrorDetails(result.error),
+        }
+      );
       return;
     }
     req.body = result.data;
@@ -47,15 +34,15 @@ export function validateQuery<T extends ZodType>(schema: T): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
-      const response: ApiResponse = {
-        success: false,
-        error: {
-          code: ERROR_CODES.VALIDATION_ERROR,
-          message: 'Validation failed',
-          details: formatZodErrors(result.error),
-        },
-      };
-      res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+      sendErrorResponse(
+        res,
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        'Validation failed',
+        {
+          details: formatZodErrorDetails(result.error),
+        }
+      );
       return;
     }
     res.locals.validated = { ...res.locals.validated, query: result.data };
@@ -75,15 +62,15 @@ export function validateParams<T extends ZodType>(schema: T): RequestHandler {
 
     const result = schema.safeParse(normalized);
     if (!result.success) {
-      const response: ApiResponse = {
-        success: false,
-        error: {
-          code: ERROR_CODES.VALIDATION_ERROR,
-          message: 'Validation failed',
-          details: formatZodErrors(result.error),
-        },
-      };
-      res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+      sendErrorResponse(
+        res,
+        HTTP_STATUS.BAD_REQUEST,
+        ERROR_CODES.VALIDATION_ERROR,
+        'Validation failed',
+        {
+          details: formatZodErrorDetails(result.error),
+        }
+      );
       return;
     }
     res.locals.validated = { ...res.locals.validated, params: result.data };
