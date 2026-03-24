@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { documentConfig } from '@config/env';
+import { sendErrorResponse } from '@core/errors/response';
 import { knowledgeBaseController } from './controllers/knowledge-base.controller';
 import {
   authenticate,
@@ -33,22 +34,10 @@ function handleMulterError(err: Error, _req: Request, res: Response, next: NextF
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       const maxMB = Math.round(documentConfig.maxSize / (1024 * 1024));
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'FILE_TOO_LARGE',
-          message: `File too large. Maximum size is ${maxMB}MB`,
-        },
-      });
+      sendErrorResponse(res, 400, 'FILE_TOO_LARGE', `File too large. Maximum size is ${maxMB}MB`);
       return;
     }
-    res.status(400).json({
-      success: false,
-      error: {
-        code: 'UPLOAD_ERROR',
-        message: err.message,
-      },
-    });
+    sendErrorResponse(res, 400, 'UPLOAD_ERROR', err.message);
     return;
   }
   next(err);
