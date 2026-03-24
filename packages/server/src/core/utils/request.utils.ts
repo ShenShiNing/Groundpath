@@ -66,6 +66,10 @@ export function isPrivateIpAddress(ipAddress: string): boolean {
   return PRIVATE_IP_PATTERNS.some((pattern) => pattern.test(ipAddress));
 }
 
+function isTrustProxyEnabled(req: Request): boolean {
+  return typeof req.app?.get === 'function' && Boolean(req.app.get('trust proxy'));
+}
+
 /**
  * Extract client IP address from request.
  *
@@ -79,27 +83,28 @@ export function isPrivateIpAddress(ipAddress: string): boolean {
  * @see https://expressjs.com/en/guide/behind-proxies.html
  */
 export function getClientIp(req: Request): string | null {
-  const directIp = normalizeIpAddress(req.ip ?? req.socket.remoteAddress ?? null);
-  if (directIp && !isPrivateIpAddress(directIp)) {
-    return directIp;
+  const requestIp = normalizeIpAddress(req.ip ?? null);
+  if (requestIp && !isPrivateIpAddress(requestIp)) {
+    return requestIp;
   }
 
-  // Fallback for proxied production deployments where the app only sees a private hop IP.
-  const forwardedForHeader = req.headers['x-forwarded-for'];
-  const forwardedIp = normalizeIpAddress(
-    Array.isArray(forwardedForHeader) ? forwardedForHeader[0] : forwardedForHeader
-  );
-  if (forwardedIp) {
-    return forwardedIp;
+  if (isTrustProxyEnabled(req)) {
+    const forwardedForHeader = req.headers?.['x-forwarded-for'];
+    const forwardedIp = normalizeIpAddress(
+      Array.isArray(forwardedForHeader) ? forwardedForHeader[0] : forwardedForHeader
+    );
+    if (forwardedIp) {
+      return forwardedIp;
+    }
+
+    const realIpHeader = req.headers?.['x-real-ip'];
+    const realIp = normalizeIpAddress(Array.isArray(realIpHeader) ? realIpHeader[0] : realIpHeader);
+    if (realIp) {
+      return realIp;
+    }
   }
 
-  const realIpHeader = req.headers['x-real-ip'];
-  const realIp = normalizeIpAddress(Array.isArray(realIpHeader) ? realIpHeader[0] : realIpHeader);
-  if (realIp) {
-    return realIp;
-  }
-
-  return directIp;
+  return requestIp ?? normalizeIpAddress(req.socket.remoteAddress ?? null);
 }
 
 /**

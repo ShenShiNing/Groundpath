@@ -6,10 +6,14 @@ function createRequest(input: {
   ip?: string | null;
   remoteAddress?: string | null;
   headers?: Record<string, string | string[] | undefined>;
+  trustProxy?: boolean;
 }): Request {
   return {
     ip: input.ip ?? undefined,
     headers: input.headers ?? {},
+    app: {
+      get: (key: string) => (key === 'trust proxy' ? (input.trustProxy ?? false) : undefined),
+    },
     socket: {
       remoteAddress: input.remoteAddress ?? undefined,
     },
@@ -25,6 +29,7 @@ describe('request.utils', () => {
   it('prefers forwarded client ip when the direct ip is a private proxy hop', () => {
     const req = createRequest({
       ip: '10.0.0.8',
+      trustProxy: true,
       headers: {
         'x-forwarded-for': '203.0.113.20, 10.0.0.8',
       },
@@ -36,6 +41,7 @@ describe('request.utils', () => {
   it('keeps the direct request ip when it is already public', () => {
     const req = createRequest({
       ip: '203.0.113.30',
+      trustProxy: true,
       headers: {
         'x-forwarded-for': '198.51.100.10',
       },
