@@ -18,7 +18,7 @@
     "db:verify": "pnpm run db:drift-check && pnpm run db:check",
     "document-index:backfill": "tsx src/scripts/document-index-backfill.ts",
     "test": "vitest run",
-    "test:integration:real": "vitest run --maxWorkers=1 tests/integration/db/auth-schema-migrations.integration.test.ts tests/integration/document/document-lifecycle-locks.integration.test.ts tests/integration/document-index/document-index-lifecycle-consistency.integration.test.ts tests/integration/document-index/document-index-backfill.db-queue.integration.test.ts tests/integration/document-index/document-index-backfill.worker-combo.integration.test.ts tests/integration/document-index/document-index-backfill-foreign-key.integration.test.ts tests/integration/user/user-auths-foreign-key.integration.test.ts tests/integration/user/user-soft-delete-uniqueness.integration.test.ts",
+    "test:integration:real": "tsx tests/integration/run-real-integration.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },

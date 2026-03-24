@@ -1,54 +1,15 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Queue } from 'bullmq';
-import { describe, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
+import {
+  getRealIntegrationDescribe,
+  loadRealIntegrationEnv,
+} from '../helpers/real-integration';
 
-function readEnvFile(filePath: string): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  if (!fs.existsSync(filePath)) {
-    return env;
-  }
-
-  for (const rawLine of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-
-    const separatorIndex = line.indexOf('=');
-    if (separatorIndex === -1) continue;
-
-    const key = line.slice(0, separatorIndex).trim();
-    let value = line.slice(separatorIndex + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    env[key] = value;
-  }
-
-  return env;
-}
-
-function shouldRunRealWorkerIntegration(): boolean {
-  if (
-    process.env.RUN_REAL_BACKFILL_WORKER_INTEGRATION === '1' ||
-    process.env.RUN_REAL_BACKFILL_INTEGRATION === '1'
-  ) {
-    return true;
-  }
-
-  const testEnv = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
-  return (
-    testEnv.RUN_REAL_BACKFILL_WORKER_INTEGRATION === '1' ||
-    testEnv.RUN_REAL_BACKFILL_INTEGRATION === '1'
-  );
-}
-
-const describeRealWorkerIntegration = shouldRunRealWorkerIntegration() ? describe : describe.skip;
+const describeRealWorkerIntegration = getRealIntegrationDescribe([
+  'RUN_REAL_BACKFILL_WORKER_INTEGRATION',
+  'RUN_REAL_BACKFILL_INTEGRATION',
+]);
 
 async function waitFor<T>(
   producer: () => Promise<T>,
@@ -86,9 +47,7 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
 
   vi.resetModules();
 
-  const envFromFile = readEnvFile(
-    path.resolve(import.meta.dirname, '../../../.env.development.local')
-  );
+  const envFromFile = loadRealIntegrationEnv();
   const databaseUrl = process.env.BACKFILL_REAL_DATABASE_URL ?? envFromFile.DATABASE_URL;
   const redisUrl = process.env.BACKFILL_REAL_REDIS_URL ?? envFromFile.REDIS_URL;
 

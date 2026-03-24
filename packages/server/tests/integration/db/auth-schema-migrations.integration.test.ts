@@ -1,60 +1,22 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import mysql from 'mysql2/promise';
 import type { Connection, RowDataPacket } from 'mysql2/promise';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import {
+  getRealIntegrationDescribe,
+  loadRealIntegrationEnv,
+} from '../helpers/real-integration';
 
-function readEnvFile(filePath: string): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  if (!fs.existsSync(filePath)) {
-    return env;
-  }
-
-  for (const rawLine of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-
-    const separatorIndex = line.indexOf('=');
-    if (separatorIndex === -1) continue;
-
-    const key = line.slice(0, separatorIndex).trim();
-    let value = line.slice(separatorIndex + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    env[key] = value;
-  }
-
-  return env;
-}
-
-function shouldRunRealIntegration(): boolean {
-  if (process.env.RUN_REAL_AUTH_SCHEMA_MIGRATIONS_INTEGRATION === '1') {
-    return true;
-  }
-
-  const testEnv = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
-  return testEnv.RUN_REAL_AUTH_SCHEMA_MIGRATIONS_INTEGRATION === '1';
-}
-
-const describeRealIntegration = shouldRunRealIntegration() ? describe : describe.skip;
+const describeRealIntegration = getRealIntegrationDescribe(
+  'RUN_REAL_AUTH_SCHEMA_MIGRATIONS_INTEGRATION'
+);
 
 function getDatabaseUrl(): URL {
-  const testEnv = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
-  const developmentEnv = readEnvFile(
-    path.resolve(import.meta.dirname, '../../../.env.development.local')
-  );
+  const envFromFile = loadRealIntegrationEnv();
   const rawUrl =
     process.env.AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL ??
-    testEnv.TEST_DATABASE_URL ??
-    testEnv.DATABASE_URL ??
-    developmentEnv.DATABASE_URL;
+    envFromFile.TEST_DATABASE_URL ??
+    envFromFile.DATABASE_URL;
 
   if (!rawUrl) {
     throw new Error(

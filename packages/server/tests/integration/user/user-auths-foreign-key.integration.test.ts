@@ -1,48 +1,12 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { eq, inArray, sql } from 'drizzle-orm';
+import {
+  getRealIntegrationDescribe,
+  loadRealIntegrationEnv,
+} from '../helpers/real-integration';
 
-function readEnvFile(filePath: string): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  if (!fs.existsSync(filePath)) {
-    return env;
-  }
-
-  for (const rawLine of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-
-    const separatorIndex = line.indexOf('=');
-    if (separatorIndex === -1) continue;
-
-    const key = line.slice(0, separatorIndex).trim();
-    let value = line.slice(separatorIndex + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    env[key] = value;
-  }
-
-  return env;
-}
-
-function shouldRunRealIntegration(): boolean {
-  if (process.env.RUN_REAL_USER_AUTHS_FK_INTEGRATION === '1') {
-    return true;
-  }
-
-  const envFromFile = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
-  return envFromFile.RUN_REAL_USER_AUTHS_FK_INTEGRATION === '1';
-}
-
-const describeRealIntegration = shouldRunRealIntegration() ? describe : describe.skip;
+const describeRealIntegration = getRealIntegrationDescribe('RUN_REAL_USER_AUTHS_FK_INTEGRATION');
 
 type DbModule = typeof import('@core/db');
 type SchemaModule = typeof import('@core/db/schema');
@@ -126,15 +90,11 @@ describeRealIntegration('user_auths foreign key real db integration', () => {
   beforeAll(async () => {
     vi.resetModules();
 
-    const testEnv = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
-    const developmentEnv = readEnvFile(
-      path.resolve(import.meta.dirname, '../../../.env.development.local')
-    );
+    const envFromFile = loadRealIntegrationEnv();
     const databaseUrl =
       process.env.USER_AUTHS_FK_REAL_DATABASE_URL ??
-      testEnv.TEST_DATABASE_URL ??
-      testEnv.DATABASE_URL ??
-      developmentEnv.DATABASE_URL;
+      envFromFile.TEST_DATABASE_URL ??
+      envFromFile.DATABASE_URL;
 
     if (!databaseUrl) {
       throw new Error(
@@ -142,13 +102,12 @@ describeRealIntegration('user_auths foreign key real db integration', () => {
       );
     }
 
-    Object.assign(process.env, testEnv, {
+    Object.assign(process.env, envFromFile, {
       NODE_ENV: 'test',
       DATABASE_URL: databaseUrl,
       REDIS_URL:
-        testEnv.TEST_REDIS_URL ??
-        testEnv.REDIS_URL ??
-        developmentEnv.REDIS_URL ??
+        envFromFile.TEST_REDIS_URL ??
+        envFromFile.REDIS_URL ??
         'redis://127.0.0.1:6379',
       JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
       ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars',

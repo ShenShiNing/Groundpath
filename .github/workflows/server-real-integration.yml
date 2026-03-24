@@ -35,6 +35,7 @@ jobs:
     env:
       DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
       REDIS_URL: redis://127.0.0.1:6379
+      RUN_REAL_INTEGRATION: '1'
       AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
       USER_UNIQUENESS_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci
       USER_AUTHS_FK_REAL_DATABASE_URL: mysql://root:root@127.0.0.1:3306/groundpath_ci

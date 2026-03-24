@@ -1,54 +1,14 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import {
+  getRealIntegrationDescribe,
+  loadRealIntegrationEnv,
+} from '../helpers/real-integration';
 
-function readEnvFile(filePath: string): Record<string, string> {
-  const env: Record<string, string> = {};
-
-  if (!fs.existsSync(filePath)) {
-    return env;
-  }
-
-  for (const rawLine of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-
-    const separatorIndex = line.indexOf('=');
-    if (separatorIndex === -1) continue;
-
-    const key = line.slice(0, separatorIndex).trim();
-    let value = line.slice(separatorIndex + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    env[key] = value;
-  }
-
-  return env;
-}
-
-function shouldRunRealIntegration(): boolean {
-  if (process.env.RUN_REAL_DOCUMENT_INDEX_LIFECYCLE_INTEGRATION === '1') {
-    return true;
-  }
-
-  if (process.env.RUN_REAL_DOCUMENT_LIFECYCLE_INTEGRATION === '1') {
-    return true;
-  }
-
-  const envFromFile = readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local'));
-  return (
-    envFromFile.RUN_REAL_DOCUMENT_INDEX_LIFECYCLE_INTEGRATION === '1' ||
-    envFromFile.RUN_REAL_DOCUMENT_LIFECYCLE_INTEGRATION === '1'
-  );
-}
-
-const describeRealIntegration = shouldRunRealIntegration() ? describe : describe.skip;
+const describeRealIntegration = getRealIntegrationDescribe([
+  'RUN_REAL_DOCUMENT_INDEX_LIFECYCLE_INTEGRATION',
+  'RUN_REAL_DOCUMENT_LIFECYCLE_INTEGRATION',
+]);
 
 const dispatchDocumentProcessingMock = vi.hoisted(() =>
   vi.fn(() => Promise.resolve('document-processing-job'))
@@ -80,10 +40,7 @@ describeRealIntegration('document index lifecycle consistency real db integratio
   beforeAll(async () => {
     vi.resetModules();
 
-    const envFromFile = {
-      ...readEnvFile(path.resolve(import.meta.dirname, '../../../.env.development.local')),
-      ...readEnvFile(path.resolve(import.meta.dirname, '../../../.env.test.local')),
-    };
+    const envFromFile = loadRealIntegrationEnv();
     const databaseUrl =
       process.env.DOCUMENT_INDEX_LIFECYCLE_REAL_DATABASE_URL ??
       process.env.DOCUMENT_LIFECYCLE_REAL_DATABASE_URL ??
