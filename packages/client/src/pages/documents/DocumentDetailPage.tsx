@@ -1,35 +1,9 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import type {
-  DocumentType,
-  DocumentVersionListItem,
-  VersionSource,
-} from '@groundpath/shared/types';
-import {
-  ArrowLeft,
-  Download,
-  Eye,
-  FileText,
-  History,
-  PencilLine,
-  RotateCcw,
-  Wand2,
-} from 'lucide-react';
+import type { DocumentType, DocumentVersionListItem } from '@groundpath/shared/types';
 import { toast } from 'sonner';
-import { DocumentReader, DocumentInfo, AIRewriteDialog } from '@/components/documents';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { DocumentInfo, AIRewriteDialog } from '@/components/documents';
 import { documentsApi } from '@/api';
 import {
   useDocument,
@@ -38,21 +12,13 @@ import {
   useRestoreVersion,
   useSaveDocumentContent,
 } from '@/hooks';
-import { formatBytes, openInNewTab } from '@/lib/utils';
-import { formatDateTime } from '@/lib/date';
+import { openInNewTab } from '@/lib/utils';
 import { syncDocumentMode, type ViewMode } from './documentDetailMode';
-
-const LazyDocumentEditor = lazy(async () => {
-  const module = await import('@/components/documents/DocumentEditor');
-  return { default: module.DocumentEditor };
-});
-
-const versionSourceTranslationKeys = {
-  upload: 'versions.source.upload',
-  edit: 'versions.source.edit',
-  ai_generate: 'versions.source.ai_generate',
-  restore: 'versions.source.restore',
-} as const satisfies Record<VersionSource, string>;
+import { DocumentDetailContent } from './document-detail/DocumentDetailContent';
+import { DocumentDetailHeader } from './document-detail/DocumentDetailHeader';
+import { DocumentDetailState } from './document-detail/DocumentDetailState';
+import { DocumentRestoreDialog } from './document-detail/DocumentRestoreDialog';
+import { DocumentVersionHistory } from './document-detail/DocumentVersionHistory';
 
 export function DocumentDetailPage() {
   const { t } = useTranslation(['document', 'common']);
@@ -170,203 +136,33 @@ export function DocumentDetailPage() {
     }
   };
 
-  const getVersionSourceLabel = (source: VersionSource) => t(versionSourceTranslationKeys[source]);
-
-  const editorLoadingFallback = (
-    <DocumentReader
-      documentType={resolvedDocumentType}
-      textContent={content?.textContent ?? null}
-      storageUrl={content?.storageUrl ?? null}
-      isLoading
-    />
-  );
-
-  const renderContent = () => {
-    if (isPageLoading) {
-      return editorLoadingFallback;
-    }
-
-    if (mode === 'edit' && isEditable) {
-      return (
-        <Suspense fallback={editorLoadingFallback}>
-          <LazyDocumentEditor
-            key={editorKey}
-            documentId={document?.id ?? safeDocumentId}
-            documentType={resolvedDocumentType}
-            initialContent={content?.textContent ?? ''}
-            isSaving={isSaving}
-            isTruncated={content?.isTruncated ?? false}
-            onSave={handleSaveContent}
-            onError={handleSaveError}
-          />
-        </Suspense>
-      );
-    }
-
-    return (
-      <DocumentReader
-        documentType={resolvedDocumentType}
-        textContent={content?.textContent ?? null}
-        storageUrl={content?.storageUrl ?? null}
-        isLoading={false}
-      />
-    );
-  };
-
-  const renderVersionHistory = () => {
-    if (isVersionLoading) {
-      return <p className="text-sm text-muted-foreground">{t('versions.loading')}</p>;
-    }
-
-    if (versionError) {
-      return <p className="text-sm text-destructive">{t('error.loadFailed')}</p>;
-    }
-
-    if (versions.length === 0) {
-      return <p className="text-sm text-muted-foreground">{t('versions.empty')}</p>;
-    }
-
-    return (
-      <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-        {versions.map((version) => {
-          const isCurrent = version.version === currentVersion;
-
-          return (
-            <div key={version.id} className="rounded-lg border p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-semibold">v{version.version}</span>
-                  {isCurrent && <Badge variant="secondary">{t('versions.current')}</Badge>}
-                </div>
-
-                {!isCurrent && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 cursor-pointer px-2.5 text-xs"
-                    disabled={isRestoringVersion}
-                    onClick={() => openRestoreDialog(version)}
-                  >
-                    <RotateCcw className="mr-1 size-3.5" />
-                    {t('versions.action.restore')}
-                  </Button>
-                )}
-              </div>
-
-              <p className="truncate text-sm font-medium" title={version.fileName}>
-                {version.fileName}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {getVersionSourceLabel(version.source)}
-              </p>
-
-              {version.changeNote && (
-                <p className="mt-1.5 wrap-break-word text-xs text-muted-foreground">
-                  {version.changeNote}
-                </p>
-              )}
-
-              <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>{formatDateTime(version.createdAt)}</span>
-                <span>{formatBytes(version.fileSize)}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   if (isPageError && !isPageLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="py-14 text-center">
-          <p className="text-destructive">{t('error.loadFailed')}</p>
-          <Button variant="outline" className="mt-4 cursor-pointer" onClick={handleBackToList}>
-            {t('action.backToList')}
-          </Button>
-        </div>
-      </div>
+      <DocumentDetailState
+        message={t('error.loadFailed')}
+        onAction={handleBackToList}
+        tone="destructive"
+      />
     );
   }
 
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="shrink-0 border-b px-6 py-5">
-          <div className="flex flex-wrap items-start gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 cursor-pointer"
-              aria-label={t('action.backToList')}
-              onClick={handleBackToList}
-            >
-              <ArrowLeft className="size-4" />
-            </Button>
-
-            <div className="min-w-0 flex-1">
-              <h1 className="font-display truncate text-2xl font-semibold tracking-tight sm:text-3xl">
-                {isPageLoading
-                  ? t('loading')
-                  : (content?.title ?? document?.title ?? t('page.title'))}
-              </h1>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <FileText className="size-3.5" />
-                  {document?.documentType?.toUpperCase() ?? 'DOCUMENT'}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <History className="size-3.5" />
-                  {currentVersion
-                    ? t('versions.currentNumber', { version: currentVersion })
-                    : t('versions.currentPending')}
-                </span>
-                <span>{t('page.subtitle')}</span>
-              </div>
-            </div>
-
-            {document && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant={mode === 'read' ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => handleModeChange('read')}
-                >
-                  <Eye className="size-4 mr-1.5" />
-                  {t('action.read')}
-                </Button>
-
-                {isEditable && (
-                  <Button
-                    variant={mode === 'edit' ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() => handleModeChange('edit')}
-                  >
-                    <PencilLine className="size-4 mr-1.5" />
-                    {t('action.edit')}
-                  </Button>
-                )}
-
-                {isEditable && (
-                  <Button
-                    variant="outline"
-                    className="cursor-pointer"
-                    onClick={() => setAiRewriteOpen(true)}
-                  >
-                    <Wand2 className="size-4 mr-1.5" />
-                    {t('action.aiRewrite')}
-                  </Button>
-                )}
-
-                <Button variant="outline" className="cursor-pointer" onClick={handleDownload}>
-                  <Download className="size-4 mr-1.5" />
-                  {t('action.download')}
-                </Button>
-              </div>
-            )}
-          </div>
-        </header>
+        <DocumentDetailHeader
+          title={content?.title ?? document?.title ?? t('page.title')}
+          documentType={document?.documentType}
+          currentVersion={currentVersion}
+          isPageLoading={isPageLoading}
+          showActions={!!document}
+          isEditable={isEditable}
+          mode={mode}
+          onBack={handleBackToList}
+          onReadMode={() => handleModeChange('read')}
+          onEditMode={() => handleModeChange('edit')}
+          onAiRewrite={() => setAiRewriteOpen(true)}
+          onDownload={handleDownload}
+        />
 
         {(document || isPageLoading) && (
           <div className="flex-1 overflow-y-auto">
@@ -375,7 +171,20 @@ export function DocumentDetailPage() {
                 <h2 className="mb-4 text-lg font-semibold">
                   {mode === 'edit' ? t('card.editor') : t('card.preview')}
                 </h2>
-                {renderContent()}
+                <DocumentDetailContent
+                  mode={mode}
+                  documentId={document?.id ?? safeDocumentId}
+                  documentType={resolvedDocumentType}
+                  textContent={content?.textContent ?? null}
+                  storageUrl={content?.storageUrl ?? null}
+                  isPageLoading={isPageLoading}
+                  isEditable={isEditable}
+                  isSaving={isSaving}
+                  isTruncated={content?.isTruncated ?? false}
+                  editorKey={editorKey}
+                  onSave={handleSaveContent}
+                  onError={handleSaveError}
+                />
               </div>
 
               {document && (
@@ -390,7 +199,14 @@ export function DocumentDetailPage() {
                     <p className="mb-4 text-xs text-muted-foreground">
                       {t('versions.description')}
                     </p>
-                    {renderVersionHistory()}
+                    <DocumentVersionHistory
+                      versions={versions}
+                      currentVersion={currentVersion}
+                      isVersionLoading={isVersionLoading}
+                      isVersionError={versionError}
+                      isRestoringVersion={isRestoringVersion}
+                      onRestore={openRestoreDialog}
+                    />
                   </section>
                 </aside>
               )}
@@ -399,35 +215,16 @@ export function DocumentDetailPage() {
         )}
 
         {!isPageLoading && (!documentId || !document) && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="py-14 text-center">
-              <p className="text-muted-foreground">{t('notFound')}</p>
-              <Button variant="outline" className="mt-4 cursor-pointer" onClick={handleBackToList}>
-                {t('action.backToList')}
-              </Button>
-            </div>
-          </div>
+          <DocumentDetailState message={t('notFound')} onAction={handleBackToList} />
         )}
       </div>
 
-      <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('versions.dialog.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('versions.dialog.description', { version: selectedVersion?.version ?? '-' })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer">
-              {t('cancel', { ns: 'common' })}
-            </AlertDialogCancel>
-            <AlertDialogAction className="cursor-pointer" onClick={handleConfirmRestore}>
-              {t('versions.dialog.confirm')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DocumentRestoreDialog
+        open={restoreDialogOpen}
+        selectedVersion={selectedVersion}
+        onOpenChange={setRestoreDialogOpen}
+        onConfirm={handleConfirmRestore}
+      />
 
       <AIRewriteDialog
         open={aiRewriteOpen}

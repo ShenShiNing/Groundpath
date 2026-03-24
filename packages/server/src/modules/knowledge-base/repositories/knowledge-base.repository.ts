@@ -1,4 +1,4 @@
-import { eq, and, isNull, sql, count } from 'drizzle-orm';
+import { eq, and, isNull, sql, count, desc } from 'drizzle-orm';
 import { db } from '@core/db';
 import { now, getDbContext, type Transaction } from '@core/db/db.utils';
 import {
@@ -92,7 +92,7 @@ export const knowledgeBaseRepository = {
       .select()
       .from(knowledgeBases)
       .where(and(eq(knowledgeBases.userId, userId), isNull(knowledgeBases.deletedAt)))
-      .orderBy(knowledgeBases.createdAt)
+      .orderBy(desc(knowledgeBases.createdAt), desc(knowledgeBases.id))
       .limit(pageSize)
       .offset((page - 1) * pageSize);
   },

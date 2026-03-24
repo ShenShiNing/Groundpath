@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@groundpath/shared';
-import type { ApiResponse } from '@groundpath/shared';
 import { featureFlags, serverConfig } from '@config/env';
 import { Errors } from '@core/errors';
+import { sendErrorResponse } from '@core/errors/response';
 import { createLogger } from '@core/logger';
 import { buildRedisKey, getRedisClient } from '@core/redis';
 import { getClientIp } from '../utils/request.utils';
@@ -93,16 +93,15 @@ export function createRateLimiter(options: RateLimitOptions) {
         res.setHeader('Retry-After', retryAfter.toString());
         setRateLimitHeaders(res, options.maxRequests, 0, resetAt);
 
-        const response: ApiResponse = {
-          success: false,
-          error: {
-            code: AUTH_ERROR_CODES.RATE_LIMITED,
-            message,
+        sendErrorResponse(
+          res,
+          HTTP_STATUS.TOO_MANY_REQUESTS,
+          AUTH_ERROR_CODES.RATE_LIMITED,
+          message,
+          {
             details: { retryAfter },
-          },
-        };
-
-        res.status(HTTP_STATUS.TOO_MANY_REQUESTS).json(response);
+          }
+        );
         return;
       }
 

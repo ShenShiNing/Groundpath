@@ -1,0 +1,3 @@
+CREATE INDEX `knowledge_bases_user_deleted_created_id_idx` ON `knowledge_bases` (`user_id`,`deleted_at`,`created_at`,`id`);--> statement-breakpoint
+CREATE INDEX `documents_user_deleted_updated_id_idx` ON `documents` (`user_id`,`deleted_at`,`updated_at`,`id`);--> statement-breakpoint
+CREATE INDEX `documents_kb_deleted_updated_id_idx` ON `documents` (`knowledge_base_id`,`deleted_at`,`updated_at`,`id`);

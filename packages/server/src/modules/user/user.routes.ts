@@ -1,5 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import multer from 'multer';
+import { sendErrorResponse } from '@core/errors/response';
 import { authenticate, validateBody } from '@core/middleware';
 import { changeEmailRequestSchema, updateProfileRequestSchema } from '@groundpath/shared/schemas';
 import { userController } from './controllers/user.controller';
@@ -21,22 +22,15 @@ function handleMulterError(err: Error, _req: Request, res: Response, next: NextF
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       const maxMB = Math.round(MAX_AVATAR_SIZE / (1024 * 1024));
-      res.status(400).json({
-        success: false,
-        error: {
-          code: 'FILE_TOO_LARGE',
-          message: `Avatar file too large. Maximum size is ${maxMB}MB`,
-        },
-      });
+      sendErrorResponse(
+        res,
+        400,
+        'FILE_TOO_LARGE',
+        `Avatar file too large. Maximum size is ${maxMB}MB`
+      );
       return;
     }
-    res.status(400).json({
-      success: false,
-      error: {
-        code: 'UPLOAD_ERROR',
-        message: err.message,
-      },
-    });
+    sendErrorResponse(res, 400, 'UPLOAD_ERROR', err.message);
     return;
   }
   // Non-multer error, pass to global error handler

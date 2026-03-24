@@ -1,5 +1,6 @@
 import {
   boolean,
+  foreignKey,
   index,
   int,
   mysqlEnum,
@@ -8,6 +9,8 @@ import {
   timestamp,
   varchar,
 } from 'drizzle-orm/mysql-core';
+import { users } from '../user/users.schema';
+import { knowledgeBases } from './knowledge-bases.schema';
 
 export const documentIndexBackfillRuns = mysqlTable(
   'document_index_backfill_runs',
@@ -49,7 +52,18 @@ export const documentIndexBackfillRuns = mysqlTable(
     index('document_index_backfill_status_idx').on(table.status),
     index('document_index_backfill_trigger_idx').on(table.trigger),
     index('document_index_backfill_kb_idx').on(table.knowledgeBaseId),
+    index('document_index_backfill_created_by_idx').on(table.createdBy),
     index('document_index_backfill_created_at_idx').on(table.createdAt),
+    foreignKey({
+      columns: [table.knowledgeBaseId],
+      foreignColumns: [knowledgeBases.id],
+      name: 'document_index_backfill_runs_knowledge_base_id_fk',
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: 'document_index_backfill_runs_created_by_fk',
+    }).onDelete('set null'),
   ]
 );
 
