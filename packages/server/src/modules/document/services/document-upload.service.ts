@@ -60,7 +60,7 @@ export interface UploadFileInput {
  */
 export interface UploadOptions {
   title?: string;
-  description?: string;
+  description?: string | null;
   knowledgeBaseId?: string;
 }
 

@@ -105,7 +105,7 @@ export function AISettingsPage() {
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{t('sidebar.model')}</span>
-                  <span className="max-w-[10rem] truncate font-mono text-xs font-medium">
+                  <span className="max-w-40 truncate font-mono text-xs font-medium">
                     {config?.model ?? t('sidebar.unset')}
                   </span>
                 </div>

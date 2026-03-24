@@ -8,6 +8,7 @@ import {
   uniqueIndex,
   text,
 } from 'drizzle-orm/mysql-core';
+import { sql } from 'drizzle-orm';
 
 export const users = mysqlTable(
   'users',
@@ -42,13 +43,21 @@ export const users = mysqlTable(
     updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
     deletedBy: varchar('deleted_by', { length: 36 }),
     deletedAt: timestamp('deleted_at'),
+    activeUsername: varchar('active_username', { length: 50 }).generatedAlwaysAs(
+      sql`(case when deleted_at is null then username else null end)`,
+      { mode: 'stored' }
+    ),
+    activeEmail: varchar('active_email', { length: 255 }).generatedAlwaysAs(
+      sql`(case when deleted_at is null then email else null end)`,
+      { mode: 'stored' }
+    ),
   },
   (table) => [
     index('status_idx').on(table.status),
     index('deleted_at_idx').on(table.deletedAt),
     index('email_verified_idx').on(table.emailVerified),
-    uniqueIndex('username_deleted_idx').on(table.username, table.deletedAt),
-    uniqueIndex('email_deleted_idx').on(table.email, table.deletedAt),
+    uniqueIndex('active_username_unique_idx').on(table.activeUsername),
+    uniqueIndex('active_email_unique_idx').on(table.activeEmail),
   ]
 );
 
