@@ -166,6 +166,18 @@ export const documentTrashService = {
       reason: 'restore',
     }).catch((err) => {
       logger.warn({ documentId, err }, 'Failed to enqueue processing after restore');
+      documentRepository
+        .updateProcessingStatus(
+          documentId,
+          'failed',
+          `Dispatch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        .catch((updateErr) => {
+          logger.error(
+            { documentId, updateErr },
+            'Failed to mark document as failed after dispatch error'
+          );
+        });
     });
 
     // Log operation

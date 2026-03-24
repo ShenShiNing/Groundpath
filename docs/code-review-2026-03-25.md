@@ -66,16 +66,16 @@
 
 ### 4.1 后端代码质量
 
-| #   | 问题                         | 文件                                  | 描述                                              |
-| --- | ---------------------------- | ------------------------------------- | ------------------------------------------------- |
-| M-1 | 文档处理分发失败未更新状态   | `document-upload.service.ts:213-219`  | 队列不可用时文档永久停留在 pending 状态           |
-| M-2 | 删除后向量清理失败无补偿     | `document-trash.service.ts:230-238`   | DB 记录已删但 Qdrant 向量残留                     |
-| M-3 | TOCTOU 漏洞                  | `document-upload.service.ts:93,136`   | 先 validateOwnership 再 lockOwnership，中间有窗口 |
-| M-4 | 文件过长                     | `document.repository.core.ts` (502行) | 超过 400 行限制                                   |
-| M-5 | 非空断言                     | `document-upload.service.ts:98-102`   | `validation.error!` 未安全检查                    |
-| M-6 | OAuth 密钥可选但无运行时验证 | `config/env/schema.ts:48-55`          | OAuth 使用时可能报运行时错误                      |
-| M-7 | 事务后回调只抛第一个错误     | `db.utils.ts:34-52`                   | 多个 afterCommit 回调失败时丢失错误信息           |
-| M-8 | N+1 查询                     | `knowledge-base.service.ts:131-142`   | list + count 分两次查询                           |
+| #       | 问题                              | 文件                                  | 描述                                              |
+| ------- | --------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| ~~M-1~~ | ~~文档处理分发失败未更新状态~~ ✅ | `document-upload.service.ts:213-219`  | 队列不可用时文档永久停留在 pending 状态           |
+| M-2     | 删除后向量清理失败无补偿          | `document-trash.service.ts:230-238`   | DB 记录已删但 Qdrant 向量残留                     |
+| M-3     | TOCTOU 漏洞                       | `document-upload.service.ts:93,136`   | 先 validateOwnership 再 lockOwnership，中间有窗口 |
+| M-4     | 文件过长                          | `document.repository.core.ts` (502行) | 超过 400 行限制                                   |
+| M-5     | 非空断言                          | `document-upload.service.ts:98-102`   | `validation.error!` 未安全检查                    |
+| M-6     | OAuth 密钥可选但无运行时验证      | `config/env/schema.ts:48-55`          | OAuth 使用时可能报运行时错误                      |
+| M-7     | 事务后回调只抛第一个错误          | `db.utils.ts:34-52`                   | 多个 afterCommit 回调失败时丢失错误信息           |
+| M-8     | N+1 查询                          | `knowledge-base.service.ts:131-142`   | list + count 分两次查询                           |
 
 ### 4.2 认证与授权
 

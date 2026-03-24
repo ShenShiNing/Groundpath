@@ -216,6 +216,18 @@ export const documentUploadService = {
       reason: 'upload',
     }).catch((err) => {
       logger.warn({ documentId: docId, err }, 'Failed to enqueue document processing');
+      documentRepository
+        .updateProcessingStatus(
+          docId,
+          'failed',
+          `Dispatch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        .catch((updateErr) => {
+          logger.error(
+            { documentId: docId, updateErr },
+            'Failed to mark document as failed after dispatch error'
+          );
+        });
     });
 
     return toDocumentInfo(document);

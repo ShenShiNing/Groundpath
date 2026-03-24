@@ -1,9 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
-import {
-  getRealIntegrationDescribe,
-  loadRealIntegrationEnv,
-} from '../helpers/real-integration';
+import { getRealIntegrationDescribe, loadRealIntegrationEnv } from '../helpers/real-integration';
 
 const describeRealIntegration = getRealIntegrationDescribe([
   'RUN_REAL_DOCUMENT_INDEX_LIFECYCLE_INTEGRATION',
@@ -290,9 +287,12 @@ describeRealIntegration('document index lifecycle consistency real db integratio
 
       await documentService.restore(fixture.documentId, fixture.userId);
 
+      // Wait for the async dispatch failure handler to update processingStatus
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       const restoredDocument = await getDocument(fixture.documentId);
       expect(restoredDocument?.deletedAt).toBeNull();
-      expect(restoredDocument?.processingStatus).toBe('pending');
+      expect(restoredDocument?.processingStatus).toBe('failed');
       expect(restoredDocument?.activeIndexVersionId).toBeNull();
 
       const backfillCandidates = await documentRepository.listBackfillCandidates({

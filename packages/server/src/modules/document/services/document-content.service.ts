@@ -246,6 +246,18 @@ export const documentContentService = {
       reason: 'edit',
     }).catch((err) => {
       logger.warn({ documentId, err }, 'Failed to enqueue document processing after edit');
+      documentRepository
+        .updateProcessingStatus(
+          documentId,
+          'failed',
+          `Dispatch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        .catch((updateErr) => {
+          logger.error(
+            { documentId, updateErr },
+            'Failed to mark document as failed after dispatch error'
+          );
+        });
     });
 
     return toDocumentInfo(updated!);
