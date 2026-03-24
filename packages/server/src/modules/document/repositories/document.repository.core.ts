@@ -197,6 +197,7 @@ export const documentRepositoryCore = {
     await ctx
       .update(documents)
       .set({
+        activeIndexVersionId: null,
         deletedAt: now(),
         deletedBy,
       })
@@ -252,6 +253,7 @@ export const documentRepositoryCore = {
     await ctx
       .update(documents)
       .set({
+        activeIndexVersionId: null,
         deletedAt: null,
         deletedBy: null,
       })

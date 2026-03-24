@@ -94,6 +94,20 @@ function buildSearchConditionsWithoutPreview(terms: string[]) {
   return or(...termConditions);
 }
 
+function buildActiveDocumentJoinConditions() {
+  return and(
+    eq(documents.id, documentNodes.documentId),
+    eq(documents.activeIndexVersionId, documentNodes.indexVersionId)
+  );
+}
+
+function buildActiveIndexVersionJoinConditions() {
+  return and(
+    eq(documentIndexVersions.id, documentNodes.indexVersionId),
+    eq(documentIndexVersions.status, 'active')
+  );
+}
+
 function getAccessibleNodeSelect() {
   return {
     nodeId: documentNodes.id,
@@ -149,14 +163,8 @@ export const documentNodeSearchRepository = {
         tokenCount: sql<null>`NULL`,
       })
       .from(documentNodes)
-      .innerJoin(
-        documents,
-        and(
-          eq(documents.id, documentNodes.documentId),
-          eq(documents.activeIndexVersionId, documentNodes.indexVersionId)
-        )
-      )
-      .innerJoin(documentIndexVersions, eq(documentIndexVersions.id, documentNodes.indexVersionId))
+      .innerJoin(documents, buildActiveDocumentJoinConditions())
+      .innerJoin(documentIndexVersions, buildActiveIndexVersionJoinConditions())
       .where(and(...conditions))
       .limit(filter.limit ?? 50);
 
@@ -175,14 +183,8 @@ export const documentNodeSearchRepository = {
     return db
       .select(getAccessibleNodeSelect())
       .from(documentNodes)
-      .innerJoin(
-        documents,
-        and(
-          eq(documents.id, documentNodes.documentId),
-          eq(documents.activeIndexVersionId, documentNodes.indexVersionId)
-        )
-      )
-      .innerJoin(documentIndexVersions, eq(documentIndexVersions.id, documentNodes.indexVersionId))
+      .innerJoin(documents, buildActiveDocumentJoinConditions())
+      .innerJoin(documentIndexVersions, buildActiveIndexVersionJoinConditions())
       .leftJoin(documentNodeContents, eq(documentNodeContents.nodeId, documentNodes.id))
       .where(and(...conditions))
       .limit(filter.limit ?? 50);
@@ -217,14 +219,8 @@ export const documentNodeSearchRepository = {
     return db
       .select(getAccessibleNodeSelect())
       .from(documentNodes)
-      .innerJoin(
-        documents,
-        and(
-          eq(documents.id, documentNodes.documentId),
-          eq(documents.activeIndexVersionId, documentNodes.indexVersionId)
-        )
-      )
-      .innerJoin(documentIndexVersions, eq(documentIndexVersions.id, documentNodes.indexVersionId))
+      .innerJoin(documents, buildActiveDocumentJoinConditions())
+      .innerJoin(documentIndexVersions, buildActiveIndexVersionJoinConditions())
       .leftJoin(documentNodeContents, eq(documentNodeContents.nodeId, documentNodes.id))
       .where(and(...conditions));
   },
