@@ -12,7 +12,7 @@ import { paginatedResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 
 export const logsOpenApiOperations = defineOpenApiOperations({
-  'GET /api/logs/login': {
+  'GET /api/v1/logs/login': {
     summary: '列出登录历史',
     request: { query: loginLogQuerySchema },
     responses: {
@@ -28,7 +28,7 @@ export const logsOpenApiOperations = defineOpenApiOperations({
       ),
     },
   },
-  'GET /api/logs/login/recent': {
+  'GET /api/v1/logs/login/recent': {
     summary: '获取最近登录历史',
     responses: {
       200: successResponse(
@@ -44,17 +44,17 @@ export const logsOpenApiOperations = defineOpenApiOperations({
       ),
     },
   },
-  'GET /api/logs/structured-rag/summary': {
+  'GET /api/v1/logs/structured-rag/summary': {
     summary: 'RAG 仪表板摘要',
     request: { query: structuredRagDashboardQuerySchema },
     responses: { 200: successResponse(structuredRagDashboardSummarySchema, 'RAG 摘要数据') },
   },
-  'GET /api/logs/structured-rag/report': {
+  'GET /api/v1/logs/structured-rag/report': {
     summary: 'RAG 报告',
     request: { query: structuredRagReportQuerySchema },
     responses: { 200: successResponse(structuredRagLongTermReportSchema, 'RAG 报告数据') },
   },
-  'GET /api/logs/operations': {
+  'GET /api/v1/logs/operations': {
     summary: '列出操作历史',
     request: { query: operationLogQuerySchema },
     responses: {
@@ -69,7 +69,7 @@ export const logsOpenApiOperations = defineOpenApiOperations({
       ),
     },
   },
-  'GET /api/logs/operations/resource/{resourceType}/{resourceId}': {
+  'GET /api/v1/logs/operations/resource/{resourceType}/{resourceId}': {
     summary: '获取特定资源的操作历史',
     request: {
       params: z.object({ resourceType: z.string(), resourceId: z.string() }),

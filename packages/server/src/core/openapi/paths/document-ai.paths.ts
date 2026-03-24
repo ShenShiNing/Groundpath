@@ -20,7 +20,7 @@ import { defineOpenApiOperations } from '../route-metadata';
 const idParam = z.object({ id: z.string() });
 
 export const documentAiOpenApiOperations = defineOpenApiOperations({
-  'POST /api/document-ai/{id}/summary': {
+  'POST /api/v1/document-ai/{id}/summary': {
     summary: '生成文档摘要',
     request: {
       params: idParam,
@@ -31,7 +31,7 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
       404: errorResponse,
     },
   },
-  'POST /api/document-ai/{id}/summary/stream': {
+  'POST /api/v1/document-ai/{id}/summary/stream': {
     summary: '流式生成文档摘要 (SSE)',
     request: {
       params: idParam,
@@ -39,7 +39,7 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
     },
     responses: { 200: { description: 'SSE 事件流' }, 404: errorResponse },
   },
-  'POST /api/document-ai/{id}/analyze': {
+  'POST /api/v1/document-ai/{id}/analyze': {
     summary: '综合分析文档',
     request: {
       params: idParam,
@@ -47,7 +47,7 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
     },
     responses: { 200: successResponse(analysisResponseSchema, '分析结果'), 404: errorResponse },
   },
-  'POST /api/document-ai/{id}/analyze/keywords': {
+  'POST /api/v1/document-ai/{id}/analyze/keywords': {
     summary: '提取关键词',
     request: {
       params: idParam,
@@ -58,7 +58,7 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
       404: errorResponse,
     },
   },
-  'POST /api/document-ai/{id}/analyze/entities': {
+  'POST /api/v1/document-ai/{id}/analyze/entities': {
     summary: '提取实体',
     request: {
       params: idParam,
@@ -69,7 +69,7 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
       404: errorResponse,
     },
   },
-  'GET /api/document-ai/{id}/analyze/structure': {
+  'GET /api/v1/document-ai/{id}/analyze/structure': {
     summary: '获取文档结构',
     request: { params: idParam },
     responses: {
@@ -77,7 +77,7 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
       404: errorResponse,
     },
   },
-  'POST /api/document-ai/generate': {
+  'POST /api/v1/document-ai/generate': {
     summary: '生成新内容',
     request: { body: { content: { 'application/json': { schema: generateRequestSchema } } } },
     responses: {
@@ -85,12 +85,12 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
       400: errorResponse,
     },
   },
-  'POST /api/document-ai/generate/stream': {
+  'POST /api/v1/document-ai/generate/stream': {
     summary: '流式生成内容 (SSE)',
     request: { body: { content: { 'application/json': { schema: generateRequestSchema } } } },
     responses: { 200: { description: 'SSE 事件流' }, 400: errorResponse },
   },
-  'POST /api/document-ai/{id}/expand': {
+  'POST /api/v1/document-ai/{id}/expand': {
     summary: '扩展文档内容',
     request: {
       params: idParam,
@@ -101,7 +101,7 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
       404: errorResponse,
     },
   },
-  'POST /api/document-ai/{id}/expand/stream': {
+  'POST /api/v1/document-ai/{id}/expand/stream': {
     summary: '流式扩展文档 (SSE)',
     request: {
       params: idParam,

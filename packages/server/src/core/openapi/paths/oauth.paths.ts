@@ -9,23 +9,23 @@ const oauthRedirect = {
 };
 
 export const oauthOpenApiOperations = defineOpenApiOperations({
-  'GET /api/auth/oauth/github': {
+  'GET /api/v1/auth/oauth/github': {
     summary: 'GitHub OAuth 授权',
     responses: { 302: oauthRedirect },
   },
-  'GET /api/auth/oauth/github/callback': {
+  'GET /api/v1/auth/oauth/github/callback': {
     summary: 'GitHub OAuth 回调',
     responses: { 302: oauthRedirect },
   },
-  'GET /api/auth/oauth/google': {
+  'GET /api/v1/auth/oauth/google': {
     summary: 'Google OAuth 授权',
     responses: { 302: oauthRedirect },
   },
-  'GET /api/auth/oauth/google/callback': {
+  'GET /api/v1/auth/oauth/google/callback': {
     summary: 'Google OAuth 回调',
     responses: { 302: oauthRedirect },
   },
-  'POST /api/auth/oauth/exchange': {
+  'POST /api/v1/auth/oauth/exchange': {
     summary: 'OAuth 令牌交换',
     request: { body: { content: { 'application/json': { schema: oauthExchangeRequestSchema } } } },
     responses: {

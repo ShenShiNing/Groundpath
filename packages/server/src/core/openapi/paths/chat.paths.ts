@@ -16,22 +16,22 @@ import { errorResponse, messageResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 
 export const chatOpenApiOperations = defineOpenApiOperations({
-  'POST /api/chat/conversations': {
+  'POST /api/v1/chat/conversations': {
     summary: '创建会话',
     request: { body: { content: { 'application/json': { schema: createConversationSchema } } } },
     responses: { 201: successResponse(conversationInfoSchema, '会话创建成功'), 400: errorResponse },
   },
-  'GET /api/chat/conversations': {
+  'GET /api/v1/chat/conversations': {
     summary: '列出会话',
     request: { query: listConversationsSchema },
     responses: { 200: successResponse(conversationListResponseSchema, '会话列表') },
   },
-  'GET /api/chat/conversations/search': {
+  'GET /api/v1/chat/conversations/search': {
     summary: '搜索会话',
     request: { query: searchConversationsSchema },
     responses: { 200: successResponse(conversationSearchResponseSchema, '搜索结果') },
   },
-  'GET /api/chat/conversations/{id}': {
+  'GET /api/v1/chat/conversations/{id}': {
     summary: '获取会话详情',
     request: { params: z.object({ id: z.string() }) },
     responses: {
@@ -39,7 +39,7 @@ export const chatOpenApiOperations = defineOpenApiOperations({
       404: errorResponse,
     },
   },
-  'PATCH /api/chat/conversations/{id}': {
+  'PATCH /api/v1/chat/conversations/{id}': {
     summary: '更新会话',
     request: {
       params: z.object({ id: z.string() }),
@@ -47,12 +47,12 @@ export const chatOpenApiOperations = defineOpenApiOperations({
     },
     responses: { 200: successResponse(conversationInfoSchema, '会话更新成功'), 404: errorResponse },
   },
-  'DELETE /api/chat/conversations/{id}': {
+  'DELETE /api/v1/chat/conversations/{id}': {
     summary: '删除会话',
     request: { params: z.object({ id: z.string() }) },
     responses: { 200: messageResponse('会话已删除'), 404: errorResponse },
   },
-  'POST /api/chat/conversations/{id}/messages': {
+  'POST /api/v1/chat/conversations/{id}/messages': {
     summary: '发送消息（SSE 流式响应）',
     request: {
       params: z.object({ id: z.string() }),
@@ -60,7 +60,7 @@ export const chatOpenApiOperations = defineOpenApiOperations({
     },
     responses: { 200: { description: 'SSE 事件流（AI 回复）' }, 404: errorResponse },
   },
-  'GET /api/chat/conversations/{id}/messages': {
+  'GET /api/v1/chat/conversations/{id}/messages': {
     summary: '获取消息列表',
     request: {
       params: z.object({ id: z.string() }),

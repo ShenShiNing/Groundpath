@@ -4,7 +4,7 @@ import { errorResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 
 export const userOpenApiOperations = defineOpenApiOperations({
-  'PATCH /api/user/profile': {
+  'PATCH /api/v1/user/profile': {
     summary: '更新个人资料',
     request: { body: { content: { 'application/json': { schema: updateProfileRequestSchema } } } },
     responses: {
@@ -21,7 +21,7 @@ export const userOpenApiOperations = defineOpenApiOperations({
       400: errorResponse,
     },
   },
-  'PATCH /api/user/email': {
+  'PATCH /api/v1/user/email': {
     summary: '修改绑定邮箱',
     request: { body: { content: { 'application/json': { schema: changeEmailRequestSchema } } } },
     responses: {
@@ -37,7 +37,7 @@ export const userOpenApiOperations = defineOpenApiOperations({
       400: errorResponse,
     },
   },
-  'POST /api/user/avatar': {
+  'POST /api/v1/user/avatar': {
     summary: '上传头像',
     request: {
       body: {

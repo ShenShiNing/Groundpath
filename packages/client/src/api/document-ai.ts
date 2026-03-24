@@ -36,7 +36,7 @@ export const summaryApi = {
    */
   async generate(documentId: string, data?: SummaryRequest): Promise<SummaryResponse> {
     const response = await apiClient.post<ApiResponse<SummaryResponse>>(
-      `/api/document-ai/${documentId}/summary`,
+      `/api/v1/document-ai/${documentId}/summary`,
       data ?? {}
     );
     return unwrapResponse(response.data);
@@ -53,7 +53,7 @@ export const analysisApi = {
    */
   async analyze(documentId: string, data?: AnalysisRequest): Promise<AnalysisResponse> {
     const response = await apiClient.post<ApiResponse<AnalysisResponse>>(
-      `/api/document-ai/${documentId}/analyze`,
+      `/api/v1/document-ai/${documentId}/analyze`,
       data ?? {}
     );
     return unwrapResponse(response.data);
@@ -67,7 +67,7 @@ export const analysisApi = {
     options?: { maxKeywords?: number }
   ): Promise<KeywordsResponse> {
     const response = await apiClient.post<ApiResponse<KeywordsResponse>>(
-      `/api/document-ai/${documentId}/analyze/keywords`,
+      `/api/v1/document-ai/${documentId}/analyze/keywords`,
       options ?? {}
     );
     return unwrapResponse(response.data);
@@ -81,7 +81,7 @@ export const analysisApi = {
     options?: { maxEntities?: number }
   ): Promise<EntitiesResponse> {
     const response = await apiClient.post<ApiResponse<EntitiesResponse>>(
-      `/api/document-ai/${documentId}/analyze/entities`,
+      `/api/v1/document-ai/${documentId}/analyze/entities`,
       options ?? {}
     );
     return unwrapResponse(response.data);
@@ -92,7 +92,7 @@ export const analysisApi = {
    */
   async getStructure(documentId: string): Promise<StructureResponse> {
     const response = await apiClient.get<ApiResponse<StructureResponse>>(
-      `/api/document-ai/${documentId}/analyze/structure`
+      `/api/v1/document-ai/${documentId}/analyze/structure`
     );
     return unwrapResponse(response.data);
   },
@@ -108,7 +108,7 @@ export const generationApi = {
    */
   async generate(data: GenerationRequest): Promise<GenerationResponse> {
     const response = await apiClient.post<ApiResponse<GenerationResponse>>(
-      '/api/document-ai/generate',
+      '/api/v1/document-ai/generate',
       data
     );
     return unwrapResponse(response.data);
@@ -119,7 +119,7 @@ export const generationApi = {
    */
   async expand(documentId: string, data: ExpandRequest): Promise<ExpandResponse> {
     const response = await apiClient.post<ApiResponse<ExpandResponse>>(
-      `/api/document-ai/${documentId}/expand`,
+      `/api/v1/document-ai/${documentId}/expand`,
       data
     );
     return unwrapResponse(response.data);
@@ -154,7 +154,7 @@ export function streamSummary(
 
   const run = async () => {
     const result = await fetchStreamWithAuth(
-      `/api/document-ai/${documentId}/summary/stream`,
+      `/api/v1/document-ai/${documentId}/summary/stream`,
       { method: 'POST', body: JSON.stringify(data ?? {}) },
       { getAccessToken, signal: abortController.signal }
     );
@@ -200,7 +200,7 @@ export function streamGenerate(
 
   const run = async () => {
     const result = await fetchStreamWithAuth(
-      '/api/document-ai/generate/stream',
+      '/api/v1/document-ai/generate/stream',
       { method: 'POST', body: JSON.stringify(data) },
       { getAccessToken, signal: abortController.signal }
     );
@@ -247,7 +247,7 @@ export function streamExpand(
 
   const run = async () => {
     const result = await fetchStreamWithAuth(
-      `/api/document-ai/${documentId}/expand/stream`,
+      `/api/v1/document-ai/${documentId}/expand/stream`,
       { method: 'POST', body: JSON.stringify(data) },
       { getAccessToken, signal: abortController.signal }
     );

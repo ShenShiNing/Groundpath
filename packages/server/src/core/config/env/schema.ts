@@ -48,10 +48,14 @@ const emailSchema = z.object({
 const oauthSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_CALLBACK_URL: z.string().default('http://localhost:3000/api/auth/oauth/google/callback'),
+  GOOGLE_CALLBACK_URL: z
+    .string()
+    .default('http://localhost:3000/api/v1/auth/oauth/google/callback'),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
-  GITHUB_CALLBACK_URL: z.string().default('http://localhost:3000/api/auth/oauth/github/callback'),
+  GITHUB_CALLBACK_URL: z
+    .string()
+    .default('http://localhost:3000/api/v1/auth/oauth/github/callback'),
 });
 
 const storageSchema = z.object({

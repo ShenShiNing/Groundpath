@@ -37,44 +37,44 @@ const sessionItem = z.object({
 });
 
 export const authOpenApiOperations = defineOpenApiOperations({
-  'POST /api/auth/register': {
+  'POST /api/v1/auth/register': {
     summary: '注册新用户',
     request: { body: { content: { 'application/json': { schema: registerRequestSchema } } } },
     responses: { 201: successResponse(authTokenData, '注册成功'), 400: errorResponse },
   },
-  'POST /api/auth/register-with-code': {
+  'POST /api/v1/auth/register-with-code': {
     summary: '通过邮箱验证码注册',
     request: {
       body: { content: { 'application/json': { schema: registerWithCodeRequestSchema } } },
     },
     responses: { 201: successResponse(authTokenData, '注册成功'), 400: errorResponse },
   },
-  'POST /api/auth/login': {
+  'POST /api/v1/auth/login': {
     summary: '邮箱密码登录',
     request: { body: { content: { 'application/json': { schema: loginRequestSchema } } } },
     responses: { 200: successResponse(authTokenData, '登录成功'), 401: errorResponse },
   },
-  'POST /api/auth/refresh': {
+  'POST /api/v1/auth/refresh': {
     summary: '刷新访问令牌',
     description: '使用 HttpOnly cookie 中的 refresh token 获取新的 access token',
     responses: { 200: successResponse(authTokenData, '刷新成功'), 401: errorResponse },
   },
-  'POST /api/auth/reset-password': {
+  'POST /api/v1/auth/reset-password': {
     summary: '重置密码（需邮箱验证）',
     request: { body: { content: { 'application/json': { schema: resetPasswordRequestSchema } } } },
     responses: { 200: messageResponse('密码重置成功'), 400: errorResponse },
   },
-  'POST /api/auth/logout': {
+  'POST /api/v1/auth/logout': {
     summary: '登出当前设备',
     responses: { 200: messageResponse('登出成功'), 401: errorResponse },
   },
-  'PUT /api/auth/password': {
+  'PUT /api/v1/auth/password': {
     summary: '修改密码',
     security: PROTECTED,
     request: { body: { content: { 'application/json': { schema: changePasswordRequestSchema } } } },
     responses: { 200: messageResponse('密码修改成功'), 400: errorResponse },
   },
-  'POST /api/auth/logout-all': {
+  'POST /api/v1/auth/logout-all': {
     summary: '登出所有设备',
     security: PROTECTED,
     responses: {
@@ -85,7 +85,7 @@ export const authOpenApiOperations = defineOpenApiOperations({
       401: errorResponse,
     },
   },
-  'GET /api/auth/me': {
+  'GET /api/v1/auth/me': {
     summary: '获取当前用户信息',
     security: PROTECTED,
     responses: {
@@ -105,12 +105,12 @@ export const authOpenApiOperations = defineOpenApiOperations({
       401: errorResponse,
     },
   },
-  'GET /api/auth/sessions': {
+  'GET /api/v1/auth/sessions': {
     summary: '获取活跃会话列表',
     security: PROTECTED,
     responses: { 200: successResponse(z.array(sessionItem), '会话列表'), 401: errorResponse },
   },
-  'DELETE /api/auth/sessions/{id}': {
+  'DELETE /api/v1/auth/sessions/{id}': {
     summary: '撤销指定会话',
     security: PROTECTED,
     request: { params: z.object({ id: z.string() }) },
