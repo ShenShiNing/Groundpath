@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useKnowledgeBases, useDeleteKnowledgeBase } from '@/hooks';
 import { KnowledgeBaseDialog } from '@/components/knowledge-bases';
+import { useVirtualGrid } from '@/hooks/useVirtualGrid';
+import { useVirtualList } from '@/hooks/useVirtualList';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { KnowledgeBaseListItem } from '@groundpath/shared/types';
@@ -16,9 +18,157 @@ import {
   EmptyState,
   NoResultsState,
   CreateKnowledgeBaseCard,
+  type KnowledgeBasePageT,
 } from './KnowledgeBaseListItems';
 
 type ViewMode = 'grid' | 'table';
+
+const GRID_COLUMNS = {
+  breakpoints: [
+    [1280, 3], // xl
+    [640, 2], // sm
+  ] as [number, number][],
+  default: 1,
+};
+const GRID_ROW_HEIGHT = 176; // min-h-44
+const TABLE_ROW_HEIGHT = 56;
+
+/* ------------------------------------------------------------------ */
+/*  Virtual grid                                                      */
+/* ------------------------------------------------------------------ */
+
+function VirtualKBGrid({
+  knowledgeBases,
+  onEdit,
+  onDelete,
+  onCreate,
+  t,
+}: {
+  knowledgeBases: KnowledgeBaseListItem[];
+  onEdit: (kb: KnowledgeBaseListItem) => void;
+  onDelete: (kb: KnowledgeBaseListItem) => void;
+  onCreate: () => void;
+  t: KnowledgeBasePageT;
+}) {
+  const items: (KnowledgeBaseListItem | null)[] = [null, ...knowledgeBases];
+  const { parentRef, virtualizer, getRowItems, columnCount, gap } = useVirtualGrid({
+    items,
+    columns: GRID_COLUMNS,
+    estimateRowHeight: GRID_ROW_HEIGHT,
+    gap: 16,
+  });
+
+  return (
+    <div ref={parentRef} className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const rowItems = getRowItems(virtualRow.index);
+          return (
+            <div
+              key={virtualRow.key}
+              className="absolute left-0 right-0"
+              style={{
+                top: virtualRow.start,
+                height: virtualRow.size,
+                display: 'grid',
+                gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+                gap,
+              }}
+            >
+              {rowItems.map((item) =>
+                item === null ? (
+                  <CreateKnowledgeBaseCard key="create" onCreate={onCreate} t={t} />
+                ) : (
+                  <KnowledgeBaseGridCard
+                    key={item.id}
+                    knowledgeBase={item}
+                    onEdit={() => onEdit(item)}
+                    onDelete={() => onDelete(item)}
+                    t={t}
+                  />
+                )
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Virtual table                                                     */
+/* ------------------------------------------------------------------ */
+
+function VirtualKBTable({
+  knowledgeBases,
+  onEdit,
+  onDelete,
+  t,
+}: {
+  knowledgeBases: KnowledgeBaseListItem[];
+  onEdit: (kb: KnowledgeBaseListItem) => void;
+  onDelete: (kb: KnowledgeBaseListItem) => void;
+  t: KnowledgeBasePageT;
+}) {
+  const { parentRef, virtualizer } = useVirtualList({
+    count: knowledgeBases.length,
+    estimateSize: TABLE_ROW_HEIGHT,
+  });
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const paddingTop = virtualItems[0]?.start ?? 0;
+  const paddingBottom =
+    virtualItems.length > 0
+      ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1]!.end
+      : 0;
+
+  return (
+    <div ref={parentRef} className="flex-1 overflow-y-auto px-6 pb-6">
+      <div className="overflow-hidden rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/40 hover:bg-muted/40">
+              <TableHead className="font-medium">{t('table.name')}</TableHead>
+              <TableHead className="w-28 font-medium">{t('table.documents')}</TableHead>
+              <TableHead className="w-28 font-medium">{t('table.chunks')}</TableHead>
+              <TableHead className="w-32 font-medium">{t('table.updatedAt')}</TableHead>
+              <TableHead className="w-12" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paddingTop > 0 && (
+              <tr>
+                <td style={{ height: paddingTop, padding: 0, border: 'none' }} />
+              </tr>
+            )}
+            {virtualItems.map((virtualRow) => {
+              const kb = knowledgeBases[virtualRow.index]!;
+              return (
+                <KnowledgeBaseTableRow
+                  key={kb.id}
+                  knowledgeBase={kb}
+                  onEdit={() => onEdit(kb)}
+                  onDelete={() => onDelete(kb)}
+                  t={t}
+                />
+              );
+            })}
+            {paddingBottom > 0 && (
+              <tr>
+                <td style={{ height: paddingBottom, padding: 0, border: 'none' }} />
+              </tr>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                              */
+/* ------------------------------------------------------------------ */
 
 export default function KnowledgeBasesPage() {
   const { t } = useTranslation(['knowledgeBase', 'common']);
@@ -41,6 +191,7 @@ export default function KnowledgeBasesPage() {
   const totalDocuments = knowledgeBases.reduce((sum, kb) => sum + kb.documentCount, 0);
   const totalChunks = knowledgeBases.reduce((sum, kb) => sum + kb.totalChunks, 0);
   const hasSearch = normalizedSearch.length > 0;
+  const useVirtual = filteredKBs.length > 30;
 
   const handleEdit = (kb: KnowledgeBaseListItem) => {
     setEditingKB(kb);
@@ -69,6 +220,7 @@ export default function KnowledgeBasesPage() {
   return (
     <>
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* ---- Header ---- */}
         <header className="shrink-0 border-b px-6 py-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -96,7 +248,8 @@ export default function KnowledgeBasesPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        {/* ---- Toolbar (fixed) ---- */}
+        <div className="shrink-0 px-6 pt-6">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
               <div className="relative w-full sm:w-80">
@@ -158,9 +311,12 @@ export default function KnowledgeBasesPage() {
               {t('stats.autoSync')}
             </span>
           </div>
+        </div>
 
-          {isLoading ? (
-            viewMode === 'grid' ? (
+        {/* ---- Content (scrollable) ---- */}
+        {isLoading ? (
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            {viewMode === 'grid' ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {[...Array(6)].map((_, i) => (
                   <Skeleton key={i} className="h-44 rounded-2xl" />
@@ -172,9 +328,28 @@ export default function KnowledgeBasesPage() {
                   <Skeleton key={i} className="h-14 rounded-lg" />
                 ))}
               </div>
-            )
-          ) : filteredKBs.length > 0 ? (
+            )}
+          </div>
+        ) : filteredKBs.length > 0 ? (
+          useVirtual ? (
             viewMode === 'grid' ? (
+              <VirtualKBGrid
+                knowledgeBases={filteredKBs}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onCreate={handleCreateNew}
+                t={t}
+              />
+            ) : (
+              <VirtualKBTable
+                knowledgeBases={filteredKBs}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                t={t}
+              />
+            )
+          ) : viewMode === 'grid' ? (
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <CreateKnowledgeBaseCard onCreate={handleCreateNew} t={t} />
                 {filteredKBs.map((kb) => (
@@ -187,7 +362,9 @@ export default function KnowledgeBasesPage() {
                   />
                 ))}
               </div>
-            ) : (
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
               <div className="overflow-hidden rounded-xl border">
                 <Table>
                   <TableHeader>
@@ -212,13 +389,17 @@ export default function KnowledgeBasesPage() {
                   </TableBody>
                 </Table>
               </div>
-            )
-          ) : hasSearch && knowledgeBases.length > 0 ? (
+            </div>
+          )
+        ) : hasSearch && knowledgeBases.length > 0 ? (
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
             <NoResultsState search={search} onClear={() => setSearch('')} t={t} />
-          ) : (
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
             <EmptyState onCreateNew={handleCreateNew} t={t} />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <KnowledgeBaseDialog

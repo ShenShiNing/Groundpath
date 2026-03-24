@@ -33,6 +33,7 @@ export function ChatPage() {
     setScopeSwitchDialogOpen,
     pendingKnowledgeBaseName,
     messagesEndRef,
+    ensureMessageVisibleRef,
     stopGeneration,
     setDocumentScope,
     startNewConversation,
@@ -96,6 +97,7 @@ export function ChatPage() {
                 onCopyMessage={handleCopyMessage}
                 onRetry={handleRetry}
                 onEditMessage={handleEditMessage}
+                ensureMessageVisibleRef={ensureMessageVisibleRef}
               />
 
               <div className="shrink-0 bg-gradient-to-t from-background via-background to-transparent pb-4 pt-3 md:pb-6">
