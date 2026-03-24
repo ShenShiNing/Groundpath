@@ -4,9 +4,14 @@
  */
 
 import type { Request, Response } from 'express';
-import { analysisRequestSchema } from '@groundpath/shared/schemas';
+import type {
+  AnalysisRequestParsed,
+  ExtractKeywordsRequestParsed,
+  ExtractEntitiesRequestParsed,
+} from '@groundpath/shared/schemas';
 import { analysisService } from '../services/analysis.service';
 import { sendSuccessResponse, handleError } from '@core/errors';
+import { getValidatedBody } from '@core/middleware';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;
@@ -20,7 +25,7 @@ export const analysisController = {
     try {
       const userId = req.user!.sub;
       const documentId = paramAsString(req.params.id);
-      const parsed = analysisRequestSchema.parse(req.body);
+      const parsed = getValidatedBody<AnalysisRequestParsed>(res);
 
       const result = await analysisService.analyze({
         userId,
@@ -44,8 +49,7 @@ export const analysisController = {
     try {
       const userId = req.user!.sub;
       const documentId = paramAsString(req.params.id);
-      const maxKeywords = req.body.maxKeywords as number | undefined;
-      const language = req.body.language as string | undefined;
+      const { maxKeywords, language } = getValidatedBody<ExtractKeywordsRequestParsed>(res);
 
       const result = await analysisService.extractKeywords(userId, documentId, {
         maxKeywords,
@@ -65,8 +69,7 @@ export const analysisController = {
     try {
       const userId = req.user!.sub;
       const documentId = paramAsString(req.params.id);
-      const maxEntities = req.body.maxEntities as number | undefined;
-      const language = req.body.language as string | undefined;
+      const { maxEntities, language } = getValidatedBody<ExtractEntitiesRequestParsed>(res);
 
       const result = await analysisService.extractEntities(userId, documentId, {
         maxEntities,

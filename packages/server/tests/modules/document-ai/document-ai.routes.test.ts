@@ -7,10 +7,14 @@ const {
   validateBodyMock,
   summaryRequestSchemaMock,
   analysisRequestSchemaMock,
+  extractKeywordsRequestSchemaMock,
+  extractEntitiesRequestSchemaMock,
   generateRequestSchemaMock,
   expandRequestSchemaMock,
   summaryValidatorMock,
   analysisValidatorMock,
+  extractKeywordsValidatorMock,
+  extractEntitiesValidatorMock,
   generateValidatorMock,
   expandValidatorMock,
   summaryControllerMock,
@@ -25,11 +29,15 @@ const {
 
   const summaryRequestSchema = { type: 'summary-schema' };
   const analysisRequestSchema = { type: 'analysis-schema' };
+  const extractKeywordsRequestSchema = { type: 'extract-keywords-schema' };
+  const extractEntitiesRequestSchema = { type: 'extract-entities-schema' };
   const generateRequestSchema = { type: 'generate-schema' };
   const expandRequestSchema = { type: 'expand-schema' };
 
   const summaryValidator = vi.fn();
   const analysisValidator = vi.fn();
+  const extractKeywordsValidator = vi.fn();
+  const extractEntitiesValidator = vi.fn();
   const generateValidator = vi.fn();
   const expandValidator = vi.fn();
 
@@ -40,16 +48,22 @@ const {
     validateBodyMock: vi.fn((schema: unknown) => {
       if (schema === summaryRequestSchema) return summaryValidator;
       if (schema === analysisRequestSchema) return analysisValidator;
+      if (schema === extractKeywordsRequestSchema) return extractKeywordsValidator;
+      if (schema === extractEntitiesRequestSchema) return extractEntitiesValidator;
       if (schema === generateRequestSchema) return generateValidator;
       if (schema === expandRequestSchema) return expandValidator;
       return vi.fn();
     }),
     summaryRequestSchemaMock: summaryRequestSchema,
     analysisRequestSchemaMock: analysisRequestSchema,
+    extractKeywordsRequestSchemaMock: extractKeywordsRequestSchema,
+    extractEntitiesRequestSchemaMock: extractEntitiesRequestSchema,
     generateRequestSchemaMock: generateRequestSchema,
     expandRequestSchemaMock: expandRequestSchema,
     summaryValidatorMock: summaryValidator,
     analysisValidatorMock: analysisValidator,
+    extractKeywordsValidatorMock: extractKeywordsValidator,
+    extractEntitiesValidatorMock: extractEntitiesValidator,
     generateValidatorMock: generateValidator,
     expandValidatorMock: expandValidator,
     summaryControllerMock: {
@@ -84,6 +98,8 @@ vi.mock('@core/middleware', () => ({
 vi.mock('@groundpath/shared/schemas', () => ({
   summaryRequestSchema: summaryRequestSchemaMock,
   analysisRequestSchema: analysisRequestSchemaMock,
+  extractKeywordsRequestSchema: extractKeywordsRequestSchemaMock,
+  extractEntitiesRequestSchema: extractEntitiesRequestSchemaMock,
   generateRequestSchema: generateRequestSchemaMock,
   expandRequestSchema: expandRequestSchemaMock,
 }));
@@ -130,6 +146,8 @@ describe('document-ai.routes', () => {
 
   it('should register analysis endpoints', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(analysisRequestSchemaMock);
+    expect(validateBodyMock).toHaveBeenCalledWith(extractKeywordsRequestSchemaMock);
+    expect(validateBodyMock).toHaveBeenCalledWith(extractEntitiesRequestSchemaMock);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze',
       expect.any(Function),
@@ -139,11 +157,13 @@ describe('document-ai.routes', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze/keywords',
       expect.any(Function),
+      extractKeywordsValidatorMock,
       analysisControllerMock.extractKeywords
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze/entities',
       expect.any(Function),
+      extractEntitiesValidatorMock,
       analysisControllerMock.extractEntities
     );
     expect(mockRouter.get).toHaveBeenCalledWith(

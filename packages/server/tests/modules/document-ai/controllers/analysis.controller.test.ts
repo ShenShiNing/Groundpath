@@ -45,10 +45,15 @@ function createMockRequest(params: Record<string, string> = {}, body: object = {
   } as unknown as Request;
 }
 
-function createMockResponse() {
+function createMockResponse(validatedBody: object = {}) {
   return {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
+    locals: {
+      validated: {
+        body: validatedBody,
+      },
+    },
   } as unknown as Response;
 }
 
@@ -79,7 +84,12 @@ describe('analysisController > analyze', () => {
       { id: mockDocumentId },
       { analysisTypes: ['keywords', 'structure'], maxKeywords: 10 }
     );
-    const res = createMockResponse();
+    const res = createMockResponse({
+      analysisTypes: ['keywords', 'structure'],
+      maxKeywords: 10,
+      maxEntities: 20,
+      maxTopics: 5,
+    });
 
     await analysisController.analyze(req, res);
 
@@ -118,7 +128,12 @@ describe('analysisController > analyze', () => {
     vi.mocked(analysisService.analyze).mockResolvedValue(mockResult);
 
     const req = createMockRequest({ id: mockDocumentId }, {});
-    const res = createMockResponse();
+    const res = createMockResponse({
+      analysisTypes: ['keywords', 'structure'],
+      maxKeywords: 10,
+      maxEntities: 20,
+      maxTopics: 5,
+    });
 
     await analysisController.analyze(req, res);
 
@@ -145,7 +160,12 @@ describe('analysisController > analyze', () => {
     vi.mocked(analysisService.analyze).mockRejectedValue(error);
 
     const req = createMockRequest({ id: mockDocumentId }, { analysisTypes: ['keywords'] });
-    const res = createMockResponse();
+    const res = createMockResponse({
+      analysisTypes: ['keywords'],
+      maxKeywords: 10,
+      maxEntities: 20,
+      maxTopics: 5,
+    });
 
     await analysisController.analyze(req, res);
 
@@ -176,7 +196,7 @@ describe('analysisController > extractKeywords', () => {
     vi.mocked(analysisService.extractKeywords).mockResolvedValue(mockResult);
 
     const req = createMockRequest({ id: mockDocumentId }, { maxKeywords: 5 });
-    const res = createMockResponse();
+    const res = createMockResponse({ maxKeywords: 5 });
 
     await analysisController.extractKeywords(req, res);
 
@@ -199,7 +219,7 @@ describe('analysisController > extractKeywords', () => {
     vi.mocked(analysisService.extractKeywords).mockResolvedValue(mockResult);
 
     const req = createMockRequest({ id: mockDocumentId }, { maxKeywords: 10, language: 'en' });
-    const res = createMockResponse();
+    const res = createMockResponse({ maxKeywords: 10, language: 'en' });
 
     await analysisController.extractKeywords(req, res);
 
@@ -219,7 +239,7 @@ describe('analysisController > extractKeywords', () => {
     vi.mocked(analysisService.extractKeywords).mockRejectedValue(error);
 
     const req = createMockRequest({ id: mockDocumentId }, {});
-    const res = createMockResponse();
+    const res = createMockResponse({ maxKeywords: 10 });
 
     await analysisController.extractKeywords(req, res);
 
@@ -241,7 +261,7 @@ describe('analysisController > extractEntities', () => {
     vi.mocked(analysisService.extractEntities).mockResolvedValue(mockResult);
 
     const req = createMockRequest({ id: mockDocumentId }, { maxEntities: 10 });
-    const res = createMockResponse();
+    const res = createMockResponse({ maxEntities: 10 });
 
     await analysisController.extractEntities(req, res);
 
@@ -268,7 +288,7 @@ describe('analysisController > extractEntities', () => {
     vi.mocked(analysisService.extractEntities).mockRejectedValue(error);
 
     const req = createMockRequest({ id: mockDocumentId }, {});
-    const res = createMockResponse();
+    const res = createMockResponse({ maxEntities: 20 });
 
     await analysisController.extractEntities(req, res);
 

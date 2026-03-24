@@ -111,6 +111,32 @@ describe('OpenAPI route auto-discovery', () => {
     expect(getProperty(reportData, 'markdown')).toBeDefined();
   });
 
+  it('keeps document ai analyze contracts aligned with validated request bodies', () => {
+    const analyzeSchema = getResponseSchema('/api/document-ai/{id}/analyze', 'post', 200);
+    const analyzeData = getProperty(analyzeSchema, 'data');
+    expect(getProperty(getItems(getProperty(analyzeData, 'keywords')), 'relevance')).toBeDefined();
+    expect(getProperty(getItems(getProperty(analyzeData, 'entities')), 'type')?.enum).toContain(
+      'organization'
+    );
+    expect(
+      getProperty(getProperty(analyzeData, 'structure'), 'estimatedReadingTimeMinutes')
+    ).toBeDefined();
+
+    const keywordsRequestSchema = getRequestBodySchema(
+      '/api/document-ai/{id}/analyze/keywords',
+      'post'
+    );
+    expect(getProperty(keywordsRequestSchema, 'maxKeywords')).toBeDefined();
+    expect(getProperty(keywordsRequestSchema, 'language')).toBeDefined();
+
+    const entitiesRequestSchema = getRequestBodySchema(
+      '/api/document-ai/{id}/analyze/entities',
+      'post'
+    );
+    expect(getProperty(entitiesRequestSchema, 'maxEntities')).toBeDefined();
+    expect(getProperty(entitiesRequestSchema, 'language')).toBeDefined();
+  });
+
   it('keeps knowledge base and document contracts aligned with live API payloads', () => {
     const knowledgeBaseListSchema = getResponseSchema('/api/knowledge-bases', 'get', 200);
     const knowledgeBaseListData = getProperty(knowledgeBaseListSchema, 'data');
