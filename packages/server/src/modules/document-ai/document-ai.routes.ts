@@ -9,6 +9,8 @@ import { validateBody } from '@core/middleware';
 import {
   summaryRequestSchema,
   analysisRequestSchema,
+  extractKeywordsRequestSchema,
+  extractEntitiesRequestSchema,
   generateRequestSchema,
   expandRequestSchema,
 } from '@groundpath/shared/schemas';
@@ -54,10 +56,20 @@ router.post(
 );
 
 // POST /api/document-ai/:id/analyze/keywords - Extract keywords only
-router.post('/:id/analyze/keywords', aiRateLimiter, analysisController.extractKeywords);
+router.post(
+  '/:id/analyze/keywords',
+  aiRateLimiter,
+  validateBody(extractKeywordsRequestSchema),
+  analysisController.extractKeywords
+);
 
 // POST /api/document-ai/:id/analyze/entities - Extract entities only
-router.post('/:id/analyze/entities', aiRateLimiter, analysisController.extractEntities);
+router.post(
+  '/:id/analyze/entities',
+  aiRateLimiter,
+  validateBody(extractEntitiesRequestSchema),
+  analysisController.extractEntities
+);
 
 // GET /api/document-ai/:id/analyze/structure - Get document structure (no LLM)
 router.get('/:id/analyze/structure', analysisController.getStructure);

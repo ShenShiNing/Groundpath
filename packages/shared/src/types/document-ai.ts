@@ -99,6 +99,18 @@ export interface AnalysisResponse {
   analyzedAt: string;
 }
 
+/** Keywords extraction request */
+export interface ExtractKeywordsRequest {
+  maxKeywords?: number;
+  language?: string;
+}
+
+/** Entities extraction request */
+export interface ExtractEntitiesRequest {
+  maxEntities?: number;
+  language?: string;
+}
+
 /** Keywords-only response */
 export interface KeywordsResponse {
   keywords: Keyword[];

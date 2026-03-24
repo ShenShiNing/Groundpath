@@ -30,6 +30,15 @@ export const analysisRequestSchema = z.object({
   maxTopics: z.number().int().min(1).max(20).optional().default(5),
 });
 
+export const extractKeywordsRequestSchema = z.object({
+  maxKeywords: z.number().int().min(1).max(50).optional().default(10),
+  language: z.string().min(1).optional(),
+});
+
+export const extractEntitiesRequestSchema = z.object({
+  maxEntities: z.number().int().min(1).max(100).optional().default(20),
+  language: z.string().min(1).optional(),
+});
 export const keywordSchema = z.object({
   word: z.string().min(1),
   relevance: z.number().min(0).max(1),
@@ -165,6 +174,12 @@ export type SummaryRequestParsed = z.output<typeof summaryRequestSchema>;
 
 export type AnalysisRequestInput = z.input<typeof analysisRequestSchema>;
 export type AnalysisRequestParsed = z.output<typeof analysisRequestSchema>;
+
+export type ExtractKeywordsRequestInput = z.input<typeof extractKeywordsRequestSchema>;
+export type ExtractKeywordsRequestParsed = z.output<typeof extractKeywordsRequestSchema>;
+
+export type ExtractEntitiesRequestInput = z.input<typeof extractEntitiesRequestSchema>;
+export type ExtractEntitiesRequestParsed = z.output<typeof extractEntitiesRequestSchema>;
 
 export type GenerateRequestInput = z.input<typeof generateRequestSchema>;
 export type GenerateRequestParsed = z.output<typeof generateRequestSchema>;

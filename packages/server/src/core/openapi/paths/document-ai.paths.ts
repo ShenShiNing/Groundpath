@@ -1,7 +1,9 @@
-import { z } from '@groundpath/shared/schemas';
 import {
+  z,
   summaryRequestSchema,
   analysisRequestSchema,
+  extractKeywordsRequestSchema,
+  extractEntitiesRequestSchema,
   generateRequestSchema,
   expandRequestSchema,
   summaryResponseSchema,
@@ -47,7 +49,10 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
   },
   'POST /api/document-ai/{id}/analyze/keywords': {
     summary: '提取关键词',
-    request: { params: idParam },
+    request: {
+      params: idParam,
+      body: { content: { 'application/json': { schema: extractKeywordsRequestSchema } } },
+    },
     responses: {
       200: successResponse(keywordsResponseSchema, '关键词列表'),
       404: errorResponse,
@@ -55,7 +60,10 @@ export const documentAiOpenApiOperations = defineOpenApiOperations({
   },
   'POST /api/document-ai/{id}/analyze/entities': {
     summary: '提取实体',
-    request: { params: idParam },
+    request: {
+      params: idParam,
+      body: { content: { 'application/json': { schema: extractEntitiesRequestSchema } } },
+    },
     responses: {
       200: successResponse(entitiesResponseSchema, '实体列表'),
       404: errorResponse,

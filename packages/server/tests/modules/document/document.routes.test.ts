@@ -185,10 +185,7 @@ function createMockResponse(): Response {
 
 function getUploadMiddlewareByPath(path: string) {
   const routeCall = mockRouter.post.mock.calls.find((call) => call[0] === path);
-  const middlewareArray = routeCall?.[2] as
-    | [(req: Request, res: Response, next: NextFunction) => void, unknown]
-    | undefined;
-  return middlewareArray?.[0];
+  return routeCall?.[2] as ((req: Request, res: Response, next: NextFunction) => void) | undefined;
 }
 
 describe('document.routes', () => {

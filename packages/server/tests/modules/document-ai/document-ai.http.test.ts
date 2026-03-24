@@ -176,6 +176,38 @@ describe('document-ai.routes http behavior', () => {
     expect(analysisControllerMock.analyze).not.toHaveBeenCalled();
   });
 
+  it('should validate keywords payload maxKeywords upper bound', async () => {
+    const response = await fetch(`${baseUrl}/document-ai/doc-1/analyze/keywords`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ maxKeywords: 51 }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(analysisControllerMock.extractKeywords).not.toHaveBeenCalled();
+  });
+
+  it('should validate entities payload maxEntities upper bound', async () => {
+    const response = await fetch(`${baseUrl}/document-ai/doc-1/analyze/entities`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ maxEntities: 101 }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(analysisControllerMock.extractEntities).not.toHaveBeenCalled();
+  });
+
   it('should call structure endpoint without body', async () => {
     const response = await fetch(`${baseUrl}/document-ai/doc-1/analyze/structure`, {
       headers: { authorization: 'Bearer valid-access' },
@@ -185,6 +217,22 @@ describe('document-ai.routes http behavior', () => {
     expect(response.status).toBe(200);
     expect(body.route).toBe('structure');
     expect(analysisControllerMock.getStructure).toHaveBeenCalledTimes(1);
+  });
+
+  it('should pass valid keywords payload to controller', async () => {
+    const response = await fetch(`${baseUrl}/document-ai/doc-1/analyze/keywords`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ maxKeywords: 8, language: 'en' }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(200);
+    expect(body.route).toBe('keywords');
+    expect(analysisControllerMock.extractKeywords).toHaveBeenCalledTimes(1);
   });
 
   it('should validate generate payload for empty prompt', async () => {
