@@ -141,6 +141,20 @@ export const knowledgeBaseRepository = {
   },
 
   /**
+   * Lock a knowledge base row by ID within an existing transaction.
+   * Used internally by counter updates to serialize concurrent modifications.
+   */
+  async lockById(id: string, tx: Transaction): Promise<void> {
+    const ctx = getDbContext(tx);
+    await ctx.execute(sql`
+      SELECT id
+      FROM knowledge_bases
+      WHERE id = ${id}
+      FOR UPDATE
+    `);
+  },
+
+  /**
    * List all knowledge bases for a user (paginated)
    */
   async listByUser(
@@ -226,10 +240,14 @@ export const knowledgeBaseRepository = {
   },
 
   /**
-   * Increment document count (with floor at 0)
+   * Increment document count (with floor at 0).
+   * Acquires a row-level lock when called within a transaction to serialize concurrent updates.
    */
   async incrementDocumentCount(id: string, delta: number, tx?: Transaction): Promise<void> {
     const ctx = getDbContext(tx);
+    if (tx) {
+      await this.lockById(id, tx);
+    }
     await ctx
       .update(knowledgeBases)
       .set({
@@ -239,10 +257,14 @@ export const knowledgeBaseRepository = {
   },
 
   /**
-   * Increment total chunks count (with floor at 0)
+   * Increment total chunks count (with floor at 0).
+   * Acquires a row-level lock when called within a transaction to serialize concurrent updates.
    */
   async incrementTotalChunks(id: string, delta: number, tx?: Transaction): Promise<void> {
     const ctx = getDbContext(tx);
+    if (tx) {
+      await this.lockById(id, tx);
+    }
     await ctx
       .update(knowledgeBases)
       .set({
