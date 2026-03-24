@@ -45,8 +45,9 @@ export function normalizeIpAddress(ipAddress: string | null | undefined): string
     }
   } else {
     const ipv4WithPortMatch = normalized.match(/^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/);
-    if (ipv4WithPortMatch) {
-      normalized = ipv4WithPortMatch[1];
+    const ipv4Address = ipv4WithPortMatch?.[1];
+    if (ipv4Address) {
+      normalized = ipv4Address;
     }
   }
 
