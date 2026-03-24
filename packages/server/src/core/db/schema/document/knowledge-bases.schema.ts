@@ -41,6 +41,12 @@ export const knowledgeBases = mysqlTable(
   (table) => [
     index('user_id_idx').on(table.userId),
     index('deleted_at_idx').on(table.deletedAt),
+    index('knowledge_bases_user_deleted_created_id_idx').on(
+      table.userId,
+      table.deletedAt,
+      table.createdAt,
+      table.id
+    ),
     foreignKey({
       columns: [table.userId],
       foreignColumns: [users.id],

@@ -77,6 +77,26 @@ function buildTrashOrderBy(sortBy: TrashListParams['sortBy']) {
   }[sortBy];
 }
 
+function buildStableDocumentOrder(
+  sortColumn:
+    | typeof documents.createdAt
+    | typeof documents.updatedAt
+    | typeof documents.title
+    | typeof documents.fileSize,
+  sortOrder: 'asc' | 'desc'
+) {
+  const orderByFn = sortOrder === 'asc' ? asc : desc;
+  return [orderByFn(sortColumn), orderByFn(documents.id)] as const;
+}
+
+function buildStableTrashOrder(
+  sortColumn: typeof documents.deletedAt | typeof documents.title | typeof documents.fileSize,
+  sortOrder: 'asc' | 'desc'
+) {
+  const orderByFn = sortOrder === 'asc' ? asc : desc;
+  return [orderByFn(sortColumn), orderByFn(documents.id)] as const;
+}
+
 export const documentRepositoryCore = {
   create: async (data: NewDocument, tx?: Transaction): Promise<Document> => {
     const ctx = getDbContext(tx);
@@ -164,12 +184,12 @@ export const documentRepositoryCore = {
     const whereClause = and(...conditions);
     const countResult = await db.select({ count: count() }).from(documents).where(whereClause);
     const total = countResult[0]?.count ?? 0;
-    const orderByFn = sortOrder === 'asc' ? asc : desc;
+    const orderBy = buildStableDocumentOrder(buildDocumentOrderBy(sortBy), sortOrder);
     const result = await db
       .select()
       .from(documents)
       .where(whereClause)
-      .orderBy(orderByFn(buildDocumentOrderBy(sortBy)))
+      .orderBy(...orderBy)
       .limit(pageSize)
       .offset(offset);
 
@@ -227,12 +247,12 @@ export const documentRepositoryCore = {
     const whereClause = and(...conditions);
     const countResult = await db.select({ count: count() }).from(documents).where(whereClause);
     const total = countResult[0]?.count ?? 0;
-    const orderByFn = sortOrder === 'asc' ? asc : desc;
+    const orderBy = buildStableTrashOrder(buildTrashOrderBy(sortBy), sortOrder);
     const result = await db
       .select()
       .from(documents)
       .where(whereClause)
-      .orderBy(orderByFn(buildTrashOrderBy(sortBy)))
+      .orderBy(...orderBy)
       .limit(pageSize)
       .offset(offset);
 

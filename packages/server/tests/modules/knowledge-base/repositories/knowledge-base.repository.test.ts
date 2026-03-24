@@ -14,6 +14,7 @@ const {
   eqMock,
   andMock,
   isNullMock,
+  descMock,
   sqlMock,
   countMock,
   relationsMock,
@@ -57,6 +58,7 @@ const {
     eqMock: vi.fn((left: unknown, right: unknown) => ({ type: 'eq', left, right })),
     andMock: vi.fn((...conditions: unknown[]) => ({ type: 'and', conditions })),
     isNullMock: vi.fn((value: unknown) => ({ type: 'isNull', value })),
+    descMock: vi.fn((value: unknown) => ({ type: 'desc', value })),
     sqlMock: vi.fn((strings: TemplateStringsArray, ...values: unknown[]) => ({
       type: 'sql',
       strings: Array.from(strings),
@@ -71,6 +73,7 @@ const {
       userId: 'kb.userId',
       deletedAt: 'kb.deletedAt',
       createdAt: 'kb.createdAt',
+      updatedAt: 'kb.updatedAt',
       documentCount: 'kb.documentCount',
       totalChunks: 'kb.totalChunks',
     },
@@ -81,6 +84,7 @@ vi.mock('drizzle-orm', () => ({
   eq: eqMock,
   and: andMock,
   isNull: isNullMock,
+  desc: descMock,
   sql: sqlMock,
   count: countMock,
   relations: relationsMock,
@@ -219,7 +223,7 @@ describe('knowledgeBaseRepository', () => {
     expect(tx.execute).toHaveBeenCalledWith(expect.objectContaining({ type: 'sql' }));
   });
 
-  it('should list knowledge bases by user ordered by creation time', async () => {
+  it('should list knowledge bases by user ordered by creation time with stable id tie-breaker', async () => {
     selectFromMock.mockReturnValueOnce({ where: selectWhereMock });
     selectWhereMock.mockReturnValueOnce({ orderBy: selectOrderByMock });
     selectOrderByMock.mockReturnValueOnce({ limit: selectLimitMock });
@@ -231,7 +235,12 @@ describe('knowledgeBaseRepository', () => {
     expect(eqMock).toHaveBeenCalledWith(knowledgeBasesMock.userId, 'user-1');
     expect(isNullMock).toHaveBeenCalledWith(knowledgeBasesMock.deletedAt);
     expect(andMock).toHaveBeenCalledTimes(1);
-    expect(selectOrderByMock).toHaveBeenCalledWith(knowledgeBasesMock.createdAt);
+    expect(descMock).toHaveBeenNthCalledWith(1, knowledgeBasesMock.createdAt);
+    expect(descMock).toHaveBeenNthCalledWith(2, knowledgeBasesMock.id);
+    expect(selectOrderByMock).toHaveBeenCalledWith(
+      { type: 'desc', value: knowledgeBasesMock.createdAt },
+      { type: 'desc', value: knowledgeBasesMock.id }
+    );
     expect(selectLimitMock).toHaveBeenCalledWith(20);
     expect(selectOffsetMock).toHaveBeenCalledWith(0);
     expect(result).toEqual([mockKnowledgeBase]);

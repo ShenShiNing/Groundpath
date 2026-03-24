@@ -52,7 +52,7 @@ export const documentListParamsSchema = z.object({
   knowledgeBaseId: z.string().uuid().optional(),
   documentType: documentTypeSchema.optional(),
   search: z.string().max(100).optional(),
-  sortBy: z.enum(['createdAt', 'updatedAt', 'title', 'fileSize']).default('createdAt'),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'title', 'fileSize']).default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
