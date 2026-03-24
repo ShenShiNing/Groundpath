@@ -282,28 +282,62 @@ describe('knowledgeBaseRepository', () => {
     expect(eqMock).toHaveBeenCalledWith(knowledgeBasesMock.id, 'kb-1');
   });
 
-  it('should increment document count using sql expression in tx context', async () => {
+  it('should lock knowledge base row by id inside a transaction', async () => {
+    const tx = {
+      execute: vi.fn().mockResolvedValueOnce([[{ id: 'kb-1' }]]),
+    };
+
+    getDbContextMock.mockReturnValueOnce(tx);
+
+    await knowledgeBaseRepository.lockById('kb-1', tx as never);
+
+    expect(getDbContextMock).toHaveBeenCalledWith(tx);
+    expect(tx.execute).toHaveBeenCalledWith(expect.objectContaining({ type: 'sql' }));
+  });
+
+  it('should acquire row lock before incrementing document count inside a transaction', async () => {
+    const txExecuteMock = vi.fn().mockResolvedValueOnce([[{ id: 'kb-1' }]]);
     const txUpdateWhereMock = vi.fn().mockResolvedValueOnce(undefined);
     const txUpdateSetMock = vi.fn().mockReturnValueOnce({ where: txUpdateWhereMock });
     const txUpdateMock = vi.fn().mockReturnValueOnce({ set: txUpdateSetMock });
-    const txContext = { update: txUpdateMock };
+    const txContext = { execute: txExecuteMock, update: txUpdateMock };
     const tx = { id: 'tx-1' };
 
-    getDbContextMock.mockReturnValueOnce(txContext);
+    getDbContextMock.mockReturnValue(txContext);
 
     await knowledgeBaseRepository.incrementDocumentCount('kb-1', -2, tx as never);
 
+    expect(getDbContextMock).toHaveBeenCalledTimes(2);
     expect(getDbContextMock).toHaveBeenCalledWith(tx);
-    expect(sqlMock).toHaveBeenCalledTimes(1);
-    expect(sqlMock.mock.calls[0]?.[1]).toBe(knowledgeBasesMock.documentCount);
-    expect(sqlMock.mock.calls[0]?.[2]).toBe(-2);
+    // lockById SELECT FOR UPDATE
+    expect(txExecuteMock).toHaveBeenCalledTimes(1);
+    // sql called twice: lockById + GREATEST
+    expect(sqlMock).toHaveBeenCalledTimes(2);
+    expect(sqlMock.mock.calls[1]?.[1]).toBe(knowledgeBasesMock.documentCount);
+    expect(sqlMock.mock.calls[1]?.[2]).toBe(-2);
     expect(txUpdateSetMock).toHaveBeenCalledWith({
       documentCount: expect.objectContaining({ type: 'sql' }),
     });
     expect(eqMock).toHaveBeenCalledWith(knowledgeBasesMock.id, 'kb-1');
   });
 
-  it('should increment total chunks using sql expression in tx context', async () => {
+  it('should skip row lock when incrementing document count without a transaction', async () => {
+    updateSetMock.mockReturnValueOnce({ where: updateWhereMock });
+    updateWhereMock.mockResolvedValueOnce(undefined);
+
+    getDbContextMock.mockReturnValueOnce(dbMock);
+
+    await knowledgeBaseRepository.incrementDocumentCount('kb-1', 1);
+
+    expect(getDbContextMock).toHaveBeenCalledTimes(1);
+    expect(getDbContextMock).toHaveBeenCalledWith(undefined);
+    // sql called once: only GREATEST, no lockById
+    expect(sqlMock).toHaveBeenCalledTimes(1);
+    expect(sqlMock.mock.calls[0]?.[1]).toBe(knowledgeBasesMock.documentCount);
+    expect(sqlMock.mock.calls[0]?.[2]).toBe(1);
+  });
+
+  it('should skip row lock when incrementing total chunks without a transaction', async () => {
     const txUpdateWhereMock = vi.fn().mockResolvedValueOnce(undefined);
     const txUpdateSetMock = vi.fn().mockReturnValueOnce({ where: txUpdateWhereMock });
     const txUpdateMock = vi.fn().mockReturnValueOnce({ set: txUpdateSetMock });
@@ -313,10 +347,36 @@ describe('knowledgeBaseRepository', () => {
 
     await knowledgeBaseRepository.incrementTotalChunks('kb-1', 5);
 
+    expect(getDbContextMock).toHaveBeenCalledTimes(1);
     expect(getDbContextMock).toHaveBeenCalledWith(undefined);
+    // sql called once: only GREATEST, no lockById
     expect(sqlMock).toHaveBeenCalledTimes(1);
     expect(sqlMock.mock.calls[0]?.[1]).toBe(knowledgeBasesMock.totalChunks);
     expect(sqlMock.mock.calls[0]?.[2]).toBe(5);
+    expect(txUpdateSetMock).toHaveBeenCalledWith({
+      totalChunks: expect.objectContaining({ type: 'sql' }),
+    });
+    expect(eqMock).toHaveBeenCalledWith(knowledgeBasesMock.id, 'kb-1');
+  });
+
+  it('should acquire row lock before incrementing total chunks inside a transaction', async () => {
+    const txExecuteMock = vi.fn().mockResolvedValueOnce([[{ id: 'kb-1' }]]);
+    const txUpdateWhereMock = vi.fn().mockResolvedValueOnce(undefined);
+    const txUpdateSetMock = vi.fn().mockReturnValueOnce({ where: txUpdateWhereMock });
+    const txUpdateMock = vi.fn().mockReturnValueOnce({ set: txUpdateSetMock });
+    const txContext = { execute: txExecuteMock, update: txUpdateMock };
+    const tx = { id: 'tx-1' };
+
+    getDbContextMock.mockReturnValue(txContext);
+
+    await knowledgeBaseRepository.incrementTotalChunks('kb-1', 3, tx as never);
+
+    expect(getDbContextMock).toHaveBeenCalledTimes(2);
+    expect(getDbContextMock).toHaveBeenCalledWith(tx);
+    expect(txExecuteMock).toHaveBeenCalledTimes(1);
+    expect(sqlMock).toHaveBeenCalledTimes(2);
+    expect(sqlMock.mock.calls[1]?.[1]).toBe(knowledgeBasesMock.totalChunks);
+    expect(sqlMock.mock.calls[1]?.[2]).toBe(3);
     expect(txUpdateSetMock).toHaveBeenCalledWith({
       totalChunks: expect.objectContaining({ type: 'sql' }),
     });
