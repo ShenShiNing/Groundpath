@@ -10,33 +10,36 @@ import { apiClient, unwrapResponse } from '@/lib/http';
 export const userApi = {
   /** 获取当前用户信息 */
   async me(): Promise<UserPublicInfo> {
-    const response = await apiClient.get<ApiResponse<UserPublicInfo>>('/api/auth/me');
+    const response = await apiClient.get<ApiResponse<UserPublicInfo>>('/api/v1/auth/me');
     return unwrapResponse(response.data);
   },
 
   /** 获取当前用户的所有会话 */
   async getSessions(): Promise<SessionInfo[]> {
-    const response = await apiClient.get<ApiResponse<SessionInfo[]>>('/api/auth/sessions');
+    const response = await apiClient.get<ApiResponse<SessionInfo[]>>('/api/v1/auth/sessions');
     return unwrapResponse(response.data);
   },
 
   /** 撤销指定会话 */
   async revokeSession(sessionId: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse<{ message: string }>>(
-      `/api/auth/sessions/${sessionId}`
+      `/api/v1/auth/sessions/${sessionId}`
     );
     unwrapResponse(response.data);
   },
 
   /** 更新用户资料 */
   async updateProfile(data: UpdateProfileRequest): Promise<UserPublicInfo> {
-    const response = await apiClient.patch<ApiResponse<UserPublicInfo>>('/api/user/profile', data);
+    const response = await apiClient.patch<ApiResponse<UserPublicInfo>>(
+      '/api/v1/user/profile',
+      data
+    );
     return unwrapResponse(response.data);
   },
 
   /** 更新绑定邮箱 */
   async changeEmail(data: ChangeEmailRequest): Promise<UserPublicInfo> {
-    const response = await apiClient.patch<ApiResponse<UserPublicInfo>>('/api/user/email', data);
+    const response = await apiClient.patch<ApiResponse<UserPublicInfo>>('/api/v1/user/email', data);
     return unwrapResponse(response.data);
   },
 
@@ -45,7 +48,7 @@ export const userApi = {
     const formData = new FormData();
     formData.append('avatar', file);
     const response = await apiClient.post<ApiResponse<UserPublicInfo>>(
-      '/api/user/avatar',
+      '/api/v1/user/avatar',
       formData,
       {
         headers: {

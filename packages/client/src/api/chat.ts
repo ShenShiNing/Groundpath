@@ -45,7 +45,7 @@ export const conversationApi = {
    */
   async create(data: CreateConversationInput): Promise<ConversationInfo> {
     const response = await apiClient.post<ApiResponse<ConversationInfo>>(
-      '/api/chat/conversations',
+      '/api/v1/chat/conversations',
       data
     );
     return unwrapResponse(response.data);
@@ -60,7 +60,7 @@ export const conversationApi = {
     offset?: number;
   }): Promise<ConversationListResponse> {
     const response = await apiClient.get<ApiResponse<ConversationListResponse>>(
-      '/api/chat/conversations',
+      '/api/v1/chat/conversations',
       { params }
     );
     return unwrapResponse(response.data);
@@ -71,7 +71,7 @@ export const conversationApi = {
    */
   async search(params: SearchConversationsInput): Promise<ConversationSearchResponse> {
     const response = await apiClient.get<ApiResponse<ConversationSearchResponse>>(
-      '/api/chat/conversations/search',
+      '/api/v1/chat/conversations/search',
       { params }
     );
     return unwrapResponse(response.data);
@@ -82,7 +82,7 @@ export const conversationApi = {
    */
   async getById(id: string): Promise<ConversationWithMessages> {
     const response = await apiClient.get<ApiResponse<ConversationWithMessages>>(
-      `/api/chat/conversations/${id}`
+      `/api/v1/chat/conversations/${id}`
     );
     return unwrapResponse(response.data);
   },
@@ -92,7 +92,7 @@ export const conversationApi = {
    */
   async update(id: string, data: UpdateConversationInput): Promise<ConversationInfo> {
     const response = await apiClient.patch<ApiResponse<ConversationInfo>>(
-      `/api/chat/conversations/${id}`,
+      `/api/v1/chat/conversations/${id}`,
       data
     );
     return unwrapResponse(response.data);
@@ -103,7 +103,7 @@ export const conversationApi = {
    */
   async delete(id: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse<{ message: string }>>(
-      `/api/chat/conversations/${id}`
+      `/api/v1/chat/conversations/${id}`
     );
     unwrapResponse(response.data);
   },
@@ -122,7 +122,7 @@ export const messageApi = {
     params?: { limit?: number; offset?: number }
   ): Promise<MessageInfo[]> {
     const response = await apiClient.get<ApiResponse<MessageInfo[]>>(
-      `/api/chat/conversations/${conversationId}/messages`,
+      `/api/v1/chat/conversations/${conversationId}/messages`,
       { params }
     );
     return unwrapResponse(response.data);
@@ -166,7 +166,7 @@ export function sendMessageWithSSE(
 
   const run = async () => {
     const result = await fetchStreamWithAuth(
-      `/api/chat/conversations/${conversationId}/messages`,
+      `/api/v1/chat/conversations/${conversationId}/messages`,
       { method: 'POST', body: JSON.stringify(data) },
       { getAccessToken, signal: abortController.signal }
     );

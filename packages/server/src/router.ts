@@ -24,6 +24,24 @@ for (const routeModule of apiRouteModules) {
 
 // 404 handler for undefined routes (must be last)
 router.use('/api/{*path}', (req, res) => {
+  // Hint callers still using unversioned paths to migrate to /api/v1/
+  const isUnversionedBusinessRoute =
+    req.originalUrl.startsWith('/api/') &&
+    !req.originalUrl.startsWith('/api/v1/') &&
+    !req.originalUrl.startsWith('/api/files/') &&
+    !req.originalUrl.startsWith('/api/uploads/');
+
+  if (isUnversionedBusinessRoute) {
+    sendErrorResponse(
+      res,
+      404,
+      'NOT_FOUND',
+      `Route ${req.method} ${req.originalUrl} not found. API routes have moved to /api/v1/. ` +
+        `Try ${req.originalUrl.replace('/api/', '/api/v1/')}`
+    );
+    return;
+  }
+
   sendErrorResponse(res, 404, 'NOT_FOUND', `Route ${req.method} ${req.originalUrl} not found`);
 });
 

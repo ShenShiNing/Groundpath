@@ -27,7 +27,7 @@ export const documentsApi = {
     options?: UploadOptions
   ): Promise<{ document: DocumentInfo; message: string }> {
     const response = await apiClient.post<ApiResponse<{ document: DocumentInfo; message: string }>>(
-      '/api/documents',
+      '/api/v1/documents',
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -44,7 +44,7 @@ export const documentsApi = {
    * List documents with pagination and filtering
    */
   async listPage(params?: Partial<DocumentListParams>): Promise<DocumentListResponse> {
-    const response = await apiClient.get<ApiResponse<DocumentListResponse>>('/api/documents', {
+    const response = await apiClient.get<ApiResponse<DocumentListResponse>>('/api/v1/documents', {
       params,
     });
     return unwrapResponse(response.data);
@@ -71,7 +71,9 @@ export const documentsApi = {
    * Get document details
    */
   async getById(documentId: string): Promise<DocumentInfo> {
-    const response = await apiClient.get<ApiResponse<DocumentInfo>>(`/api/documents/${documentId}`);
+    const response = await apiClient.get<ApiResponse<DocumentInfo>>(
+      `/api/v1/documents/${documentId}`
+    );
     return unwrapResponse(response.data);
   },
 
@@ -80,7 +82,7 @@ export const documentsApi = {
    */
   async getContent(documentId: string): Promise<DocumentContentResponse> {
     const response = await apiClient.get<ApiResponse<DocumentContentResponse>>(
-      `/api/documents/${documentId}/content`
+      `/api/v1/documents/${documentId}/content`
     );
     return unwrapResponse(response.data);
   },
@@ -93,7 +95,7 @@ export const documentsApi = {
     data: SaveDocumentContentRequest
   ): Promise<{ document: DocumentInfo; message: string }> {
     const response = await apiClient.put<ApiResponse<{ document: DocumentInfo; message: string }>>(
-      `/api/documents/${documentId}/content`,
+      `/api/v1/documents/${documentId}/content`,
       data
     );
     return unwrapResponse(response.data);
@@ -104,7 +106,7 @@ export const documentsApi = {
    */
   async update(documentId: string, data: UpdateDocumentRequest): Promise<DocumentInfo> {
     const response = await apiClient.patch<ApiResponse<DocumentInfo>>(
-      `/api/documents/${documentId}`,
+      `/api/v1/documents/${documentId}`,
       data
     );
     return unwrapResponse(response.data);
@@ -115,7 +117,7 @@ export const documentsApi = {
    */
   async delete(documentId: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse<{ message: string }>>(
-      `/api/documents/${documentId}`
+      `/api/v1/documents/${documentId}`
     );
     unwrapResponse(response.data);
   },
@@ -124,7 +126,7 @@ export const documentsApi = {
    * Get download URL for document
    */
   getDownloadUrl(documentId: string): string {
-    return `/api/documents/${documentId}/download`;
+    return `/api/v1/documents/${documentId}/download`;
   },
 
   // ==================== Trash Operations ====================
@@ -133,9 +135,12 @@ export const documentsApi = {
    * List trash documents
    */
   async listTrashPage(params?: Partial<TrashListParams>): Promise<TrashListResponse> {
-    const response = await apiClient.get<ApiResponse<TrashListResponse>>('/api/documents/trash', {
-      params,
-    });
+    const response = await apiClient.get<ApiResponse<TrashListResponse>>(
+      '/api/v1/documents/trash',
+      {
+        params,
+      }
+    );
     return unwrapResponse(response.data);
   },
 
@@ -161,7 +166,7 @@ export const documentsApi = {
    */
   async restore(documentId: string): Promise<{ document: DocumentInfo; message: string }> {
     const response = await apiClient.post<ApiResponse<{ document: DocumentInfo; message: string }>>(
-      `/api/documents/${documentId}/restore`
+      `/api/v1/documents/${documentId}/restore`
     );
     return unwrapResponse(response.data);
   },
@@ -171,7 +176,7 @@ export const documentsApi = {
    */
   async permanentDelete(documentId: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse<{ message: string }>>(
-      `/api/documents/${documentId}/permanent`
+      `/api/v1/documents/${documentId}/permanent`
     );
     unwrapResponse(response.data);
   },
@@ -183,7 +188,7 @@ export const documentsApi = {
     const response =
       await apiClient.delete<
         ApiResponse<{ deletedCount: number; failedCount: number; message: string }>
-      >('/api/documents/trash');
+      >('/api/v1/documents/trash');
     return unwrapResponse(response.data);
   },
 
@@ -194,7 +199,7 @@ export const documentsApi = {
    */
   async getVersionHistory(documentId: string): Promise<VersionListResponse> {
     const response = await apiClient.get<ApiResponse<VersionListResponse>>(
-      `/api/documents/${documentId}/versions`
+      `/api/v1/documents/${documentId}/versions`
     );
     return unwrapResponse(response.data);
   },
@@ -219,7 +224,7 @@ export const documentsApi = {
     options?: UploadOptions
   ): Promise<{ document: DocumentInfo; message: string }> {
     const response = await apiClient.post<ApiResponse<{ document: DocumentInfo; message: string }>>(
-      `/api/documents/${documentId}/versions`,
+      `/api/v1/documents/${documentId}/versions`,
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -239,7 +244,7 @@ export const documentsApi = {
     versionId: string
   ): Promise<{ document: DocumentInfo; message: string }> {
     const response = await apiClient.post<ApiResponse<{ document: DocumentInfo; message: string }>>(
-      `/api/documents/${documentId}/versions/${versionId}/restore`
+      `/api/v1/documents/${documentId}/versions/${versionId}/restore`
     );
     return unwrapResponse(response.data);
   },

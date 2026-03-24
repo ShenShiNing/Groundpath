@@ -14,7 +14,7 @@ import { getDeviceInfo } from '@/lib/device';
 export const authApi = {
   /** 登录 */
   async login(data: Omit<LoginRequest, 'deviceInfo'>): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/auth/login', {
+    const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/v1/auth/login', {
       ...data,
       deviceInfo: getDeviceInfo(),
     });
@@ -23,7 +23,7 @@ export const authApi = {
 
   /** 注册 (legacy, without email verification) */
   async register(data: Omit<RegisterRequest, 'deviceInfo'>): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/auth/register', {
+    const response = await apiClient.post<ApiResponse<AuthResponse>>('/api/v1/auth/register', {
       ...data,
       deviceInfo: getDeviceInfo(),
     });
@@ -33,7 +33,7 @@ export const authApi = {
   /** 注册 (with verified email) */
   async registerWithCode(data: Omit<RegisterWithCodeRequest, 'deviceInfo'>): Promise<AuthResponse> {
     const response = await apiClient.post<ApiResponse<AuthResponse>>(
-      '/api/auth/register-with-code',
+      '/api/v1/auth/register-with-code',
       {
         ...data,
         deviceInfo: getDeviceInfo(),
@@ -45,7 +45,7 @@ export const authApi = {
   /** 重置密码 */
   async resetPassword(data: ResetPasswordRequest): Promise<ResetPasswordResponse> {
     const response = await apiClient.post<ApiResponse<ResetPasswordResponse>>(
-      '/api/auth/reset-password',
+      '/api/v1/auth/reset-password',
       data
     );
     return unwrapResponse(response.data);
@@ -53,7 +53,10 @@ export const authApi = {
 
   /** 登出当前设备（refresh token 通过 cookie 自动发送） */
   async logout(): Promise<void> {
-    const response = await apiClient.post<ApiResponse<{ message: string }>>('/api/auth/logout', {});
+    const response = await apiClient.post<ApiResponse<{ message: string }>>(
+      '/api/v1/auth/logout',
+      {}
+    );
     unwrapResponse(response.data);
   },
 
@@ -61,7 +64,7 @@ export const authApi = {
   async logoutAll(): Promise<{ revokedSessions: number }> {
     const response =
       await apiClient.post<ApiResponse<{ message: string; revokedSessions: number }>>(
-        '/api/auth/logout-all'
+        '/api/v1/auth/logout-all'
       );
     return unwrapResponse(response.data);
   },
@@ -69,7 +72,7 @@ export const authApi = {
   /** 修改密码 */
   async changePassword(data: ChangePasswordRequest): Promise<void> {
     const response = await apiClient.put<ApiResponse<{ message: string }>>(
-      '/api/auth/password',
+      '/api/v1/auth/password',
       data
     );
     unwrapResponse(response.data);

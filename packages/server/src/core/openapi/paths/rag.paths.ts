@@ -4,7 +4,7 @@ import { errorResponse, successResponse } from '../registry';
 import { defineOpenApiOperations } from '../route-metadata';
 
 export const ragOpenApiOperations = defineOpenApiOperations({
-  'POST /api/rag/search': {
+  'POST /api/v1/rag/search': {
     summary: 'RAG 语义搜索',
     request: { body: { content: { 'application/json': { schema: ragSearchRequestSchema } } } },
     responses: {
@@ -24,7 +24,7 @@ export const ragOpenApiOperations = defineOpenApiOperations({
       400: errorResponse,
     },
   },
-  'POST /api/rag/process/{documentId}': {
+  'POST /api/v1/rag/process/{documentId}': {
     summary: '处理文档（向量化）',
     request: { params: z.object({ documentId: z.string() }) },
     responses: {
@@ -35,7 +35,7 @@ export const ragOpenApiOperations = defineOpenApiOperations({
       404: errorResponse,
     },
   },
-  'GET /api/rag/status/{documentId}': {
+  'GET /api/v1/rag/status/{documentId}': {
     summary: '获取文档处理状态',
     request: { params: z.object({ documentId: z.string() }) },
     responses: {

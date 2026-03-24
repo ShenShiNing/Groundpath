@@ -10,9 +10,9 @@ import { getCsrfTokenFromCookie, getPreferredLanguageHeader } from './headers';
 
 type RetryableRequest = InternalAxiosRequestConfig & { _retry?: boolean };
 const CSRF_PROTECTED_PATHS = new Set([
-  '/api/auth/refresh',
-  '/api/auth/logout',
-  '/api/auth/oauth/exchange',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/logout',
+  '/api/v1/auth/oauth/exchange',
 ]);
 
 const apiClient = axios.create({

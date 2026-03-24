@@ -14,7 +14,7 @@ export const logsApi = {
     params?: Partial<StructuredRagDashboardQueryParams>
   ): Promise<StructuredRagDashboardSummary> {
     const response = await apiClient.get<ApiResponse<StructuredRagDashboardSummary>>(
-      '/api/logs/structured-rag/summary',
+      '/api/v1/logs/structured-rag/summary',
       { params }
     );
 
@@ -25,7 +25,7 @@ export const logsApi = {
     params?: Partial<StructuredRagReportQueryParams>
   ): Promise<StructuredRagLongTermReport> {
     const response = await apiClient.get<ApiResponse<StructuredRagLongTermReport>>(
-      '/api/logs/structured-rag/report',
+      '/api/v1/logs/structured-rag/report',
       { params }
     );
 

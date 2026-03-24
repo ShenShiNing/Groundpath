@@ -124,7 +124,7 @@ export default function KnowledgeBaseDetailPage() {
   ]);
 
   const handleDownloadDocument = useCallback((document: DocumentListItem) => {
-    openInNewTab(`/api/documents/${document.id}/download`);
+    openInNewTab(`/api/v1/documents/${document.id}/download`);
   }, []);
 
   if (!knowledgeBaseId) {

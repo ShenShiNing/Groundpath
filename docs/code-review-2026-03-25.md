@@ -53,11 +53,12 @@
 - **修复**: 修复 3 处跨模块深入导入（chat→agent、user→auth、document-index→rag），统一改为通过模块 barrel/public API。加强 dependency-cruiser Rule 6：覆盖所有子目录（不限于 services/repositories），严重级别 warn→error。保留 llm→agent/tools/tool.interface 类型导入例外以避免循环依赖。
 - **提交**: `refactor/module-public-api` 分支，`e636c57`
 
-### H-4: API 缺少版本控制
+### ~~H-4: API 缺少版本控制~~ ✅ 已修复
 
-- **文件**: `packages/server/src/api-route-modules.ts`
+- **文件**: `packages/server/src/api-route-modules.ts`、各前端 API 文件
 - **描述**: 所有路由在 `/api/` 下无版本前缀，未来 API 演进将破坏向后兼容。
-- **建议**: 在 basePath 中添加 `/api/v1/` 前缀。
+- **修复**: 在 `api-route-modules.ts` 中定义 `API_V1 = '/api/v1'` 常量，所有业务路由统一迁移至 `/api/v1/` 前缀。文件服务路由（`/api/files/`、`/api/uploads/`）和健康检查端点（`/api/hello`）保持不变（URL 存储在数据库中或属于系统级路由）。同步更新：OpenAPI paths、前端 API 客户端、CSRF 路径配置、OAuth 回调 URL 默认值、cookie 路径（含旧路径清理向后兼容）、404 handler（提供迁移提示）。
+- **提交**: `feat/api-versioning` 分支
 
 ---
 
@@ -243,7 +244,7 @@
 
 ### 第 2 周 — 高优先级
 
-- [ ] 添加 API 版本前缀 `/api/v1/`
+- [x] 添加 API 版本前缀 `/api/v1/` ✅
 - [ ] 统一控制器实现风格（asyncHandler）
 - [x] 大列表引入虚拟滚动 ✅
 

@@ -27,7 +27,7 @@ router.use(authenticate);
 // Summary Routes
 // ============================================================================
 
-// POST /api/document-ai/:id/summary - Generate document summary
+// POST /api/v1/document-ai/:id/summary - Generate document summary
 router.post(
   '/:id/summary',
   aiRateLimiter,
@@ -35,7 +35,7 @@ router.post(
   summaryController.generate
 );
 
-// POST /api/document-ai/:id/summary/stream - Stream document summary (SSE)
+// POST /api/v1/document-ai/:id/summary/stream - Stream document summary (SSE)
 router.post(
   '/:id/summary/stream',
   aiRateLimiter,
@@ -47,7 +47,7 @@ router.post(
 // Analysis Routes
 // ============================================================================
 
-// POST /api/document-ai/:id/analyze - Comprehensive analysis
+// POST /api/v1/document-ai/:id/analyze - Comprehensive analysis
 router.post(
   '/:id/analyze',
   aiRateLimiter,
@@ -55,7 +55,7 @@ router.post(
   analysisController.analyze
 );
 
-// POST /api/document-ai/:id/analyze/keywords - Extract keywords only
+// POST /api/v1/document-ai/:id/analyze/keywords - Extract keywords only
 router.post(
   '/:id/analyze/keywords',
   aiRateLimiter,
@@ -63,7 +63,7 @@ router.post(
   analysisController.extractKeywords
 );
 
-// POST /api/document-ai/:id/analyze/entities - Extract entities only
+// POST /api/v1/document-ai/:id/analyze/entities - Extract entities only
 router.post(
   '/:id/analyze/entities',
   aiRateLimiter,
@@ -71,14 +71,14 @@ router.post(
   analysisController.extractEntities
 );
 
-// GET /api/document-ai/:id/analyze/structure - Get document structure (no LLM)
+// GET /api/v1/document-ai/:id/analyze/structure - Get document structure (no LLM)
 router.get('/:id/analyze/structure', analysisController.getStructure);
 
 // ============================================================================
 // Generation Routes
 // ============================================================================
 
-// POST /api/document-ai/generate - Generate new content
+// POST /api/v1/document-ai/generate - Generate new content
 router.post(
   '/generate',
   aiRateLimiter,
@@ -86,7 +86,7 @@ router.post(
   generationController.generate
 );
 
-// POST /api/document-ai/generate/stream - Stream content generation (SSE)
+// POST /api/v1/document-ai/generate/stream - Stream content generation (SSE)
 router.post(
   '/generate/stream',
   aiRateLimiter,
@@ -94,7 +94,7 @@ router.post(
   generationController.streamGenerate
 );
 
-// POST /api/document-ai/:id/expand - Expand existing document
+// POST /api/v1/document-ai/:id/expand - Expand existing document
 router.post(
   '/:id/expand',
   aiRateLimiter,
@@ -102,7 +102,7 @@ router.post(
   generationController.expand
 );
 
-// POST /api/document-ai/:id/expand/stream - Stream document expansion (SSE)
+// POST /api/v1/document-ai/:id/expand/stream - Stream document expansion (SSE)
 router.post(
   '/:id/expand/stream',
   aiRateLimiter,

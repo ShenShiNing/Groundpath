@@ -20,7 +20,7 @@ export const knowledgeBasesApi = {
    */
   async create(data: CreateKnowledgeBaseRequest): Promise<KnowledgeBaseInfo> {
     const response = await apiClient.post<ApiResponse<KnowledgeBaseInfo>>(
-      '/api/knowledge-bases',
+      '/api/v1/knowledge-bases',
       data
     );
     return unwrapResponse(response.data);
@@ -31,7 +31,7 @@ export const knowledgeBasesApi = {
    */
   async listPage(params?: Partial<KnowledgeBaseListParams>): Promise<KnowledgeBaseListResponse> {
     const response = await apiClient.get<ApiResponse<KnowledgeBaseListResponse>>(
-      '/api/knowledge-bases',
+      '/api/v1/knowledge-bases',
       { params }
     );
     return unwrapResponse(response.data);
@@ -60,7 +60,7 @@ export const knowledgeBasesApi = {
    */
   async getById(id: string): Promise<KnowledgeBaseInfo> {
     const response = await apiClient.get<ApiResponse<KnowledgeBaseInfo>>(
-      `/api/knowledge-bases/${id}`
+      `/api/v1/knowledge-bases/${id}`
     );
     return unwrapResponse(response.data);
   },
@@ -70,7 +70,7 @@ export const knowledgeBasesApi = {
    */
   async update(id: string, data: UpdateKnowledgeBaseRequest): Promise<KnowledgeBaseInfo> {
     const response = await apiClient.patch<ApiResponse<KnowledgeBaseInfo>>(
-      `/api/knowledge-bases/${id}`,
+      `/api/v1/knowledge-bases/${id}`,
       data
     );
     return unwrapResponse(response.data);
@@ -81,7 +81,7 @@ export const knowledgeBasesApi = {
    */
   async delete(id: string): Promise<void> {
     const response = await apiClient.delete<ApiResponse<{ message: string }>>(
-      `/api/knowledge-bases/${id}`
+      `/api/v1/knowledge-bases/${id}`
     );
     unwrapResponse(response.data);
   },
@@ -94,7 +94,7 @@ export const knowledgeBasesApi = {
     params?: Partial<DocumentListParams>
   ): Promise<DocumentListResponse> {
     const response = await apiClient.get<ApiResponse<DocumentListResponse>>(
-      `/api/knowledge-bases/${kbId}/documents`,
+      `/api/v1/knowledge-bases/${kbId}/documents`,
       { params }
     );
     return unwrapResponse(response.data);
@@ -129,7 +129,7 @@ export const knowledgeBasesApi = {
     options?: UploadOptions
   ): Promise<{ document: DocumentInfo; message: string }> {
     const response = await apiClient.post<ApiResponse<{ document: DocumentInfo; message: string }>>(
-      `/api/knowledge-bases/${kbId}/documents`,
+      `/api/v1/knowledge-bases/${kbId}/documents`,
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
