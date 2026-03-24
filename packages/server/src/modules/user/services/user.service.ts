@@ -9,7 +9,7 @@ import { withTransaction, type Transaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';
 import { userRepository } from '../repositories/user.repository';
 import { normalizeEmail, toUserPublicInfo } from '@core/utils';
-import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
+import { emailVerificationService } from '@modules/auth';
 import { storageService } from '@modules/document/public/storage';
 
 /**
