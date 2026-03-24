@@ -62,7 +62,7 @@ export function UserMessage({
     <div className="mb-5 flex justify-end">
       <div className={isEditing ? 'w-full' : 'max-w-[85%]'}>
         {isEditing ? (
-          <div className="rounded-2xl rounded-tr-md border bg-background p-3 shadow-sm">
+          <div className="rounded-[1.75rem] border border-border/70 bg-background p-3 shadow-sm">
             <textarea
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
@@ -111,7 +111,7 @@ export function UserMessage({
           </div>
         ) : (
           <>
-            <div className="rounded-2xl rounded-tr-md bg-muted px-4 py-2.5 text-sm text-foreground">
+            <div className="rounded-[1.75rem] bg-[#ececec] px-4 py-3 text-sm text-foreground dark:bg-[#2f2f2f]">
               {message.content}
             </div>
             <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">

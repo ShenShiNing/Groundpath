@@ -1,5 +1,4 @@
 import type { RefObject } from 'react';
-import { Sparkles } from 'lucide-react';
 import { ChatMessage } from '@/components/chat';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -36,12 +35,11 @@ export function ChatPageConversation({
     <div className="min-h-0 flex-1">
       {messages.length === 0 ? (
         <div className="flex h-full items-center justify-center px-4 py-8 md:px-6">
-          <div className="mx-auto flex max-w-lg flex-col items-center text-center">
-            <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
-              <Sparkles className="size-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold">{t('empty.title')}</h3>
-            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+          <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
+            <h3 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+              {t('empty.title')}
+            </h3>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
               {selectedKnowledgeBaseId ? t('empty.withKb') : t('empty.general')}
             </p>
           </div>

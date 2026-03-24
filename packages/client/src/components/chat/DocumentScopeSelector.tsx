@@ -68,10 +68,7 @@ export function DocumentScopeSelector({
 
   return (
     <div
-      className={cn(
-        'flex w-full flex-col items-stretch gap-1 sm:w-auto sm:flex-row sm:items-center sm:gap-2',
-        className
-      )}
+      className={cn('flex w-full min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap', className)}
     >
       <Combobox
         multiple
@@ -163,7 +160,7 @@ export function DocumentScopeSelector({
 
       {/* Selected Document Badges (optional) */}
       {!isAllSelected && selectedCount <= 2 && (
-        <div className="hidden items-center gap-1 overflow-hidden md:flex">
+        <div className="hidden items-center gap-1 overflow-hidden sm:flex">
           {getSelectedDocumentNames().map((name) => (
             <Badge key={name} variant="secondary" className="text-[10px] truncate max-w-25">
               {name}

@@ -1,26 +1,23 @@
-import { useCallback, useEffect, useState } from 'react';
-import { PanelLeft } from 'lucide-react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useRouter } from '@tanstack/react-router';
+import { Menu } from 'lucide-react';
 import { BRAND_STORAGE_KEYS } from '@groundpath/shared/constants';
 import { authApi } from '@/api';
+import { UserMenu } from '@/components/layout/UserMenu';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { logClientError } from '@/lib/logger';
 import { useAuthStore } from '@/stores';
 import { useTranslation } from 'react-i18next';
 import { AppSidebar } from './AppSidebar';
-
-// ============================================================================
-// Types
-// ============================================================================
+import { matchesNavPath } from './appNavigation';
 
 interface AppLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   showSidebar?: boolean;
 }
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = BRAND_STORAGE_KEYS.sidebarCollapsed;
-const MOBILE_LAYOUT_QUERY = '(max-width: 767px)';
 
 function getInitialSidebarCollapsedState(): boolean {
   if (typeof window === 'undefined') {
@@ -30,23 +27,49 @@ function getInitialSidebarCollapsedState(): boolean {
   return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
 }
 
-function getInitialMobileState(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
+function getCurrentPageLabel(pathname: string, t: ReturnType<typeof useTranslation>['t']): string {
+  if (matchesNavPath(pathname, '/dashboard')) {
+    return String(t('nav.dashboard', { ns: 'app' }));
+  }
+  if (matchesNavPath(pathname, '/chat')) {
+    return String(t('nav.chat', { ns: 'app' }));
+  }
+  if (matchesNavPath(pathname, '/knowledge-bases')) {
+    return String(t('nav.knowledgeBases', { ns: 'app' }));
+  }
+  if (matchesNavPath(pathname, '/trash')) {
+    return String(t('nav.trash', { ns: 'app' }));
+  }
+  if (matchesNavPath(pathname, '/profile')) {
+    return String(t('profile', { ns: 'common' }));
+  }
+  if (matchesNavPath(pathname, '/sessions')) {
+    return String(t('sessions', { ns: 'common' }));
+  }
+  if (matchesNavPath(pathname, '/settings/ai')) {
+    return String(t('settings', { ns: 'common' }));
+  }
+  if (matchesNavPath(pathname, '/security')) {
+    return String(t('userMenu.security', { ns: 'app' }));
   }
 
-  return window.matchMedia(MOBILE_LAYOUT_QUERY).matches;
+  return String(t('brand', { ns: 'common' }));
 }
 
 export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
-  const { t } = useTranslation(['app', 'common']);
   const router = useRouter();
   const location = useLocation();
+  const { t } = useTranslation(['app', 'common']);
   const storeIsAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(getInitialSidebarCollapsedState);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(getInitialMobileState);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const currentPageLabel = getCurrentPageLabel(location.pathname, t);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -69,38 +92,6 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
     });
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia(MOBILE_LAYOUT_QUERY);
-    const updateIsMobile = (event?: MediaQueryListEvent) => {
-      setIsMobile(event?.matches ?? mediaQuery.matches);
-    };
-
-    updateIsMobile();
-
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', updateIsMobile);
-      return () => mediaQuery.removeEventListener('change', updateIsMobile);
-    }
-
-    mediaQuery.addListener(updateIsMobile);
-    return () => mediaQuery.removeListener(updateIsMobile);
-  }, []);
-
-  useEffect(() => {
-    setMobileSidebarOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (!isMobile) {
-      setMobileSidebarOpen(false);
-    }
-  }, [isMobile]);
-
-  // Non-authenticated layout (landing pages, auth pages)
   if (!storeIsAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -109,59 +100,64 @@ export function AppLayout({ children, showSidebar = true }: AppLayoutProps) {
     );
   }
 
-  // Authenticated layout with sidebar
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {showSidebar && !isMobile && (
-        <AppSidebar
-          isCollapsed={sidebarCollapsed}
-          onToggleCollapse={handleToggleSidebar}
-          onLogout={handleLogout}
-        />
+    <div className="flex h-dvh overflow-hidden bg-background">
+      {showSidebar && (
+        <div className="hidden h-full md:flex">
+          <AppSidebar
+            isCollapsed={sidebarCollapsed}
+            onToggleCollapse={handleToggleSidebar}
+            onLogout={handleLogout}
+            variant="desktop"
+          />
+        </div>
       )}
+
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {showSidebar && isMobile && (
-          <>
-            <header className="flex h-14 items-center gap-3 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        {showSidebar && (
+          <header className="shrink-0 border-b bg-background/90 px-3 py-3 backdrop-blur md:hidden">
+            <div className="flex items-center gap-3">
               <Button
-                type="button"
                 variant="ghost"
                 size="icon"
-                className="size-9 rounded-lg"
-                onClick={() => setMobileSidebarOpen(true)}
-                aria-label={t('sidebar.openNavigation', { ns: 'app' })}
+                className="size-10 rounded-2xl bg-background/70"
+                onClick={() => setMobileNavOpen(true)}
+                aria-label={t('mobile.openNavigation')}
               >
-                <PanelLeft className="size-4" />
+                <Menu className="size-5" />
               </Button>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{t('brand', { ns: 'common' })}</p>
-              </div>
-            </header>
 
-            <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-              <SheetContent
-                side="left"
-                className="w-[min(20rem,calc(100vw-1rem))] border-r p-0"
-                showCloseButton={false}
-              >
-                <SheetHeader className="sr-only">
-                  <SheetTitle>{t('sidebar.navigation', { ns: 'app' })}</SheetTitle>
-                </SheetHeader>
-                <AppSidebar
-                  isCollapsed={false}
-                  isMobile
-                  className="h-full border-r-0"
-                  onToggleCollapse={handleToggleSidebar}
-                  onLogout={handleLogout}
-                  onNavigate={() => setMobileSidebarOpen(false)}
-                />
-              </SheetContent>
-            </Sheet>
-          </>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-sm font-semibold">
+                  {t('brand', { ns: 'common' })}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">{currentPageLabel}</p>
+              </div>
+
+              <UserMenu onLogout={handleLogout} isCollapsed fullWidth={false} menuSide="bottom" />
+            </div>
+          </header>
         )}
 
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
+        <main className="min-h-0 flex-1 flex flex-col overflow-hidden">{children}</main>
       </div>
+
+      {showSidebar && (
+        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+          <SheetContent side="left" className="w-[88vw] max-w-sm p-0 md:hidden">
+            <div className="sr-only">
+              <SheetTitle>{t('mobile.navigationTitle')}</SheetTitle>
+              <SheetDescription>{t('mobile.navigationDescription')}</SheetDescription>
+            </div>
+            <AppSidebar
+              isCollapsed={false}
+              onLogout={handleLogout}
+              onNavigate={() => setMobileNavOpen(false)}
+              variant="mobile"
+            />
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

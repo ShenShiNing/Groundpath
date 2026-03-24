@@ -39,6 +39,8 @@ function getUserInitials(username?: string, email?: string): string {
 export interface UserMenuProps {
   onLogout: () => void;
   isCollapsed: boolean;
+  fullWidth?: boolean;
+  menuSide?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 function MenuItemContent({ icon, label }: { icon: ReactNode; label: string }) {
@@ -50,7 +52,7 @@ function MenuItemContent({ icon, label }: { icon: ReactNode; label: string }) {
   );
 }
 
-export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
+export function UserMenu({ onLogout, isCollapsed, fullWidth = true, menuSide }: UserMenuProps) {
   const { t, i18n } = useTranslation(['app', 'common', 'language']);
   const { theme, setTheme } = useTheme();
   const user = useAuthStore((s) => s.user);
@@ -77,7 +79,8 @@ export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            'flex w-full items-center rounded-md text-sm transition-colors hover:bg-accent',
+            'flex items-center rounded-md text-sm transition-colors hover:bg-accent',
+            fullWidth && 'w-full',
             isCollapsed ? 'justify-center px-0 py-2' : 'gap-3 px-3 py-2 text-left'
           )}
         >
@@ -97,7 +100,7 @@ export function UserMenu({ onLogout, isCollapsed }: UserMenuProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={isCollapsed ? 'center' : 'start'}
-        side={isCollapsed ? 'right' : 'top'}
+        side={menuSide ?? (isCollapsed ? 'right' : 'top')}
         className="w-56"
       >
         <DropdownMenuLabel className="font-normal">

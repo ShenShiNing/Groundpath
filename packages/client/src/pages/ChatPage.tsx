@@ -98,7 +98,7 @@ export function ChatPage() {
                 onEditMessage={handleEditMessage}
               />
 
-              <div className="shrink-0 bg-background pb-4 pt-2 md:pb-6">
+              <div className="shrink-0 bg-gradient-to-t from-background via-background to-transparent pb-4 pt-3 md:pb-6">
                 <div className="mx-auto w-full max-w-3xl px-4 md:px-6">
                   <ChatInput
                     onSend={handleSendMessage}
