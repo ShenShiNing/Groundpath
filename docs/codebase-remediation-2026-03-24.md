@@ -37,7 +37,7 @@
 - 但 `packages/server/src/modules/document/document.routes.ts` 中：
   - `POST /api/documents`
   - `POST /api/documents/:id/versions`
-  仅挂了 `multer + sanitize`，没有挂 `validateBody(...)`
+    仅挂了 `multer + sanitize`，没有挂 `validateBody(...)`
 
 **影响**
 
