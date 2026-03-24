@@ -56,3 +56,7 @@ export {
 
 // Logs / Observability hooks
 export { useStructuredRagDashboard } from './useLogs';
+
+// Virtualization hooks
+export { useVirtualGrid } from './useVirtualGrid';
+export { useVirtualList } from './useVirtualList';
