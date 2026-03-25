@@ -2,7 +2,6 @@ import type { Request, Response } from 'express';
 import { sendMessageSchema, listMessagesSchema } from '@groundpath/shared/schemas';
 import { chatService } from '../services/chat.service';
 import { messageService } from '../services/message.service';
-import { conversationService } from '../services/conversation.service';
 import { sendSuccessResponse, handleError } from '@core/errors';
 
 function paramAsString(value: string | string[] | undefined): string {
@@ -18,9 +17,6 @@ export const messageController = {
       const userId = req.user!.sub;
       const conversationId = paramAsString(req.params.id);
       const parsed = sendMessageSchema.parse(req.body);
-
-      // Validate conversation ownership before streaming
-      await conversationService.validateOwnership(userId, conversationId);
 
       // Stream response via SSE
       await chatService.sendMessageWithSSE(res, {
@@ -44,12 +40,8 @@ export const messageController = {
    */
   async listMessages(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user!.sub;
       const conversationId = paramAsString(req.params.id);
       const parsed = listMessagesSchema.parse(req.query);
-
-      // Validate conversation ownership
-      await conversationService.validateOwnership(userId, conversationId);
 
       const messages = await messageService.getByConversation(conversationId, parsed);
       sendSuccessResponse(res, messages);

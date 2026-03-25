@@ -1,4 +1,5 @@
 export { authenticate, optionalAuthenticate, authenticateRefreshToken } from './auth.middleware';
+export { requireResourceOwnership } from './resource-ownership.middleware';
 export { errorMiddleware } from './error.middleware';
 export {
   createRateLimiter,

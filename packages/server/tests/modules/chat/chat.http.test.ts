@@ -81,10 +81,14 @@ const {
   };
 });
 
-vi.mock('@core/middleware', () => ({
-  authenticate: authenticateMock,
-  aiRateLimiter: aiRateLimiterMock,
-}));
+vi.mock('@core/middleware', async () => {
+  const actual = await vi.importActual<typeof import('@core/middleware')>('@core/middleware');
+  return {
+    ...actual,
+    authenticate: authenticateMock,
+    aiRateLimiter: aiRateLimiterMock,
+  };
+});
 
 vi.mock('@modules/chat/services/conversation.service', () => ({
   conversationService: conversationServiceMock,

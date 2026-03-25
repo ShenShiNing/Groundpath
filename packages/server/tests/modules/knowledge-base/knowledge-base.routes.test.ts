@@ -9,6 +9,8 @@ const {
   validateBodyMock,
   validateQueryMock,
   createSanitizeMiddlewareMock,
+  requireKnowledgeBaseOwnershipMock,
+  knowledgeBaseOwnershipMiddlewareMock,
   sanitizeMultipartFieldsMock,
   multerFactoryMock,
   multerMemoryStorageMock,
@@ -70,6 +72,7 @@ const {
   const knowledgeBaseListValidator = vi.fn();
   const uploadDocumentValidator = vi.fn();
   const sanitizeMultipartFields = vi.fn();
+  const knowledgeBaseOwnershipMiddleware = vi.fn();
 
   return {
     mockRouter: hoistedRouter,
@@ -98,6 +101,8 @@ const {
       return vi.fn();
     }),
     createSanitizeMiddlewareMock: vi.fn(() => sanitizeMultipartFields),
+    requireKnowledgeBaseOwnershipMock: vi.fn(() => knowledgeBaseOwnershipMiddleware),
+    knowledgeBaseOwnershipMiddlewareMock: knowledgeBaseOwnershipMiddleware,
     sanitizeMultipartFieldsMock: sanitizeMultipartFields,
     multerFactoryMock: hoistedMulterFactory,
     multerMemoryStorageMock: hoistedMulterMemoryStorage,
@@ -151,6 +156,10 @@ vi.mock('@core/middleware', () => ({
   validateBody: validateBodyMock,
   validateQuery: validateQueryMock,
   createSanitizeMiddleware: createSanitizeMiddlewareMock,
+}));
+
+vi.mock('@modules/knowledge-base/public/ownership', () => ({
+  requireKnowledgeBaseOwnership: requireKnowledgeBaseOwnershipMock,
 }));
 
 vi.mock('@groundpath/shared/schemas', () => ({
@@ -223,17 +232,20 @@ describe('knowledge-base.routes', () => {
 
   it('should register document routes with controller handlers', () => {
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseDocumentListParamsSchemaMock);
+    expect(requireKnowledgeBaseOwnershipMock).toHaveBeenCalledTimes(2);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/documents',
       generalRateLimiterMock,
       expect.any(Function),
       sanitizeMultipartFieldsMock,
       uploadDocumentValidatorMock,
+      knowledgeBaseOwnershipMiddlewareMock,
       knowledgeBaseControllerMock.uploadDocument
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/:id/documents',
       documentListValidatorMock,
+      knowledgeBaseOwnershipMiddlewareMock,
       knowledgeBaseControllerMock.listDocuments
     );
   });

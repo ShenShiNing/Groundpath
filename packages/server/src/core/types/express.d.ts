@@ -9,6 +9,7 @@
 
 import type { Logger } from 'pino';
 import type { AccessTokenPayload, RefreshTokenContext } from './auth.types';
+import type { OwnedResources } from './owned-resources.types';
 
 declare module 'express' {
   interface Request {
@@ -27,5 +28,7 @@ declare module 'express' {
       query?: unknown;
       params?: unknown;
     };
+    /** Owned resources resolved by authorization middleware */
+    ownedResources?: OwnedResources;
   }
 }

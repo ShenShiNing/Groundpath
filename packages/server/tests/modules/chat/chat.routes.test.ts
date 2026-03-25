@@ -5,8 +5,16 @@ const {
   RouterMock,
   authenticateMock,
   aiRateLimiterMock,
+  validateBodyMock,
+  validateQueryMock,
   conversationControllerMock,
+  requireConversationOwnershipMock,
+  conversationOwnershipMiddlewareMock,
   messageControllerMock,
+  sendMessageSchemaMock,
+  listMessagesSchemaMock,
+  sendMessageValidatorMock,
+  listMessagesValidatorMock,
 } = vi.hoisted(() => {
   const hoistedRouter = {
     use: vi.fn(),
@@ -15,12 +23,17 @@ const {
     patch: vi.fn(),
     delete: vi.fn(),
   };
+  const sendMessageValidator = vi.fn();
+  const listMessagesValidator = vi.fn();
+  const conversationOwnershipMiddleware = vi.fn();
 
   return {
     mockRouter: hoistedRouter,
     RouterMock: vi.fn(() => hoistedRouter),
     authenticateMock: vi.fn(),
     aiRateLimiterMock: vi.fn(),
+    validateBodyMock: vi.fn(() => sendMessageValidator),
+    validateQueryMock: vi.fn(() => listMessagesValidator),
     conversationControllerMock: {
       create: vi.fn(),
       list: vi.fn(),
@@ -29,10 +42,16 @@ const {
       update: vi.fn(),
       delete: vi.fn(),
     },
+    requireConversationOwnershipMock: vi.fn(() => conversationOwnershipMiddleware),
+    conversationOwnershipMiddlewareMock: conversationOwnershipMiddleware,
     messageControllerMock: {
       sendMessage: vi.fn(),
       listMessages: vi.fn(),
     },
+    sendMessageSchemaMock: { type: 'send-message-schema' },
+    listMessagesSchemaMock: { type: 'list-messages-schema' },
+    sendMessageValidatorMock: sendMessageValidator,
+    listMessagesValidatorMock: listMessagesValidator,
   };
 });
 
@@ -43,6 +62,8 @@ vi.mock('express', () => ({
 vi.mock('@core/middleware', () => ({
   authenticate: authenticateMock,
   aiRateLimiter: aiRateLimiterMock,
+  validateBody: validateBodyMock,
+  validateQuery: validateQueryMock,
 }));
 
 vi.mock('@modules/chat/controllers/conversation.controller', () => ({
@@ -51,6 +72,15 @@ vi.mock('@modules/chat/controllers/conversation.controller', () => ({
 
 vi.mock('@modules/chat/controllers/message.controller', () => ({
   messageController: messageControllerMock,
+}));
+
+vi.mock('@modules/chat/public/ownership', () => ({
+  requireConversationOwnership: requireConversationOwnershipMock,
+}));
+
+vi.mock('@groundpath/shared/schemas', () => ({
+  sendMessageSchema: sendMessageSchemaMock,
+  listMessagesSchema: listMessagesSchemaMock,
 }));
 
 import chatRoutes from '@modules/chat/chat.routes';
@@ -98,13 +128,21 @@ describe('chat.routes', () => {
   });
 
   it('should register message endpoints', () => {
+    expect(validateBodyMock).toHaveBeenCalledWith(sendMessageSchemaMock);
+    expect(validateQueryMock).toHaveBeenCalledWith(listMessagesSchemaMock);
+    expect(requireConversationOwnershipMock).toHaveBeenCalledTimes(2);
+
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/conversations/:id/messages',
       aiRateLimiterMock,
+      sendMessageValidatorMock,
+      conversationOwnershipMiddlewareMock,
       messageControllerMock.sendMessage
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/conversations/:id/messages',
+      listMessagesValidatorMock,
+      conversationOwnershipMiddlewareMock,
       messageControllerMock.listMessages
     );
   });

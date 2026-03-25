@@ -1,7 +1,9 @@
 import { Router } from 'express';
-import { authenticate, aiRateLimiter } from '@core/middleware';
+import { listMessagesSchema, sendMessageSchema } from '@groundpath/shared/schemas';
+import { authenticate, aiRateLimiter, validateBody, validateQuery } from '@core/middleware';
 import { conversationController } from './controllers/conversation.controller';
 import { messageController } from './controllers/message.controller';
+import { requireConversationOwnership } from './public/ownership';
 
 const router = Router();
 
@@ -17,7 +19,18 @@ router.patch('/conversations/:id', conversationController.update);
 router.delete('/conversations/:id', conversationController.delete);
 
 // Message endpoints
-router.post('/conversations/:id/messages', aiRateLimiter, messageController.sendMessage);
-router.get('/conversations/:id/messages', messageController.listMessages);
+router.post(
+  '/conversations/:id/messages',
+  aiRateLimiter,
+  validateBody(sendMessageSchema),
+  requireConversationOwnership(),
+  messageController.sendMessage
+);
+router.get(
+  '/conversations/:id/messages',
+  validateQuery(listMessagesSchema),
+  requireConversationOwnership(),
+  messageController.listMessages
+);
 
 export default router;
