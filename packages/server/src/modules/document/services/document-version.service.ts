@@ -78,7 +78,7 @@ export const documentVersionService = {
     if (!validation.valid) {
       throw Errors.auth(
         DOCUMENT_ERROR_CODES.INVALID_FILE_TYPE as 'INVALID_FILE_TYPE',
-        validation.error!,
+        validation.error ?? 'Invalid file upload',
         400
       );
     }
