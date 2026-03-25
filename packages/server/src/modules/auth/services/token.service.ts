@@ -4,7 +4,7 @@ import type { TokenPair, DeviceInfo } from '@groundpath/shared/types';
 import { authConfig } from '@config/env';
 import type { User } from '@core/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@core/types';
-import { Errors } from '@core/errors';
+import { AppError, Errors } from '@core/errors';
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -23,22 +23,24 @@ export interface RefreshTokensResult {
 }
 
 type VerifiedRefreshTokenPayload = ReturnType<typeof verifyRefreshToken>;
+type RefreshTokensTransactionResult = RefreshTokensResult | AppError;
 
 async function revokeUserSessionsAndInvalidateAccess(
   userId: string,
   tx: Transaction
-): Promise<void> {
-  await refreshTokenRepository.revokeAllForUser(userId, tx);
+): Promise<number> {
+  const revokedSessions = await refreshTokenRepository.revokeAllForUser(userId, tx);
   await userTokenStateRepository.bumpTokenValidAfter(userId, tx);
+  return revokedSessions;
 }
 
-async function consumeRefreshTokenOrThrow(input: {
+async function consumeRefreshTokenOrError(input: {
   payload: VerifiedRefreshTokenPayload;
   refreshToken: string;
   ipAddress: string | null;
   deviceInfo: DeviceInfo | null;
   tx: Transaction;
-}): Promise<void> {
+}): Promise<AppError | null> {
   const consumeResult = await refreshTokenRepository.consumeIfValid(
     input.payload.sid,
     input.refreshToken,
@@ -46,53 +48,68 @@ async function consumeRefreshTokenOrThrow(input: {
   );
 
   if (consumeResult === 'token_mismatch') {
-    await refreshTokenRepository.revoke(input.payload.sid, input.tx);
+    const revokedSessions = await revokeUserSessionsAndInvalidateAccess(
+      input.payload.sub,
+      input.tx
+    );
     systemLogger.securityEvent(
       'auth.refresh.token_mismatch',
-      'Refresh token mismatch detected, revoked suspicious session',
+      'Refresh token mismatch detected, revoked all user sessions',
       {
         userId: input.payload.sub,
         tokenId: input.payload.sid,
-        action: 'revoke_session',
+        action: 'revoke_all_sessions',
+        sessionsRevoked: revokedSessions,
         ipAddress: input.ipAddress,
         deviceInfo: input.deviceInfo,
       }
     );
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
+    return Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Token validation failed');
   }
 
   if (consumeResult === 'already_revoked') {
+    const revokedSessions = await revokeUserSessionsAndInvalidateAccess(
+      input.payload.sub,
+      input.tx
+    );
     systemLogger.securityEvent(
       'auth.refresh.replay_blocked',
-      'Replay attempt blocked by atomic refresh token consumption',
+      'Refresh token replay detected, revoked all user sessions',
       {
         userId: input.payload.sub,
         tokenId: input.payload.sid,
+        action: 'revoke_all_sessions',
+        sessionsRevoked: revokedSessions,
         ipAddress: input.ipAddress,
         deviceInfo: input.deviceInfo,
       }
     );
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has already been used');
+    return Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has already been used');
   }
 
   if (consumeResult === 'expired') {
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Refresh token has expired');
+    return Errors.auth(AUTH_ERROR_CODES.TOKEN_EXPIRED, 'Refresh token has expired');
   }
 
   if (consumeResult === 'not_found') {
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
+    return Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Refresh token has been revoked');
   }
+
+  return null;
 }
 
-async function validateRefreshUserOrThrow(userId: string, tx: Transaction): Promise<User> {
+async function validateRefreshUserOrError(
+  userId: string,
+  tx: Transaction
+): Promise<User | AppError> {
   const user = await userService.findById(userId);
   if (!user) {
-    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+    return Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
   }
 
   if (user.status === 'banned') {
     await revokeUserSessionsAndInvalidateAccess(user.id, tx);
-    throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
+    return Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'User account is banned', 403);
   }
 
   return user;
@@ -169,16 +186,23 @@ export const tokenService = {
     // Verify the JWT signature and structure (outside transaction - no DB involved)
     const payload = verifyRefreshToken(refreshToken);
 
-    return withTransaction(async (tx) => {
-      await consumeRefreshTokenOrThrow({
+    const result = await withTransaction<RefreshTokensTransactionResult>(async (tx) => {
+      const consumeError = await consumeRefreshTokenOrError({
         payload,
         refreshToken,
         ipAddress,
         deviceInfo,
         tx,
       });
+      if (consumeError) {
+        return consumeError;
+      }
 
-      const user = await validateRefreshUserOrThrow(payload.sub, tx);
+      const user = await validateRefreshUserOrError(payload.sub, tx);
+      if (user instanceof AppError) {
+        return user;
+      }
+
       return issueRefreshedTokens({
         user,
         ipAddress,
@@ -186,6 +210,12 @@ export const tokenService = {
         tx,
       });
     });
+
+    if (result instanceof AppError) {
+      throw result;
+    }
+
+    return result;
   },
 
   /**

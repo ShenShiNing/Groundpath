@@ -326,34 +326,46 @@ describe('tokenService', () => {
       expect(actual?.code).toBe(AUTH_ERROR_CODES.TOKEN_REVOKED);
     });
 
-    // 场景 4：token 重用攻击检测（mismatch → revoke_session）
+    // 场景 4：token 重放攻击检测（mismatch → revoke_all_sessions）
     // JWT 解码的 jti 在数据库中存在，但 token 字符串不匹配
-    // 安全措施：吊销当前会话 → 抛出 TOKEN_INVALID
-    it('should revoke session on token mismatch (reuse attack)', async () => {
+    // 安全措施：吊销该用户所有会话并使 access token 立即失效 → 抛出 TOKEN_INVALID
+    it('should revoke all user sessions on token mismatch (reuse attack)', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('token_mismatch');
-      vi.mocked(refreshTokenRepository.revoke).mockResolvedValue(undefined);
+      vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(3);
+      vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mockResolvedValue(undefined);
 
-      let actual: { code: string; revokedSession: boolean } | null = null;
+      let actual: { code: string; revokedAllSessions: boolean; invalidatedAccess: boolean } | null =
+        null;
       try {
         await tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo);
       } catch (error) {
         actual = {
           code: (error as AppError).code,
-          revokedSession: vi.mocked(refreshTokenRepository.revoke).mock.calls.length > 0,
+          revokedAllSessions:
+            vi.mocked(refreshTokenRepository.revokeAllForUser).mock.calls.length > 0,
+          invalidatedAccess:
+            vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mock.calls.length > 0,
         };
       }
 
-      const expected = { code: AUTH_ERROR_CODES.TOKEN_INVALID, revokedSession: true };
+      const expected = {
+        code: AUTH_ERROR_CODES.TOKEN_INVALID,
+        revokedAllSessions: true,
+        invalidatedAccess: true,
+      };
       logTestInfo(
         { inputToken: mockRefreshToken, consumeResult: 'token_mismatch' },
         expected,
         actual
       );
 
-      expect(actual?.revokedSession).toBe(true);
+      expect(actual?.revokedAllSessions).toBe(true);
+      expect(actual?.invalidatedAccess).toBe(true);
       expect(actual?.code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
-      expect(refreshTokenRepository.revoke).toHaveBeenCalledWith('token-id-456', {});
+      expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
+      expect(userTokenStateRepository.bumpTokenValidAfter).toHaveBeenCalledWith('user-123', {});
+      expect(refreshTokenRepository.revoke).not.toHaveBeenCalled();
     });
 
     // 场景 5：用户不存在（可能已被删除）
@@ -376,16 +388,21 @@ describe('tokenService', () => {
       expect(actual?.code).toBe(AUTH_ERROR_CODES.TOKEN_INVALID);
     });
 
-    // 场景 6：already_revoked → 直接拒绝（无重放缓存）
-    it('should throw TOKEN_REVOKED when token already revoked', async () => {
+    // 场景 6：already_revoked → 视为 refresh token replay，吊销所有会话
+    it('should revoke all user sessions when a consumed token is replayed', async () => {
       vi.mocked(verifyRefreshToken).mockReturnValue(mockPayload);
       vi.mocked(refreshTokenRepository.consumeIfValid).mockResolvedValue('already_revoked');
+      vi.mocked(refreshTokenRepository.revokeAllForUser).mockResolvedValue(2);
+      vi.mocked(userTokenStateRepository.bumpTokenValidAfter).mockResolvedValue(undefined);
 
       await expect(
         tokenService.refreshTokens(mockRefreshToken, ipAddress, deviceInfo)
       ).rejects.toMatchObject({
         code: AUTH_ERROR_CODES.TOKEN_REVOKED,
       });
+
+      expect(refreshTokenRepository.revokeAllForUser).toHaveBeenCalledWith('user-123', {});
+      expect(userTokenStateRepository.bumpTokenValidAfter).toHaveBeenCalledWith('user-123', {});
     });
 
     // 场景 7：用户已被封禁
