@@ -162,4 +162,45 @@ describe('shared/config/env/validated-env', () => {
       },
     });
   });
+
+  it('should throw when an OAuth provider is configured with only half of its credentials', async () => {
+    const loadModule = () =>
+      importValidatedEnvModule({
+        envDir: '/workspace/config',
+        nodeEnv: 'production',
+        safeParseResult: {
+          success: true,
+          data: {
+            NODE_ENV: 'production',
+            STORAGE_TYPE: 'local',
+            EMBEDDING_PROVIDER: 'ollama',
+            IMAGE_DESCRIPTION_ENABLED: false,
+            JWT_SECRET: 'x'.repeat(32),
+            ENCRYPTION_KEY: 'y'.repeat(32),
+            EMAIL_VERIFICATION_SECRET: 'prod-email-verification-secret',
+            GOOGLE_CLIENT_ID: 'google-client-id',
+            GOOGLE_CLIENT_SECRET: '   ',
+            GITHUB_CLIENT_ID: '',
+            GITHUB_CLIENT_SECRET: 'github-client-secret',
+          },
+        },
+      });
+
+    const actual = await loadModule().catch((error) => error);
+
+    expect(actual).toMatchObject({
+      name: 'AppError',
+      code: 'VALIDATION_ERROR',
+      details: {
+        fieldErrors: {
+          GOOGLE_CLIENT_SECRET: [
+            'GOOGLE_CLIENT_SECRET is required when GOOGLE_CLIENT_ID is set for Google OAuth.',
+          ],
+          GITHUB_CLIENT_ID: [
+            'GITHUB_CLIENT_ID is required when GITHUB_CLIENT_SECRET is set for GitHub OAuth.',
+          ],
+        },
+      },
+    });
+  });
 });

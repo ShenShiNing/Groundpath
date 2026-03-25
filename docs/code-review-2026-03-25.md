@@ -73,7 +73,7 @@
 | M-3 | TOCTOU 漏洞                  | `document-upload.service.ts:93,136`   | 先 validateOwnership 再 lockOwnership，中间有窗口 |
 | M-4 | 文件过长                     | `document.repository.core.ts` (502行) | 超过 400 行限制                                   |
 | M-5 | 非空断言                     | `document-upload.service.ts:98-102`   | `validation.error!` 未安全检查                    |
-| M-6 | OAuth 密钥可选但无运行时验证 | `config/env/schema.ts:48-55`          | OAuth 使用时可能报运行时错误                      |
+| ~~M-6~~ | ~~OAuth 密钥可选但无运行时验证~~ ✅ | `config/env/schema.ts:48-55`          | 在 `runtime-env-validation.ts` 中增加 OAuth 凭证成对校验，阻止半配置进入运行期 |
 | M-7 | 事务后回调只抛第一个错误     | `db.utils.ts:34-52`                   | 多个 afterCommit 回调失败时丢失错误信息           |
 | M-8 | N+1 查询                     | `knowledge-base.service.ts:131-142`   | list + count 分两次查询                           |
 
