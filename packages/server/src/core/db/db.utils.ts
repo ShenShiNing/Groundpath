@@ -42,13 +42,24 @@ async function flushAfterCommitCallbacks(tx: Transaction): Promise<void> {
   const results = await Promise.allSettled(
     callbacks.map((callback) => Promise.resolve().then(callback))
   );
-  const rejected = results.find(
+  const rejected = results.filter(
     (result): result is PromiseRejectedResult => result.status === 'rejected'
   );
 
-  if (rejected) {
-    throw rejected.reason;
+  if (!rejected.length) {
+    return;
   }
+
+  const [firstRejected] = rejected;
+
+  if (rejected.length === 1 && firstRejected) {
+    throw firstRejected.reason;
+  }
+
+  throw new AggregateError(
+    rejected.map((result) => result.reason),
+    `${rejected.length} after-commit callbacks failed`
+  );
 }
 
 /**

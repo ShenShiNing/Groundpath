@@ -92,6 +92,57 @@ function validateStorageConfig(env: Env, fieldErrors: FieldErrors): void {
   }
 }
 
+function validateOAuthProviderConfig(
+  fieldErrors: FieldErrors,
+  providerName: 'Google' | 'GitHub',
+  clientId: string | undefined,
+  clientSecret: string | undefined,
+  clientIdField: keyof Env,
+  clientSecretField: keyof Env
+): void {
+  const hasClientId = !isBlank(clientId);
+  const hasClientSecret = !isBlank(clientSecret);
+
+  if (!hasClientId && !hasClientSecret) {
+    return;
+  }
+
+  if (!hasClientId) {
+    addFieldError(
+      fieldErrors,
+      clientIdField,
+      `${String(clientIdField)} is required when ${String(clientSecretField)} is set for ${providerName} OAuth.`
+    );
+  }
+
+  if (!hasClientSecret) {
+    addFieldError(
+      fieldErrors,
+      clientSecretField,
+      `${String(clientSecretField)} is required when ${String(clientIdField)} is set for ${providerName} OAuth.`
+    );
+  }
+}
+
+function validateOAuthConfig(env: Env, fieldErrors: FieldErrors): void {
+  validateOAuthProviderConfig(
+    fieldErrors,
+    'Google',
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET,
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET'
+  );
+  validateOAuthProviderConfig(
+    fieldErrors,
+    'GitHub',
+    env.GITHUB_CLIENT_ID,
+    env.GITHUB_CLIENT_SECRET,
+    'GITHUB_CLIENT_ID',
+    'GITHUB_CLIENT_SECRET'
+  );
+}
+
 export function getRuntimeEnvFieldErrors(env: Env): FieldErrors {
   const fieldErrors: FieldErrors = {};
 
@@ -99,6 +150,7 @@ export function getRuntimeEnvFieldErrors(env: Env): FieldErrors {
   validateEmbeddingConfig(env, fieldErrors);
   validateVlmConfig(env, fieldErrors);
   validateStorageConfig(env, fieldErrors);
+  validateOAuthConfig(env, fieldErrors);
 
   return fieldErrors;
 }
