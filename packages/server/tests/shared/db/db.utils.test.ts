@@ -58,4 +58,60 @@ describe('db.utils transaction hooks', () => {
 
     expect(callOrder).toEqual([]);
   });
+
+  it('rethrows a single after-commit callback failure', async () => {
+    const managedTx = {};
+    const callbackError = new Error('after-commit failed');
+
+    mocks.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback(managedTx)
+    );
+
+    await expect(
+      withTransaction(async (tx) => {
+        await afterTransactionCommit(() => {
+          throw callbackError;
+        }, tx);
+
+        return 'done';
+      })
+    ).rejects.toBe(callbackError);
+  });
+
+  it('aggregates multiple after-commit callback failures', async () => {
+    const callOrder: string[] = [];
+    const managedTx = {};
+    const firstError = new Error('first after-commit failure');
+    const secondError = new Error('second after-commit failure');
+
+    mocks.transaction.mockImplementation(async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback(managedTx)
+    );
+
+    let thrown: unknown;
+
+    try {
+      await withTransaction(async (tx) => {
+        await afterTransactionCommit(() => {
+          callOrder.push('first');
+          throw firstError;
+        }, tx);
+        await afterTransactionCommit(() => {
+          callOrder.push('second');
+          throw secondError;
+        }, tx);
+
+        return 'done';
+      });
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(callOrder).toEqual(['first', 'second']);
+    expect(thrown).toBeInstanceOf(AggregateError);
+
+    const aggregateError = thrown as AggregateError;
+    expect(aggregateError.message).toBe('2 after-commit callbacks failed');
+    expect(aggregateError.errors).toEqual([firstError, secondError]);
+  });
 });
