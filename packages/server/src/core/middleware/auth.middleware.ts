@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import { authConfig } from '@config/env';
+import type { AccessTokenPayload } from '../types';
 import { Errors, handleError } from '../errors';
 import {
   extractBearerToken,
@@ -36,6 +37,31 @@ async function isSessionActiveForUser(sessionId: string, userId: string): Promis
   return session.userId === userId;
 }
 
+async function validateAccessTokenSession(token: string): Promise<AccessTokenPayload> {
+  const payload = verifyAccessToken(token);
+  const tokenIat = getTokenIssuedAt(token);
+  if (!tokenIat) {
+    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
+  }
+
+  const authState = await userRepository.findAccessAuthStateById(payload.sub);
+  if (!authState) {
+    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
+  }
+
+  if (authState.status === 'banned') {
+    throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'Your account has been banned', 403);
+  }
+  if (isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfterEpoch)) {
+    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Access token has been revoked');
+  }
+  if (!(await isSessionActiveForUser(payload.sid, payload.sub))) {
+    throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Session has been revoked');
+  }
+
+  return payload;
+}
+
 /**
  * Middleware to authenticate requests using JWT access token
  * Attaches user payload to request if valid
@@ -48,27 +74,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       throw Errors.auth(AUTH_ERROR_CODES.MISSING_TOKEN, 'Authorization token required');
     }
 
-    // Verify and decode access token
-    const payload = verifyAccessToken(token);
-    const tokenIat = getTokenIssuedAt(token);
-    if (!tokenIat) {
-      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'Invalid access token');
-    }
-
-    const authState = await userRepository.findAccessAuthStateById(payload.sub);
-    if (!authState) {
-      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_INVALID, 'User not found');
-    }
-
-    if (authState.status === 'banned') {
-      throw Errors.auth(AUTH_ERROR_CODES.USER_BANNED, 'Your account has been banned', 403);
-    }
-    if (isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfterEpoch)) {
-      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Access token has been revoked');
-    }
-    if (!(await isSessionActiveForUser(payload.sid, payload.sub))) {
-      throw Errors.auth(AUTH_ERROR_CODES.TOKEN_REVOKED, 'Session has been revoked');
-    }
+    const payload = await validateAccessTokenSession(token);
 
     // Attach user to request
     req.user = payload;
@@ -84,32 +90,21 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
  */
 export async function optionalAuthenticate(
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ): Promise<void> {
-  try {
-    const token = extractBearerToken(req.headers.authorization);
+  const token = extractBearerToken(req.headers.authorization);
 
-    if (token) {
-      const payload = verifyAccessToken(token);
-      const tokenIat = getTokenIssuedAt(token);
-      const authState = tokenIat
-        ? await userRepository.findAccessAuthStateById(payload.sub)
-        : undefined;
-      if (
-        tokenIat &&
-        authState &&
-        authState.status !== 'banned' &&
-        !isTokenRevokedByTimestamp(tokenIat, authState.tokenValidAfterEpoch) &&
-        (await isSessionActiveForUser(payload.sid, payload.sub))
-      ) {
-        req.user = payload;
-      }
-    }
+  if (!token) {
     next();
-  } catch {
-    // Silently continue without authentication
+    return;
+  }
+
+  try {
+    req.user = await validateAccessTokenSession(token);
     next();
+  } catch (error) {
+    handleError(error, res, 'Optional auth middleware');
   }
 }
 
