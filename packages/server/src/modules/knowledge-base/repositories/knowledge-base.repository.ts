@@ -1,4 +1,4 @@
-import { eq, and, isNull, sql, count, desc, lt, or } from 'drizzle-orm';
+import { eq, and, isNull, sql, count, desc } from 'drizzle-orm';
 import { db } from '@core/db';
 import { now, getDbContext, type Transaction } from '@core/db/db.utils';
 import { AppError } from '@core/errors/app-error';
@@ -60,17 +60,6 @@ function decodeCursor(cursor: string): { id: string; value: Date } {
     }
     throw invalidCursorError();
   }
-}
-
-function buildCursorCondition(cursor: { id: string; value: Date }) {
-  const condition = or(
-    lt(knowledgeBases.createdAt, cursor.value),
-    and(eq(knowledgeBases.createdAt, cursor.value), lt(knowledgeBases.id, cursor.id))
-  );
-  if (!condition) {
-    throw Errors.internal('Failed to build pagination cursor condition');
-  }
-  return condition;
 }
 
 /**
@@ -160,23 +149,65 @@ export const knowledgeBaseRepository = {
   async listByUser(
     userId: string,
     options?: { pageSize?: number; cursor?: string }
-  ): Promise<{ knowledgeBases: KnowledgeBase[]; hasMore: boolean; nextCursor: string | null }> {
+  ): Promise<{
+    knowledgeBases: KnowledgeBase[];
+    total: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  }> {
     const pageSize = options?.pageSize ?? 20;
-    const conditions = [eq(knowledgeBases.userId, userId), isNull(knowledgeBases.deletedAt)];
+    const cursor = options?.cursor ? decodeCursor(options.cursor) : null;
+    const cursorClause = cursor
+      ? sql`
+        WHERE createdAt < ${cursor.value}
+          OR (createdAt = ${cursor.value} AND id < ${cursor.id})
+      `
+      : sql``;
 
-    if (options?.cursor) {
-      conditions.push(buildCursorCondition(decodeCursor(options.cursor)));
-    }
+    const rawRows = extractRows<
+      KnowledgeBase & {
+        totalCount: number;
+      }
+    >(await db.execute(sql`
+      WITH kb_base AS (
+        SELECT
+          ${knowledgeBases.id} AS id,
+          ${knowledgeBases.userId} AS userId,
+          ${knowledgeBases.name} AS name,
+          ${knowledgeBases.description} AS description,
+          ${knowledgeBases.embeddingProvider} AS embeddingProvider,
+          ${knowledgeBases.embeddingModel} AS embeddingModel,
+          ${knowledgeBases.embeddingDimensions} AS embeddingDimensions,
+          ${knowledgeBases.documentCount} AS documentCount,
+          ${knowledgeBases.totalChunks} AS totalChunks,
+          ${knowledgeBases.createdBy} AS createdBy,
+          ${knowledgeBases.createdAt} AS createdAt,
+          ${knowledgeBases.updatedBy} AS updatedBy,
+          ${knowledgeBases.updatedAt} AS updatedAt,
+          ${knowledgeBases.deletedBy} AS deletedBy,
+          ${knowledgeBases.deletedAt} AS deletedAt,
+          COUNT(*) OVER() AS totalCount
+        FROM ${knowledgeBases}
+        WHERE ${knowledgeBases.userId} = ${userId}
+          AND ${knowledgeBases.deletedAt} IS NULL
+      )
+      SELECT *
+      FROM kb_base
+      ${cursorClause}
+      ORDER BY createdAt DESC, id DESC
+      LIMIT ${pageSize + 1}
+    `));
 
-    const rows = await db
-      .select()
-      .from(knowledgeBases)
-      .where(and(...conditions))
-      .orderBy(desc(knowledgeBases.createdAt), desc(knowledgeBases.id))
-      .limit(pageSize + 1);
-
-    const hasMore = rows.length > pageSize;
-    const pageRows = hasMore ? rows.slice(0, pageSize) : rows;
+    const total =
+      rawRows.length > 0
+        ? Number(rawRows[0]?.totalCount ?? 0)
+        : options?.cursor
+          ? await this.countByUser(userId)
+          : 0;
+    const hasMore = rawRows.length > pageSize;
+    const pageRows = (hasMore ? rawRows.slice(0, pageSize) : rawRows).map(
+      ({ totalCount: _ignored, ...knowledgeBase }) => knowledgeBase
+    );
     const lastKnowledgeBase = pageRows.at(-1);
     const nextCursor =
       hasMore && lastKnowledgeBase
@@ -190,6 +221,7 @@ export const knowledgeBaseRepository = {
 
     return {
       knowledgeBases: pageRows,
+      total,
       hasMore,
       nextCursor,
     };

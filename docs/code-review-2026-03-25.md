@@ -75,7 +75,7 @@
 | M-5 | 非空断言                     | `document-upload.service.ts:98-102`   | `validation.error!` 未安全检查                    |
 | M-6 | OAuth 密钥可选但无运行时验证 | `config/env/schema.ts:48-55`          | OAuth 使用时可能报运行时错误                      |
 | M-7 | 事务后回调只抛第一个错误     | `db.utils.ts:34-52`                   | 多个 afterCommit 回调失败时丢失错误信息           |
-| M-8 | N+1 查询                     | `knowledge-base.service.ts:131-142`   | list + count 分两次查询                           |
+| ~~M-8~~ | ~~N+1 查询~~ ✅          | `knowledge-base.service.ts:131-142`   | 分页列表改为 repository 单次查询回传 `knowledgeBases + total`，service 不再额外执行 `count` 查询 |
 
 ### 4.2 认证与授权
 
