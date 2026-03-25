@@ -50,8 +50,10 @@ async function flushAfterCommitCallbacks(tx: Transaction): Promise<void> {
     return;
   }
 
-  if (rejected.length === 1) {
-    throw rejected[0].reason;
+  const [firstRejected] = rejected;
+
+  if (rejected.length === 1 && firstRejected) {
+    throw firstRejected.reason;
   }
 
   throw new AggregateError(
