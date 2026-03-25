@@ -166,6 +166,18 @@ export const documentTrashService = {
       reason: 'restore',
     }).catch((err) => {
       logger.warn({ documentId, err }, 'Failed to enqueue processing after restore');
+      documentRepository
+        .updateProcessingStatus(
+          documentId,
+          'failed',
+          `Dispatch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        .catch((updateErr) => {
+          logger.error(
+            { documentId, updateErr },
+            'Failed to mark document as failed after dispatch error'
+          );
+        });
     });
 
     // Log operation
@@ -186,8 +198,15 @@ export const documentTrashService = {
 
   /**
    * Permanently delete a document
-   * MySQL operations are wrapped in a transaction for atomicity.
-   * Storage and Qdrant operations run outside the transaction.
+   *
+   * Order of operations (compensation-safe):
+   * 1. Soft-delete vectors BEFORE DB hard-delete — makes them invisible to
+   *    search immediately. If this fails, abort so DB records remain intact
+   *    and the user can retry.
+   * 2. DB transaction — hard-deletes metadata.
+   * 3. Best-effort cleanup — storage files + physical vector deletion.
+   *    The daily vector-cleanup job sweeps any soft-deleted vectors that
+   *    fail to be physically removed here.
    */
   async permanentDelete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();
@@ -206,16 +225,32 @@ export const documentTrashService = {
     // Collect storage keys for cleanup after DB transaction
     const storageKeys = versions.map((v) => v.storageKey);
 
-    // DB transaction FIRST — removes metadata before external resources
-    // If this fails, storage and vectors remain intact (consistent state)
+    // STEP 1: Soft-delete vectors BEFORE DB hard-delete.
+    // This ensures vectors are excluded from search immediately.
+    // If Qdrant is unreachable, we abort so the user can retry later
+    // (DB records stay intact → no orphaned vectors).
+    const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(document.knowledgeBaseId);
+    const softDeleted = await vectorRepository.markAsDeleted(embeddingConfig.collectionName, {
+      documentId,
+    });
+    if (!softDeleted) {
+      throw Errors.external(
+        'Failed to mark vectors as deleted in Qdrant — aborting permanent delete to prevent orphaned vectors. Please retry later.',
+        { documentId }
+      );
+    }
+
+    // STEP 2: DB transaction — removes metadata.
+    // If this fails, vectors are soft-deleted but the document is still in
+    // trash; restoring it will re-dispatch processing and create new vectors.
     await withTransaction(async (tx) => {
       await documentChunkRepository.deleteByDocumentId(documentId, tx);
       await documentVersionRepository.deleteByDocumentId(documentId, tx);
       await documentRepository.hardDelete(documentId, tx);
     });
 
-    // AFTER DB success: clean up storage files (best effort)
-    // Orphaned files are acceptable — a background cleanup job can sweep them
+    // STEP 3: Best-effort cleanup of storage files.
+    // Orphaned files are acceptable — a background cleanup job can sweep them.
     for (const key of storageKeys) {
       try {
         await documentStorageService.deleteDocument(key);
@@ -227,14 +262,15 @@ export const documentTrashService = {
       }
     }
 
-    // AFTER DB success: clean up vectors (best effort)
+    // STEP 4: Physically remove soft-deleted vectors (best effort).
+    // If this fails, the daily vector-cleanup job will purge them.
     try {
-      const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(
-        document.knowledgeBaseId
-      );
       await vectorRepository.deleteByDocumentId(embeddingConfig.collectionName, documentId);
     } catch (err) {
-      logger.warn({ documentId, err }, 'Failed to delete vectors from Qdrant after DB commit');
+      logger.warn(
+        { documentId, err },
+        'Physical vector deletion failed after DB commit — daily cleanup will handle it'
+      );
     }
 
     // Log operation

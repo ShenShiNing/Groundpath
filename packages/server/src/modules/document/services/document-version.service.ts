@@ -78,7 +78,7 @@ export const documentVersionService = {
     if (!validation.valid) {
       throw Errors.auth(
         DOCUMENT_ERROR_CODES.INVALID_FILE_TYPE as 'INVALID_FILE_TYPE',
-        validation.error!,
+        validation.error ?? 'Invalid file upload',
         400
       );
     }
@@ -208,6 +208,18 @@ export const documentVersionService = {
         { documentId, err },
         'Failed to enqueue document processing after version upload'
       );
+      documentRepository
+        .updateProcessingStatus(
+          documentId,
+          'failed',
+          `Dispatch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        .catch((updateErr) => {
+          logger.error(
+            { documentId, updateErr },
+            'Failed to mark document as failed after dispatch error'
+          );
+        });
     });
 
     return toDocumentInfo(updated!);
@@ -348,6 +360,18 @@ export const documentVersionService = {
         { documentId, err },
         'Failed to enqueue document processing after version restore'
       );
+      documentRepository
+        .updateProcessingStatus(
+          documentId,
+          'failed',
+          `Dispatch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        .catch((updateErr) => {
+          logger.error(
+            { documentId, updateErr },
+            'Failed to mark document as failed after dispatch error'
+          );
+        });
     });
 
     return toDocumentInfo(updated!);

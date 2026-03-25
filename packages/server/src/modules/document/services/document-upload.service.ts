@@ -89,15 +89,18 @@ export const documentUploadService = {
     }
     const knowledgeBaseId = options.knowledgeBaseId;
 
-    // Validate knowledge base exists and belongs to user
-    await knowledgeBaseService.validateOwnership(knowledgeBaseId, userId);
+    // NOTE: Ownership is validated atomically by lockOwnership() inside the
+    // transaction below (SELECT ... FOR UPDATE). A separate pre-check here
+    // would create a TOCTOU window — the KB could be deleted or transferred
+    // between the check and the lock, wasting upload work at best and
+    // allowing a race-condition bypass at worst.
 
     // Validate file
     const validation = documentStorageService.validateFile(file);
     if (!validation.valid) {
       throw Errors.auth(
         DOCUMENT_ERROR_CODES.INVALID_FILE_TYPE as 'INVALID_FILE_TYPE',
-        validation.error!,
+        validation.error ?? 'Invalid file upload',
         400
       );
     }
@@ -216,6 +219,18 @@ export const documentUploadService = {
       reason: 'upload',
     }).catch((err) => {
       logger.warn({ documentId: docId, err }, 'Failed to enqueue document processing');
+      documentRepository
+        .updateProcessingStatus(
+          docId,
+          'failed',
+          `Dispatch failed: ${err instanceof Error ? err.message : String(err)}`
+        )
+        .catch((updateErr) => {
+          logger.error(
+            { documentId: docId, updateErr },
+            'Failed to mark document as failed after dispatch error'
+          );
+        });
     });
 
     return toDocumentInfo(document);

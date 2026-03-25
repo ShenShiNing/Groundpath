@@ -12,7 +12,6 @@ import {
   mockTextStorageResult,
   mockMarkdownStorageResult,
   mockKnowledgeBaseId,
-  mockKnowledgeBase,
   logTestInfo,
 } from '@tests/__mocks__/document.mocks';
 
@@ -100,12 +99,10 @@ import { knowledgeBaseService } from '@modules/knowledge-base/services/knowledge
 
 // ==================== upload ====================
 // 场景：用户上传新文档
-// 职责：文件验证 → 知识库验证 → 上传到R2 → 文本提取 → 创建数据库记录
+// 职责：文件验证 → 知识库加锁校验 → 上传到R2 → 文本提取 → 创建数据库记录
 describe('documentService > upload', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default mock for knowledgeBaseService.validateOwnership
-    vi.mocked(knowledgeBaseService.validateOwnership).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseService.lockOwnership).mockResolvedValue(undefined);
   });
 
@@ -140,10 +137,6 @@ describe('documentService > upload', () => {
       { id: result.id, title: result.title }
     );
 
-    expect(knowledgeBaseService.validateOwnership).toHaveBeenCalledWith(
-      mockKnowledgeBaseId,
-      mockUserId
-    );
     expect(knowledgeBaseService.lockOwnership).toHaveBeenCalledWith(
       mockKnowledgeBaseId,
       mockUserId,
@@ -369,7 +362,38 @@ describe('documentService > upload', () => {
     expect(actual?.statusCode).toBe(400);
   });
 
-  // 场景 8：currentVersion 初始值为 1
+  // 场景 8：校验失败但未返回错误文案时，使用兜底错误信息
+  it('should fall back to a default validation message when validator omits error text', async () => {
+    vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: false } as ReturnType<
+      typeof documentStorageService.validateFile
+    >);
+
+    let actual: { code: string; statusCode: number; message: string } | null = null;
+    try {
+      await documentService.upload(
+        mockUserId,
+        {
+          buffer: Buffer.from('bad'),
+          originalname: 'broken.bin',
+          mimetype: 'application/octet-stream',
+          size: 128,
+        },
+        { knowledgeBaseId: mockKnowledgeBaseId }
+      );
+    } catch (error) {
+      actual = {
+        code: (error as AppError).code,
+        statusCode: (error as AppError).statusCode,
+        message: (error as AppError).message,
+      };
+    }
+
+    expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.INVALID_FILE_TYPE);
+    expect(actual?.statusCode).toBe(400);
+    expect(actual?.message).toBe('Invalid file upload');
+  });
+
+  // 场景 9：currentVersion 初始值为 1
   it('should set initial currentVersion to 1', async () => {
     vi.mocked(documentStorageService.validateFile).mockReturnValue({ valid: true });
     vi.mocked(documentStorageService.uploadDocument).mockResolvedValue(mockStorageResult);

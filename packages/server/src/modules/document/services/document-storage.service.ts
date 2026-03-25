@@ -56,6 +56,8 @@ function getFileExtension(filename: string): string {
   return parts.length > 1 ? (parts.pop() ?? '').toLowerCase() : '';
 }
 
+type FileValidationResult = { valid: true } | { valid: false; error: string };
+
 /**
  * Document storage service
  */
@@ -112,10 +114,11 @@ export const documentStorageService = {
   /**
    * Validate file before upload (checks both MIME type and extension)
    */
-  validateFile(file: { mimetype: string; size: number; originalname?: string }): {
-    valid: boolean;
-    error?: string;
-  } {
+  validateFile(file: {
+    mimetype: string;
+    size: number;
+    originalname?: string;
+  }): FileValidationResult {
     const ext = file.originalname ? getFileExtension(file.originalname) : '';
 
     // Check MIME type first, then fallback to extension
