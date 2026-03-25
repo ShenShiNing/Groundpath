@@ -63,6 +63,7 @@ vi.mock('@modules/knowledge-base/services/knowledge-base.service', () => ({
     getById: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    validateOwnership: vi.fn(async () => undefined),
   },
 }));
 

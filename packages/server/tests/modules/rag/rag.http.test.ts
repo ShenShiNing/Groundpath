@@ -3,6 +3,7 @@ import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
+import { AppError } from '@core/errors/app-error';
 
 const {
   authenticateMock,
@@ -117,6 +118,22 @@ describe('rag.routes http behavior', () => {
     const app = express();
     app.use(express.json({ limit: '2mb' }));
     app.use('/rag', ragRoutes);
+    app.use(
+      (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        if (err instanceof AppError) {
+          res.status(err.statusCode).json({
+            success: false,
+            error: { code: err.code, message: err.message },
+          });
+          return;
+        }
+
+        res.status(500).json({
+          success: false,
+          error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
+        });
+      }
+    );
 
     await new Promise<void>((resolve) => {
       server = app.listen(0, () => resolve());

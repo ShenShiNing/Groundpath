@@ -8,9 +8,6 @@ const mocks = vi.hoisted(() => ({
   messageService: {
     getByConversation: vi.fn(),
   },
-  conversationService: {
-    validateOwnership: vi.fn(),
-  },
   sendSuccessResponse: vi.fn(),
   handleError: vi.fn(),
 }));
@@ -21,10 +18,6 @@ vi.mock('@modules/chat/services/chat.service', () => ({
 
 vi.mock('@modules/chat/services/message.service', () => ({
   messageService: mocks.messageService,
-}));
-
-vi.mock('@modules/chat/services/conversation.service', () => ({
-  conversationService: mocks.conversationService,
 }));
 
 vi.mock('@core/errors', () => ({
@@ -57,10 +50,9 @@ function createRes(overrides: Partial<Response> = {}): Response {
 describe('messageController', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.conversationService.validateOwnership.mockResolvedValue(undefined);
   });
 
-  it('sendMessage should validate ownership and delegate SSE streaming', async () => {
+  it('sendMessage should delegate SSE streaming', async () => {
     const req = createReq({
       params: { id: 'conv-1' },
       body: { content: 'Hello', documentIds: ['123e4567-e89b-12d3-a456-426614174000'] },
@@ -69,7 +61,6 @@ describe('messageController', () => {
 
     await messageController.sendMessage(req, res);
 
-    expect(mocks.conversationService.validateOwnership).toHaveBeenCalledWith('user-1', 'conv-1');
     expect(mocks.chatService.sendMessageWithSSE).toHaveBeenCalledWith(res, {
       userId: 'user-1',
       conversationId: 'conv-1',
@@ -91,7 +82,7 @@ describe('messageController', () => {
   it('sendMessage should not call handleError when headers already sent', async () => {
     const req = createReq({ params: { id: 'conv-1' }, body: { content: 'Hi' } });
     const res = createRes({ headersSent: true });
-    mocks.conversationService.validateOwnership.mockRejectedValue(new Error('boom'));
+    mocks.chatService.sendMessageWithSSE.mockRejectedValueOnce(new Error('boom'));
 
     await messageController.sendMessage(req, res);
 
@@ -106,7 +97,6 @@ describe('messageController', () => {
 
     await messageController.listMessages(req, res);
 
-    expect(mocks.conversationService.validateOwnership).toHaveBeenCalledWith('user-1', 'conv-1');
     expect(mocks.messageService.getByConversation).toHaveBeenCalledWith('conv-1', {
       limit: 20,
       offset: 1,

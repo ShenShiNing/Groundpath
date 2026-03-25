@@ -11,6 +11,7 @@ import {
   validateQuery,
   createSanitizeMiddleware,
 } from '@core/middleware';
+import { requireKnowledgeBaseOwnership } from '@modules/knowledge-base/public/ownership';
 import {
   createKnowledgeBaseSchema,
   updateKnowledgeBaseSchema,
@@ -90,6 +91,7 @@ router.post(
   generalRateLimiter,
   ...uploadWithErrorHandling('file'),
   validateBody(knowledgeBaseDocumentUploadMetadataSchema),
+  requireKnowledgeBaseOwnership(),
   knowledgeBaseController.uploadDocument
 );
 
@@ -97,6 +99,7 @@ router.post(
 router.get(
   '/:id/documents',
   validateQuery(knowledgeBaseDocumentListParamsSchema),
+  requireKnowledgeBaseOwnership(),
   knowledgeBaseController.listDocuments
 );
 
