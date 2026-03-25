@@ -66,16 +66,16 @@
 
 ### 4.1 后端代码质量
 
-| #       | 问题                                | 文件                                  | 描述                                                                                            |
-| ------- | ----------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| M-1     | 文档处理分发失败未更新状态          | `document-upload.service.ts:213-219`  | 队列不可用时文档永久停留在 pending 状态                                                         |
-| M-2     | 删除后向量清理失败无补偿            | `document-trash.service.ts:230-238`   | DB 记录已删但 Qdrant 向量残留                                                                   |
-| M-3     | TOCTOU 漏洞                         | `document-upload.service.ts:93,136`   | 先 validateOwnership 再 lockOwnership，中间有窗口                                               |
-| M-4     | 文件过长                            | `document.repository.core.ts` (502行) | 超过 400 行限制                                                                                 |
-| M-5     | 非空断言                            | `document-upload.service.ts:98-102`   | `validation.error!` 未安全检查                                                                  |
-| ~~M-6~~ | ~~OAuth 密钥可选但无运行时验证~~ ✅ | `config/env/schema.ts:48-55`          | 在 `runtime-env-validation.ts` 中增加 OAuth 凭证成对校验，阻止半配置进入运行期                  |
-| ~~M-7~~ | ~~事务后回调只抛第一个错误~~ ✅     | `db.utils.ts:34-52`                   | 在 `flushAfterCommitCallbacks` 中保留单错透传，并在多错时抛出 `AggregateError` 聚合全部失败原因 |
-| M-8     | N+1 查询                            | `knowledge-base.service.ts:131-142`   | list + count 分两次查询                                                                         |
+| #       | 问题                                | 文件                                  | 描述                                                                                             |
+| ------- | ----------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| ~~M-1~~ | ~~文档处理分发失败未更新状态~~ ✅   | `document-upload.service.ts:213-219`  | 队列不可用时文档永久停留在 pending 状态                                                          |
+| ~~M-2~~ | ~~删除后向量清理失败无补偿~~ ✅     | `document-trash.service.ts:230-238`   | DB 记录已删但 Qdrant 向量残留                                                                    |
+| ~~M-3~~ | ~~TOCTOU 漏洞~~ ✅                  | `document-upload.service.ts:93,136`   | 先 validateOwnership 再 lockOwnership，中间有窗口                                                |
+| ~~M-4~~ | ~~文件过长~~ ✅                     | `document.repository.core.ts` (502行) | 提取游标分页至 `document.repository.cursor.ts`，core 降至 332 行                                 |
+| ~~M-5~~ | ~~非空断言~~ ✅                     | `document-upload.service.ts:99-103`   | `validateFile` 改为判别联合并为错误文案加兜底，已移除 `validation.error!`                        |
+| ~~M-6~~ | ~~OAuth 密钥可选但无运行时验证~~ ✅ | `config/env/schema.ts:48-55`          | 在 `runtime-env-validation.ts` 中增加 OAuth 凭证成对校验，阻止半配置进入运行期                   |
+| ~~M-7~~ | ~~事务后回调只抛第一个错误~~ ✅     | `db.utils.ts:34-52`                   | 在 `flushAfterCommitCallbacks` 中保留单错透传，并在多错时抛出 `AggregateError` 聚合全部失败原因  |
+| ~~M-8~~ | ~~N+1 查询~~ ✅                     | `knowledge-base.service.ts:131-142`   | 分页列表改为 repository 单次查询回传 `knowledgeBases + total`，service 不再额外执行 `count` 查询 |
 
 ### 4.2 认证与授权
 

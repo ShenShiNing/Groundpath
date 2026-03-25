@@ -65,7 +65,6 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
     findByIdAndUser: vi.fn(),
     lockByIdAndUser: vi.fn(),
     listByUser: vi.fn(),
-    countByUser: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
     findById: vi.fn(),
@@ -154,10 +153,10 @@ describe('knowledgeBaseService', () => {
     vi.mocked(knowledgeBaseRepository.update).mockResolvedValue(mockKnowledgeBase);
     vi.mocked(knowledgeBaseRepository.listByUser).mockResolvedValue({
       knowledgeBases: [mockKnowledgeBase],
+      total: 1,
       hasMore: false,
       nextCursor: null,
     });
-    vi.mocked(knowledgeBaseRepository.countByUser).mockResolvedValue(1);
     vi.mocked(documentRepository.listByKnowledgeBaseId).mockResolvedValue([]);
     vi.mocked(documentRepository.hardDeleteByKnowledgeBaseId).mockResolvedValue(undefined);
     vi.mocked(documentVersionRepository.listByDocumentIds).mockResolvedValue([]);
@@ -271,7 +270,6 @@ describe('knowledgeBaseService', () => {
       pageSize: 20,
       cursor: undefined,
     });
-    expect(knowledgeBaseRepository.countByUser).toHaveBeenCalledWith(mockUserId);
     expect(result).toMatchObject({
       knowledgeBases: [
         {

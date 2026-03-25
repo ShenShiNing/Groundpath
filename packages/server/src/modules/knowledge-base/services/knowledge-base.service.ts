@@ -130,11 +130,10 @@ export const knowledgeBaseService = {
    */
   async list(userId: string, params?: KnowledgeBaseListParams): Promise<KnowledgeBaseListResponse> {
     const pageSize = normalizePageSize(params?.pageSize ?? 20);
-
-    const [{ knowledgeBases, hasMore, nextCursor }, total] = await Promise.all([
-      knowledgeBaseRepository.listByUser(userId, { cursor: params?.cursor, pageSize }),
-      knowledgeBaseRepository.countByUser(userId),
-    ]);
+    const { knowledgeBases, total, hasMore, nextCursor } = await knowledgeBaseRepository.listByUser(
+      userId,
+      { cursor: params?.cursor, pageSize }
+    );
 
     return {
       knowledgeBases: knowledgeBases.map(toKnowledgeBaseListItem),

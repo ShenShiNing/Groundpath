@@ -220,25 +220,49 @@ describe('knowledgeBaseRepository', () => {
   });
 
   it('should list knowledge bases by user ordered by creation time with stable id tie-breaker', async () => {
-    selectFromMock.mockReturnValueOnce({ where: selectWhereMock });
-    selectWhereMock.mockReturnValueOnce({ orderBy: selectOrderByMock });
-    selectOrderByMock.mockReturnValueOnce({ limit: selectLimitMock });
-    selectLimitMock.mockResolvedValueOnce([mockKnowledgeBase]);
+    executeMock.mockResolvedValueOnce([
+      [
+        {
+          ...mockKnowledgeBase,
+          totalCount: 1,
+        },
+      ],
+    ]);
 
     const result = await knowledgeBaseRepository.listByUser('user-1');
 
-    expect(eqMock).toHaveBeenCalledWith(knowledgeBasesMock.userId, 'user-1');
-    expect(isNullMock).toHaveBeenCalledWith(knowledgeBasesMock.deletedAt);
-    expect(andMock).toHaveBeenCalledTimes(1);
-    expect(descMock).toHaveBeenNthCalledWith(1, knowledgeBasesMock.createdAt);
-    expect(descMock).toHaveBeenNthCalledWith(2, knowledgeBasesMock.id);
-    expect(selectOrderByMock).toHaveBeenCalledWith(
-      { type: 'desc', value: knowledgeBasesMock.createdAt },
-      { type: 'desc', value: knowledgeBasesMock.id }
-    );
-    expect(selectLimitMock).toHaveBeenCalledWith(21);
+    expect(executeMock).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       knowledgeBases: [mockKnowledgeBase],
+      total: 1,
+      hasMore: false,
+      nextCursor: null,
+    });
+  });
+
+  it('should fall back to countByUser when a cursor page is empty', async () => {
+    executeMock.mockResolvedValueOnce([[]]);
+    const countByUserSpy = vi
+      .spyOn(knowledgeBaseRepository, 'countByUser')
+      .mockResolvedValueOnce(3);
+
+    const result = await knowledgeBaseRepository.listByUser('user-1', {
+      cursor: Buffer.from(
+        JSON.stringify({
+          id: 'kb-9',
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+          value: now.toISOString(),
+        }),
+        'utf8'
+      ).toString('base64url'),
+    });
+
+    expect(executeMock).toHaveBeenCalledTimes(1);
+    expect(countByUserSpy).toHaveBeenCalledWith('user-1');
+    expect(result).toEqual({
+      knowledgeBases: [],
+      total: 3,
       hasMore: false,
       nextCursor: null,
     });
