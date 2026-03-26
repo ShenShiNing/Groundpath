@@ -89,7 +89,7 @@
 
 | #    | 问题                 | 文件                                    | 描述                                    |
 | ---- | -------------------- | --------------------------------------- | --------------------------------------- |
-| M-12 | 分页元数据定义重复   | `pagination.ts` + `shared/types/api.ts` | 两处维护同一结构                        |
+| ~~M-12~~ | ~~分页元数据定义重复~~ ✅   | `pagination.ts` + `shared/types/api.ts` | 服务端分页工具改为复用共享类型定义      |
 | M-13 | 控制器实现风格不一致 | 各 controller                           | 部分用 asyncHandler，部分用 try-catch   |
 | M-14 | 参数提取方法不一致   | 各 controller                           | `requireUserId(req)` vs `req.user!.sub` |
 | M-15 | 部分端点缺少速率限制 | `trash` 相关路由                        | 批量删除无保护                          |
