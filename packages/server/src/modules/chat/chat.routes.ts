@@ -1,5 +1,12 @@
 import { Router } from 'express';
-import { listMessagesSchema, sendMessageSchema } from '@groundpath/shared/schemas';
+import {
+  createConversationSchema,
+  listConversationsSchema,
+  listMessagesSchema,
+  searchConversationsSchema,
+  sendMessageSchema,
+  updateConversationSchema,
+} from '@groundpath/shared/schemas';
 import { authenticate, aiRateLimiter, validateBody, validateQuery } from '@core/middleware';
 import { conversationController } from './controllers/conversation.controller';
 import { messageController } from './controllers/message.controller';
@@ -11,11 +18,23 @@ const router = Router();
 router.use(authenticate);
 
 // Conversation endpoints
-router.post('/conversations', conversationController.create);
-router.get('/conversations', conversationController.list);
-router.get('/conversations/search', conversationController.search);
+router.post(
+  '/conversations',
+  validateBody(createConversationSchema),
+  conversationController.create
+);
+router.get('/conversations', validateQuery(listConversationsSchema), conversationController.list);
+router.get(
+  '/conversations/search',
+  validateQuery(searchConversationsSchema),
+  conversationController.search
+);
 router.get('/conversations/:id', conversationController.getById);
-router.patch('/conversations/:id', conversationController.update);
+router.patch(
+  '/conversations/:id',
+  validateBody(updateConversationSchema),
+  conversationController.update
+);
 router.delete('/conversations/:id', conversationController.delete);
 
 // Message endpoints

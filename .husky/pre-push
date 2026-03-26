@@ -1,1 +1,2 @@
+#!/usr/bin/env sh
 pnpm -F @groundpath/server db:drift-check

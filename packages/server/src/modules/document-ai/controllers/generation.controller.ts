@@ -4,9 +4,10 @@
  */
 
 import type { Request, Response } from 'express';
-import { generateRequestSchema, expandRequestSchema } from '@groundpath/shared/schemas';
+import type { GenerateRequestParsed, ExpandRequestParsed } from '@groundpath/shared/schemas';
 import { generationService } from '../services/generation.service';
-import { sendSuccessResponse, handleError } from '@core/errors';
+import { sendSuccessResponse, handleError, asyncHandler } from '@core/errors';
+import { getValidatedBody } from '@core/middleware';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;
@@ -16,40 +17,35 @@ export const generationController = {
   /**
    * POST /api/document-ai/generate - Generate new content (non-streaming)
    */
-  async generate(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user!.sub;
-      const parsed = generateRequestSchema.parse(req.body);
+  generate: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const parsed = getValidatedBody<GenerateRequestParsed>(res);
 
-      const result = await generationService.generate({
-        userId,
-        prompt: parsed.prompt,
-        template: parsed.template,
-        style: parsed.style,
-        language: parsed.language,
-        maxLength: parsed.maxLength,
-        knowledgeBaseId: parsed.knowledgeBaseId,
-        contextDocumentIds: parsed.contextDocumentIds,
-      });
+    const result = await generationService.generate({
+      userId,
+      prompt: parsed.prompt,
+      template: parsed.template,
+      style: parsed.style,
+      language: parsed.language,
+      maxLength: parsed.maxLength,
+      knowledgeBaseId: parsed.knowledgeBaseId,
+      contextDocumentIds: parsed.contextDocumentIds,
+    });
 
-      sendSuccessResponse(res, result);
-    } catch (error) {
-      handleError(error, res, 'Generate content');
-    }
-  },
+    sendSuccessResponse(res, result);
+  }),
 
   /**
    * POST /api/document-ai/generate/stream - Stream content generation (SSE)
    */
-  async streamGenerate(req: Request, res: Response): Promise<void> {
+  streamGenerate: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const parsed = getValidatedBody<GenerateRequestParsed>(res);
+
+    const abortController = new AbortController();
+    res.on('close', () => abortController.abort());
+
     try {
-      const userId = req.user!.sub;
-      const parsed = generateRequestSchema.parse(req.body);
-
-      // Create abort controller for client disconnect
-      const abortController = new AbortController();
-      res.on('close', () => abortController.abort());
-
       await generationService.streamGenerate(res, {
         userId,
         prompt: parsed.prompt,
@@ -66,46 +62,41 @@ export const generationController = {
         handleError(error, res, 'Stream generate content');
       }
     }
-  },
+  }),
 
   /**
    * POST /api/document-ai/:id/expand - Expand existing document (non-streaming)
    */
-  async expand(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user!.sub;
-      const documentId = paramAsString(req.params.id);
-      const parsed = expandRequestSchema.parse(req.body);
+  expand: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const documentId = paramAsString(req.params.id);
+    const parsed = getValidatedBody<ExpandRequestParsed>(res);
 
-      const result = await generationService.expand({
-        userId,
-        documentId,
-        instruction: parsed.instruction,
-        position: parsed.position,
-        style: parsed.style,
-        maxLength: parsed.maxLength,
-        knowledgeBaseId: parsed.knowledgeBaseId,
-      });
+    const result = await generationService.expand({
+      userId,
+      documentId,
+      instruction: parsed.instruction,
+      position: parsed.position,
+      style: parsed.style,
+      maxLength: parsed.maxLength,
+      knowledgeBaseId: parsed.knowledgeBaseId,
+    });
 
-      sendSuccessResponse(res, result);
-    } catch (error) {
-      handleError(error, res, 'Expand document');
-    }
-  },
+    sendSuccessResponse(res, result);
+  }),
 
   /**
    * POST /api/document-ai/:id/expand/stream - Stream document expansion (SSE)
    */
-  async streamExpand(req: Request, res: Response): Promise<void> {
+  streamExpand: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const documentId = paramAsString(req.params.id);
+    const parsed = getValidatedBody<ExpandRequestParsed>(res);
+
+    const abortController = new AbortController();
+    res.on('close', () => abortController.abort());
+
     try {
-      const userId = req.user!.sub;
-      const documentId = paramAsString(req.params.id);
-      const parsed = expandRequestSchema.parse(req.body);
-
-      // Create abort controller for client disconnect
-      const abortController = new AbortController();
-      res.on('close', () => abortController.abort());
-
       await generationService.streamExpand(res, {
         userId,
         documentId,
@@ -121,5 +112,5 @@ export const generationController = {
         handleError(error, res, 'Stream expand document');
       }
     }
-  },
+  }),
 };

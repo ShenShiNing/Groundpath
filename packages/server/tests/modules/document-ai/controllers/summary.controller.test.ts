@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared';
 import { AppError } from '@core/errors';
 import {
@@ -8,8 +8,6 @@ import {
   mockSummaryResponse,
   logTestInfo,
 } from '@tests/__mocks__/document-ai.mocks';
-
-// ==================== Mocks ====================
 
 vi.mock('@modules/document-ai/services/summary.service', () => ({
   summaryService: {
@@ -33,14 +31,14 @@ vi.mock('@core/errors', async (importOriginal) => {
   };
 });
 
-// Import after mocks
 import { summaryController } from '@modules/document-ai/controllers/summary.controller';
 import { summaryService } from '@modules/document-ai/services/summary.service';
 import { sendSuccessResponse, handleError } from '@core/errors';
 
-// ==================== Test Helpers ====================
-
-function createMockRequest(params: Record<string, string> = {}, body: object = {}): Request {
+function createMockRequest(
+  params: Record<string, string | string[]> = {},
+  body: object = {}
+): Request {
   return {
     user: { sub: mockUserId },
     params,
@@ -48,8 +46,8 @@ function createMockRequest(params: Record<string, string> = {}, body: object = {
   } as unknown as Request;
 }
 
-function createMockResponse() {
-  const res = {
+function createMockResponse(validatedBody?: object) {
+  return {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
     setHeader: vi.fn().mockReturnThis(),
@@ -58,17 +56,29 @@ function createMockResponse() {
     on: vi.fn().mockReturnThis(),
     off: vi.fn().mockReturnThis(),
     headersSent: false,
+    locals: {
+      validated: {
+        body: validatedBody,
+      },
+    },
   } as unknown as Response;
-  return res;
 }
 
-// ==================== generate ====================
+async function callController(
+  handler: (req: Request, res: Response, next: NextFunction) => void,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  handler(req, res, next);
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
 describe('summaryController > generate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功生成摘要
   it('should generate summary and return success response', async () => {
     const mockResult = {
       summary: mockSummaryResponse,
@@ -78,10 +88,16 @@ describe('summaryController > generate', () => {
     };
     vi.mocked(summaryService.generateSummary).mockResolvedValue(mockResult);
 
+    const validatedBody = {
+      length: 'medium',
+      language: undefined,
+      focusAreas: undefined,
+    };
     const req = createMockRequest({ id: mockDocumentId }, { length: 'medium' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await summaryController.generate(req, res);
+    await callController(summaryController.generate, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId, length: 'medium' },
@@ -97,9 +113,9 @@ describe('summaryController > generate', () => {
       focusAreas: undefined,
     });
     expect(sendSuccessResponse).toHaveBeenCalledWith(res, mockResult);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：传递所有参数
   it('should pass all parameters to service', async () => {
     const mockResult = {
       summary: mockSummaryResponse,
@@ -109,13 +125,19 @@ describe('summaryController > generate', () => {
     };
     vi.mocked(summaryService.generateSummary).mockResolvedValue(mockResult);
 
+    const validatedBody = {
+      length: 'detailed',
+      language: 'en',
+      focusAreas: ['技术', '应用'],
+    };
     const req = createMockRequest(
       { id: mockDocumentId },
       { length: 'detailed', language: 'en', focusAreas: ['技术', '应用'] }
     );
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await summaryController.generate(req, res);
+    await callController(summaryController.generate, req, res, next);
 
     logTestInfo(
       { length: 'detailed', language: 'en', focusAreas: ['技术', '应用'] },
@@ -130,10 +152,10 @@ describe('summaryController > generate', () => {
       language: 'en',
       focusAreas: ['技术', '应用'],
     });
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：服务抛出错误
-  it('should handle service errors', async () => {
+  it('should forward service errors to next', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.CONTENT_EMPTY as 'DOCUMENT_AI_CONTENT_EMPTY',
       'Document has no content',
@@ -141,21 +163,26 @@ describe('summaryController > generate', () => {
     );
     vi.mocked(summaryService.generateSummary).mockRejectedValue(error);
 
+    const validatedBody = {
+      length: 'medium',
+      language: undefined,
+      focusAreas: undefined,
+    };
     const req = createMockRequest({ id: mockDocumentId }, { length: 'medium' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
 
-    await summaryController.generate(req, res);
+    await callController(summaryController.generate, req, res, next);
 
-    logTestInfo(
-      { documentId: mockDocumentId },
-      { handleErrorCalled: true },
-      { handleErrorCalled: vi.mocked(handleError).mock.calls.length > 0 }
-    );
+    logTestInfo({ documentId: mockDocumentId }, { nextCalled: true }, { nextError });
 
-    expect(handleError).toHaveBeenCalledWith(error, res, 'Generate summary');
+    expect(nextError).toBe(error);
+    expect(handleError).not.toHaveBeenCalled();
   });
 
-  // 场景 4：处理数组形式的 params.id
   it('should handle array-style params.id', async () => {
     const mockResult = {
       summary: mockSummaryResponse,
@@ -165,35 +192,46 @@ describe('summaryController > generate', () => {
     };
     vi.mocked(summaryService.generateSummary).mockResolvedValue(mockResult);
 
+    const validatedBody = {
+      length: 'medium',
+      language: undefined,
+      focusAreas: undefined,
+    };
     const req = {
       user: { sub: mockUserId },
       params: { id: [mockDocumentId, 'ignored'] },
       body: { length: 'medium' },
     } as unknown as Request;
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await summaryController.generate(req, res);
+    await callController(summaryController.generate, req, res, next);
 
     expect(summaryService.generateSummary).toHaveBeenCalledWith(
       expect.objectContaining({ documentId: mockDocumentId })
     );
+    expect(next).not.toHaveBeenCalled();
   });
 });
 
-// ==================== stream ====================
 describe('summaryController > stream', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功启动流式摘要
   it('should call streamSummary service', async () => {
     vi.mocked(summaryService.streamSummary).mockResolvedValue(undefined);
 
+    const validatedBody = {
+      length: 'medium',
+      language: undefined,
+      focusAreas: undefined,
+    };
     const req = createMockRequest({ id: mockDocumentId }, { length: 'medium' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await summaryController.stream(req, res);
+    await callController(summaryController.stream, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId },
@@ -210,16 +248,22 @@ describe('summaryController > stream', () => {
         signal: expect.any(AbortSignal),
       })
     );
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：注册 close 事件监听器
   it('should register close event listener for abort', async () => {
     vi.mocked(summaryService.streamSummary).mockResolvedValue(undefined);
 
+    const validatedBody = {
+      length: 'medium',
+      language: undefined,
+      focusAreas: undefined,
+    };
     const req = createMockRequest({ id: mockDocumentId }, { length: 'medium' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await summaryController.stream(req, res);
+    await callController(summaryController.stream, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId },
@@ -228,9 +272,9 @@ describe('summaryController > stream', () => {
     );
 
     expect(res.on).toHaveBeenCalledWith('close', expect.any(Function));
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：流式服务抛出错误且 headers 未发送
   it('should handle error when headers not sent', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.STREAMING_FAILED as 'DOCUMENT_AI_STREAMING_FAILED',
@@ -239,11 +283,17 @@ describe('summaryController > stream', () => {
     );
     vi.mocked(summaryService.streamSummary).mockRejectedValue(error);
 
+    const validatedBody = {
+      length: 'medium',
+      language: undefined,
+      focusAreas: undefined,
+    };
     const req = createMockRequest({ id: mockDocumentId }, { length: 'medium' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
     (res as { headersSent: boolean }).headersSent = false;
+    const next = vi.fn() as unknown as NextFunction;
 
-    await summaryController.stream(req, res);
+    await callController(summaryController.stream, req, res, next);
 
     logTestInfo(
       { headersSent: false },
@@ -252,18 +302,24 @@ describe('summaryController > stream', () => {
     );
 
     expect(handleError).toHaveBeenCalledWith(error, res, 'Stream summary');
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 4：流式服务抛出错误但 headers 已发送
   it('should not call handleError when headers already sent', async () => {
     const error = new Error('Stream interrupted');
     vi.mocked(summaryService.streamSummary).mockRejectedValue(error);
 
+    const validatedBody = {
+      length: 'medium',
+      language: undefined,
+      focusAreas: undefined,
+    };
     const req = createMockRequest({ id: mockDocumentId }, { length: 'medium' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
     (res as { headersSent: boolean }).headersSent = true;
+    const next = vi.fn() as unknown as NextFunction;
 
-    await summaryController.stream(req, res);
+    await callController(summaryController.stream, req, res, next);
 
     logTestInfo(
       { headersSent: true },
@@ -272,5 +328,6 @@ describe('summaryController > stream', () => {
     );
 
     expect(handleError).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
   });
 });

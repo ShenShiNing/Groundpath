@@ -10,7 +10,7 @@ import type {
   ExtractEntitiesRequestParsed,
 } from '@groundpath/shared/schemas';
 import { analysisService } from '../services/analysis.service';
-import { sendSuccessResponse, handleError } from '@core/errors';
+import { sendSuccessResponse, asyncHandler } from '@core/errors';
 import { getValidatedBody } from '@core/middleware';
 
 function paramAsString(value: string | string[] | undefined): string {
@@ -21,80 +21,64 @@ export const analysisController = {
   /**
    * POST /api/document-ai/:id/analyze - Perform comprehensive analysis
    */
-  async analyze(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user!.sub;
-      const documentId = paramAsString(req.params.id);
-      const parsed = getValidatedBody<AnalysisRequestParsed>(res);
+  analyze: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const documentId = paramAsString(req.params.id);
+    const parsed = getValidatedBody<AnalysisRequestParsed>(res);
 
-      const result = await analysisService.analyze({
-        userId,
-        documentId,
-        analysisTypes: parsed.analysisTypes,
-        maxKeywords: parsed.maxKeywords,
-        maxEntities: parsed.maxEntities,
-        maxTopics: parsed.maxTopics,
-      });
+    const result = await analysisService.analyze({
+      userId,
+      documentId,
+      analysisTypes: parsed.analysisTypes,
+      maxKeywords: parsed.maxKeywords,
+      maxEntities: parsed.maxEntities,
+      maxTopics: parsed.maxTopics,
+    });
 
-      sendSuccessResponse(res, result);
-    } catch (error) {
-      handleError(error, res, 'Analyze document');
-    }
-  },
+    sendSuccessResponse(res, result);
+  }),
 
   /**
    * POST /api/document-ai/:id/analyze/keywords - Extract keywords only
    */
-  async extractKeywords(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user!.sub;
-      const documentId = paramAsString(req.params.id);
-      const { maxKeywords, language } = getValidatedBody<ExtractKeywordsRequestParsed>(res);
+  extractKeywords: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const documentId = paramAsString(req.params.id);
+    const { maxKeywords, language } = getValidatedBody<ExtractKeywordsRequestParsed>(res);
 
-      const result = await analysisService.extractKeywords(userId, documentId, {
-        maxKeywords,
-        language,
-      });
+    const result = await analysisService.extractKeywords(userId, documentId, {
+      maxKeywords,
+      language,
+    });
 
-      sendSuccessResponse(res, result);
-    } catch (error) {
-      handleError(error, res, 'Extract keywords');
-    }
-  },
+    sendSuccessResponse(res, result);
+  }),
 
   /**
    * POST /api/document-ai/:id/analyze/entities - Extract entities only
    */
-  async extractEntities(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user!.sub;
-      const documentId = paramAsString(req.params.id);
-      const { maxEntities, language } = getValidatedBody<ExtractEntitiesRequestParsed>(res);
+  extractEntities: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const documentId = paramAsString(req.params.id);
+    const { maxEntities, language } = getValidatedBody<ExtractEntitiesRequestParsed>(res);
 
-      const result = await analysisService.extractEntities(userId, documentId, {
-        maxEntities,
-        language,
-      });
+    const result = await analysisService.extractEntities(userId, documentId, {
+      maxEntities,
+      language,
+    });
 
-      sendSuccessResponse(res, result);
-    } catch (error) {
-      handleError(error, res, 'Extract entities');
-    }
-  },
+    sendSuccessResponse(res, result);
+  }),
 
   /**
    * GET /api/document-ai/:id/analyze/structure - Get document structure (no LLM)
    */
-  async getStructure(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user!.sub;
-      const documentId = paramAsString(req.params.id);
+  getStructure: asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    const documentId = paramAsString(req.params.id);
 
-      const result = await analysisService.getStructure(userId, documentId);
+    const result = await analysisService.getStructure(userId, documentId);
 
-      sendSuccessResponse(res, result);
-    } catch (error) {
-      handleError(error, res, 'Get document structure');
-    }
-  },
+    sendSuccessResponse(res, result);
+  }),
 };

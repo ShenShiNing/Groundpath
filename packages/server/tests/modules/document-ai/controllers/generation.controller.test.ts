@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared';
 import { AppError } from '@core/errors';
 import {
@@ -10,8 +10,6 @@ import {
   mockExpandResponse,
   logTestInfo,
 } from '@tests/__mocks__/document-ai.mocks';
-
-// ==================== Mocks ====================
 
 vi.mock('@modules/document-ai/services/generation.service', () => ({
   generationService: {
@@ -37,14 +35,14 @@ vi.mock('@core/errors', async (importOriginal) => {
   };
 });
 
-// Import after mocks
 import { generationController } from '@modules/document-ai/controllers/generation.controller';
 import { generationService } from '@modules/document-ai/services/generation.service';
 import { sendSuccessResponse, handleError } from '@core/errors';
 
-// ==================== Test Helpers ====================
-
-function createMockRequest(params: Record<string, string> = {}, body: object = {}): Request {
+function createMockRequest(
+  params: Record<string, string | string[]> = {},
+  body: object = {}
+): Request {
   return {
     user: { sub: mockUserId },
     params,
@@ -52,8 +50,8 @@ function createMockRequest(params: Record<string, string> = {}, body: object = {
   } as unknown as Request;
 }
 
-function createMockResponse() {
-  const res = {
+function createMockResponse(validatedBody?: object) {
+  return {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
     setHeader: vi.fn().mockReturnThis(),
@@ -62,17 +60,29 @@ function createMockResponse() {
     on: vi.fn().mockReturnThis(),
     off: vi.fn().mockReturnThis(),
     headersSent: false,
+    locals: {
+      validated: {
+        body: validatedBody,
+      },
+    },
   } as unknown as Response;
-  return res;
 }
 
-// ==================== generate ====================
+async function callController(
+  handler: (req: Request, res: Response, next: NextFunction) => void,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  handler(req, res, next);
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
 describe('generationController > generate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功生成内容
   it('should generate content and return success response', async () => {
     const mockResult = {
       content: mockGenerationResponse,
@@ -82,16 +92,20 @@ describe('generationController > generate', () => {
     };
     vi.mocked(generationService.generate).mockResolvedValue(mockResult);
 
-    const req = createMockRequest(
-      {},
-      {
-        prompt: '写一篇关于人工智能的文章',
-        style: 'formal',
-      }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      prompt: '写一篇关于人工智能的文章',
+      template: undefined,
+      style: 'formal',
+      language: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+      contextDocumentIds: undefined,
+    };
+    const req = createMockRequest({}, { prompt: 'raw prompt' });
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.generate(req, res);
+    await callController(generationController.generate, req, res, next);
 
     logTestInfo(
       { prompt: '写一篇关于人工智能的文章', style: 'formal' },
@@ -110,9 +124,9 @@ describe('generationController > generate', () => {
       contextDocumentIds: undefined,
     });
     expect(sendSuccessResponse).toHaveBeenCalledWith(res, mockResult);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：传递所有参数（包括 RAG）
   it('should pass all parameters including RAG options', async () => {
     const mockResult = {
       content: mockGenerationResponse,
@@ -123,21 +137,20 @@ describe('generationController > generate', () => {
     };
     vi.mocked(generationService.generate).mockResolvedValue(mockResult);
 
-    const req = createMockRequest(
-      {},
-      {
-        prompt: '生成技术报告',
-        template: 'report',
-        style: 'technical',
-        language: 'zh',
-        maxLength: 5000,
-        knowledgeBaseId: mockKnowledgeBaseId,
-        contextDocumentIds: [mockDocumentId],
-      }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      prompt: '生成技术报告',
+      template: 'report',
+      style: 'technical',
+      language: 'zh',
+      maxLength: 5000,
+      knowledgeBaseId: mockKnowledgeBaseId,
+      contextDocumentIds: [mockDocumentId],
+    };
+    const req = createMockRequest({}, validatedBody);
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.generate(req, res);
+    await callController(generationController.generate, req, res, next);
 
     logTestInfo(
       { template: 'report', knowledgeBaseId: mockKnowledgeBaseId },
@@ -155,10 +168,10 @@ describe('generationController > generate', () => {
       knowledgeBaseId: mockKnowledgeBaseId,
       contextDocumentIds: [mockDocumentId],
     });
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：服务抛出错误
-  it('should handle service errors', async () => {
+  it('should forward service errors to next', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.GENERATION_FAILED as 'DOCUMENT_AI_GENERATION_FAILED',
       'Generation failed',
@@ -166,29 +179,51 @@ describe('generationController > generate', () => {
     );
     vi.mocked(generationService.generate).mockRejectedValue(error);
 
+    const validatedBody = {
+      prompt: 'Test prompt',
+      template: undefined,
+      style: undefined,
+      language: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+      contextDocumentIds: undefined,
+    };
     const req = createMockRequest({}, { prompt: 'Test prompt' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
 
-    await generationController.generate(req, res);
+    await callController(generationController.generate, req, res, next);
 
-    expect(handleError).toHaveBeenCalledWith(error, res, 'Generate content');
+    expect(nextError).toBe(error);
+    expect(handleError).not.toHaveBeenCalled();
   });
 });
 
-// ==================== streamGenerate ====================
 describe('generationController > streamGenerate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功启动流式生成
   it('should call streamGenerate service', async () => {
     vi.mocked(generationService.streamGenerate).mockResolvedValue(undefined);
 
+    const validatedBody = {
+      prompt: 'Generate content',
+      template: undefined,
+      style: 'formal',
+      language: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+      contextDocumentIds: undefined,
+    };
     const req = createMockRequest({}, { prompt: 'Generate content', style: 'formal' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamGenerate(req, res);
+    await callController(generationController.streamGenerate, req, res, next);
 
     logTestInfo(
       { prompt: 'Generate content' },
@@ -205,21 +240,31 @@ describe('generationController > streamGenerate', () => {
         signal: expect.any(AbortSignal),
       })
     );
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：注册 close 事件监听器
   it('should register close event listener for abort', async () => {
     vi.mocked(generationService.streamGenerate).mockResolvedValue(undefined);
 
+    const validatedBody = {
+      prompt: 'Test',
+      template: undefined,
+      style: undefined,
+      language: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+      contextDocumentIds: undefined,
+    };
     const req = createMockRequest({}, { prompt: 'Test' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamGenerate(req, res);
+    await callController(generationController.streamGenerate, req, res, next);
 
     expect(res.on).toHaveBeenCalledWith('close', expect.any(Function));
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：流式服务抛出错误且 headers 未发送
   it('should handle error when headers not sent', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.STREAMING_FAILED as 'DOCUMENT_AI_STREAMING_FAILED',
@@ -228,37 +273,56 @@ describe('generationController > streamGenerate', () => {
     );
     vi.mocked(generationService.streamGenerate).mockRejectedValue(error);
 
+    const validatedBody = {
+      prompt: 'Test',
+      template: undefined,
+      style: undefined,
+      language: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+      contextDocumentIds: undefined,
+    };
     const req = createMockRequest({}, { prompt: 'Test' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
     (res as { headersSent: boolean }).headersSent = false;
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamGenerate(req, res);
+    await callController(generationController.streamGenerate, req, res, next);
 
     expect(handleError).toHaveBeenCalledWith(error, res, 'Stream generate content');
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 4：流式服务抛出错误但 headers 已发送
   it('should not call handleError when headers already sent', async () => {
     const error = new Error('Stream interrupted');
     vi.mocked(generationService.streamGenerate).mockRejectedValue(error);
 
+    const validatedBody = {
+      prompt: 'Test',
+      template: undefined,
+      style: undefined,
+      language: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+      contextDocumentIds: undefined,
+    };
     const req = createMockRequest({}, { prompt: 'Test' });
-    const res = createMockResponse();
+    const res = createMockResponse(validatedBody);
     (res as { headersSent: boolean }).headersSent = true;
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamGenerate(req, res);
+    await callController(generationController.streamGenerate, req, res, next);
 
     expect(handleError).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
   });
 });
 
-// ==================== expand ====================
 describe('generationController > expand', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功扩展文档
   it('should expand document and return success response', async () => {
     const mockResult = {
       content: mockExpandResponse,
@@ -268,13 +332,18 @@ describe('generationController > expand', () => {
     };
     vi.mocked(generationService.expand).mockResolvedValue(mockResult);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      { instruction: '添加更多细节', position: 'after' }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: '添加更多细节',
+      position: 'after',
+      style: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.expand(req, res);
+    await callController(generationController.expand, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId, instruction: '添加更多细节', position: 'after' },
@@ -292,9 +361,9 @@ describe('generationController > expand', () => {
       knowledgeBaseId: undefined,
     });
     expect(sendSuccessResponse).toHaveBeenCalledWith(res, mockResult);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：传递所有参数
   it('should pass all parameters to service', async () => {
     const mockResult = {
       content: mockExpandResponse,
@@ -304,19 +373,18 @@ describe('generationController > expand', () => {
     };
     vi.mocked(generationService.expand).mockResolvedValue(mockResult);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      {
-        instruction: '扩展内容',
-        position: 'before',
-        style: 'academic',
-        maxLength: 2000,
-        knowledgeBaseId: mockKnowledgeBaseId,
-      }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: '扩展内容',
+      position: 'before',
+      style: 'academic',
+      maxLength: 2000,
+      knowledgeBaseId: mockKnowledgeBaseId,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.expand(req, res);
+    await callController(generationController.expand, req, res, next);
 
     expect(generationService.expand).toHaveBeenCalledWith({
       userId: mockUserId,
@@ -327,10 +395,10 @@ describe('generationController > expand', () => {
       maxLength: 2000,
       knowledgeBaseId: mockKnowledgeBaseId,
     });
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：服务抛出错误
-  it('should handle service errors', async () => {
+  it('should forward service errors to next', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.CONTENT_EMPTY as 'DOCUMENT_AI_CONTENT_EMPTY',
       'No content to expand',
@@ -338,35 +406,47 @@ describe('generationController > expand', () => {
     );
     vi.mocked(generationService.expand).mockRejectedValue(error);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      { instruction: 'Test', position: 'after' }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: 'Test',
+      position: 'after',
+      style: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
 
-    await generationController.expand(req, res);
+    await callController(generationController.expand, req, res, next);
 
-    expect(handleError).toHaveBeenCalledWith(error, res, 'Expand document');
+    expect(nextError).toBe(error);
+    expect(handleError).not.toHaveBeenCalled();
   });
 });
 
-// ==================== streamExpand ====================
 describe('generationController > streamExpand', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功启动流式扩展
   it('should call streamExpand service', async () => {
     vi.mocked(generationService.streamExpand).mockResolvedValue(undefined);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      { instruction: '扩展内容', position: 'after' }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: '扩展内容',
+      position: 'after',
+      style: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamExpand(req, res);
+    await callController(generationController.streamExpand, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId, instruction: '扩展内容' },
@@ -384,24 +464,29 @@ describe('generationController > streamExpand', () => {
         signal: expect.any(AbortSignal),
       })
     );
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：注册 close 事件监听器
   it('should register close event listener for abort', async () => {
     vi.mocked(generationService.streamExpand).mockResolvedValue(undefined);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      { instruction: 'Test', position: 'after' }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: 'Test',
+      position: 'after',
+      style: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamExpand(req, res);
+    await callController(generationController.streamExpand, req, res, next);
 
     expect(res.on).toHaveBeenCalledWith('close', expect.any(Function));
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：流式服务抛出错误且 headers 未发送
   it('should handle error when headers not sent', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.STREAMING_FAILED as 'DOCUMENT_AI_STREAMING_FAILED',
@@ -410,52 +495,61 @@ describe('generationController > streamExpand', () => {
     );
     vi.mocked(generationService.streamExpand).mockRejectedValue(error);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      { instruction: 'Test', position: 'after' }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: 'Test',
+      position: 'after',
+      style: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
     (res as { headersSent: boolean }).headersSent = false;
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamExpand(req, res);
+    await callController(generationController.streamExpand, req, res, next);
 
     expect(handleError).toHaveBeenCalledWith(error, res, 'Stream expand document');
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 4：流式服务抛出错误但 headers 已发送
   it('should not call handleError when headers already sent', async () => {
     const error = new Error('Stream interrupted');
     vi.mocked(generationService.streamExpand).mockRejectedValue(error);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      { instruction: 'Test', position: 'after' }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: 'Test',
+      position: 'after',
+      style: undefined,
+      maxLength: undefined,
+      knowledgeBaseId: undefined,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
     (res as { headersSent: boolean }).headersSent = true;
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamExpand(req, res);
+    await callController(generationController.streamExpand, req, res, next);
 
     expect(handleError).not.toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 5：传递所有参数（包括 style 和 knowledgeBaseId）
   it('should pass all parameters to service', async () => {
     vi.mocked(generationService.streamExpand).mockResolvedValue(undefined);
 
-    const req = createMockRequest(
-      { id: mockDocumentId },
-      {
-        instruction: '扩展内容',
-        position: 'replace',
-        style: 'creative',
-        maxLength: 3000,
-        knowledgeBaseId: mockKnowledgeBaseId,
-      }
-    );
-    const res = createMockResponse();
+    const validatedBody = {
+      instruction: '扩展内容',
+      position: 'replace',
+      style: 'creative',
+      maxLength: 3000,
+      knowledgeBaseId: mockKnowledgeBaseId,
+    };
+    const req = createMockRequest({ id: mockDocumentId }, validatedBody);
+    const res = createMockResponse(validatedBody);
+    const next = vi.fn() as unknown as NextFunction;
 
-    await generationController.streamExpand(req, res);
+    await callController(generationController.streamExpand, req, res, next);
 
     expect(generationService.streamExpand).toHaveBeenCalledWith(
       res,
@@ -469,5 +563,6 @@ describe('generationController > streamExpand', () => {
         knowledgeBaseId: mockKnowledgeBaseId,
       })
     );
+    expect(next).not.toHaveBeenCalled();
   });
 });

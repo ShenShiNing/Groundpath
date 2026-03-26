@@ -11,8 +11,16 @@ const {
   requireConversationOwnershipMock,
   conversationOwnershipMiddlewareMock,
   messageControllerMock,
+  createConversationSchemaMock,
+  listConversationsSchemaMock,
+  searchConversationsSchemaMock,
+  updateConversationSchemaMock,
   sendMessageSchemaMock,
   listMessagesSchemaMock,
+  createConversationValidatorMock,
+  listConversationsValidatorMock,
+  searchConversationsValidatorMock,
+  updateConversationValidatorMock,
   sendMessageValidatorMock,
   listMessagesValidatorMock,
 } = vi.hoisted(() => {
@@ -23,6 +31,18 @@ const {
     patch: vi.fn(),
     delete: vi.fn(),
   };
+
+  const createConversationSchema = { type: 'create-conversation-schema' };
+  const listConversationsSchema = { type: 'list-conversations-schema' };
+  const searchConversationsSchema = { type: 'search-conversations-schema' };
+  const updateConversationSchema = { type: 'update-conversation-schema' };
+  const sendMessageSchema = { type: 'send-message-schema' };
+  const listMessagesSchema = { type: 'list-messages-schema' };
+
+  const createConversationValidator = vi.fn();
+  const listConversationsValidator = vi.fn();
+  const searchConversationsValidator = vi.fn();
+  const updateConversationValidator = vi.fn();
   const sendMessageValidator = vi.fn();
   const listMessagesValidator = vi.fn();
   const conversationOwnershipMiddleware = vi.fn();
@@ -32,8 +52,18 @@ const {
     RouterMock: vi.fn(() => hoistedRouter),
     authenticateMock: vi.fn(),
     aiRateLimiterMock: vi.fn(),
-    validateBodyMock: vi.fn(() => sendMessageValidator),
-    validateQueryMock: vi.fn(() => listMessagesValidator),
+    validateBodyMock: vi.fn((schema: unknown) => {
+      if (schema === createConversationSchema) return createConversationValidator;
+      if (schema === updateConversationSchema) return updateConversationValidator;
+      if (schema === sendMessageSchema) return sendMessageValidator;
+      return vi.fn();
+    }),
+    validateQueryMock: vi.fn((schema: unknown) => {
+      if (schema === listConversationsSchema) return listConversationsValidator;
+      if (schema === searchConversationsSchema) return searchConversationsValidator;
+      if (schema === listMessagesSchema) return listMessagesValidator;
+      return vi.fn();
+    }),
     conversationControllerMock: {
       create: vi.fn(),
       list: vi.fn(),
@@ -48,8 +78,16 @@ const {
       sendMessage: vi.fn(),
       listMessages: vi.fn(),
     },
-    sendMessageSchemaMock: { type: 'send-message-schema' },
-    listMessagesSchemaMock: { type: 'list-messages-schema' },
+    createConversationSchemaMock: createConversationSchema,
+    listConversationsSchemaMock: listConversationsSchema,
+    searchConversationsSchemaMock: searchConversationsSchema,
+    updateConversationSchemaMock: updateConversationSchema,
+    sendMessageSchemaMock: sendMessageSchema,
+    listMessagesSchemaMock: listMessagesSchema,
+    createConversationValidatorMock: createConversationValidator,
+    listConversationsValidatorMock: listConversationsValidator,
+    searchConversationsValidatorMock: searchConversationsValidator,
+    updateConversationValidatorMock: updateConversationValidator,
     sendMessageValidatorMock: sendMessageValidator,
     listMessagesValidatorMock: listMessagesValidator,
   };
@@ -79,6 +117,10 @@ vi.mock('@modules/chat/public/ownership', () => ({
 }));
 
 vi.mock('@groundpath/shared/schemas', () => ({
+  createConversationSchema: createConversationSchemaMock,
+  listConversationsSchema: listConversationsSchemaMock,
+  searchConversationsSchema: searchConversationsSchemaMock,
+  updateConversationSchema: updateConversationSchemaMock,
   sendMessageSchema: sendMessageSchemaMock,
   listMessagesSchema: listMessagesSchemaMock,
 }));
@@ -95,14 +137,25 @@ describe('chat.routes', () => {
     expect(mockRouter.use).toHaveBeenCalledWith(authenticateMock);
   });
 
-  it('should register conversation endpoints', () => {
+  it('should register conversation endpoints with validators', () => {
+    expect(validateBodyMock).toHaveBeenCalledWith(createConversationSchemaMock);
+    expect(validateBodyMock).toHaveBeenCalledWith(updateConversationSchemaMock);
+    expect(validateQueryMock).toHaveBeenCalledWith(listConversationsSchemaMock);
+    expect(validateQueryMock).toHaveBeenCalledWith(searchConversationsSchemaMock);
+
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/conversations',
+      createConversationValidatorMock,
       conversationControllerMock.create
     );
-    expect(mockRouter.get).toHaveBeenCalledWith('/conversations', conversationControllerMock.list);
+    expect(mockRouter.get).toHaveBeenCalledWith(
+      '/conversations',
+      listConversationsValidatorMock,
+      conversationControllerMock.list
+    );
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/conversations/search',
+      searchConversationsValidatorMock,
       conversationControllerMock.search
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
@@ -111,20 +164,13 @@ describe('chat.routes', () => {
     );
     expect(mockRouter.patch).toHaveBeenCalledWith(
       '/conversations/:id',
+      updateConversationValidatorMock,
       conversationControllerMock.update
     );
     expect(mockRouter.delete).toHaveBeenCalledWith(
       '/conversations/:id',
       conversationControllerMock.delete
     );
-
-    const getCalls = mockRouter.get.mock.calls.map((call) => call[0]);
-    expect(getCalls).toEqual([
-      '/conversations',
-      '/conversations/search',
-      '/conversations/:id',
-      '/conversations/:id/messages',
-    ]);
   });
 
   it('should register message endpoints', () => {

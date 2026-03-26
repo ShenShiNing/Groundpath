@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 
 const mocks = vi.hoisted(() => ({
   conversationService: {
@@ -8,14 +8,12 @@ const mocks = vi.hoisted(() => ({
     search: vi.fn(),
     getById: vi.fn(),
     update: vi.fn(),
-    updateTitle: vi.fn(),
     delete: vi.fn(),
   },
   messageService: {
     getByConversation: vi.fn(),
   },
   sendSuccessResponse: vi.fn(),
-  handleError: vi.fn(),
 }));
 
 vi.mock('@modules/chat/services/conversation.service', () => ({
@@ -26,10 +24,13 @@ vi.mock('@modules/chat/services/message.service', () => ({
   messageService: mocks.messageService,
 }));
 
-vi.mock('@core/errors', () => ({
-  sendSuccessResponse: mocks.sendSuccessResponse,
-  handleError: mocks.handleError,
-}));
+vi.mock('@core/errors', async () => {
+  const actual = await vi.importActual<typeof import('@core/errors')>('@core/errors');
+  return {
+    ...actual,
+    sendSuccessResponse: mocks.sendSuccessResponse,
+  };
+});
 
 import { conversationController } from '@modules/chat/controllers/conversation.controller';
 
@@ -43,12 +44,23 @@ function createReq(overrides: Partial<Request> = {}): Request {
   } as Request;
 }
 
-function createRes(): Response {
+function createRes(overrides: Partial<Response> = {}): Response {
   return {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
     locals: {},
+    ...overrides,
   } as unknown as Response;
+}
+
+async function callController(
+  handler: (req: Request, res: Response, next: NextFunction) => void,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  handler(req, res, next);
+  await new Promise((resolve) => setImmediate(resolve));
 }
 
 describe('conversationController', () => {
@@ -56,64 +68,92 @@ describe('conversationController', () => {
     vi.clearAllMocks();
   });
 
-  it('create should call service and return 201 response', async () => {
-    const req = createReq({
-      body: { title: 'My chat', knowledgeBaseId: '123e4567-e89b-12d3-a456-426614174000' },
+  it('create should use validated body and return 201 response', async () => {
+    const validatedBody = {
+      title: 'My chat',
+      knowledgeBaseId: '123e4567-e89b-12d3-a456-426614174000',
+    };
+    const req = createReq({ body: { title: 'raw body should be ignored' } });
+    const res = createRes({
+      locals: { validated: { body: validatedBody } },
     });
-    const res = createRes();
+    const next = vi.fn() as unknown as NextFunction;
     const conversation = { id: 'conv-1' };
     mocks.conversationService.create.mockResolvedValue(conversation);
 
-    await conversationController.create(req, res);
+    await callController(conversationController.create, req, res, next);
 
-    expect(mocks.conversationService.create).toHaveBeenCalledWith('user-1', req.body);
+    expect(mocks.conversationService.create).toHaveBeenCalledWith('user-1', validatedBody);
     expect(mocks.sendSuccessResponse).toHaveBeenCalledWith(res, conversation, 201);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  it('create should forward validation error to handleError', async () => {
-    const req = createReq({ body: { title: '' } });
-    const res = createRes();
+  it('create should forward service errors to next', async () => {
+    const error = new Error('create failed');
+    const req = createReq();
+    const res = createRes({
+      locals: { validated: { body: { title: 'My chat' } } },
+    });
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
+    mocks.conversationService.create.mockRejectedValue(error);
 
-    await conversationController.create(req, res);
+    await callController(conversationController.create, req, res, next);
 
-    expect(mocks.conversationService.create).not.toHaveBeenCalled();
-    expect(mocks.handleError).toHaveBeenCalledTimes(1);
-    expect(mocks.handleError.mock.calls[0]![1]).toBe(res);
-    expect(mocks.handleError.mock.calls[0]![2]).toBe('Create conversation');
+    expect(nextError).toBe(error);
+    expect(mocks.sendSuccessResponse).not.toHaveBeenCalled();
   });
 
-  it('list should parse query and return success response', async () => {
-    const req = createReq({ query: { limit: '10', offset: '5' } });
-    const res = createRes();
+  it('list should use validated query and return success response', async () => {
+    const validatedQuery = { limit: 10, offset: 5 };
+    const req = createReq({ query: { limit: '1', offset: '0' } });
+    const res = createRes({
+      locals: { validated: { query: validatedQuery } },
+    });
+    const next = vi.fn() as unknown as NextFunction;
     const list = {
       items: [{ id: 'conv-1' }],
       pagination: { limit: 10, offset: 5, total: 1, hasMore: false },
     };
     mocks.conversationService.list.mockResolvedValue(list);
 
-    await conversationController.list(req, res);
+    await callController(conversationController.list, req, res, next);
 
-    expect(mocks.conversationService.list).toHaveBeenCalledWith('user-1', { limit: 10, offset: 5 });
+    expect(mocks.conversationService.list).toHaveBeenCalledWith('user-1', validatedQuery);
     expect(mocks.sendSuccessResponse).toHaveBeenCalledWith(res, list);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  it('search should forward invalid query error', async () => {
-    const req = createReq({ query: { query: 'a' } });
-    const res = createRes();
+  it('search should use validated query and return success response', async () => {
+    const validatedQuery = { query: 'hello', limit: 20, offset: 0 };
+    const req = createReq({ query: { query: 'raw' } });
+    const res = createRes({
+      locals: { validated: { query: validatedQuery } },
+    });
+    const next = vi.fn() as unknown as NextFunction;
+    const result = {
+      items: [{ conversationId: 'conv-1' }],
+      pagination: { limit: 20, offset: 0, total: 1, hasMore: false },
+    };
+    mocks.conversationService.search.mockResolvedValue(result);
 
-    await conversationController.search(req, res);
+    await callController(conversationController.search, req, res, next);
 
-    expect(mocks.conversationService.search).not.toHaveBeenCalled();
-    expect(mocks.handleError).toHaveBeenCalledWith(expect.anything(), res, 'Search conversations');
+    expect(mocks.conversationService.search).toHaveBeenCalledWith('user-1', validatedQuery);
+    expect(mocks.sendSuccessResponse).toHaveBeenCalledWith(res, result);
+    expect(next).not.toHaveBeenCalled();
   });
 
   it('getById should combine conversation and messages', async () => {
     const req = createReq({ params: { id: 'conv-1' } });
     const res = createRes();
+    const next = vi.fn() as unknown as NextFunction;
     mocks.conversationService.getById.mockResolvedValue({ id: 'conv-1', title: 'Title' });
     mocks.messageService.getByConversation.mockResolvedValue([{ id: 'msg-1' }]);
 
-    await conversationController.getById(req, res);
+    await callController(conversationController.getById, req, res, next);
 
     expect(mocks.conversationService.getById).toHaveBeenCalledWith('user-1', 'conv-1');
     expect(mocks.messageService.getByConversation).toHaveBeenCalledWith('conv-1');
@@ -122,33 +162,43 @@ describe('conversationController', () => {
       title: 'Title',
       messages: [{ id: 'msg-1' }],
     });
+    expect(next).not.toHaveBeenCalled();
   });
 
-  it('update should validate body and call update', async () => {
-    const req = createReq({ params: { id: 'conv-1' }, body: { title: 'New title' } });
-    const res = createRes();
+  it('update should use validated body and call update', async () => {
+    const validatedBody = { title: 'New title' };
+    const req = createReq({ params: { id: 'conv-1' }, body: { title: 'raw' } });
+    const res = createRes({
+      locals: { validated: { body: validatedBody } },
+    });
+    const next = vi.fn() as unknown as NextFunction;
     mocks.conversationService.update.mockResolvedValue({ id: 'conv-1', title: 'New title' });
 
-    await conversationController.update(req, res);
+    await callController(conversationController.update, req, res, next);
 
-    expect(mocks.conversationService.update).toHaveBeenCalledWith('user-1', 'conv-1', {
-      title: 'New title',
-    });
+    expect(mocks.conversationService.update).toHaveBeenCalledWith(
+      'user-1',
+      'conv-1',
+      validatedBody
+    );
     expect(mocks.sendSuccessResponse).toHaveBeenCalledWith(res, {
       id: 'conv-1',
       title: 'New title',
     });
+    expect(next).not.toHaveBeenCalled();
   });
 
   it('delete should call service and return success message', async () => {
     const req = createReq({ params: { id: 'conv-1' } });
     const res = createRes();
+    const next = vi.fn() as unknown as NextFunction;
 
-    await conversationController.delete(req, res);
+    await callController(conversationController.delete, req, res, next);
 
     expect(mocks.conversationService.delete).toHaveBeenCalledWith('user-1', 'conv-1');
     expect(mocks.sendSuccessResponse).toHaveBeenCalledWith(res, {
       message: 'Conversation deleted',
     });
+    expect(next).not.toHaveBeenCalled();
   });
 });
