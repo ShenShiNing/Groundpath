@@ -6,7 +6,7 @@ import type { Connection, RowDataPacket } from 'mysql2/promise';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import {
   getRealIntegrationDescribe,
-  loadRealIntegrationEnv,
+  resolveRealIntegrationEnvValue,
 } from '../helpers/real-integration';
 
 const describeRealIntegration = getRealIntegrationDescribe(
@@ -14,15 +14,15 @@ const describeRealIntegration = getRealIntegrationDescribe(
 );
 
 function getDatabaseUrl(): URL {
-  const envFromFile = loadRealIntegrationEnv();
-  const rawUrl =
-    process.env.AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL ??
-    envFromFile.TEST_DATABASE_URL ??
-    envFromFile.DATABASE_URL;
+  const rawUrl = resolveRealIntegrationEnvValue([
+    'AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL',
+    'TEST_DATABASE_URL',
+    'DATABASE_URL',
+  ]);
 
   if (!rawUrl) {
     throw new Error(
-      'Real auth schema migration integration test requires AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL or packages/server/.env.development.local'
+      'Real auth schema migration integration test requires AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or packages/server/.env.development.local'
     );
   }
 

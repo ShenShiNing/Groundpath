@@ -4,7 +4,10 @@ import path from 'node:path';
 import mysql from 'mysql2/promise';
 import type { Connection, RowDataPacket } from 'mysql2/promise';
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { getRealIntegrationDescribe, loadRealIntegrationEnv } from '../helpers/real-integration';
+import {
+  getRealIntegrationDescribe,
+  resolveRealIntegrationEnvValue,
+} from '../helpers/real-integration';
 
 const describeRealIntegration = getRealIntegrationDescribe(
   'RUN_REAL_MESSAGES_SCHEMA_MIGRATIONS_INTEGRATION'
@@ -12,15 +15,15 @@ const describeRealIntegration = getRealIntegrationDescribe(
 const MESSAGES_CONTENT_FULLTEXT_INDEX = 'messages_content_fulltext_idx';
 
 function getDatabaseUrl(): URL {
-  const envFromFile = loadRealIntegrationEnv();
-  const rawUrl =
-    process.env.MESSAGES_SCHEMA_MIGRATIONS_REAL_DATABASE_URL ??
-    envFromFile.TEST_DATABASE_URL ??
-    envFromFile.DATABASE_URL;
+  const rawUrl = resolveRealIntegrationEnvValue([
+    'MESSAGES_SCHEMA_MIGRATIONS_REAL_DATABASE_URL',
+    'TEST_DATABASE_URL',
+    'DATABASE_URL',
+  ]);
 
   if (!rawUrl) {
     throw new Error(
-      'Real messages schema migration integration test requires MESSAGES_SCHEMA_MIGRATIONS_REAL_DATABASE_URL or packages/server/.env.development.local'
+      'Real messages schema migration integration test requires MESSAGES_SCHEMA_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or packages/server/.env.development.local'
     );
   }
 

@@ -3,22 +3,25 @@ import path from 'node:path';
 import mysql from 'mysql2/promise';
 import type { Connection, RowDataPacket } from 'mysql2/promise';
 import { afterAll, beforeAll, expect, it } from 'vitest';
-import { getRealIntegrationDescribe, loadRealIntegrationEnv } from '../helpers/real-integration';
+import {
+  getRealIntegrationDescribe,
+  resolveRealIntegrationEnvValue,
+} from '../helpers/real-integration';
 
 const describeRealIntegration = getRealIntegrationDescribe(
   'RUN_REAL_LOG_PARTITION_MIGRATIONS_INTEGRATION'
 );
 
 function getDatabaseUrl(): URL {
-  const envFromFile = loadRealIntegrationEnv();
-  const rawUrl =
-    process.env.LOG_PARTITION_MIGRATIONS_REAL_DATABASE_URL ??
-    envFromFile.TEST_DATABASE_URL ??
-    envFromFile.DATABASE_URL;
+  const rawUrl = resolveRealIntegrationEnvValue([
+    'LOG_PARTITION_MIGRATIONS_REAL_DATABASE_URL',
+    'TEST_DATABASE_URL',
+    'DATABASE_URL',
+  ]);
 
   if (!rawUrl) {
     throw new Error(
-      'Real log partition migration integration test requires LOG_PARTITION_MIGRATIONS_REAL_DATABASE_URL or packages/server/.env.development.local'
+      'Real log partition migration integration test requires LOG_PARTITION_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or packages/server/.env.development.local'
     );
   }
 

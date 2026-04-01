@@ -53,6 +53,27 @@ export function buildRealIntegrationProcessEnv(
   };
 }
 
+export function resolveRealIntegrationEnvValue(
+  keys: readonly string[],
+  envFromFile: Record<string, string> = loadRealIntegrationEnv()
+): string | undefined {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value) {
+      return value;
+    }
+  }
+
+  for (const key of keys) {
+    const value = envFromFile[key];
+    if (value) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
 export function shouldRunRealIntegration(flags: string | readonly string[]): boolean {
   const flagList = Array.isArray(flags) ? flags : [flags];
   const envFromFile = loadRealIntegrationEnv();

@@ -7,6 +7,7 @@ const loggerErrorMock = vi.fn();
 const schedulerErrorMock = vi.fn();
 
 const logCleanupRunMock = vi.fn();
+const conversationCleanupMock = vi.fn();
 const tokenCleanupRunMock = vi.fn();
 const vectorCleanupRunMock = vi.fn();
 const counterSyncAllMock = vi.fn();
@@ -90,6 +91,12 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
+  vi.doMock('@modules/chat/public/cleanup', () => ({
+    conversationCleanupService: {
+      cleanup: conversationCleanupMock,
+    },
+  }));
+
   vi.doMock('@modules/logs/public/alerts', () => ({
     structuredRagAlertService: {
       checkAndNotify: structuredRagAlertCheckMock,
@@ -143,6 +150,7 @@ describe('shared/scheduler', () => {
     loggerErrorMock.mockReset();
     schedulerErrorMock.mockReset();
     logCleanupRunMock.mockReset();
+    conversationCleanupMock.mockReset();
     tokenCleanupRunMock.mockReset();
     vectorCleanupRunMock.mockReset();
     counterSyncAllMock.mockReset();
@@ -201,6 +209,7 @@ describe('shared/scheduler', () => {
     await cleanupTask!();
 
     expect(logCleanupRunMock).toHaveBeenCalledTimes(1);
+    expect(conversationCleanupMock).toHaveBeenCalledTimes(1);
     expect(tokenCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(vectorCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(documentIndexArtifactCleanupMock).not.toHaveBeenCalled();
