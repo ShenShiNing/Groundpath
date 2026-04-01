@@ -1,5 +1,5 @@
 import { db } from '@core/db';
-import { sql, eq, and, isNull, isNotNull, count, or, lt } from 'drizzle-orm';
+import { sql, eq, and, isNull, isNotNull, count, or, lt, ne } from 'drizzle-orm';
 import { documentConfig } from '@core/config/env';
 import { documents } from '@core/db/schema/document/documents.schema';
 import { documentVersions } from '@core/db/schema/document/document-versions.schema';
@@ -260,6 +260,31 @@ async function checkDuplicateChunkKeys(): Promise<CheckResult> {
   };
 }
 
+export async function checkDocumentOwnershipMismatch(): Promise<CheckResult> {
+  const name = '9. Document ownership mismatch (document.user_id != knowledge_base.user_id)';
+  const rows = await db
+    .select({
+      id: documents.id,
+      title: documents.title,
+      documentUserId: documents.userId,
+      knowledgeBaseId: knowledgeBases.id,
+      knowledgeBaseUserId: knowledgeBases.userId,
+    })
+    .from(documents)
+    .innerJoin(knowledgeBases, eq(documents.knowledgeBaseId, knowledgeBases.id))
+    .where(ne(documents.userId, knowledgeBases.userId));
+
+  return {
+    name,
+    passed: rows.length === 0,
+    count: rows.length,
+    details: rows.map(
+      (row) =>
+        `doc=${row.id} title="${row.title}" docUser=${row.documentUserId} kb=${row.knowledgeBaseId} kbUser=${row.knowledgeBaseUserId}`
+    ),
+  };
+}
+
 export const documentConsistencyChecks = [
   checkOrphanDocuments,
   checkOrphanDocumentVersions,
@@ -269,4 +294,5 @@ export const documentConsistencyChecks = [
   checkDocumentChunkCountMismatch,
   checkStaleProcessingStatus,
   checkDuplicateChunkKeys,
+  checkDocumentOwnershipMismatch,
 ] as const;

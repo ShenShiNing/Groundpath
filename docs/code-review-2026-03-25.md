@@ -92,16 +92,16 @@
 | ~~M-12~~ | ~~分页元数据定义重复~~ ✅   | `pagination.ts` + `shared/types/api.ts` | 服务端分页工具改为复用共享类型定义                                                                          |
 | ~~M-13~~ | ~~控制器实现风格不一致~~ ✅ | 各 controller                           | 顶层控制器统一改为 `asyncHandler`，仅保留 SSE/流式下载/OAuth 回调等响应已开始场景所需的局部兜底 `try-catch` |
 | ~~M-14~~ | ~~参数提取方法不一致~~ ✅   | 各 controller                           | 剩余 controller 统一改为 `requireUserId(req)`，未鉴权场景统一抛出 `UNAUTHORIZED`                            |
-| ~~M-15~~ | ~~部分端点缺少速率限制~~ ✅ | `trash` 相关路由                        | 回收站清空/永久删除已补充专用速率限制   |
+| ~~M-15~~ | ~~部分端点缺少速率限制~~ ✅ | `trash` 相关路由                        | 回收站清空/永久删除已补充专用速率限制                                                                       |
 
 ### 4.4 数据库设计
 
-| #    | 问题                       | 文件                                   | 描述                                     |
-| ---- | -------------------------- | -------------------------------------- | ---------------------------------------- |
-| M-16 | 外键 RESTRICT 与软删除冲突 | `documents → users`                    | 用户硬删除被非软删文档阻止               |
-| M-17 | count 查询效率低           | `document-chunk.repository.ts:116-145` | 取全量数据后 `.length`，应用 `COUNT(*)`  |
-| M-18 | messages 表缺少全文索引    | messages schema                        | `searchByContent` 依赖 FULLTEXT 但无索引 |
-| M-19 | 日志大表缺少分区策略       | messages, login_logs, operation_logs   | 增长快无分区                             |
+| #        | 问题                              | 文件                                   | 描述                                                                                         |
+| -------- | --------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| ~~M-16~~ | ~~外键 RESTRICT 与软删除冲突~~ ✅ | `documents → users`                    | 移除冗余 `documents→users` 外键，保留 `knowledge_base` 级联约束，并新增 ownership 一致性检查 |
+| M-17     | count 查询效率低                  | `document-chunk.repository.ts:116-145` | 取全量数据后 `.length`，应用 `COUNT(*)`                                                      |
+| M-18     | messages 表缺少全文索引           | messages schema                        | `searchByContent` 依赖 FULLTEXT 但无索引                                                     |
+| M-19     | 日志大表缺少分区策略              | messages, login_logs, operation_logs   | 增长快无分区                                                                                 |
 
 ### 4.5 前端质量
 
@@ -240,7 +240,7 @@
 
 - [x] DocumentReader 引入 DOMPurify 替代自定义清理 ✅
 - [ ] count 查询改用 `COUNT(*)`（document-chunk.repository.ts）
-- [ ] 审查 documents→users 外键策略
+- [x] 审查 documents→users 外键策略 ✅
 
 ### 第 2 周 — 高优先级
 
