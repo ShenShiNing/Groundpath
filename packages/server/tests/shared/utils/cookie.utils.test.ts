@@ -18,11 +18,19 @@ describe('cookie.utils', () => {
 
     setRefreshTokenCookie(res, 'refresh-token-value');
 
-    expect(res.clearCookie).toHaveBeenCalledTimes(1);
+    expect(res.clearCookie).toHaveBeenCalledTimes(2);
     expect(res.clearCookie).toHaveBeenCalledWith(
       CSRF_TOKEN_COOKIE_NAME,
       expect.objectContaining({
         httpOnly: false,
+        sameSite: 'strict',
+        path: '/api/auth',
+      })
+    );
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN_COOKIE_NAME,
+      expect.objectContaining({
+        httpOnly: true,
         sameSite: 'strict',
         path: '/api/auth',
       })
@@ -35,7 +43,7 @@ describe('cookie.utils', () => {
       expect.objectContaining({
         httpOnly: true,
         sameSite: 'strict',
-        path: '/api/auth',
+        path: '/api/v1/auth',
       })
     );
     expect(res.cookie).toHaveBeenCalledWith(
@@ -56,13 +64,13 @@ describe('cookie.utils', () => {
 
     clearRefreshTokenCookie(res);
 
-    expect(res.clearCookie).toHaveBeenCalledTimes(3);
+    expect(res.clearCookie).toHaveBeenCalledTimes(4);
     expect(res.clearCookie).toHaveBeenCalledWith(
       REFRESH_TOKEN_COOKIE_NAME,
       expect.objectContaining({
         httpOnly: true,
         sameSite: 'strict',
-        path: '/api/auth',
+        path: '/api/v1/auth',
       })
     );
     expect(res.clearCookie).toHaveBeenCalledWith(
@@ -77,6 +85,14 @@ describe('cookie.utils', () => {
       CSRF_TOKEN_COOKIE_NAME,
       expect.objectContaining({
         httpOnly: false,
+        sameSite: 'strict',
+        path: '/api/auth',
+      })
+    );
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      REFRESH_TOKEN_COOKIE_NAME,
+      expect.objectContaining({
+        httpOnly: true,
         sameSite: 'strict',
         path: '/api/auth',
       })

@@ -81,6 +81,7 @@ vi.mock('@modules/knowledge-base/public/management', () => ({
 
 vi.mock('@modules/vector/public/repositories', () => ({
   vectorRepository: {
+    markAsDeleted: vi.fn(() => Promise.resolve(true)),
     deleteByDocumentId: vi.fn(() => Promise.resolve()),
   },
 }));

@@ -60,7 +60,11 @@ const {
         title: 'chat title',
         knowledgeBaseId: null,
       })),
-      updateTitle: vi.fn(async (_userId: string, id: string, title: string) => ({ id, title })),
+      update: vi.fn(async (_userId: string, id: string, payload: Record<string, unknown>) => ({
+        id,
+        title: payload.title ?? 'chat title',
+        knowledgeBaseId: payload.knowledgeBaseId ?? null,
+      })),
       delete: vi.fn(async () => undefined),
       validateOwnership: vi.fn(async () => undefined),
     },
@@ -215,7 +219,7 @@ describe('chat.routes http behavior', () => {
     expect(messageServiceMock.getByConversation).toHaveBeenCalledWith('conv-1');
   });
 
-  it('should validate update title payload', async () => {
+  it('should validate update conversation payload', async () => {
     const response = await fetch(`${baseUrl}/chat/conversations/conv-1`, {
       method: 'PATCH',
       headers: {
@@ -228,7 +232,25 @@ describe('chat.routes http behavior', () => {
 
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
-    expect(conversationServiceMock.updateTitle).not.toHaveBeenCalled();
+    expect(conversationServiceMock.update).not.toHaveBeenCalled();
+  });
+
+  it('should update conversation with valid payload', async () => {
+    const response = await fetch(`${baseUrl}/chat/conversations/conv-1`, {
+      method: 'PATCH',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ title: 'Updated title' }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(conversationServiceMock.update).toHaveBeenCalledWith('user-1', 'conv-1', {
+      title: 'Updated title',
+    });
   });
 
   it('should delete conversation with valid request', async () => {

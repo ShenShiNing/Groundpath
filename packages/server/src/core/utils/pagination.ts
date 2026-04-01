@@ -2,6 +2,10 @@
 // Pagination Utilities
 // ============================================================================
 
+import type { CursorPaginationMeta, PaginationMeta } from '@groundpath/shared/types';
+
+export type { CursorPaginationMeta, PaginationMeta } from '@groundpath/shared/types';
+
 /**
  * Default page size for list queries
  */
@@ -11,23 +15,6 @@ export const DEFAULT_PAGE_SIZE = 20;
  * Maximum allowed page size to prevent abuse
  */
 export const MAX_PAGE_SIZE = 100;
-
-/**
- * Pagination metadata for API responses
- */
-export interface PaginationMeta {
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-}
-
-export interface CursorPaginationMeta {
-  pageSize: number;
-  total: number;
-  hasMore: boolean;
-  nextCursor: string | null;
-}
 
 /**
  * Build pagination metadata from total count and request params

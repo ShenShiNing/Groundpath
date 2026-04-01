@@ -1,10 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared';
 import { AppError } from '@core/errors';
 import { mockUserId, mockDocumentId, logTestInfo } from '@tests/__mocks__/document-ai.mocks';
-
-// ==================== Mocks ====================
 
 vi.mock('@modules/document-ai/services/analysis.service', () => ({
   analysisService: {
@@ -30,14 +28,14 @@ vi.mock('@core/errors', async (importOriginal) => {
   };
 });
 
-// Import after mocks
 import { analysisController } from '@modules/document-ai/controllers/analysis.controller';
 import { analysisService } from '@modules/document-ai/services/analysis.service';
 import { sendSuccessResponse, handleError } from '@core/errors';
 
-// ==================== Test Helpers ====================
-
-function createMockRequest(params: Record<string, string> = {}, body: object = {}): Request {
+function createMockRequest(
+  params: Record<string, string | string[]> = {},
+  body: object = {}
+): Request {
   return {
     user: { sub: mockUserId },
     params,
@@ -45,7 +43,7 @@ function createMockRequest(params: Record<string, string> = {}, body: object = {
   } as unknown as Request;
 }
 
-function createMockResponse(validatedBody: object = {}) {
+function createMockResponse(validatedBody?: object) {
   return {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
@@ -57,13 +55,21 @@ function createMockResponse(validatedBody: object = {}) {
   } as unknown as Response;
 }
 
-// ==================== analyze ====================
+async function callController(
+  handler: (req: Request, res: Response, next: NextFunction) => void,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  handler(req, res, next);
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
 describe('analysisController > analyze', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功执行完整分析
   it('should perform analysis and return success response', async () => {
     const mockResult = {
       documentId: mockDocumentId,
@@ -90,8 +96,9 @@ describe('analysisController > analyze', () => {
       maxEntities: 20,
       maxTopics: 5,
     });
+    const next = vi.fn() as unknown as NextFunction;
 
-    await analysisController.analyze(req, res);
+    await callController(analysisController.analyze, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId, analysisTypes: ['keywords', 'structure'] },
@@ -108,9 +115,9 @@ describe('analysisController > analyze', () => {
       maxTopics: 5,
     });
     expect(sendSuccessResponse).toHaveBeenCalledWith(res, mockResult);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：使用默认分析类型
   it('should use default analysis types when not specified', async () => {
     const mockResult = {
       documentId: mockDocumentId,
@@ -134,8 +141,9 @@ describe('analysisController > analyze', () => {
       maxEntities: 20,
       maxTopics: 5,
     });
+    const next = vi.fn() as unknown as NextFunction;
 
-    await analysisController.analyze(req, res);
+    await callController(analysisController.analyze, req, res, next);
 
     logTestInfo(
       { noAnalysisTypes: true },
@@ -148,10 +156,10 @@ describe('analysisController > analyze', () => {
         analysisTypes: ['keywords', 'structure'],
       })
     );
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：服务抛出错误
-  it('should handle service errors', async () => {
+  it('should forward service errors to next', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.CONTENT_EMPTY as 'DOCUMENT_AI_CONTENT_EMPTY',
       'Document has no content',
@@ -166,26 +174,29 @@ describe('analysisController > analyze', () => {
       maxEntities: 20,
       maxTopics: 5,
     });
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
 
-    await analysisController.analyze(req, res);
+    await callController(analysisController.analyze, req, res, next);
 
     logTestInfo(
       { error: DOCUMENT_AI_ERROR_CODES.CONTENT_EMPTY },
-      { handleErrorCalled: true },
-      { handleErrorCalled: vi.mocked(handleError).mock.calls.length > 0 }
+      { nextCalled: true },
+      { nextError }
     );
 
-    expect(handleError).toHaveBeenCalledWith(error, res, 'Analyze document');
+    expect(nextError).toBe(error);
+    expect(handleError).not.toHaveBeenCalled();
   });
 });
 
-// ==================== extractKeywords ====================
 describe('analysisController > extractKeywords', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功提取关键词
   it('should extract keywords and return success response', async () => {
     const mockResult = {
       keywords: [
@@ -197,8 +208,9 @@ describe('analysisController > extractKeywords', () => {
 
     const req = createMockRequest({ id: mockDocumentId }, { maxKeywords: 5 });
     const res = createMockResponse({ maxKeywords: 5 });
+    const next = vi.fn() as unknown as NextFunction;
 
-    await analysisController.extractKeywords(req, res);
+    await callController(analysisController.extractKeywords, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId, maxKeywords: 5 },
@@ -211,26 +223,27 @@ describe('analysisController > extractKeywords', () => {
       language: undefined,
     });
     expect(sendSuccessResponse).toHaveBeenCalledWith(res, mockResult);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：传递语言参数
   it('should pass language option to service', async () => {
     const mockResult = { keywords: [] };
     vi.mocked(analysisService.extractKeywords).mockResolvedValue(mockResult);
 
     const req = createMockRequest({ id: mockDocumentId }, { maxKeywords: 10, language: 'en' });
     const res = createMockResponse({ maxKeywords: 10, language: 'en' });
+    const next = vi.fn() as unknown as NextFunction;
 
-    await analysisController.extractKeywords(req, res);
+    await callController(analysisController.extractKeywords, req, res, next);
 
     expect(analysisService.extractKeywords).toHaveBeenCalledWith(mockUserId, mockDocumentId, {
       maxKeywords: 10,
       language: 'en',
     });
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 3：服务抛出错误
-  it('should handle service errors', async () => {
+  it('should forward service errors to next', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.ANALYSIS_FAILED as 'DOCUMENT_AI_ANALYSIS_FAILED',
       'Analysis failed',
@@ -240,20 +253,23 @@ describe('analysisController > extractKeywords', () => {
 
     const req = createMockRequest({ id: mockDocumentId }, {});
     const res = createMockResponse({ maxKeywords: 10 });
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
 
-    await analysisController.extractKeywords(req, res);
+    await callController(analysisController.extractKeywords, req, res, next);
 
-    expect(handleError).toHaveBeenCalledWith(error, res, 'Extract keywords');
+    expect(nextError).toBe(error);
+    expect(handleError).not.toHaveBeenCalled();
   });
 });
 
-// ==================== extractEntities ====================
 describe('analysisController > extractEntities', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功提取实体
   it('should extract entities and return success response', async () => {
     const mockResult = {
       entities: [{ text: 'OpenAI', type: 'organization' as const, confidence: 0.95 }],
@@ -262,8 +278,9 @@ describe('analysisController > extractEntities', () => {
 
     const req = createMockRequest({ id: mockDocumentId }, { maxEntities: 10 });
     const res = createMockResponse({ maxEntities: 10 });
+    const next = vi.fn() as unknown as NextFunction;
 
-    await analysisController.extractEntities(req, res);
+    await callController(analysisController.extractEntities, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId, maxEntities: 10 },
@@ -276,10 +293,10 @@ describe('analysisController > extractEntities', () => {
       language: undefined,
     });
     expect(sendSuccessResponse).toHaveBeenCalledWith(res, mockResult);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：服务抛出错误
-  it('should handle service errors', async () => {
+  it('should forward service errors to next', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.CONTENT_EMPTY as 'DOCUMENT_AI_CONTENT_EMPTY',
       'No content',
@@ -289,20 +306,23 @@ describe('analysisController > extractEntities', () => {
 
     const req = createMockRequest({ id: mockDocumentId }, {});
     const res = createMockResponse({ maxEntities: 20 });
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
 
-    await analysisController.extractEntities(req, res);
+    await callController(analysisController.extractEntities, req, res, next);
 
-    expect(handleError).toHaveBeenCalledWith(error, res, 'Extract entities');
+    expect(nextError).toBe(error);
+    expect(handleError).not.toHaveBeenCalled();
   });
 });
 
-// ==================== getStructure ====================
 describe('analysisController > getStructure', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // 场景 1：成功获取结构
   it('should get structure and return success response', async () => {
     const mockResult = {
       structure: {
@@ -318,8 +338,9 @@ describe('analysisController > getStructure', () => {
 
     const req = createMockRequest({ id: mockDocumentId }, {});
     const res = createMockResponse();
+    const next = vi.fn() as unknown as NextFunction;
 
-    await analysisController.getStructure(req, res);
+    await callController(analysisController.getStructure, req, res, next);
 
     logTestInfo(
       { documentId: mockDocumentId },
@@ -329,10 +350,10 @@ describe('analysisController > getStructure', () => {
 
     expect(analysisService.getStructure).toHaveBeenCalledWith(mockUserId, mockDocumentId);
     expect(sendSuccessResponse).toHaveBeenCalledWith(res, mockResult);
+    expect(next).not.toHaveBeenCalled();
   });
 
-  // 场景 2：服务抛出错误
-  it('should handle service errors', async () => {
+  it('should forward service errors to next', async () => {
     const error = new AppError(
       DOCUMENT_AI_ERROR_CODES.CONTENT_EMPTY as 'DOCUMENT_AI_CONTENT_EMPTY',
       'No content',
@@ -342,13 +363,17 @@ describe('analysisController > getStructure', () => {
 
     const req = createMockRequest({ id: mockDocumentId }, {});
     const res = createMockResponse();
+    let nextError: unknown;
+    const next = vi.fn((err?: unknown) => {
+      nextError = err;
+    }) as unknown as NextFunction;
 
-    await analysisController.getStructure(req, res);
+    await callController(analysisController.getStructure, req, res, next);
 
-    expect(handleError).toHaveBeenCalledWith(error, res, 'Get document structure');
+    expect(nextError).toBe(error);
+    expect(handleError).not.toHaveBeenCalled();
   });
 
-  // 场景 3：GET 请求不需要 body
   it('should work without request body (GET request)', async () => {
     const mockResult = {
       structure: {
@@ -365,13 +390,40 @@ describe('analysisController > getStructure', () => {
     const req = {
       user: { sub: mockUserId },
       params: { id: mockDocumentId },
-      // No body for GET request
     } as unknown as Request;
     const res = createMockResponse();
+    const next = vi.fn() as unknown as NextFunction;
 
-    await analysisController.getStructure(req, res);
+    await callController(analysisController.getStructure, req, res, next);
 
     expect(analysisService.getStructure).toHaveBeenCalledWith(mockUserId, mockDocumentId);
     expect(sendSuccessResponse).toHaveBeenCalled();
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('should handle array-style params.id', async () => {
+    const mockResult = {
+      structure: {
+        characterCount: 1,
+        wordCount: 1,
+        paragraphCount: 1,
+        sentenceCount: 1,
+        estimatedReadingTimeMinutes: 1,
+        headings: [],
+      },
+    };
+    vi.mocked(analysisService.getStructure).mockResolvedValue(mockResult);
+
+    const req = {
+      user: { sub: mockUserId },
+      params: { id: [mockDocumentId, 'ignored'] },
+    } as unknown as Request;
+    const res = createMockResponse();
+    const next = vi.fn() as unknown as NextFunction;
+
+    await callController(analysisController.getStructure, req, res, next);
+
+    expect(analysisService.getStructure).toHaveBeenCalledWith(mockUserId, mockDocumentId);
+    expect(next).not.toHaveBeenCalled();
   });
 });

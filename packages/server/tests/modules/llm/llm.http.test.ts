@@ -127,6 +127,22 @@ describe('llm.routes http behavior', () => {
     expect(llmConfigControllerMock.getConfig).toHaveBeenCalledTimes(1);
   });
 
+  it('should validate update-config payload', async () => {
+    const response = await fetch(`${baseUrl}/llm/config`, {
+      method: 'PUT',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ baseUrl: 'not-a-url' }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(llmConfigControllerMock.updateConfig).not.toHaveBeenCalled();
+  });
+
   it('should call update-config endpoint for authenticated request', async () => {
     const response = await fetch(`${baseUrl}/llm/config`, {
       method: 'PUT',
@@ -168,6 +184,22 @@ describe('llm.routes http behavior', () => {
     expect(response.status).toBe(200);
     expect(body.route).toBe('llm-get-providers');
     expect(llmConfigControllerMock.getProviders).toHaveBeenCalledTimes(1);
+  });
+
+  it('should validate models payload', async () => {
+    const response = await fetch(`${baseUrl}/llm/models`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ provider: 'invalid-provider' }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+    expect(llmConfigControllerMock.fetchModels).not.toHaveBeenCalled();
   });
 
   it('should call models endpoint for authenticated request', async () => {
