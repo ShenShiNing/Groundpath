@@ -9,7 +9,6 @@ import {
   int,
   foreignKey,
 } from 'drizzle-orm/mysql-core';
-import { users } from '../user/users.schema';
 import { knowledgeBases } from './knowledge-bases.schema';
 
 export const documents = mysqlTable(
@@ -118,11 +117,6 @@ export const documents = mysqlTable(
       table.updatedAt,
       table.id
     ),
-    foreignKey({
-      columns: [table.userId],
-      foreignColumns: [users.id],
-      name: 'documents_user_id_fk',
-    }).onDelete('restrict'),
     foreignKey({
       columns: [table.knowledgeBaseId],
       foreignColumns: [knowledgeBases.id],
