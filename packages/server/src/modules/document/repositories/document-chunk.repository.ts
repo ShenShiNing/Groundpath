@@ -1,4 +1,4 @@
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq, and, desc, inArray, count } from 'drizzle-orm';
 import { db } from '@core/db';
 import { getDbContext, type Transaction } from '@core/db/db.utils';
 import {
@@ -8,6 +8,25 @@ import {
 } from '@core/db/schema/document/document-chunks.schema';
 import { documentIndexVersions } from '@core/db/schema/document/document-index-versions.schema';
 import { documents } from '@core/db/schema/document/documents.schema';
+
+async function getLatestIndexVersionIdForDocumentVersion(
+  documentId: string,
+  version: number
+): Promise<string | null> {
+  const latestBuild = await db
+    .select({ indexVersionId: documentIndexVersions.id })
+    .from(documentIndexVersions)
+    .where(
+      and(
+        eq(documentIndexVersions.documentId, documentId),
+        eq(documentIndexVersions.documentVersion, version)
+      )
+    )
+    .orderBy(desc(documentIndexVersions.builtAt))
+    .limit(1);
+
+  return latestBuild[0]?.indexVersionId ?? null;
+}
 
 /**
  * Document chunk repository for RAG operations
@@ -39,19 +58,11 @@ export const documentChunkRepository = {
    * Get all chunks for a document version (ordered by chunk index)
    */
   async listByDocumentAndVersion(documentId: string, version: number): Promise<DocumentChunk[]> {
-    const latestBuild = await db
-      .select({ indexVersionId: documentIndexVersions.id })
-      .from(documentIndexVersions)
-      .where(
-        and(
-          eq(documentIndexVersions.documentId, documentId),
-          eq(documentIndexVersions.documentVersion, version)
-        )
-      )
-      .orderBy(desc(documentIndexVersions.builtAt))
-      .limit(1);
-
-    if (latestBuild.length === 0) {
+    const latestIndexVersionId = await getLatestIndexVersionIdForDocumentVersion(
+      documentId,
+      version
+    );
+    if (!latestIndexVersionId) {
       return [];
     }
 
@@ -62,7 +73,7 @@ export const documentChunkRepository = {
         and(
           eq(documentChunks.documentId, documentId),
           eq(documentChunks.version, version),
-          eq(documentChunks.indexVersionId, latestBuild[0]!.indexVersionId)
+          eq(documentChunks.indexVersionId, latestIndexVersionId)
         )
       )
       .orderBy(documentChunks.chunkIndex);
@@ -114,8 +125,26 @@ export const documentChunkRepository = {
    * Count chunks for a document version
    */
   async countByDocumentAndVersion(documentId: string, version: number): Promise<number> {
-    const chunks = await this.listByDocumentAndVersion(documentId, version);
-    return chunks.length;
+    const latestIndexVersionId = await getLatestIndexVersionIdForDocumentVersion(
+      documentId,
+      version
+    );
+    if (!latestIndexVersionId) {
+      return 0;
+    }
+
+    const result = await db
+      .select({ count: count() })
+      .from(documentChunks)
+      .where(
+        and(
+          eq(documentChunks.documentId, documentId),
+          eq(documentChunks.version, version),
+          eq(documentChunks.indexVersionId, latestIndexVersionId)
+        )
+      );
+
+    return result[0]?.count ?? 0;
   },
 
   /**
@@ -131,7 +160,7 @@ export const documentChunkRepository = {
 
   async countByActiveIndexVersion(documentId: string, indexVersionId: string): Promise<number> {
     const result = await db
-      .select({ id: documentChunks.id })
+      .select({ count: count() })
       .from(documentChunks)
       .where(
         and(
@@ -139,15 +168,15 @@ export const documentChunkRepository = {
           eq(documentChunks.indexVersionId, indexVersionId)
         )
       );
-    return result.length;
+    return result[0]?.count ?? 0;
   },
 
   async countByIndexVersionId(indexVersionId: string): Promise<number> {
     const result = await db
-      .select({ id: documentChunks.id })
+      .select({ count: count() })
       .from(documentChunks)
       .where(eq(documentChunks.indexVersionId, indexVersionId));
-    return result.length;
+    return result[0]?.count ?? 0;
   },
 
   /**

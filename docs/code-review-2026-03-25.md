@@ -96,12 +96,13 @@
 
 ### 4.4 数据库设计
 
-| #        | 问题                              | 文件                                   | 描述                                                                                         |
-| -------- | --------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
-| ~~M-16~~ | ~~外键 RESTRICT 与软删除冲突~~ ✅ | `documents → users`                    | 移除冗余 `documents→users` 外键，保留 `knowledge_base` 级联约束，并新增 ownership 一致性检查 |
-| M-17     | count 查询效率低                  | `document-chunk.repository.ts:116-145` | 取全量数据后 `.length`，应用 `COUNT(*)`                                                      |
-| M-18     | messages 表缺少全文索引           | messages schema                        | `searchByContent` 依赖 FULLTEXT 但无索引                                                     |
-| M-19     | 日志大表缺少分区策略              | messages, login_logs, operation_logs   | 增长快无分区                                                                                 |
+<<<<<<< HEAD
+| # | 问题 | 文件 | 描述 |
+| -------- | --------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| ~~M-16~~ | ~~外键 RESTRICT 与软删除冲突~~ ✅ | `documents → users` | 移除冗余 `documents→users` 外键，保留 `knowledge_base` 级联约束，并新增 ownership 一致性检查 |
+| ~~M-17~~ | ~~count 查询效率低~~ ✅ | `document-chunk.repository.ts:116-145` | `countByDocumentAndVersion` / `countByActiveIndexVersion` / `countByIndexVersionId` 已改为数据库侧 `COUNT(*)` |
+| M-18 | messages 表缺少全文索引 | messages schema | `searchByContent` 依赖 FULLTEXT 但无索引 |
+| M-19 | 日志大表缺少分区策略 | messages, login_logs, operation_logs | 增长快无分区 |
 
 ### 4.5 前端质量
 
@@ -176,13 +177,13 @@
 
 ### 7.2 改进建议
 
-| 优先级 | 建议                                    | 说明                                 |
-| ------ | --------------------------------------- | ------------------------------------ |
-| 高     | 修复 count 查询: `.length` → `COUNT(*)` | `document-chunk.repository.ts`       |
-| 高     | 审查 documents→users RESTRICT 约束      | 可能阻止用户删除                     |
-| 中     | messages 表创建 FULLTEXT 索引           | searchByContent 依赖                 |
-| 中     | 日志表按时间分区                        | messages, login_logs, operation_logs |
-| 低     | 评估 system_logs 生成列数量             | 10+ 生成列可能影响写入性能           |
+| 优先级 | 建议                                           | 说明                                 |
+| ------ | ---------------------------------------------- | ------------------------------------ |
+| 高     | ~~修复 count 查询: `.length` → `COUNT(*)`~~ ✅ | `document-chunk.repository.ts`       |
+| 高     | 审查 documents→users RESTRICT 约束             | 可能阻止用户删除                     |
+| 中     | messages 表创建 FULLTEXT 索引                  | searchByContent 依赖                 |
+| 中     | 日志表按时间分区                               | messages, login_logs, operation_logs |
+| 低     | 评估 system_logs 生成列数量                    | 10+ 生成列可能影响写入性能           |
 
 ---
 
@@ -239,7 +240,7 @@
 ### 第 1 周 — 关键修复
 
 - [x] DocumentReader 引入 DOMPurify 替代自定义清理 ✅
-- [ ] count 查询改用 `COUNT(*)`（document-chunk.repository.ts）
+- [x] count 查询改用 `COUNT(*)`（document-chunk.repository.ts） ✅
 - [x] 审查 documents→users 外键策略 ✅
 
 ### 第 2 周 — 高优先级
