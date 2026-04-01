@@ -113,6 +113,13 @@
       "when": 1775070535226,
       "tag": "0015_documents_user_fk_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1775074169355,
+      "tag": "0016_messages_content_fulltext",
+      "breakpoints": true
     }
   ]
 }

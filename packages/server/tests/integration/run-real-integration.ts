@@ -9,6 +9,7 @@ const vitestArgs = [
   'run',
   '--maxWorkers=1',
   'tests/integration/db/auth-schema-migrations.integration.test.ts',
+  'tests/integration/db/messages-schema-migrations.integration.test.ts',
   'tests/integration/document/document-lifecycle-locks.integration.test.ts',
   'tests/integration/document-index/document-index-lifecycle-consistency.integration.test.ts',
   'tests/integration/document-index/document-index-backfill.db-queue.integration.test.ts',
