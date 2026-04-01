@@ -25,6 +25,9 @@ export const loggingDefaults = {
   cleanup: {
     batchSize: 1_000,
   },
+  partitioning: {
+    futureMonths: 6,
+  },
 } as const;
 
 /** Structured-RAG alert windows, thresholds, and report period */

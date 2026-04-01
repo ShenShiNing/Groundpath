@@ -101,7 +101,7 @@
 | M-16 | 外键 RESTRICT 与软删除冲突 | `documents → users`                    | 用户硬删除被非软删文档阻止               |
 | M-17 | count 查询效率低           | `document-chunk.repository.ts:116-145` | 取全量数据后 `.length`，应用 `COUNT(*)`  |
 | M-18 | messages 表缺少全文索引    | messages schema                        | `searchByContent` 依赖 FULLTEXT 但无索引 |
-| M-19 | 日志大表缺少分区策略       | messages, login_logs, operation_logs   | 增长快无分区                             |
+| ~~M-19~~ | ~~日志大表缺少分区策略~~ ✅ | messages, login_logs, operation_logs | `login_logs` / `operation_logs` 按 `created_at` 月分区并自动补未来分区；`messages` 因外键限制改为软删会话定期物理清理 |
 
 ### 4.5 前端质量
 
@@ -181,7 +181,7 @@
 | 高     | 修复 count 查询: `.length` → `COUNT(*)` | `document-chunk.repository.ts`       |
 | 高     | 审查 documents→users RESTRICT 约束      | 可能阻止用户删除                     |
 | 中     | messages 表创建 FULLTEXT 索引           | searchByContent 依赖                 |
-| 中     | 日志表按时间分区                        | messages, login_logs, operation_logs |
+| ~~中~~ | ~~日志表按时间分区~~ ✅                 | `login_logs` / `operation_logs` 已按月分区；`messages` 改为生命周期清理 |
 | 低     | 评估 system_logs 生成列数量             | 10+ 生成列可能影响写入性能           |
 
 ---
@@ -251,6 +251,7 @@
 ### 第 3 周 — 架构优化
 
 - [x] 完善各模块 index.ts 公共 API 导出 ✅
+- [x] 日志表月分区 + 软删会话消息清理 ✅
 - [ ] ChatMessage 添加 memo + Zustand 选择器合并
 - [ ] messages 表创建 FULLTEXT 索引
 

@@ -10,6 +10,7 @@ import { createLogger } from '@core/logger';
 import { systemLogger } from '@core/logger/system-logger';
 import { structuredRagAlertService } from '@modules/logs/public/alerts';
 import { logCleanupService } from '@modules/logs/public/cleanup';
+import { conversationCleanupService } from '@modules/chat/public/cleanup';
 import { documentIndexBackfillService } from '@modules/document-index/public/backfill';
 import { documentIndexArtifactCleanupService } from '@modules/document-index/public/cleanup';
 import { tokenCleanupService } from '@modules/auth';
@@ -41,6 +42,7 @@ export function initializeScheduler(): void {
 
         const results = await Promise.allSettled([
           logCleanupService.runCleanup(),
+          conversationCleanupService.cleanup(),
           tokenCleanupService.runCleanup(),
           vectorCleanupService.runCleanup(),
         ]);
@@ -60,7 +62,9 @@ export function initializeScheduler(): void {
         timezone: 'UTC',
       }
     );
-    scheduledTasks.push('cleanup (3:00 AM UTC daily, includes vector purge)');
+    scheduledTasks.push(
+      'cleanup (3:00 AM UTC daily, includes log retention, soft-deleted chat purge, and vector purge)'
+    );
   }
 
   // Optional: Schedule counter sync weekly on Sunday at 4:00 AM UTC

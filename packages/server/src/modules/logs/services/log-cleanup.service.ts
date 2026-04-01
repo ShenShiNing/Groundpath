@@ -4,6 +4,10 @@ import { systemLogger } from '@core/logger/system-logger';
 import { loginLogRepository } from '@modules/auth/public/login-logs';
 import { operationLogRepository } from '../repositories/operation-log.repository';
 import { systemLogRepository } from '../repositories/system-log.repository';
+import {
+  createEmptyLogPartitionMaintenanceResult,
+  logPartitionService,
+} from './log-partition.service';
 
 const logger = createLogger('log-cleanup.service');
 
@@ -11,6 +15,10 @@ export interface CleanupResult {
   loginLogsDeleted: number;
   operationLogsDeleted: number;
   systemLogsDeleted: number;
+  loginLogFuturePartitionsAdded: number;
+  loginLogExpiredPartitionsDropped: number;
+  operationLogFuturePartitionsAdded: number;
+  operationLogExpiredPartitionsDropped: number;
   durationMs: number;
 }
 
@@ -56,6 +64,19 @@ export const logCleanupService = {
     const loginCutoff = getCutoffDate(loggingConfig.retention.loginDays);
     const operationCutoff = getCutoffDate(loggingConfig.retention.operationDays);
     const systemCutoff = getCutoffDate(loggingConfig.retention.systemDays);
+    let partitionMaintenance = createEmptyLogPartitionMaintenanceResult();
+
+    try {
+      partitionMaintenance = await logPartitionService.maintainPartitions({
+        loginCutoff,
+        operationCutoff,
+      });
+    } catch (error) {
+      logger.warn(
+        { error },
+        'Log partition maintenance failed; continuing with row-based cleanup'
+      );
+    }
 
     // Delete old logs in batches
     const [loginLogsDeleted, operationLogsDeleted, systemLogsDeleted] = await Promise.all([
@@ -82,6 +103,12 @@ export const logCleanupService = {
       loginLogsDeleted,
       operationLogsDeleted,
       systemLogsDeleted,
+      loginLogFuturePartitionsAdded: partitionMaintenance.loginLogs.futurePartitionsAdded,
+      loginLogExpiredPartitionsDropped: partitionMaintenance.loginLogs.expiredPartitionsDropped,
+      operationLogFuturePartitionsAdded:
+        partitionMaintenance.operationLogs.futurePartitionsAdded,
+      operationLogExpiredPartitionsDropped:
+        partitionMaintenance.operationLogs.expiredPartitionsDropped,
       durationMs,
     };
 
@@ -92,6 +119,7 @@ export const logCleanupService = {
       loginLogsDeleted,
       operationLogsDeleted,
       systemLogsDeleted,
+      partitionMaintenance,
       retentionDays: {
         login: loggingConfig.retention.loginDays,
         operation: loggingConfig.retention.operationDays,

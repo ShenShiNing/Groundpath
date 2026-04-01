@@ -1,6 +1,7 @@
 export { env } from './env/validated-env';
 export type { Env } from './env/schema';
 export {
+  chatConfig,
   agentConfig,
   authConfig,
   backfillConfig,
