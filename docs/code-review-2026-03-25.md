@@ -96,12 +96,12 @@
 
 ### 4.4 数据库设计
 
-| #        | 问题                              | 文件                                   | 描述                                                                                                          |
-| -------- | --------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| ~~M-16~~ | ~~外键 RESTRICT 与软删除冲突~~ ✅ | `documents → users`                    | 移除冗余 `documents→users` 外键，保留 `knowledge_base` 级联约束，并新增 ownership 一致性检查                  |
-| ~~M-17~~ | ~~count 查询效率低~~ ✅           | `document-chunk.repository.ts:116-145` | `countByDocumentAndVersion` / `countByActiveIndexVersion` / `countByIndexVersionId` 已改为数据库侧 `COUNT(*)` |
-| ~~M-18~~ | ~~messages 表缺少全文索引~~ ✅    | messages schema + drizzle migration    | 已为 `messages.content` 添加 FULLTEXT 索引，并补充真实迁移集成测试                                            |
-| M-19     | 日志大表缺少分区策略              | messages, login_logs, operation_logs   | 增长快无分区                                                                                                  |
+| #        | 问题                              | 文件                                   | 描述                                                                                                                    |
+| -------- | --------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| ~~M-16~~ | ~~外键 RESTRICT 与软删除冲突~~ ✅ | `documents → users`                    | 移除冗余 `documents→users` 外键，保留 `knowledge_base` 级联约束，并新增 ownership 一致性检查                            |
+| ~~M-17~~ | ~~count 查询效率低~~ ✅           | `document-chunk.repository.ts:116-145` | `countByDocumentAndVersion` / `countByActiveIndexVersion` / `countByIndexVersionId` 已改为数据库侧 `COUNT(*)`           |
+| ~~M-18~~ | ~~messages 表缺少全文索引~~ ✅    | messages schema + drizzle migration    | 已为 `messages.content` 添加 FULLTEXT 索引，并补充真实迁移集成测试                                                      |
+| ~~M-19~~ | ~~日志大表缺少分区策略~~ ✅       | messages, login_logs, operation_logs   | `login_logs` / `operation_logs` 已按 `created_at` 月分区并自动补未来分区；`messages` 因外键限制改为软删会话定期物理清理 |
 
 ### 4.5 前端质量
 
@@ -176,13 +176,13 @@
 
 ### 7.2 改进建议
 
-| 优先级 | 建议                                           | 说明                                      |
-| ------ | ---------------------------------------------- | ----------------------------------------- |
-| 高     | ~~修复 count 查询: `.length` → `COUNT(*)`~~ ✅ | `document-chunk.repository.ts`            |
-| 高     | ~~审查 documents→users RESTRICT 约束~~ ✅      | 已移除冗余外键并改为 ownership 一致性校验 |
-| 中     | ~~messages 表创建 FULLTEXT 索引~~ ✅           | `searchByContent` 依赖                    |
-| 中     | 日志表按时间分区                               | messages, login_logs, operation_logs      |
-| 低     | 评估 system_logs 生成列数量                    | 10+ 生成列可能影响写入性能                |
+| 优先级 | 建议                                           | 说明                                                                    |
+| ------ | ---------------------------------------------- | ----------------------------------------------------------------------- |
+| 高     | ~~修复 count 查询: `.length` → `COUNT(*)`~~ ✅ | `document-chunk.repository.ts`                                          |
+| 高     | ~~审查 documents→users RESTRICT 约束~~ ✅      | 已移除冗余外键并改为 ownership 一致性校验                               |
+| 中     | ~~messages 表创建 FULLTEXT 索引~~ ✅           | `searchByContent` 依赖                                                  |
+| 中     | ~~日志表按时间分区~~ ✅                        | `login_logs` / `operation_logs` 已按月分区；`messages` 改为生命周期清理 |
+| 低     | 评估 system_logs 生成列数量                    | 10+ 生成列可能影响写入性能                                              |
 
 ---
 
@@ -251,6 +251,7 @@
 ### 第 3 周 — 架构优化
 
 - [x] 完善各模块 index.ts 公共 API 导出 ✅
+- [x] 日志表月分区 + 软删会话消息清理 ✅
 - [ ] ChatMessage 添加 memo + Zustand 选择器合并
 - [x] messages 表创建 FULLTEXT 索引 ✅
 

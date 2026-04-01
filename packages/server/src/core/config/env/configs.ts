@@ -193,6 +193,7 @@ export const loggingConfig = {
     ...loggingDefaults.cleanup,
     enabled: validatedEnv.LOG_CLEANUP_ENABLED,
   },
+  partitioning: loggingDefaults.partitioning,
 } as const;
 
 export const structuredRagObservabilityConfig = {

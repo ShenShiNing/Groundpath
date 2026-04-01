@@ -1,4 +1,4 @@
-import { eq, and, isNull, desc, sql } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, desc, sql, inArray, lt, asc } from 'drizzle-orm';
 import { db } from '@core/db';
 import { getDbContext, type Transaction } from '@core/db/db.utils';
 import { now } from '@core/db/db.utils';
@@ -108,6 +108,36 @@ export const conversationRepository = {
         deletedBy,
       })
       .where(eq(conversations.id, id));
+  },
+
+  /**
+   * Physically delete soft-deleted conversations older than the cutoff.
+   * Cascading foreign keys purge their messages in the same delete.
+   */
+  async deleteSoftDeletedOlderThan(date: Date, batchSize: number): Promise<number> {
+    const candidates = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .where(and(isNotNull(conversations.deletedAt), lt(conversations.deletedAt, date)))
+      .orderBy(asc(conversations.deletedAt))
+      .limit(batchSize);
+
+    if (candidates.length === 0) {
+      return 0;
+    }
+
+    const ids = candidates.map((conversation) => conversation.id);
+    await db
+      .delete(conversations)
+      .where(
+        and(
+          inArray(conversations.id, ids),
+          isNotNull(conversations.deletedAt),
+          lt(conversations.deletedAt, date)
+        )
+      );
+
+    return ids.length;
   },
 
   /**

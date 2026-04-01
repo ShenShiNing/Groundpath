@@ -9,4 +9,8 @@ export const chatDefaults = {
   titleGenMaxTokens: 30,
   /** Temperature for AI title generation (lower = more deterministic) */
   titleGenTemperature: 0.3,
+  /** Retention window before soft-deleted conversations are physically purged */
+  deletedConversationRetentionDays: 30,
+  /** Batch size for purging soft-deleted conversations and cascaded messages */
+  deletedConversationCleanupBatchSize: 100,
 } as const;

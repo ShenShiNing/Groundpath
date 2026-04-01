@@ -120,6 +120,13 @@
       "when": 1775074169355,
       "tag": "0016_messages_content_fulltext",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1775097600000,
+      "tag": "0017_log_table_partitioning",
+      "breakpoints": true
     }
   ]
 }
