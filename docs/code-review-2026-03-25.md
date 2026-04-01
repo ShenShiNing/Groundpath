@@ -92,16 +92,16 @@
 | ~~M-12~~ | ~~分页元数据定义重复~~ ✅   | `pagination.ts` + `shared/types/api.ts` | 服务端分页工具改为复用共享类型定义                                                                          |
 | ~~M-13~~ | ~~控制器实现风格不一致~~ ✅ | 各 controller                           | 顶层控制器统一改为 `asyncHandler`，仅保留 SSE/流式下载/OAuth 回调等响应已开始场景所需的局部兜底 `try-catch` |
 | ~~M-14~~ | ~~参数提取方法不一致~~ ✅   | 各 controller                           | 剩余 controller 统一改为 `requireUserId(req)`，未鉴权场景统一抛出 `UNAUTHORIZED`                            |
-| ~~M-15~~ | ~~部分端点缺少速率限制~~ ✅ | `trash` 相关路由                        | 回收站清空/永久删除已补充专用速率限制   |
+| ~~M-15~~ | ~~部分端点缺少速率限制~~ ✅ | `trash` 相关路由                        | 回收站清空/永久删除已补充专用速率限制                                                                       |
 
 ### 4.4 数据库设计
 
-| #    | 问题                       | 文件                                   | 描述                                     |
-| ---- | -------------------------- | -------------------------------------- | ---------------------------------------- |
-| M-16 | 外键 RESTRICT 与软删除冲突 | `documents → users`                    | 用户硬删除被非软删文档阻止               |
-| M-17 | count 查询效率低           | `document-chunk.repository.ts:116-145` | 取全量数据后 `.length`，应用 `COUNT(*)`  |
-| M-18 | messages 表缺少全文索引    | messages schema                        | `searchByContent` 依赖 FULLTEXT 但无索引 |
-| M-19 | 日志大表缺少分区策略       | messages, login_logs, operation_logs   | 增长快无分区                             |
+| #        | 问题                           | 文件                                   | 描述                                                               |
+| -------- | ------------------------------ | -------------------------------------- | ------------------------------------------------------------------ |
+| M-16     | 外键 RESTRICT 与软删除冲突     | `documents → users`                    | 用户硬删除被非软删文档阻止                                         |
+| M-17     | count 查询效率低               | `document-chunk.repository.ts:116-145` | 取全量数据后 `.length`，应用 `COUNT(*)`                            |
+| ~~M-18~~ | ~~messages 表缺少全文索引~~ ✅ | messages schema + drizzle migration    | 已为 `messages.content` 添加 FULLTEXT 索引，并补充真实迁移集成测试 |
+| M-19     | 日志大表缺少分区策略           | messages, login_logs, operation_logs   | 增长快无分区                                                       |
 
 ### 4.5 前端质量
 
@@ -180,7 +180,7 @@
 | ------ | --------------------------------------- | ------------------------------------ |
 | 高     | 修复 count 查询: `.length` → `COUNT(*)` | `document-chunk.repository.ts`       |
 | 高     | 审查 documents→users RESTRICT 约束      | 可能阻止用户删除                     |
-| 中     | messages 表创建 FULLTEXT 索引           | searchByContent 依赖                 |
+| 中     | ~~messages 表创建 FULLTEXT 索引~~ ✅    | `searchByContent` 依赖               |
 | 中     | 日志表按时间分区                        | messages, login_logs, operation_logs |
 | 低     | 评估 system_logs 生成列数量             | 10+ 生成列可能影响写入性能           |
 
@@ -252,7 +252,7 @@
 
 - [x] 完善各模块 index.ts 公共 API 导出 ✅
 - [ ] ChatMessage 添加 memo + Zustand 选择器合并
-- [ ] messages 表创建 FULLTEXT 索引
+- [x] messages 表创建 FULLTEXT 索引 ✅
 
 ### 第 4 周 — 安全加固
 
