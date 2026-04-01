@@ -267,6 +267,7 @@ vi.mock('@modules/knowledge-base/repositories/knowledge-base.repository', () => 
 
       return {
         knowledgeBases: items.slice(0, pageSize).map(cloneKnowledgeBase),
+        total: items.length,
         hasMore: items.length > pageSize,
         nextCursor: null,
       };
@@ -587,7 +588,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
 
   beforeAll(async () => {
     const result = await startTestServer((app) => {
-      app.use('/api/knowledge-bases', knowledgeBaseRoutes);
+      app.use('/api/v1/knowledge-bases', knowledgeBaseRoutes);
       app.use(
         (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
           const statusCode = 'statusCode' in err ? (err as { statusCode: number }).statusCode : 500;
@@ -612,7 +613,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should reject unauthenticated KB creation', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ name: 'Test KB', embeddingProvider: 'openai' }),
@@ -624,7 +625,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should create a knowledge base with the shared response contract', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases`, {
       method: 'POST',
       headers: {
         authorization: 'Bearer valid-access',
@@ -653,7 +654,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should reject KB creation with missing name', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases`, {
       method: 'POST',
       headers: {
         authorization: 'Bearer valid-access',
@@ -670,7 +671,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should list knowledge bases with the shared list contract', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases`, {
       headers: { authorization: 'Bearer valid-access' },
     });
 
@@ -693,7 +694,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should get knowledge base by ID with the shared detail contract', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases/${createdKbId}`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${createdKbId}`, {
       headers: { authorization: 'Bearer valid-access' },
     });
 
@@ -708,7 +709,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should update knowledge base name with the shared detail contract', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases/${createdKbId}`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${createdKbId}`, {
       method: 'PATCH',
       headers: {
         authorization: 'Bearer valid-access',
@@ -733,7 +734,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
     formData.set('title', 'Journey Doc');
     formData.set('description', 'Contract test document');
 
-    const response = await fetch(`${baseUrl}/api/knowledge-bases/${createdKbId}/documents`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${createdKbId}/documents`, {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
@@ -757,7 +758,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should list knowledge base documents with the shared list contract', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases/${createdKbId}/documents`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${createdKbId}/documents`, {
       headers: { authorization: 'Bearer valid-access' },
     });
 
@@ -785,7 +786,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should reject upload without file', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases/${createdKbId}/documents`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${createdKbId}/documents`, {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
     });
@@ -796,7 +797,7 @@ describe('HTTP Contract Smoke: KB & Document Journey', () => {
   });
 
   it('should delete knowledge base through the real service layer', async () => {
-    const response = await fetch(`${baseUrl}/api/knowledge-bases/${createdKbId}`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${createdKbId}`, {
       method: 'DELETE',
       headers: { authorization: 'Bearer valid-access' },
     });

@@ -36,7 +36,7 @@ describe('conversationApi.search', () => {
       offset: 0,
     });
 
-    expect(mocks.get).toHaveBeenCalledWith('/api/chat/conversations/search', {
+    expect(mocks.get).toHaveBeenCalledWith('/api/v1/chat/conversations/search', {
       params: {
         query: 'vector db',
         limit: 20,

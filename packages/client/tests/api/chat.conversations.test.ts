@@ -34,7 +34,7 @@ describe('conversationApi.list / chatApi.listConversations', () => {
 
     const result = await conversationApi.list({ knowledgeBaseId: 'kb-1', limit: 20, offset: 0 });
 
-    expect(mocks.get).toHaveBeenCalledWith('/api/chat/conversations', {
+    expect(mocks.get).toHaveBeenCalledWith('/api/v1/chat/conversations', {
       params: { knowledgeBaseId: 'kb-1', limit: 20, offset: 0 },
     });
     expect(result).toEqual(responsePayload);

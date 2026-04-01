@@ -34,6 +34,12 @@ const mocks = vi.hoisted(() => ({
   },
   resolveTools: vi.fn(),
   executeAgentLoop: vi.fn(),
+  toPlainChatMessages: vi.fn((messages) =>
+    messages.map((message: { role: string; content: string }) => ({
+      role: message.role === 'tool' ? 'user' : message.role,
+      content: message.content,
+    }))
+  ),
 }));
 
 vi.mock('@modules/chat/services/conversation.service', () => ({
@@ -67,6 +73,7 @@ vi.mock('@modules/document/public/repositories', () => ({
 vi.mock('@modules/agent', () => ({
   resolveTools: mocks.resolveTools,
   executeAgentLoop: mocks.executeAgentLoop,
+  toPlainChatMessages: mocks.toPlainChatMessages,
 }));
 
 vi.mock('@core/logger', () => ({

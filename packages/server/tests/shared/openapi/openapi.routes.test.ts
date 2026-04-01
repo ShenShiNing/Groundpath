@@ -115,7 +115,7 @@ describe('OpenAPI route auto-discovery', () => {
   });
 
   it('describes structured rag summary and report responses with concrete schemas', () => {
-    const summarySchema = getResponseSchema('/api/logs/structured-rag/summary', 'get', 200);
+    const summarySchema = getResponseSchema('/api/v1/logs/structured-rag/summary', 'get', 200);
     const summaryData = getProperty(summarySchema, 'data');
     expect(getProperty(getProperty(summaryData, 'agent'), 'fallbackRatio')).toBeDefined();
     expect(
@@ -125,12 +125,12 @@ describe('OpenAPI route auto-discovery', () => {
       )
     ).toBeDefined();
 
-    const reportSchema = getResponseSchema('/api/logs/structured-rag/report', 'get', 200);
+    const reportSchema = getResponseSchema('/api/v1/logs/structured-rag/report', 'get', 200);
     const reportData = getProperty(reportSchema, 'data');
     expect(getProperty(getProperty(reportData, 'summary'), 'index')).toBeDefined();
     expect(getProperty(reportData, 'markdown')).toBeDefined();
 
-    const analyzeSchema = getResponseSchema('/api/document-ai/{id}/analyze', 'post', 200);
+    const analyzeSchema = getResponseSchema('/api/v1/document-ai/{id}/analyze', 'post', 200);
     const analyzeData = getProperty(analyzeSchema, 'data');
     expect(getProperty(getItems(getProperty(analyzeData, 'keywords')), 'relevance')).toBeDefined();
     expect(getProperty(getItems(getProperty(analyzeData, 'entities')), 'type')?.enum).toContain(
@@ -140,12 +140,12 @@ describe('OpenAPI route auto-discovery', () => {
       getProperty(getProperty(analyzeData, 'structure'), 'estimatedReadingTimeMinutes')
     ).toBeDefined();
 
-    const chatListSchema = getResponseSchema('/api/chat/conversations', 'get', 200);
+    const chatListSchema = getResponseSchema('/api/v1/chat/conversations', 'get', 200);
     const chatListData = getProperty(chatListSchema, 'data');
     expect(getProperty(getItems(getProperty(chatListData, 'items')), 'messageCount')).toBeDefined();
     expect(getProperty(getProperty(chatListData, 'pagination'), 'hasMore')).toBeDefined();
 
-    const chatDetailSchema = getResponseSchema('/api/chat/conversations/{id}', 'get', 200);
+    const chatDetailSchema = getResponseSchema('/api/v1/chat/conversations/{id}', 'get', 200);
     const chatDetailData = getProperty(chatDetailSchema, 'data');
     expect(
       getProperty(getItems(getProperty(chatDetailData, 'messages')), 'conversationId')
@@ -159,7 +159,7 @@ describe('OpenAPI route auto-discovery', () => {
   });
 
   it('keeps document ai analyze contracts aligned with validated request bodies', () => {
-    const analyzeSchema = getResponseSchema('/api/document-ai/{id}/analyze', 'post', 200);
+    const analyzeSchema = getResponseSchema('/api/v1/document-ai/{id}/analyze', 'post', 200);
     const analyzeData = getProperty(analyzeSchema, 'data');
     expect(getProperty(getItems(getProperty(analyzeData, 'keywords')), 'relevance')).toBeDefined();
     expect(getProperty(getItems(getProperty(analyzeData, 'entities')), 'type')?.enum).toContain(
@@ -170,21 +170,21 @@ describe('OpenAPI route auto-discovery', () => {
     ).toBeDefined();
 
     const keywordsRequestSchema = getRequestBodySchema(
-      '/api/document-ai/{id}/analyze/keywords',
+      '/api/v1/document-ai/{id}/analyze/keywords',
       'post'
     );
     expect(getProperty(keywordsRequestSchema, 'maxKeywords')).toBeDefined();
     expect(getProperty(keywordsRequestSchema, 'language')).toBeDefined();
 
     const entitiesRequestSchema = getRequestBodySchema(
-      '/api/document-ai/{id}/analyze/entities',
+      '/api/v1/document-ai/{id}/analyze/entities',
       'post'
     );
     expect(getProperty(entitiesRequestSchema, 'maxEntities')).toBeDefined();
     expect(getProperty(entitiesRequestSchema, 'language')).toBeDefined();
 
     const keywordsResponseSchema = getResponseSchema(
-      '/api/document-ai/{id}/analyze/keywords',
+      '/api/v1/document-ai/{id}/analyze/keywords',
       'post',
       200
     );
@@ -194,7 +194,7 @@ describe('OpenAPI route auto-discovery', () => {
     expect(getProperty(keywordItem, 'relevance')).toBeDefined();
 
     const entitiesResponseSchema = getResponseSchema(
-      '/api/document-ai/{id}/analyze/entities',
+      '/api/v1/document-ai/{id}/analyze/entities',
       'post',
       200
     );
@@ -206,7 +206,7 @@ describe('OpenAPI route auto-discovery', () => {
   });
 
   it('keeps knowledge base and document contracts aligned with live API payloads', () => {
-    const knowledgeBaseListSchema = getResponseSchema('/api/knowledge-bases', 'get', 200);
+    const knowledgeBaseListSchema = getResponseSchema('/api/v1/knowledge-bases', 'get', 200);
     const knowledgeBaseListData = getProperty(knowledgeBaseListSchema, 'data');
     const knowledgeBases = getProperty(knowledgeBaseListData, 'knowledgeBases');
     expect(getProperty(getItems(knowledgeBases), 'embeddingModel')).toBeDefined();
@@ -214,7 +214,7 @@ describe('OpenAPI route auto-discovery', () => {
     expect(getProperty(knowledgeBaseListData, 'pagination')).toBeDefined();
 
     const knowledgeBaseDocumentsSchema = getResponseSchema(
-      '/api/knowledge-bases/{id}/documents',
+      '/api/v1/knowledge-bases/{id}/documents',
       'get',
       200
     );
@@ -222,14 +222,14 @@ describe('OpenAPI route auto-discovery', () => {
     expect(getProperty(knowledgeBaseDocumentsData, 'documents')).toBeDefined();
     expect(getProperty(knowledgeBaseDocumentsData, 'pagination')).toBeDefined();
     expect(
-      getQueryParameter('/api/knowledge-bases/{id}/documents', 'get', 'cursor')?.required
+      getQueryParameter('/api/v1/knowledge-bases/{id}/documents', 'get', 'cursor')?.required
     ).toBe(false);
     expect(
-      getQueryParameter('/api/knowledge-bases/{id}/documents', 'get', 'knowledgeBaseId')
+      getQueryParameter('/api/v1/knowledge-bases/{id}/documents', 'get', 'knowledgeBaseId')
     ).toBeUndefined();
 
     const knowledgeBaseDocumentUploadSchema = getRequestBodySchema(
-      '/api/knowledge-bases/{id}/documents',
+      '/api/v1/knowledge-bases/{id}/documents',
       'post',
       'multipart/form-data'
     );
@@ -239,7 +239,7 @@ describe('OpenAPI route auto-discovery', () => {
     expect(knowledgeBaseDocumentUploadSchema?.required).toContain('file');
 
     const knowledgeBaseDocumentUploadResponse = getResponseSchema(
-      '/api/knowledge-bases/{id}/documents',
+      '/api/v1/knowledge-bases/{id}/documents',
       'post',
       201
     );
@@ -253,7 +253,7 @@ describe('OpenAPI route auto-discovery', () => {
     ).toBeDefined();
 
     const documentUploadSchema = getRequestBodySchema(
-      '/api/documents',
+      '/api/v1/documents',
       'post',
       'multipart/form-data'
     );
@@ -264,14 +264,14 @@ describe('OpenAPI route auto-discovery', () => {
       expect.arrayContaining(['file', 'knowledgeBaseId'])
     );
 
-    const documentUploadResponse = getResponseSchema('/api/documents', 'post', 201);
+    const documentUploadResponse = getResponseSchema('/api/v1/documents', 'post', 201);
     const documentUploadData = getProperty(documentUploadResponse, 'data');
     expect(getProperty(documentUploadData, 'message')).toBeDefined();
     expect(
       getProperty(getProperty(documentUploadData, 'document'), 'currentVersion')
     ).toBeDefined();
 
-    const versionListSchema = getResponseSchema('/api/documents/{id}/versions', 'get', 200);
+    const versionListSchema = getResponseSchema('/api/v1/documents/{id}/versions', 'get', 200);
     const versionListData = getProperty(versionListSchema, 'data');
     const versions = getProperty(versionListData, 'versions');
     expect(getProperty(getItems(versions), 'version')).toBeDefined();
@@ -279,18 +279,18 @@ describe('OpenAPI route auto-discovery', () => {
     expect(getProperty(versionListData, 'currentVersion')).toBeDefined();
 
     const versionUploadSchema = getRequestBodySchema(
-      '/api/documents/{id}/versions',
+      '/api/v1/documents/{id}/versions',
       'post',
       'multipart/form-data'
     );
     expect(getProperty(versionUploadSchema, 'changeNote')).toBeDefined();
 
-    const saveContentSchema = getResponseSchema('/api/documents/{id}/content', 'put', 200);
+    const saveContentSchema = getResponseSchema('/api/v1/documents/{id}/content', 'put', 200);
     const saveContentData = getProperty(saveContentSchema, 'data');
     expect(getProperty(saveContentData, 'message')).toBeDefined();
     expect(getProperty(getProperty(saveContentData, 'document'), 'processingStatus')).toBeDefined();
 
-    const clearTrashSchema = getResponseSchema('/api/documents/trash', 'delete', 200);
+    const clearTrashSchema = getResponseSchema('/api/v1/documents/trash', 'delete', 200);
     const clearTrashData = getProperty(clearTrashSchema, 'data');
     expect(getProperty(clearTrashData, 'deletedCount')).toBeDefined();
     expect(getProperty(clearTrashData, 'failedCount')).toBeDefined();

@@ -38,7 +38,7 @@ describe('knowledgeBasesApi', () => {
 
     const result = await knowledgeBasesApi.list();
 
-    expect(mocks.get).toHaveBeenCalledWith('/api/knowledge-bases', {
+    expect(mocks.get).toHaveBeenCalledWith('/api/v1/knowledge-bases', {
       params: { pageSize: 100, cursor: undefined },
     });
     expect(result).toEqual(responsePayload.knowledgeBases);
@@ -54,7 +54,7 @@ describe('knowledgeBasesApi', () => {
 
     const result = await knowledgeBasesApi.listDocuments('kb-1', { pageSize: 50, search: 'doc' });
 
-    expect(mocks.get).toHaveBeenCalledWith('/api/knowledge-bases/kb-1/documents', {
+    expect(mocks.get).toHaveBeenCalledWith('/api/v1/knowledge-bases/kb-1/documents', {
       params: { pageSize: 50, search: 'doc', cursor: undefined },
     });
     expect(result).toEqual(responsePayload);
@@ -77,7 +77,7 @@ describe('knowledgeBasesApi', () => {
     });
 
     expect(mocks.post).toHaveBeenCalledWith(
-      '/api/knowledge-bases/kb-1/documents',
+      '/api/v1/knowledge-bases/kb-1/documents',
       formData,
       expect.objectContaining({
         headers: { 'Content-Type': 'multipart/form-data' },

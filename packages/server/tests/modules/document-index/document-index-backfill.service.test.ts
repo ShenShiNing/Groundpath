@@ -32,7 +32,13 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@config/env', () => mocks.env);
+vi.mock('@config/env', async () => {
+  const actual = await vi.importActual<typeof import('@config/env')>('@config/env');
+  return {
+    ...actual,
+    ...mocks.env,
+  };
+});
 
 vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: mocks.documentRepository,

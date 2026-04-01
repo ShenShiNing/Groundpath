@@ -12,6 +12,7 @@ const {
   createSanitizeMiddlewareMock,
   generalRateLimiterMock,
   documentServiceMock,
+  requireKnowledgeBaseOwnershipMock,
 } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     if (req.headers.authorization === 'Bearer valid-access') {
@@ -44,6 +45,7 @@ const {
     createSanitizeMiddlewareMock: vi.fn(() => passthroughMiddleware),
     generalRateLimiterMock: vi.fn(passthroughMiddleware),
     documentServiceMock: documentService,
+    requireKnowledgeBaseOwnershipMock: vi.fn(() => passthroughMiddleware),
   };
 });
 
@@ -53,6 +55,10 @@ vi.mock('@modules/document/services/document.service', () => ({
 
 vi.mock('@modules/document/public/documents', () => ({
   documentService: documentServiceMock,
+}));
+
+vi.mock('@modules/knowledge-base/public/ownership', () => ({
+  requireKnowledgeBaseOwnership: requireKnowledgeBaseOwnershipMock,
 }));
 
 vi.mock('@core/middleware', async () => {
@@ -74,8 +80,8 @@ describe('multipart upload http regression', () => {
 
   beforeAll(async () => {
     const app = express();
-    app.use('/documents', documentRoutes);
-    app.use('/knowledge-bases', knowledgeBaseRoutes);
+    app.use('/api/v1/documents', documentRoutes);
+    app.use('/api/v1/knowledge-bases', knowledgeBaseRoutes);
     app.use(
       (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
         if (
@@ -138,7 +144,7 @@ describe('multipart upload http regression', () => {
     formData.set('title', 'Runtime Doc');
     formData.set('description', 'Multipart metadata');
 
-    const response = await fetch(`${baseUrl}/documents`, {
+    const response = await fetch(`${baseUrl}/api/v1/documents`, {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
@@ -171,7 +177,7 @@ describe('multipart upload http regression', () => {
     formData.set('file', new Blob(['v2'], { type: 'text/plain' }), 'runtime-v2.txt');
     formData.set('changeNote', 'Version 2');
 
-    const response = await fetch(`${baseUrl}/documents/${VALID_DOCUMENT_ID}/versions`, {
+    const response = await fetch(`${baseUrl}/api/v1/documents/${VALID_DOCUMENT_ID}/versions`, {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
@@ -201,7 +207,7 @@ describe('multipart upload http regression', () => {
     formData.set('file', new Blob(['hello'], { type: 'text/plain' }), 'invalid.txt');
     formData.set('title', '');
 
-    const response = await fetch(`${baseUrl}/knowledge-bases/${VALID_KB_ID}/documents`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${VALID_KB_ID}/documents`, {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
@@ -219,7 +225,7 @@ describe('multipart upload http regression', () => {
     formData.set('title', 'Nested Doc');
     formData.set('description', 'Nested multipart metadata');
 
-    const response = await fetch(`${baseUrl}/knowledge-bases/${VALID_KB_ID}/documents`, {
+    const response = await fetch(`${baseUrl}/api/v1/knowledge-bases/${VALID_KB_ID}/documents`, {
       method: 'POST',
       headers: { authorization: 'Bearer valid-access' },
       body: formData,
