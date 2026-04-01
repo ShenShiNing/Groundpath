@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Request } from 'express';
-import { getClientIp } from '@core/utils/request.utils';
+import { AppError } from '@core/errors';
+import { getClientIp, requireUserId } from '@core/utils/request.utils';
 
 describe('request.utils > getClientIp', () => {
   it('should return req.ip when available', () => {
@@ -28,5 +29,29 @@ describe('request.utils > getClientIp', () => {
     } as Request;
 
     expect(getClientIp(req)).toBeNull();
+  });
+});
+
+describe('request.utils > requireUserId', () => {
+  it('should return req.user.sub when authenticated', () => {
+    const req = {
+      user: { sub: 'user-123' },
+    } as Request;
+
+    expect(requireUserId(req)).toBe('user-123');
+  });
+
+  it('should throw UNAUTHORIZED when req.user.sub is missing', () => {
+    const req = {} as Request;
+
+    expect(() => requireUserId(req)).toThrow(AppError);
+
+    try {
+      requireUserId(req);
+    } catch (error) {
+      const appError = error as AppError;
+      expect(appError.code).toBe('UNAUTHORIZED');
+      expect(appError.statusCode).toBe(401);
+    }
   });
 });

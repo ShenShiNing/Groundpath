@@ -8,6 +8,7 @@ import type { SummaryRequestParsed } from '@groundpath/shared/schemas';
 import { summaryService } from '../services/summary.service';
 import { sendSuccessResponse, handleError, asyncHandler } from '@core/errors';
 import { getValidatedBody } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;
@@ -18,7 +19,7 @@ export const summaryController = {
    * POST /api/document-ai/:id/summary - Generate document summary (non-streaming)
    */
   generate: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
     const parsed = getValidatedBody<SummaryRequestParsed>(res);
 
@@ -37,7 +38,7 @@ export const summaryController = {
    * POST /api/document-ai/:id/summary/stream - Stream document summary (SSE)
    */
   stream: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
     const parsed = getValidatedBody<SummaryRequestParsed>(res);
 

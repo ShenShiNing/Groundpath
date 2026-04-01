@@ -4,6 +4,7 @@ import { chatService } from '../services/chat.service';
 import { messageService } from '../services/message.service';
 import { sendSuccessResponse, handleError, asyncHandler } from '@core/errors';
 import { getValidatedBody, getValidatedQuery } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;
@@ -15,7 +16,7 @@ export const messageController = {
    */
   sendMessage: asyncHandler(async (req: Request, res: Response) => {
     try {
-      const userId = req.user!.sub;
+      const userId = requireUserId(req);
       const conversationId = paramAsString(req.params.id);
       const parsed = getValidatedBody<SendMessageInput>(res);
 

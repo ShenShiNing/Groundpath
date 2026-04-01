@@ -3,6 +3,7 @@ import type { Document } from '@core/db/schema/document/documents.schema';
 import type { RagSearchRequest } from '@groundpath/shared/schemas';
 import { sendSuccessResponse, Errors, asyncHandler } from '@core/errors';
 import { getValidatedBody } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 import { searchService } from '../services/search.service';
 import { enqueueDocumentProcessing } from '../queue';
 
@@ -16,7 +17,7 @@ function requireOwnedDocument(res: Response): Document {
 
 export const ragController = {
   search: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const parsed = getValidatedBody<RagSearchRequest>(res);
 
     const results = await searchService.searchInKnowledgeBase({
@@ -36,7 +37,7 @@ export const ragController = {
   }),
 
   processDocument: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const document = requireOwnedDocument(res);
     const documentId = document.id;
 

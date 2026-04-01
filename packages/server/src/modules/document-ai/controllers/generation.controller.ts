@@ -8,6 +8,7 @@ import type { GenerateRequestParsed, ExpandRequestParsed } from '@groundpath/sha
 import { generationService } from '../services/generation.service';
 import { sendSuccessResponse, handleError, asyncHandler } from '@core/errors';
 import { getValidatedBody } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;
@@ -18,7 +19,7 @@ export const generationController = {
    * POST /api/document-ai/generate - Generate new content (non-streaming)
    */
   generate: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const parsed = getValidatedBody<GenerateRequestParsed>(res);
 
     const result = await generationService.generate({
@@ -39,7 +40,7 @@ export const generationController = {
    * POST /api/document-ai/generate/stream - Stream content generation (SSE)
    */
   streamGenerate: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const parsed = getValidatedBody<GenerateRequestParsed>(res);
 
     const abortController = new AbortController();
@@ -68,7 +69,7 @@ export const generationController = {
    * POST /api/document-ai/:id/expand - Expand existing document (non-streaming)
    */
   expand: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
     const parsed = getValidatedBody<ExpandRequestParsed>(res);
 
@@ -89,7 +90,7 @@ export const generationController = {
    * POST /api/document-ai/:id/expand/stream - Stream document expansion (SSE)
    */
   streamExpand: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
     const parsed = getValidatedBody<ExpandRequestParsed>(res);
 

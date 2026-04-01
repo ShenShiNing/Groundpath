@@ -12,6 +12,7 @@ import type {
 import { analysisService } from '../services/analysis.service';
 import { sendSuccessResponse, asyncHandler } from '@core/errors';
 import { getValidatedBody } from '@core/middleware';
+import { requireUserId } from '@core/utils';
 
 function paramAsString(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0]! : value!;
@@ -22,7 +23,7 @@ export const analysisController = {
    * POST /api/document-ai/:id/analyze - Perform comprehensive analysis
    */
   analyze: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
     const parsed = getValidatedBody<AnalysisRequestParsed>(res);
 
@@ -42,7 +43,7 @@ export const analysisController = {
    * POST /api/document-ai/:id/analyze/keywords - Extract keywords only
    */
   extractKeywords: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
     const { maxKeywords, language } = getValidatedBody<ExtractKeywordsRequestParsed>(res);
 
@@ -58,7 +59,7 @@ export const analysisController = {
    * POST /api/document-ai/:id/analyze/entities - Extract entities only
    */
   extractEntities: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
     const { maxEntities, language } = getValidatedBody<ExtractEntitiesRequestParsed>(res);
 
@@ -74,7 +75,7 @@ export const analysisController = {
    * GET /api/document-ai/:id/analyze/structure - Get document structure (no LLM)
    */
   getStructure: asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
+    const userId = requireUserId(req);
     const documentId = paramAsString(req.params.id);
 
     const result = await analysisService.getStructure(userId, documentId);
