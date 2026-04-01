@@ -81,7 +81,7 @@ async function getConstraintCount(
 
 async function expectMysqlError(
   operation: Promise<unknown>,
-  code: 'ER_NO_REFERENCED_ROW_2'
+  code: 'ER_NO_REFERENCED_ROW_2' | 'ER_ROW_IS_REFERENCED_2'
 ): Promise<void> {
   await expect(operation).rejects.toMatchObject({ code });
 }
@@ -121,10 +121,16 @@ describeRealIntegration('document schema migrations integration', () => {
     }
   });
 
-  it('removes documents_user_id_fk while preserving the knowledge base foreign key', async () => {
+  it('removes documents_user_id_fk while preserving ownership constraints that still need orchestration', async () => {
     expect(await getConstraintCount(testConnection, 'documents', 'documents_user_id_fk')).toBe(0);
     expect(
       await getConstraintCount(testConnection, 'documents', 'documents_knowledge_base_id_fk')
+    ).toBe(1);
+    expect(
+      await getConstraintCount(testConnection, 'knowledge_bases', 'knowledge_bases_user_id_fk')
+    ).toBe(1);
+    expect(
+      await getConstraintCount(testConnection, 'conversations', 'conversations_user_id_fk')
     ).toBe(1);
   });
 
@@ -240,6 +246,84 @@ describeRealIntegration('document schema migrations integration', () => {
         ]
       ),
       'ER_NO_REFERENCED_ROW_2'
+    );
+  });
+
+  it('still blocks deleting a user who owns knowledge bases', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const userId = randomUUID();
+    const knowledgeBaseId = randomUUID();
+
+    await testConnection.query(
+      `
+        INSERT INTO users (
+          id, username, email, password, status, email_verified, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `,
+      [userId, `kb-owner-${suffix}`, `kb-owner-${suffix}@example.com`, null, 'active', true]
+    );
+
+    await testConnection.query(
+      `
+        INSERT INTO knowledge_bases (
+          id, user_id, name, description, embedding_provider, embedding_model, embedding_dimensions,
+          document_count, total_chunks, created_by, created_at, updated_by, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())
+      `,
+      [
+        knowledgeBaseId,
+        userId,
+        'User Delete Boundary KB',
+        'fixture',
+        'openai',
+        'text-embedding-3-small',
+        1536,
+        0,
+        0,
+        userId,
+        userId,
+      ]
+    );
+
+    await expectMysqlError(
+      testConnection.query(`DELETE FROM users WHERE id = ?`, [userId]),
+      'ER_ROW_IS_REFERENCED_2'
+    );
+  });
+
+  it('still blocks deleting a user who owns standalone conversations', async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const userId = randomUUID();
+    const conversationId = randomUUID();
+
+    await testConnection.query(
+      `
+        INSERT INTO users (
+          id, username, email, password, status, email_verified, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `,
+      [
+        userId,
+        `conversation-owner-${suffix}`,
+        `conversation-owner-${suffix}@example.com`,
+        null,
+        'active',
+        true,
+      ]
+    );
+
+    await testConnection.query(
+      `
+        INSERT INTO conversations (
+          id, user_id, knowledge_base_id, title, created_by, created_at, updated_by, updated_at
+        ) VALUES (?, ?, ?, ?, ?, NOW(), ?, NOW())
+      `,
+      [conversationId, userId, null, 'Standalone Conversation', userId, userId]
+    );
+
+    await expectMysqlError(
+      testConnection.query(`DELETE FROM users WHERE id = ?`, [userId]),
+      'ER_ROW_IS_REFERENCED_2'
     );
   });
 });
