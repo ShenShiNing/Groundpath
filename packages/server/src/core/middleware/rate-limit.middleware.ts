@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@groundpath/shared';
-import { featureFlags, serverConfig } from '@config/env';
+import { documentConfig, featureFlags, serverConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { sendErrorResponse } from '@core/errors/response';
 import { createLogger } from '@core/logger';
@@ -65,6 +65,14 @@ function setRateLimitHeaders(
 
 function isRateLimitDisabled(): boolean {
   return serverConfig.nodeEnv === 'test' || featureFlags.disableRateLimit;
+}
+
+function getScopedRateLimitKey(scope: string, req: Request): string {
+  const userId = req.user?.sub;
+  if (userId) {
+    return `${scope}:user:${userId}`;
+  }
+  return `${scope}:ip:${getClientIp(req) ?? 'unknown'}`;
 }
 
 export function createRateLimiter(options: RateLimitOptions) {
@@ -140,6 +148,20 @@ export const generalRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 100,
   message: 'Too many requests, please try again later',
+});
+
+export const trashMutationRateLimiter = createRateLimiter({
+  windowMs: documentConfig.trashRateLimit.mutationWindowMs,
+  maxRequests: documentConfig.trashRateLimit.mutationMaxRequests,
+  keyGenerator: (req) => getScopedRateLimitKey('trash-mutation', req),
+  message: 'Too many trash operations, please try again later',
+});
+
+export const trashClearRateLimiter = createRateLimiter({
+  windowMs: documentConfig.trashRateLimit.clearWindowMs,
+  maxRequests: documentConfig.trashRateLimit.clearMaxRequests,
+  keyGenerator: (req) => getScopedRateLimitKey('trash-clear', req),
+  message: 'Too many trash clear attempts, please try again later',
 });
 
 export const aiRateLimiter = createRateLimiter({

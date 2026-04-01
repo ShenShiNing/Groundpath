@@ -8,6 +8,8 @@ export {
   registerRateLimiter,
   refreshRateLimiter,
   generalRateLimiter,
+  trashMutationRateLimiter,
+  trashClearRateLimiter,
   aiRateLimiter,
   emailSendRateLimiter,
   emailVerifyRateLimiter,

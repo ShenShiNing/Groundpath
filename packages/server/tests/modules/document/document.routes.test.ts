@@ -8,6 +8,8 @@ const {
   validateBodyMock,
   validateQueryMock,
   createSanitizeMiddlewareMock,
+  trashMutationRateLimiterMock,
+  trashClearRateLimiterMock,
   sanitizeMultipartFieldsMock,
   sanitizeInlineContentMock,
   updateDocumentRequestSchemaMock,
@@ -98,6 +100,8 @@ const {
       return vi.fn();
     }),
     createSanitizeMiddlewareMock: createSanitizeMiddleware,
+    trashMutationRateLimiterMock: vi.fn(),
+    trashClearRateLimiterMock: vi.fn(),
     sanitizeMultipartFieldsMock: sanitizeMultipartFields,
     sanitizeInlineContentMock: sanitizeInlineContent,
     updateDocumentRequestSchemaMock: updateDocumentRequestSchema,
@@ -163,6 +167,8 @@ vi.mock('@core/middleware', () => ({
   validateQuery: validateQueryMock,
   createSanitizeMiddleware: createSanitizeMiddlewareMock,
   generalRateLimiter: vi.fn(),
+  trashMutationRateLimiter: trashMutationRateLimiterMock,
+  trashClearRateLimiter: trashClearRateLimiterMock,
 }));
 
 vi.mock('@groundpath/shared/schemas', () => ({
@@ -225,10 +231,19 @@ describe('document.routes', () => {
       trashListValidatorMock,
       documentControllerMock.listTrash
     );
-    expect(mockRouter.delete).toHaveBeenCalledWith('/trash', documentControllerMock.clearTrash);
-    expect(mockRouter.post).toHaveBeenCalledWith('/:id/restore', documentControllerMock.restore);
+    expect(mockRouter.delete).toHaveBeenCalledWith(
+      '/trash',
+      trashClearRateLimiterMock,
+      documentControllerMock.clearTrash
+    );
+    expect(mockRouter.post).toHaveBeenCalledWith(
+      '/:id/restore',
+      trashMutationRateLimiterMock,
+      documentControllerMock.restore
+    );
     expect(mockRouter.delete).toHaveBeenCalledWith(
       '/:id/permanent',
+      trashMutationRateLimiterMock,
       documentControllerMock.permanentDelete
     );
   });

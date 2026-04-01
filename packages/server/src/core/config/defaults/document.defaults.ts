@@ -16,6 +16,12 @@ export const documentDefaults = {
   processingRecoveryBatchSize: 100,
   buildCleanupRetentionDays: 7,
   buildCleanupBatchSize: 100,
+  trashRateLimit: {
+    mutationWindowMs: 60_000,
+    mutationMaxRequests: 20,
+    clearWindowMs: 15 * 60_000,
+    clearMaxRequests: 3,
+  },
 } as const;
 
 /** Structured-RAG indexing parameters */

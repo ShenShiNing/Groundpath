@@ -10,6 +10,8 @@ import {
   validateQuery,
   createSanitizeMiddleware,
   generalRateLimiter,
+  trashMutationRateLimiter,
+  trashClearRateLimiter,
 } from '@core/middleware';
 import {
   updateDocumentRequestSchema,
@@ -116,13 +118,13 @@ router.use(authenticate);
 router.get('/trash', validateQuery(trashListParamsSchema), documentController.listTrash);
 
 // Clear trash (permanently delete all)
-router.delete('/trash', documentController.clearTrash);
+router.delete('/trash', trashClearRateLimiter, documentController.clearTrash);
 
 // Restore document from trash
-router.post('/:id/restore', documentController.restore);
+router.post('/:id/restore', trashMutationRateLimiter, documentController.restore);
 
 // Permanently delete document
-router.delete('/:id/permanent', documentController.permanentDelete);
+router.delete('/:id/permanent', trashMutationRateLimiter, documentController.permanentDelete);
 
 // ==================== Document Routes ====================
 

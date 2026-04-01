@@ -4,61 +4,91 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
 
-const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock } = vi.hoisted(
-  () => {
-    const authenticate: RequestHandler = (req, res, next) => {
-      if (req.headers.authorization === 'Bearer valid-access') {
-        next();
-        return;
-      }
-      res.status(401).json({
+const {
+  authenticateMock,
+  createSanitizeMiddlewareMock,
+  trashMutationRateLimiterMock,
+  trashClearRateLimiterMock,
+  documentControllerMock,
+} = vi.hoisted(() => {
+  const authenticate: RequestHandler = (req, res, next) => {
+    if (req.headers.authorization === 'Bearer valid-access') {
+      next();
+      return;
+    }
+    res.status(401).json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Missing or invalid access token' },
+    });
+  };
+
+  const passthroughSanitize: RequestHandler = (_req, _res, next) => next();
+  const trashMutationRateLimiter: RequestHandler = (req, res, next) => {
+    if (req.headers['x-test-rate-limit'] === 'trash-mutation') {
+      res.status(429).json({
         success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Missing or invalid access token' },
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Too many trash operations, please try again later',
+        },
       });
-    };
+      return;
+    }
+    next();
+  };
+  const trashClearRateLimiter: RequestHandler = (req, res, next) => {
+    if (req.headers['x-test-rate-limit'] === 'trash-clear') {
+      res.status(429).json({
+        success: false,
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Too many trash clear attempts, please try again later',
+        },
+      });
+      return;
+    }
+    next();
+  };
 
-    const passthroughSanitize: RequestHandler = (_req, _res, next) => next();
-
-    return {
-      authenticateMock: vi.fn(authenticate),
-      createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
-      documentControllerMock: {
-        listTrash: vi.fn((_req, res) =>
-          res.status(200).json({ success: true, route: 'list-trash' })
-        ),
-        clearTrash: vi.fn((_req, res) =>
-          res.status(200).json({ success: true, route: 'clear-trash' })
-        ),
-        restore: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'restore' })),
-        permanentDelete: vi.fn((_req, res) =>
-          res.status(200).json({ success: true, route: 'permanent-delete' })
-        ),
-        upload: vi.fn((_req, res) => res.status(201).json({ success: true, route: 'upload' })),
-        list: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'list' })),
-        getContent: vi.fn((_req, res) =>
-          res.status(200).json({ success: true, route: 'get-content' })
-        ),
-        saveContent: vi.fn((_req, res) =>
-          res.status(200).json({ success: true, route: 'save-content' })
-        ),
-        getById: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'get-by-id' })),
-        update: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'update' })),
-        delete: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'delete' })),
-        download: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'download' })),
-        preview: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'preview' })),
-        getVersionHistory: vi.fn((_req, res) =>
-          res.status(200).json({ success: true, route: 'version-history' })
-        ),
-        uploadNewVersion: vi.fn((_req, res) =>
-          res.status(201).json({ success: true, route: 'upload-version' })
-        ),
-        restoreVersion: vi.fn((_req, res) =>
-          res.status(200).json({ success: true, route: 'restore-version' })
-        ),
-      },
-    };
-  }
-);
+  return {
+    authenticateMock: vi.fn(authenticate),
+    createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
+    trashMutationRateLimiterMock: vi.fn(trashMutationRateLimiter),
+    trashClearRateLimiterMock: vi.fn(trashClearRateLimiter),
+    documentControllerMock: {
+      listTrash: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'list-trash' })),
+      clearTrash: vi.fn((_req, res) =>
+        res.status(200).json({ success: true, route: 'clear-trash' })
+      ),
+      restore: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'restore' })),
+      permanentDelete: vi.fn((_req, res) =>
+        res.status(200).json({ success: true, route: 'permanent-delete' })
+      ),
+      upload: vi.fn((_req, res) => res.status(201).json({ success: true, route: 'upload' })),
+      list: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'list' })),
+      getContent: vi.fn((_req, res) =>
+        res.status(200).json({ success: true, route: 'get-content' })
+      ),
+      saveContent: vi.fn((_req, res) =>
+        res.status(200).json({ success: true, route: 'save-content' })
+      ),
+      getById: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'get-by-id' })),
+      update: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'update' })),
+      delete: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'delete' })),
+      download: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'download' })),
+      preview: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'preview' })),
+      getVersionHistory: vi.fn((_req, res) =>
+        res.status(200).json({ success: true, route: 'version-history' })
+      ),
+      uploadNewVersion: vi.fn((_req, res) =>
+        res.status(201).json({ success: true, route: 'upload-version' })
+      ),
+      restoreVersion: vi.fn((_req, res) =>
+        res.status(200).json({ success: true, route: 'restore-version' })
+      ),
+    },
+  };
+});
 
 vi.mock('@config/env', async () => {
   const actual = await vi.importActual<typeof import('@config/env')>('@config/env');
@@ -81,6 +111,8 @@ vi.mock('@core/middleware', async () => {
     ...actual,
     authenticate: authenticateMock,
     createSanitizeMiddleware: createSanitizeMiddlewareMock,
+    trashMutationRateLimiter: trashMutationRateLimiterMock,
+    trashClearRateLimiter: trashClearRateLimiterMock,
   };
 });
 
@@ -205,5 +237,35 @@ describe('document.routes http behavior', () => {
     expect(response.status).toBe(400);
     expect(body.error.code).toBe('VALIDATION_ERROR');
     expect(documentControllerMock.saveContent).not.toHaveBeenCalled();
+  });
+
+  it('should reject clear-trash when rate limited', async () => {
+    const response = await fetch(`${baseUrl}/documents/trash`, {
+      method: 'DELETE',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'x-test-rate-limit': 'trash-clear',
+      },
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(429);
+    expect(body.error.code).toBe('RATE_LIMITED');
+    expect(documentControllerMock.clearTrash).not.toHaveBeenCalled();
+  });
+
+  it('should reject permanent-delete when rate limited', async () => {
+    const response = await fetch(`${baseUrl}/documents/doc-1/permanent`, {
+      method: 'DELETE',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'x-test-rate-limit': 'trash-mutation',
+      },
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(429);
+    expect(body.error.code).toBe('RATE_LIMITED');
+    expect(documentControllerMock.permanentDelete).not.toHaveBeenCalled();
   });
 });
