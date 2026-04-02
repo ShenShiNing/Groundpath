@@ -13,7 +13,7 @@ import {
   startDocumentProcessingWorker,
   stopDocumentProcessingWorker,
   enqueueDocumentProcessing,
-} from '@modules/rag';
+} from '@modules/rag/public/queue';
 import { registerDocumentProcessingDispatcher } from '@modules/document/public/processing';
 import { createApp } from './app';
 

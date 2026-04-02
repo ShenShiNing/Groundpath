@@ -58,11 +58,11 @@ vi.mock('@modules/chat/repositories/conversation.repository', () => ({
   conversationRepository: mocks.conversationRepository,
 }));
 
-vi.mock('@modules/llm', () => ({
+vi.mock('@modules/llm/public/runtime', () => ({
   llmService: mocks.llmService,
 }));
 
-vi.mock('@modules/rag', () => ({
+vi.mock('@modules/rag/public/search', () => ({
   searchService: mocks.searchService,
 }));
 
@@ -70,8 +70,11 @@ vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: mocks.documentRepository,
 }));
 
-vi.mock('@modules/agent', () => ({
+vi.mock('@modules/agent/public/tools', () => ({
   resolveTools: mocks.resolveTools,
+}));
+
+vi.mock('@modules/agent/public/execution', () => ({
   executeAgentLoop: mocks.executeAgentLoop,
   toPlainChatMessages: mocks.toPlainChatMessages,
 }));

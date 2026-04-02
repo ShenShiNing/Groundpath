@@ -1,6 +1,6 @@
-export type { EmbeddingProvider, EmbeddingProviderType } from './embedding.types';
+export type { EmbeddingProvider, EmbeddingProviderType } from './public/providers';
 export {
   getEmbeddingProvider,
   getEmbeddingProviderByType,
   resetEmbeddingProvider,
-} from './embedding.factory';
+} from './public/providers';

@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import type { SendVerificationCodeRequest, VerifyCodeRequest } from '@groundpath/shared';
 import { emailVerificationService } from '../verification/email-verification.service';
-import { userService } from '../../user';
+import { userService } from '@modules/user/public/management';
 import { sendSuccessResponse } from '@core/errors';
 import { Errors } from '@core/errors';
 import { asyncHandler } from '@core/errors/async-handler';

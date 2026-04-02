@@ -13,10 +13,10 @@ import { logCleanupService } from '@modules/logs/public/cleanup';
 import { conversationCleanupService } from '@modules/chat/public/cleanup';
 import { documentIndexBackfillService } from '@modules/document-index/public/backfill';
 import { documentIndexArtifactCleanupService } from '@modules/document-index/public/cleanup';
-import { tokenCleanupService } from '@modules/auth';
+import { tokenCleanupService } from '@modules/auth/public/maintenance';
 import { counterSyncService } from '@modules/knowledge-base/public/counters';
 import { vectorCleanupService } from '@modules/vector/public/cleanup';
-import { processingRecoveryService } from '@modules/rag';
+import { processingRecoveryService } from '@modules/rag/public/recovery';
 
 const logger = createLogger('scheduler');
 

@@ -1,6 +1,6 @@
 import { ragConfig } from '@config/env';
 import { createLogger } from '@core/logger';
-import { getEmbeddingProviderByType } from '@modules/embedding';
+import { getEmbeddingProviderByType } from '@modules/embedding/public/providers';
 import { documentRepository } from '@modules/document/public/repositories';
 import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 import { ensureCollection } from '@modules/vector/public/qdrant';

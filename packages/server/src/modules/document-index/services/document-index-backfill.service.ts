@@ -3,7 +3,7 @@ import {
   documentRepository,
   type DocumentBackfillCandidate,
 } from '@modules/document/public/repositories';
-import { enqueueDocumentProcessing } from '@modules/rag';
+import { enqueueDocumentProcessing } from '@modules/rag/public/queue';
 import type { DocumentType } from '@groundpath/shared/types';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';

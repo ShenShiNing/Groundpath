@@ -29,7 +29,7 @@ vi.mock('@modules/document/public/content', () => ({
   },
 }));
 
-vi.mock('@modules/llm', () => ({
+vi.mock('@modules/llm/public/runtime', () => ({
   llmService: {
     getProviderForUser: vi.fn(),
     getOptionsForUser: vi.fn(),
@@ -39,7 +39,7 @@ vi.mock('@modules/llm', () => ({
 // Import after mocks
 import { analysisService } from '@modules/document-ai/services/analysis.service';
 import { documentContentService } from '@modules/document/public/content';
-import { llmService } from '@modules/llm';
+import { llmService } from '@modules/llm/public/runtime';
 
 // Mock LLM provider
 const mockLLMProvider = {

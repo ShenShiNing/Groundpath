@@ -30,14 +30,14 @@ vi.mock('@modules/document/public/content', () => ({
   },
 }));
 
-vi.mock('@modules/llm', () => ({
+vi.mock('@modules/llm/public/runtime', () => ({
   llmService: {
     getProviderForUser: vi.fn(),
     getOptionsForUser: vi.fn(),
   },
 }));
 
-vi.mock('@modules/rag', () => ({
+vi.mock('@modules/rag/public/search', () => ({
   searchService: {
     searchInKnowledgeBase: vi.fn(),
   },
@@ -46,8 +46,8 @@ vi.mock('@modules/rag', () => ({
 // Import after mocks
 import { generationService } from '@modules/document-ai/services/generation.service';
 import { documentContentService } from '@modules/document/public/content';
-import { llmService } from '@modules/llm';
-import { searchService } from '@modules/rag';
+import { llmService } from '@modules/llm/public/runtime';
+import { searchService } from '@modules/rag/public/search';
 
 // Mock LLM provider
 const mockLLMProvider = {

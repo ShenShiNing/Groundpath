@@ -103,7 +103,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  vi.doMock('@modules/auth', () => ({
+  vi.doMock('@modules/auth/public/maintenance', () => ({
     tokenCleanupService: {
       runCleanup: tokenCleanupRunMock,
     },
@@ -121,7 +121,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
     },
   }));
 
-  vi.doMock('@modules/rag', () => ({
+  vi.doMock('@modules/rag/public/recovery', () => ({
     processingRecoveryService: {
       recoverStaleProcessing: processingRecoveryRecoverMock,
     },

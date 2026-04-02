@@ -1,5 +1,5 @@
 import type { LLMProviderType, ToolCallInfo } from '@groundpath/shared/types';
-import type { ToolDefinition } from '@modules/agent/tools/tool.interface';
+import type { ToolDefinition } from '@modules/agent/public/tools';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';

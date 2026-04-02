@@ -15,7 +15,7 @@ import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
 import { dispatchDocumentProcessing } from '../ports/document-processing.port';
-import { storageProvider } from '@modules/storage';
+import { storageProvider } from '@modules/storage/public/provider';
 import type { RequestContext } from './document-upload.service';
 import { toDocumentInfo } from './document-upload.service';
 

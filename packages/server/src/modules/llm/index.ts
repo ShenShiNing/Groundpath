@@ -1,6 +1,4 @@
-export { llmConfigService } from './services/llm-config.service';
-export { llmService } from './services/llm.service';
-export { createLLMProvider } from './llm.factory';
+export { llmConfigService, llmService, createLLMProvider } from './public/runtime';
 export type {
   LLMProvider,
   ChatMessage,
@@ -8,4 +6,4 @@ export type {
   AgentMessage,
   ToolGenerateResult,
   GenerateWithToolsOptions,
-} from './providers/llm-provider.interface';
+} from './public/runtime';

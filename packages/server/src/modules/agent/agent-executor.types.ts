@@ -1,4 +1,9 @@
-import type { AgentMessage, ChatMessage, GenerateOptions, LLMProvider } from '@modules/llm';
+import type {
+  AgentMessage,
+  ChatMessage,
+  GenerateOptions,
+  LLMProvider,
+} from '@modules/llm/public/runtime';
 import type { AgentTool, ToolContext } from './tools';
 import type {
   AgentStep,

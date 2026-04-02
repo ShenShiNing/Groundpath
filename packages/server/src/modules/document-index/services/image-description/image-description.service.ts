@@ -1,6 +1,6 @@
 import { featureFlags, vlmConfig } from '@config/env';
 import { createLogger } from '@core/logger';
-import { vlmService } from '@modules/vlm';
+import { vlmService } from '@modules/vlm/public/description';
 import type { ImageClassification } from './image-classifier';
 import { classifyImageByContext } from './image-classifier';
 import { getSystemPrompt, getUserPrompt } from './image-description.prompts';

@@ -6,7 +6,7 @@ import {
   pdfStructureParser,
   type ParsedDocumentStructure,
 } from '@modules/document-index/public/parsers';
-import { storageProvider } from '@modules/storage';
+import { storageProvider } from '@modules/storage/public/provider';
 import { createLogger } from '@core/logger';
 import { structuredRagMetrics } from '@core/observability';
 import type { ProcessingDocument, ProcessingVersion } from './processing.types';

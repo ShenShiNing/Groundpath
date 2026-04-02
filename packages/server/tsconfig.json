@@ -6,12 +6,11 @@
     "types": ["node"],
 
     // Path aliases to reduce deep relative imports
-    "baseUrl": ".",
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@modules/*": ["src/modules/*"],
-      "@config/*": ["src/core/config/*"],
-      "@tests/*": ["tests/*"]
+      "@core/*": ["./src/core/*"],
+      "@modules/*": ["./src/modules/*"],
+      "@config/*": ["./src/core/config/*"],
+      "@tests/*": ["./tests/*"]
     },
 
     // Stricter checks for server code

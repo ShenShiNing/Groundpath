@@ -1,5 +1,5 @@
 import type { MessageInfo, Citation } from '@groundpath/shared/types';
-import type { ChatMessage } from '@modules/llm';
+import type { ChatMessage } from '@modules/llm/public/runtime';
 
 const SYSTEM_PROMPT = `You are a helpful AI assistant with access to a knowledge base.
 

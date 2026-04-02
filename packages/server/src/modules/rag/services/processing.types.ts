@@ -1,4 +1,4 @@
-import type { EmbeddingProvider } from '@modules/embedding';
+import type { EmbeddingProvider } from '@modules/embedding/public/providers';
 import {
   documentRepository,
   documentVersionRepository,

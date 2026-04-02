@@ -4,8 +4,8 @@
  */
 
 import pLimit from 'p-limit';
-import { llmService } from '@modules/llm';
-import type { ChatMessage, GenerateOptions } from '@modules/llm';
+import { llmService } from '@modules/llm/public/runtime';
+import type { ChatMessage, GenerateOptions } from '@modules/llm/public/runtime';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 

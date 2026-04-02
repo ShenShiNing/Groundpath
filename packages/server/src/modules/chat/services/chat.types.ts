@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import type { GenerateOptions, LLMProvider } from '@modules/llm';
+import type { GenerateOptions, LLMProvider } from '@modules/llm/public/runtime';
 import type {
   Citation,
   MessageMetadata,

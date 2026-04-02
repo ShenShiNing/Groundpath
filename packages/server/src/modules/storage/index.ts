@@ -1,3 +1,3 @@
-export type { StorageProvider, SignedUrlOptions } from './storage.types';
-export { createStorageProvider, storageProvider } from './storage.factory';
+export type { StorageProvider, SignedUrlOptions } from './public/provider';
+export { createStorageProvider, storageProvider } from './public/provider';
 export { storageController } from './storage.controller';

@@ -1,6 +1,6 @@
 import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
 import { ragConfig } from '@config/env';
-import { searchService } from '@modules/rag';
+import { searchService } from '@modules/rag/public/search';
 import { structuredRagMetrics } from '@core/observability';
 import { createLogger } from '@core/logger';
 import { messageService } from './message.service';

@@ -1,4 +1,4 @@
-import type { AgentMessage } from '@modules/llm';
+import type { AgentMessage } from '@modules/llm/public/runtime';
 import { AGENT_ERROR_CODES } from '@groundpath/shared/constants';
 import { agentConfig } from '@core/config/env';
 import { createLogger } from '@core/logger';

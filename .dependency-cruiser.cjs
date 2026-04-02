@@ -71,16 +71,20 @@ module.exports = {
       comment:
         'Cross-module imports must go through the target module public/* API or root barrel (index.ts), not into internal files.',
       from: { path: '^packages/server/src/modules/([^/]+)/' },
-      to: {
-        path: '^packages/server/src/modules/(?!$1/)[^/]+/(?!public/|index\\.ts$).+\\.ts$',
-        pathNot: [
-          // type-only import: avoids llm ↔ agent circular dependency
-          '^packages/server/src/modules/agent/tools/tool\\.interface\\.ts$',
-        ],
-      },
+      to: { path: '^packages/server/src/modules/(?!$1/)[^/]+/(?!public/|index\\.ts$).+\\.ts$' },
     },
 
-    // ── Rule 7: Cross-module imports must not use legacy root barrels ──
+    // ── Rule 7: Core/scripts must only consume module public APIs ──
+    {
+      name: 'no-core-to-module-deep-import',
+      severity: 'error',
+      comment:
+        'Core entrypoints and shared runtime code must consume modules through public/* APIs to preserve feature boundaries.',
+      from: { path: '^packages/server/src/(core/|scripts/|index\\.ts$)' },
+      to: { path: '^packages/server/src/modules/[^/]+/(?!public/|index\\.ts$).+\\.ts$' },
+    },
+
+    // ── Rule 8: Cross-module imports must not use legacy root barrels ──
     {
       name: 'no-cross-module-root-barrel-import',
       severity: 'error',
@@ -88,7 +92,7 @@ module.exports = {
         'Cross-module imports must go through the target module public/* API, not the module root barrel.',
       from: { path: '^packages/server/src/' },
       to: {
-        path: '^packages/server/src/modules/(document|knowledge-base|vector|logs|document-index)/index\\.ts$',
+        path: '^packages/server/src/modules/(agent|auth|chat|document|document-index|embedding|knowledge-base|llm|logs|rag|storage|user|vector|vlm)/index\\.ts$',
       },
     },
   ],

@@ -6,7 +6,7 @@ import type { User } from '@core/db/schema/user/users.schema';
 import type { AccessTokenSubject } from '@core/types';
 import { generateOAuthStateToken, toUserPublicInfo, verifyOAuthStateToken } from '@core/utils';
 import { Errors } from '@core/errors';
-import { userService } from '../../user';
+import { userService } from '@modules/user/public/management';
 import { userAuthRepository } from '../repositories/user-auth.repository';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from '../services/token.service';

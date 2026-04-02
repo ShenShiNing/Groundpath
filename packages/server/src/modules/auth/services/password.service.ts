@@ -5,7 +5,7 @@ import { Errors } from '@core/errors';
 import { withTransaction, type Transaction } from '@core/db/db.utils';
 import { normalizeEmail } from '@core/utils';
 import { authConfig } from '@config/env';
-import { userService } from '../../user';
+import { userService } from '@modules/user/public/management';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userTokenStateRepository } from '../repositories/user-token-state.repository';
 import { emailVerificationService } from '../verification/email-verification.service';

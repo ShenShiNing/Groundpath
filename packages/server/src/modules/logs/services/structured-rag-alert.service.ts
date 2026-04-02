@@ -1,5 +1,5 @@
 import { structuredRagObservabilityConfig } from '@config/env';
-import { emailService } from '@modules/auth';
+import { emailService } from '@modules/auth/public/email';
 import { BRAND_CONFIG } from '@groundpath/shared/constants';
 import { systemLogRepository } from '../repositories/system-log.repository';
 import { systemLogger } from '@core/logger/system-logger';
