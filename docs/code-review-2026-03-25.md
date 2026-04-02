@@ -111,8 +111,8 @@
 | ~~M-21~~ | ~~ChatMessage 组件未 memo 优化~~ ✅ | `ChatMessage.tsx`             | 已补充显式 `memo` 比较器，并将 assistant action 状态下沉，避免等价消息和复制状态触发重型 markdown 子树重渲染                |
 | ~~M-22~~ | ~~错误吞咽~~ ✅                     | `KnowledgeBaseDetailPage.tsx` | 文档删除改为 `Promise.allSettled()` 等待全部请求落定；任一删除失败时通过 toast 提示“删除文档失败”，并统一刷新详情与文档列表 |
 | ~~M-23~~ | ~~PII 信息出现在日志中~~ ✅         | `authStore.ts`, `logger.ts`   | `authStore` 不再附带邮箱 metadata，客户端 logger 对 `AxiosError` / metadata 默认脱敏，避免邮箱、密码、token 落到控制台日志  |
-| ~~M-24~~ | ~~硬编码分页大小~~ ✅               | 多处 `pageSize: 100`          | 客户端已新增分页常量并统一复用，知识库列表/详情/聊天页不再散落硬编码 `100`                                                   |
-| M-25     | 正则表达式在组件内重复编译          | `DocumentReader.tsx:34-36`    | 应提升为模块级常量                                                                                                          |
+| ~~M-24~~ | ~~硬编码分页大小~~ ✅               | 多处 `pageSize: 100`          | 客户端已新增分页常量并统一复用，知识库列表/详情/聊天页不再散落硬编码 `100`                                                  |
+| ~~M-25~~ | ~~正则表达式在组件内重复编译~~ ✅   | `DocumentReader.tsx`          | 已将 `escapeHtml` / `formatInline` / `renderMarkdownSafe` 使用的正则提升为模块级常量                                        |
 
 ---
 
@@ -200,14 +200,14 @@
 
 ### 8.2 改进建议
 
-| 优先级 | 建议                                 | 说明                                                       |
-| ------ | ------------------------------------ | ---------------------------------------------------------- |
-| 高     | ~~DocumentReader 改用 DOMPurify~~ ✅ | 已引入 DOMPurify 纵深防御                                  |
-| 高     | ~~大列表引入虚拟滚动~~ ✅            | @tanstack/react-virtual                                    |
+| 优先级 | 建议                                 | 说明                                                                  |
+| ------ | ------------------------------------ | --------------------------------------------------------------------- |
+| 高     | ~~DocumentReader 改用 DOMPurify~~ ✅ | 已引入 DOMPurify 纵深防御                                             |
+| 高     | ~~大列表引入虚拟滚动~~ ✅            | @tanstack/react-virtual                                               |
 | 中     | ~~ChatMessage 添加 React.memo~~ ✅   | 已为 `ChatMessage` 添加显式 `memo` 比较器并下沉 assistant action 状态 |
-| 中     | ~~Zustand 选择器合并~~ ✅            | `useChatPageController` 已改为单个 `useShallow` 聚合选择器 |
-| 中     | ~~空 catch 块添加用户反馈~~ ✅       | 删除文档失败时改为 toast 提示并刷新详情与列表              |
-| 低     | 正则常量提升到模块级                 | 避免组件内重复编译                                         |
+| 中     | ~~Zustand 选择器合并~~ ✅            | `useChatPageController` 已改为单个 `useShallow` 聚合选择器            |
+| 中     | ~~空 catch 块添加用户反馈~~ ✅       | 删除文档失败时改为 toast 提示并刷新详情与列表                         |
+| 低     | ~~正则常量提升到模块级~~ ✅          | `DocumentReader` 渲染链路的正则已提升为模块级常量                     |
 
 ---
 

@@ -5,6 +5,23 @@ import { useTranslation } from 'react-i18next';
 import type { DocumentType } from '@groundpath/shared/types';
 import { cn } from '@/lib/utils';
 
+const HTML_AMPERSAND_PATTERN = /&/g;
+const HTML_LT_PATTERN = /</g;
+const HTML_GT_PATTERN = />/g;
+const HTML_QUOTE_PATTERN = /"/g;
+const HTML_APOSTROPHE_PATTERN = /'/g;
+const INLINE_CODE_PATTERN = /`([^`]+)`/g;
+const MARKDOWN_LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/g;
+const MARKDOWN_BOLD_PATTERN = /\*\*(.+?)\*\*/g;
+const MARKDOWN_ITALIC_PATTERN = /(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g;
+const PLACEHOLDER_PREFIX = '__INLINE_HTML_';
+const PLACEHOLDER_SUFFIX = '__';
+const PLACEHOLDER_PATTERN = /__INLINE_HTML_\d+__/g;
+const PLACEHOLDER_RESTORE_PATTERN = /__INLINE_HTML_(\d+)__/g;
+const MARKDOWN_LIST_ITEM_PATTERN = /^\s*[-*]\s+/;
+const MARKDOWN_HEADING_PATTERN = /^(#{1,6})\s+(.*)$/;
+const MARKDOWN_HORIZONTAL_RULE_PATTERN = /^(-{3,}|\*{3,})$/;
+
 interface DocumentReaderProps {
   documentType: DocumentType;
   textContent: string | null;
@@ -15,11 +32,11 @@ interface DocumentReaderProps {
 
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(HTML_AMPERSAND_PATTERN, '&amp;')
+    .replace(HTML_LT_PATTERN, '&lt;')
+    .replace(HTML_GT_PATTERN, '&gt;')
+    .replace(HTML_QUOTE_PATTERN, '&quot;')
+    .replace(HTML_APOSTROPHE_PATTERN, '&#39;');
 }
 
 /** 验证 URL 是否安全 */
@@ -44,8 +61,6 @@ function sanitizeUrl(raw: string): string | null {
 function formatInline(text: string): string {
   // 使用占位符保护已处理的 HTML，避免被后续处理破坏
   const placeholders: string[] = [];
-  const PLACEHOLDER_PREFIX = '__INLINE_HTML_';
-  const PLACEHOLDER_SUFFIX = '__';
 
   const placeholder = (html: string) => {
     const idx = placeholders.length;
@@ -56,12 +71,12 @@ function formatInline(text: string): string {
   let result = text;
 
   // 1. Inline code: `code` - 先处理，内部内容需要转义
-  result = result.replace(/`([^`]+)`/g, (_, code: string) => {
+  result = result.replace(INLINE_CODE_PATTERN, (_, code: string) => {
     return placeholder(`<code class="rounded bg-muted px-1 py-0.5">${escapeHtml(code)}</code>`);
   });
 
   // 2. Links: [text](url)
-  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label: string, url: string) => {
+  result = result.replace(MARKDOWN_LINK_PATTERN, (_, label: string, url: string) => {
     const safeUrl = sanitizeUrl(url);
     const safeLabel = escapeHtml(label);
     if (!safeUrl) return placeholder(safeLabel);
@@ -71,26 +86,23 @@ function formatInline(text: string): string {
   });
 
   // 3. Bold: **text**
-  result = result.replace(/\*\*(.+?)\*\*/g, (_, content: string) => {
+  result = result.replace(MARKDOWN_BOLD_PATTERN, (_, content: string) => {
     return placeholder(`<strong>${escapeHtml(content)}</strong>`);
   });
 
   // 4. Italic: *text* (兼容性正则，不使用 lookbehind)
-  result = result.replace(
-    /(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g,
-    (_, prefix: string, content: string) => {
-      // prefix 可能包含占位符，不要转义
-      return prefix + placeholder(`<em>${escapeHtml(content)}</em>`);
-    }
-  );
+  result = result.replace(MARKDOWN_ITALIC_PATTERN, (_, prefix: string, content: string) => {
+    // prefix 可能包含占位符，不要转义
+    return prefix + placeholder(`<em>${escapeHtml(content)}</em>`);
+  });
 
   // 5. 转义剩余的普通文本（分段处理以保护占位符）
-  const placeholderPattern = new RegExp(`${PLACEHOLDER_PREFIX}\\d+${PLACEHOLDER_SUFFIX}`, 'g');
   const parts: string[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = placeholderPattern.exec(result)) !== null) {
+  PLACEHOLDER_PATTERN.lastIndex = 0;
+  while ((match = PLACEHOLDER_PATTERN.exec(result)) !== null) {
     // 转义占位符之前的文本
     if (match.index > lastIndex) {
       parts.push(escapeHtml(result.slice(lastIndex, match.index)));
@@ -108,10 +120,9 @@ function formatInline(text: string): string {
   result = parts.join('');
 
   // 6. 还原占位符
-  result = result.replace(
-    new RegExp(`${PLACEHOLDER_PREFIX}(\\d+)${PLACEHOLDER_SUFFIX}`, 'g'),
-    (_, idx: string) => placeholders[parseInt(idx, 10)] ?? ''
-  );
+  result = result.replace(PLACEHOLDER_RESTORE_PATTERN, (_, idx: string) => {
+    return placeholders[parseInt(idx, 10)] ?? '';
+  });
 
   return result;
 }
@@ -155,12 +166,12 @@ function renderMarkdownSafe(markdown: string): string {
     }
 
     // List handling - 在原始文本上操作
-    if (/^\s*[-*]\s+/.test(line)) {
+    if (MARKDOWN_LIST_ITEM_PATTERN.test(line)) {
       if (!inList) {
         html.push('<ul class="list-disc pl-6 space-y-1">');
         inList = true;
       }
-      const itemText = line.replace(/^\s*[-*]\s+/, '');
+      const itemText = line.replace(MARKDOWN_LIST_ITEM_PATTERN, '');
       const item = formatInline(itemText);
       html.push(`<li>${item}</li>`);
       continue;
@@ -169,7 +180,7 @@ function renderMarkdownSafe(markdown: string): string {
     }
 
     // Headings - 在原始文本上操作
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+    const headingMatch = line.match(MARKDOWN_HEADING_PATTERN);
     if (headingMatch) {
       const level = headingMatch[1].length;
       const content = formatInline(headingMatch[2]);
@@ -178,7 +189,7 @@ function renderMarkdownSafe(markdown: string): string {
     }
 
     // Horizontal rule
-    if (/^(-{3,}|\*{3,})$/.test(line.trim())) {
+    if (MARKDOWN_HORIZONTAL_RULE_PATTERN.test(line.trim())) {
       html.push('<hr class="my-4 border-border" />');
       continue;
     }
