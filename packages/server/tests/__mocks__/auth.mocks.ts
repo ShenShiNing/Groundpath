@@ -1,4 +1,5 @@
 import type { TokenPair } from '@groundpath/shared/types';
+import type { User } from '@core/db/schema/user/users.schema';
 
 // ==================== Shared Test Data ====================
 
@@ -20,7 +21,9 @@ export const mockUser = {
   updatedAt: new Date('2024-01-01'),
   deletedBy: null,
   deletedAt: null,
-};
+  activeUsername: 'testuser',
+  activeEmail: 'test@example.com',
+} satisfies User;
 
 export const mockTokenPair: TokenPair = {
   accessToken: 'mock-access-token',
@@ -47,7 +50,9 @@ export const mockCreatedUser = {
   updatedAt: new Date('2024-01-01'),
   deletedBy: null,
   deletedAt: null,
-};
+  activeUsername: 'newuser',
+  activeEmail: 'newuser@example.com',
+} satisfies User;
 
 export const mockSessions = [
   {
