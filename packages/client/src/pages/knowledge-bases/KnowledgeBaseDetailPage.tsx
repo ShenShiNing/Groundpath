@@ -106,21 +106,24 @@ export default function KnowledgeBaseDetailPage() {
       return;
     }
 
-    try {
-      await Promise.all(
-        documentsToDelete.map((document) => deleteDocumentMutation.mutateAsync(document.id))
-      );
-      invalidateKnowledgeBaseQueries();
-    } catch {
-      // deletion failed — query will refetch
-    } finally {
-      handleCloseDeleteDialog();
+    const deletionResults = await Promise.allSettled(
+      documentsToDelete.map((document) => deleteDocumentMutation.mutateAsync(document.id))
+    );
+    const hasFailedDeletion = deletionResults.some((result) => result.status === 'rejected');
+
+    invalidateKnowledgeBaseQueries();
+
+    if (hasFailedDeletion) {
+      toast.error(t('toast.deleteFailed', { ns: 'document' }));
     }
+
+    handleCloseDeleteDialog();
   }, [
     deleteDialog.documents,
     deleteDocumentMutation,
     handleCloseDeleteDialog,
     invalidateKnowledgeBaseQueries,
+    t,
   ]);
 
   const handleDownloadDocument = useCallback((document: DocumentListItem) => {

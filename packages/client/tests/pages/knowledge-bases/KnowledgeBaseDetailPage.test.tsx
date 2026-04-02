@@ -328,6 +328,31 @@ describe('KnowledgeBaseDetailPage', () => {
     await view.unmount();
   });
 
+  it('should show delete feedback when document deletion fails', async () => {
+    mocks.mutateAsync.mockRejectedValueOnce(new Error('delete failed'));
+
+    const view = await render(<KnowledgeBaseDetailPage />);
+
+    const deleteButton = view.container.querySelector('button[aria-label="delete-doc-1"]');
+    await fireClick(deleteButton);
+
+    const confirmDeleteButton = Array.from(view.container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'delete'
+    );
+    await fireClick(confirmDeleteButton ?? null);
+    await flushPromises();
+
+    expect(mocks.toastError).toHaveBeenCalledWith('toast.deleteFailed');
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['knowledge-bases', 'kb-1', 'documents', {}],
+    });
+    expect(mocks.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['knowledge-bases', 'kb-1', 'detail'],
+    });
+
+    await view.unmount();
+  });
+
   it('should navigate to document detail with knowledge base return context', async () => {
     const view = await render(<KnowledgeBaseDetailPage />);
 
