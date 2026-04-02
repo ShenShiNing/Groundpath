@@ -28,7 +28,7 @@
     ·
     <a href="./docs/architecture-guardrails.md">架构门禁</a>
     ·
-    <a href="./docs/codebase-analysis.md">代码分析</a>
+    <a href="./docs/user-hard-delete-design-2026-04-02.md">删除设计</a>
   </p>
 </div>
 
@@ -303,8 +303,7 @@ pnpm dev
 ├─ docs/
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md
-│  ├─ codebase-analysis.md
-│  └─ codebase-analysis-2026-03-23.md
+│  └─ user-hard-delete-design-2026-04-02.md
 ├─ docker-compose.yml
 └─ package.json
 ```
@@ -313,7 +312,7 @@ pnpm dev
 
 - [docs/env-variables.md](./docs/env-variables.md)：环境变量总览
 - [docs/architecture-guardrails.md](./docs/architecture-guardrails.md)：架构边界与门禁
-- [docs/codebase-analysis.md](./docs/codebase-analysis.md)：代码库分析稳定入口（最新报告与归档）
+- [docs/user-hard-delete-design-2026-04-02.md](./docs/user-hard-delete-design-2026-04-02.md)：用户完整硬删的未完成设计边界
 
 ## 当前状态
 

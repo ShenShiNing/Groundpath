@@ -28,7 +28,7 @@
     ·
     <a href="./docs/architecture-guardrails.md">Architecture Guardrails</a>
     ·
-    <a href="./docs/codebase-analysis.md">Codebase Analysis</a>
+    <a href="./docs/user-hard-delete-design-2026-04-02.md">User Deletion Design</a>
   </p>
 </div>
 
@@ -255,8 +255,7 @@ See [AGENTS.md](./AGENTS.md) and [docs/architecture-guardrails.md](./docs/archit
 ├─ docs/
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md
-│  ├─ codebase-analysis.md
-│  └─ codebase-analysis-2026-03-23.md
+│  └─ user-hard-delete-design-2026-04-02.md
 ├─ docker-compose.yml
 └─ package.json
 ```
@@ -265,7 +264,7 @@ See [AGENTS.md](./AGENTS.md) and [docs/architecture-guardrails.md](./docs/archit
 
 - [docs/env-variables.md](./docs/env-variables.md): Environment variable reference
 - [docs/architecture-guardrails.md](./docs/architecture-guardrails.md): Architecture boundaries and guardrails
-- [docs/codebase-analysis.md](./docs/codebase-analysis.md): Stable entry for codebase analysis reports
+- [docs/user-hard-delete-design-2026-04-02.md](./docs/user-hard-delete-design-2026-04-02.md): Active design note for full user hard deletion
 
 ## Current Status
 
