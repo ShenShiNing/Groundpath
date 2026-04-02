@@ -1,11 +1,10 @@
 {
   "extends": "../tsconfig.app.json",
   "compilerOptions": {
-    "baseUrl": "..",
     "types": ["vite/client", "vitest/globals"],
     "paths": {
-      "@/*": ["./src/*"],
-      "@tests/*": ["./tests/*"]
+      "@/*": ["../src/*"],
+      "@tests/*": ["./*"]
     },
     "noUnusedLocals": false,
     "noUnusedParameters": false
