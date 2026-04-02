@@ -1,4 +1,3 @@
-// Services (public API — currently not consumed externally, but stable facade)
-export { summaryService } from './services/summary.service';
-export { analysisService } from './services/analysis.service';
-export { generationService } from './services/generation.service';
+export { summaryService } from './public/summary';
+export { analysisService } from './public/analysis';
+export { generationService } from './public/generation';

@@ -29,7 +29,7 @@ vi.mock('@core/utils/request.utils', () => ({
 
 // Import after mocks
 import { emailController } from '@modules/auth/verification/email.controller';
-import { emailVerificationService } from '@modules/auth';
+import { emailVerificationService } from '@modules/auth/public/email-verification';
 import { userService } from '@modules/user/public/management';
 
 // ==================== Test Helpers ====================

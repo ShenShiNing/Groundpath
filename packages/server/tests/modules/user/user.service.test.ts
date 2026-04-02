@@ -44,7 +44,7 @@ vi.mock('@modules/document/public/storage', () => ({
   },
 }));
 
-import { userService } from '@modules/user';
+import { userService } from '@modules/user/public/management';
 import { userRepository } from '@modules/user/repositories/user.repository';
 import { emailVerificationService } from '@modules/auth/verification/email-verification.service';
 import { storageService } from '@modules/document/public/storage';

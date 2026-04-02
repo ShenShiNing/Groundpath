@@ -1,4 +1,4 @@
-export { conversationService } from './services/conversation.service';
-export { messageService } from './services/message.service';
-export { chatService } from './services/chat.service';
-export { promptService } from './services/prompt.service';
+export { conversationService } from './public/conversations';
+export { messageService } from './public/messages';
+export { chatService } from './public/chat';
+export { promptService } from './public/prompts';
