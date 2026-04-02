@@ -62,9 +62,9 @@ vi.mock('@config/env', async (importOriginal) => {
 });
 
 // Import after mocks
-import { emailVerificationService } from '@modules/auth';
+import { emailVerificationService } from '@modules/auth/public/email-verification';
 import { emailVerificationRepository } from '@modules/auth/verification/email-verification.repository';
-import { emailService } from '@modules/auth';
+import { emailService } from '@modules/auth/public/email';
 
 // ==================== sendCode ====================
 // 场景：发送验证码到用户邮箱
