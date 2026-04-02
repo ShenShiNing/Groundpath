@@ -50,7 +50,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
-          logClientError('authStore.login', error, { email });
+          logClientError('authStore.login', error);
           set({ isLoading: false });
           throw error;
         }
@@ -69,7 +69,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
-          logClientError('authStore.register', error, { email: data.email });
+          logClientError('authStore.register', error);
           set({ isLoading: false });
           throw error;
         }
@@ -88,7 +88,7 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
         } catch (error) {
-          logClientError('authStore.registerWithCode', error, { email: data.email });
+          logClientError('authStore.registerWithCode', error);
           set({ isLoading: false });
           throw error;
         }
