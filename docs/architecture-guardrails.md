@@ -32,6 +32,7 @@
 对于已经拆出能力级出口的模块，跨模块调用不要再写成：
 
 - `@modules/document`
+- `@modules/document-ai`
 - `@modules/knowledge-base`
 - `@modules/logs`
 - `@modules/document-index`
@@ -41,6 +42,9 @@
 - `@modules/document/public/management`
 - `@modules/document/public/repositories`
 - `@modules/document/public/storage`
+- `@modules/document-ai/public/analysis`
+- `@modules/document-ai/public/generation`
+- `@modules/document-ai/public/summary`
 - `@modules/knowledge-base/public/management`
 - `@modules/knowledge-base/public/counters`
 - `@modules/logs/public/maintenance`
@@ -49,7 +53,7 @@
 - `@modules/document-index/public/artifact-cleanup`
 - `@modules/document-index/public/indexing`
 
-仓库里的 `dependency-cruiser` 已经对以上 4 个模块的跨模块 root barrel import 报错，避免“文档要求走 `public/*`，代码却还能偷走根出口”的回退。
+仓库里的 `dependency-cruiser` 已经对以上模块的跨模块 root barrel import 报错，避免“文档要求走 `public/*`，代码却还能偷走根出口”的回退。
 
 ### 2.3 public 入口变宽时
 

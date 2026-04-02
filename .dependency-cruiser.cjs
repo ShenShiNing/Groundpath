@@ -92,7 +92,7 @@ module.exports = {
         'Cross-module imports must go through the target module public/* API, not the module root barrel.',
       from: { path: '^packages/server/src/' },
       to: {
-        path: '^packages/server/src/modules/(agent|auth|chat|document|document-index|embedding|knowledge-base|llm|logs|rag|storage|user|vector|vlm)/index\\.ts$',
+        path: '^packages/server/src/modules/(agent|auth|chat|document|document-ai|document-index|embedding|knowledge-base|llm|logs|rag|storage|user|vector|vlm)/index\\.ts$',
       },
     },
   ],
