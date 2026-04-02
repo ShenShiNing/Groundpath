@@ -1,23 +1,15 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Copy, RefreshCw, Loader2, Check, AlignLeft, FileCode2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Loader2 } from 'lucide-react';
 import { CitationSources } from './CitationSources';
 import { ChatMarkdown } from './ChatMarkdown';
 import { ToolStepsDisplay } from './ToolStepsDisplay';
 import { ThinkingStepCard } from './ThinkingStepCard';
 import { UserMessage } from './UserMessage';
+import { AssistantMessageActions } from './AssistantMessageActions';
 import type { ChatMessage as ChatMessageType, Citation } from '@/stores';
 import { toStopReasonLabelKey } from '@/stores/chatPanelStore.types';
 import type { CopyFormat } from '@/lib/chat';
 import { useTranslation } from 'react-i18next';
-import { formatTime as formatTimeUtil } from '@/lib/date';
 
 // ============================================================================
 // Types
@@ -35,8 +27,52 @@ export interface ChatMessageProps {
 
 const PURE_CODE_BLOCK_PATTERN = /^\s*(?:```[\s\S]*?```|~~~[\s\S]*?~~~)\s*$/;
 
-function formatTime(date: Date): string {
-  return formatTimeUtil(date);
+// ============================================================================
+// Memo helpers
+// ============================================================================
+
+function hasSameArrayItems<T>(previous: readonly T[] | undefined, next: readonly T[] | undefined) {
+  if (previous === next) {
+    return true;
+  }
+
+  if (!previous || !next || previous.length !== next.length) {
+    return false;
+  }
+
+  for (let index = 0; index < previous.length; index += 1) {
+    if (previous[index] !== next[index]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function areMessagesRenderEqual(previous: ChatMessageType, next: ChatMessageType) {
+  return (
+    previous.id === next.id &&
+    previous.role === next.role &&
+    previous.content === next.content &&
+    previous.thinkingContent === next.thinkingContent &&
+    previous.isLoading === next.isLoading &&
+    previous.stopReason === next.stopReason &&
+    previous.timestamp.getTime() === next.timestamp.getTime() &&
+    hasSameArrayItems(previous.citations, next.citations) &&
+    hasSameArrayItems(previous.toolSteps, next.toolSteps)
+  );
+}
+
+function areChatMessagePropsEqual(previous: ChatMessageProps, next: ChatMessageProps) {
+  return (
+    previous.canEdit === next.canEdit &&
+    previous.canRegenerate === next.canRegenerate &&
+    previous.onCitationClick === next.onCitationClick &&
+    previous.onCopyMessage === next.onCopyMessage &&
+    previous.onEditMessage === next.onEditMessage &&
+    previous.onRegenerateMessage === next.onRegenerateMessage &&
+    areMessagesRenderEqual(previous.message, next.message)
+  );
 }
 
 // ============================================================================
@@ -227,79 +263,20 @@ function ChatMessageBase({
 
         {/* Actions */}
         {!message.isLoading && (
-          <div className="flex items-center gap-1 mt-2">
-            <span className="text-[10px] text-muted-foreground mr-1">
-              {formatTime(message.timestamp)}
-            </span>
-            {onCopyMessage && !isPureCodeBlock && (
-              <DropdownMenu>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
-                        aria-label={
-                          copiedFormat ? t('message.copyAriaDone') : t('message.copyAria')
-                        }
-                      >
-                        {copiedFormat ? (
-                          <Check className="size-3.5" />
-                        ) : (
-                          <Copy className="size-3.5" />
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {copiedFormat ? t('message.copied') : t('message.copy')}
-                  </TooltipContent>
-                </Tooltip>
-                <DropdownMenuContent align="start" sideOffset={6} className="w-36">
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onSelect={() => {
-                      void handleCopy('plain');
-                    }}
-                  >
-                    <AlignLeft className="size-3.5" />
-                    {t('message.copyPlain')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onSelect={() => {
-                      void handleCopy('markdown');
-                    }}
-                  >
-                    <FileCode2 className="size-3.5" />
-                    {t('message.copyMarkdown')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {canRegenerate && onRegenerateMessage && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 cursor-pointer text-muted-foreground"
-                    onClick={() => onRegenerateMessage(message.id)}
-                    aria-label={t('message.regenerate')}
-                  >
-                    <RefreshCw className="size-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">{t('message.regenerate')}</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
+          <AssistantMessageActions
+            messageId={message.id}
+            messageContent={message.content}
+            timestamp={message.timestamp}
+            isPureCodeBlock={isPureCodeBlock}
+            canRegenerate={canRegenerate}
+            onCopyMessage={onCopyMessage}
+            onRegenerateMessage={onRegenerateMessage}
+          />
         )}
       </div>
     </div>
   );
 }
 
-export const ChatMessage = memo(ChatMessageBase);
+export const ChatMessage = memo(ChatMessageBase, areChatMessagePropsEqual);
 ChatMessage.displayName = 'ChatMessage';
