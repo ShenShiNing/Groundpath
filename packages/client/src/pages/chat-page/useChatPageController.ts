@@ -3,34 +3,63 @@ import { useNavigate } from '@tanstack/react-router';
 import { useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useStreamBuffer } from '@/hooks/useStreamBuffer';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
-import { getAccessTokenSnapshot, useChatPanelStore, type Citation } from '@/stores';
+import {
+  getAccessTokenSnapshot,
+  useChatPanelStore,
+  type Citation,
+  type ChatPanelState,
+} from '@/stores';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { getProcessingDocumentCount, getSearchableDocuments } from './utils';
 import { useChatPageKnowledgeScope } from './useChatPageKnowledgeScope';
 import { useChatPageScrollFocus } from './useChatPageScrollFocus';
 
+const selectChatPageStore = (state: ChatPanelState) => ({
+  knowledgeBaseId: state.knowledgeBaseId,
+  conversationId: state.conversationId,
+  messages: state.messages,
+  focusMessageId: state.focusMessageId,
+  focusKeyword: state.focusKeyword,
+  selectedDocumentIds: state.selectedDocumentIds,
+  isLoading: state.isLoading,
+  open: state.open,
+  sendMessage: state.sendMessage,
+  editMessage: state.editMessage,
+  retryMessage: state.retryMessage,
+  stopGeneration: state.stopGeneration,
+  appendToLastMessage: state.appendToLastMessage,
+  setDocumentScope: state.setDocumentScope,
+  clearMessages: state.clearMessages,
+  startNewConversation: state.startNewConversation,
+  switchKnowledgeBase: state.switchKnowledgeBase,
+  clearFocusMessageId: state.clearFocusMessageId,
+});
+
 export function useChatPageController() {
   const { t } = useTranslation('chat');
   const navigate = useNavigate();
-  const knowledgeBaseId = useChatPanelStore((state) => state.knowledgeBaseId);
-  const conversationId = useChatPanelStore((state) => state.conversationId);
-  const messages = useChatPanelStore((state) => state.messages);
-  const focusMessageId = useChatPanelStore((state) => state.focusMessageId);
-  const focusKeyword = useChatPanelStore((state) => state.focusKeyword);
-  const selectedDocumentIds = useChatPanelStore((state) => state.selectedDocumentIds);
-  const isLoading = useChatPanelStore((state) => state.isLoading);
-  const open = useChatPanelStore((state) => state.open);
-  const sendMessage = useChatPanelStore((state) => state.sendMessage);
-  const editMessage = useChatPanelStore((state) => state.editMessage);
-  const retryMessage = useChatPanelStore((state) => state.retryMessage);
-  const stopGeneration = useChatPanelStore((state) => state.stopGeneration);
-  const appendToLastMessage = useChatPanelStore((state) => state.appendToLastMessage);
-  const setDocumentScope = useChatPanelStore((state) => state.setDocumentScope);
-  const clearMessages = useChatPanelStore((state) => state.clearMessages);
-  const startNewConversation = useChatPanelStore((state) => state.startNewConversation);
-  const switchKnowledgeBase = useChatPanelStore((state) => state.switchKnowledgeBase);
-  const clearFocusMessageId = useChatPanelStore((state) => state.clearFocusMessageId);
+  const {
+    knowledgeBaseId,
+    conversationId,
+    messages,
+    focusMessageId,
+    focusKeyword,
+    selectedDocumentIds,
+    isLoading,
+    open,
+    sendMessage,
+    editMessage,
+    retryMessage,
+    stopGeneration,
+    appendToLastMessage,
+    setDocumentScope,
+    clearMessages,
+    startNewConversation,
+    switchKnowledgeBase,
+    clearFocusMessageId,
+  } = useChatPanelStore(useShallow(selectChatPageStore));
 
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [previewCitation, setPreviewCitation] = useState<Citation | null>(null);
