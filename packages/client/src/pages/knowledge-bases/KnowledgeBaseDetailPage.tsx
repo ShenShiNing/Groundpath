@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { KnowledgeBaseDialog } from '@/components/knowledge-bases';
 import { useDeleteDocument, useKBDocuments, useKnowledgeBase } from '@/hooks';
+import { KNOWLEDGE_BASE_DOCUMENT_PAGE_SIZE } from '@/constants/pagination';
 import { openInNewTab } from '@/lib/utils';
 import { queryKeys } from '@/lib/query';
 import type { DocumentListItem } from '@groundpath/shared/types';
@@ -46,7 +47,7 @@ export default function KnowledgeBaseDetailPage() {
     isLoading: docsLoading,
     isError: docsError,
   } = useKBDocuments(knowledgeBaseId, {
-    pageSize: 100,
+    pageSize: KNOWLEDGE_BASE_DOCUMENT_PAGE_SIZE,
   });
   const deleteDocumentMutation = useDeleteDocument();
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useKBDocuments, useKnowledgeBases } from '@/hooks';
 import { useStreamBuffer } from '@/hooks/useStreamBuffer';
+import { KNOWLEDGE_BASE_DOCUMENT_PAGE_SIZE } from '@/constants/pagination';
 import { copyMessageToClipboard, type CopyFormat } from '@/lib/chat';
 import { getAccessTokenSnapshot, useChatPanelStore, type Citation } from '@/stores';
 import { toast } from 'sonner';
@@ -60,7 +61,7 @@ export function useChatPageController() {
     isLoading: docsLoading,
     isError: docsError,
   } = useKBDocuments(selectedKnowledgeBaseId ?? undefined, {
-    pageSize: 100,
+    pageSize: KNOWLEDGE_BASE_DOCUMENT_PAGE_SIZE,
   });
 
   const documents = useMemo(() => documentsResponse?.documents ?? [], [documentsResponse]);
