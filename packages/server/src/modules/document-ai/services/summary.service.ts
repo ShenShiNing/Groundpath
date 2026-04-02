@@ -6,8 +6,8 @@
 import type { Response } from 'express';
 import type { SummaryLength, SummaryResponse } from '@groundpath/shared/types';
 import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared/constants';
-import { llmService } from '@modules/llm';
-import type { ChatMessage } from '@modules/llm';
+import { llmService } from '@modules/llm/public/runtime';
+import type { ChatMessage } from '@modules/llm/public/runtime';
 import { documentContentService } from '@modules/document/public/content';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';

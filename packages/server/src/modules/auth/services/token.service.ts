@@ -15,7 +15,7 @@ import { withTransaction, type Transaction } from '@core/db/db.utils';
 import { systemLogger } from '@core/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 import { userTokenStateRepository } from '../repositories/user-token-state.repository';
-import { userService } from '../../user';
+import { userService } from '@modules/user/public/management';
 
 export interface RefreshTokensResult {
   tokens: TokenPair;

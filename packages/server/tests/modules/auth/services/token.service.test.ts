@@ -38,7 +38,7 @@ vi.mock('@modules/auth/repositories/user-token-state.repository', () => ({
 }));
 
 // Mock userService (not userRepository) - tokenService uses userService.findById
-vi.mock('@modules/user', () => ({
+vi.mock('@modules/user/public/management', () => ({
   userService: {
     findById: vi.fn(),
   },
@@ -60,7 +60,7 @@ vi.mock('@core/db/db.utils', () => ({
 // Import mocked modules
 import { refreshTokenRepository } from '@modules/auth';
 import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';
-import { userService } from '@modules/user';
+import { userService } from '@modules/user/public/management';
 import {
   generateAccessToken,
   generateRefreshToken,

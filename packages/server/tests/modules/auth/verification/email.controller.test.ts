@@ -13,13 +13,11 @@ vi.mock('@modules/auth/verification/email-verification.service', () => ({
   },
 }));
 
-vi.mock('@modules/user', () => ({
+vi.mock('@modules/user/public/management', () => ({
   userService: {
     existsByEmail: vi.fn(),
     findById: vi.fn(),
   },
-  userController: {},
-  userRepository: {},
 }));
 
 vi.mock('@core/utils/request.utils', () => ({
@@ -32,7 +30,7 @@ vi.mock('@core/utils/request.utils', () => ({
 // Import after mocks
 import { emailController } from '@modules/auth/verification/email.controller';
 import { emailVerificationService } from '@modules/auth';
-import { userService } from '@modules/user';
+import { userService } from '@modules/user/public/management';
 
 // ==================== Test Helpers ====================
 

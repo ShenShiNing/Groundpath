@@ -4,7 +4,7 @@ import mammoth from 'mammoth';
 import type { DocumentType } from '@groundpath/shared/types';
 import { documentConfig, storageConfig } from '@config/env';
 import { createLogger } from '@core/logger';
-import { storageProvider } from '../../storage';
+import { storageProvider } from '@modules/storage/public/provider';
 
 const logger = createLogger('document-storage');
 

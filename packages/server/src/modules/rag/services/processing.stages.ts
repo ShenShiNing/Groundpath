@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { documentConfig } from '@config/env';
-import type { EmbeddingProviderType } from '@modules/embedding';
-import { getEmbeddingProviderByType } from '@modules/embedding';
+import type { EmbeddingProviderType } from '@modules/embedding/public/providers';
+import { getEmbeddingProviderByType } from '@modules/embedding/public/providers';
 import { documentChunkRepository, documentRepository } from '@modules/document/public/repositories';
 import { documentIndexService } from '@modules/document-index/public/indexing';
 import type { ParsedDocumentStructure } from '@modules/document-index/public/parsers';

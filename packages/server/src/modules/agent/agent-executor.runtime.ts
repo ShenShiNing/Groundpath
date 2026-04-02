@@ -1,4 +1,4 @@
-import type { AgentMessage, ChatMessage } from '@modules/llm';
+import type { AgentMessage, ChatMessage } from '@modules/llm/public/runtime';
 import { agentConfig } from '@core/config/env';
 import { createLogger } from '@core/logger';
 import type { ToolExecutionResult } from './tools';

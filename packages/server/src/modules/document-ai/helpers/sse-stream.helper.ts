@@ -1,7 +1,7 @@
 import type { Response } from 'express';
 import type { DocumentAISSEEvent } from '@groundpath/shared/types';
 import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared/constants';
-import type { LLMProvider, GenerateOptions, ChatMessage } from '@modules/llm';
+import type { LLMProvider, GenerateOptions, ChatMessage } from '@modules/llm/public/runtime';
 import { createLogger } from '@core/logger';
 
 const logger = createLogger('document-ai.sse');

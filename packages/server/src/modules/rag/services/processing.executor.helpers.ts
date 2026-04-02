@@ -7,7 +7,7 @@ import {
 import { documentIndexService } from '@modules/document-index/public/indexing';
 import { documentParseRouterService } from '@modules/document-index/public/routing';
 import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
-import type { EmbeddingProviderType } from '@modules/embedding';
+import type { EmbeddingProviderType } from '@modules/embedding/public/providers';
 import { ensureCollection } from '@modules/vector/public/qdrant';
 import { chunkingService } from './chunking.service';
 import {

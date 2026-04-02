@@ -14,7 +14,7 @@ import type { User } from '@core/db/schema/user/users.schema';
 import { toUserPublicInfo, normalizeEmail, buildAccessTokenSubject } from '@core/utils';
 import { Errors } from '@core/errors';
 import { authConfig } from '@config/env';
-import { userService } from '../../user';
+import { userService } from '@modules/user/public/management';
 import { loginLogRepository } from '../repositories/login-log.repository';
 import { tokenService } from './token.service';
 import { emailVerificationService } from '../verification/email-verification.service';

@@ -22,7 +22,7 @@ vi.mock('@core/utils/jwt.utils', () => ({
 }));
 
 // Mock userService (not userRepository) - authService uses userService
-vi.mock('@modules/user', () => ({
+vi.mock('@modules/user/public/management', () => ({
   userService: {
     findByEmail: vi.fn(),
     findById: vi.fn(),
@@ -89,7 +89,7 @@ vi.mock('@core/db/db.utils', () => ({
 
 // Import after mocks
 import { passwordService } from '@modules/auth/services/password.service';
-import { userService } from '@modules/user';
+import { userService } from '@modules/user/public/management';
 import { refreshTokenRepository } from '@modules/auth';
 import { userTokenStateRepository } from '@modules/auth/repositories/user-token-state.repository';
 import { emailVerificationService } from '@modules/auth/verification/email-verification.service';

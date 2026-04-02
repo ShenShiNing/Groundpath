@@ -11,8 +11,8 @@ import {
 } from '../utils/jwt.utils';
 import { getRefreshTokenFromRequest } from '../utils/cookie.utils';
 import { isStoredRefreshTokenMatch } from '../utils/refresh-token.utils';
-import { refreshTokenRepository } from '@modules/auth/repositories/refresh-token.repository';
-import { userRepository } from '@modules/user/repositories/user.repository';
+import { refreshTokenRepository } from '@modules/auth/public/sessions';
+import { userRepository } from '@modules/user/public/repositories';
 
 export function isTokenRevokedByTimestamp(
   tokenIatSeconds: number,

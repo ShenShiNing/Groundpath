@@ -11,10 +11,10 @@ import type {
   ExpandResponse,
 } from '@groundpath/shared/types';
 import { DOCUMENT_AI_ERROR_CODES } from '@groundpath/shared/constants';
-import { llmService } from '@modules/llm';
-import type { ChatMessage } from '@modules/llm';
+import { llmService } from '@modules/llm/public/runtime';
+import type { ChatMessage } from '@modules/llm/public/runtime';
 import { documentContentService } from '@modules/document/public/content';
-import { searchService } from '@modules/rag';
+import { searchService } from '@modules/rag/public/search';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 import { ragConfig } from '@config/env';
