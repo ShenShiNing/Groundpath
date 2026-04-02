@@ -60,7 +60,6 @@ describe('authStore', () => {
       action: 'login',
       run: () => useAuthStore.getState().login('user@example.com', 'password'),
       mock: authStoreMocks.login,
-      metadata: { email: 'user@example.com' },
     },
     {
       action: 'register',
@@ -72,7 +71,6 @@ describe('authStore', () => {
           confirmPassword: 'Password123!',
         }),
       mock: authStoreMocks.register,
-      metadata: { email: 'user@example.com' },
     },
     {
       action: 'registerWithCode',
@@ -85,19 +83,14 @@ describe('authStore', () => {
           verificationToken: 'verified-token',
         }),
       mock: authStoreMocks.registerWithCode,
-      metadata: { email: 'user@example.com' },
     },
-  ])('logs %s failures and clears loading state', async ({ action, run, mock, metadata }) => {
+  ])('logs %s failures and clears loading state', async ({ action, run, mock }) => {
     const error = new Error(`${action} failed`);
     mock.mockRejectedValue(error);
 
     await expect(run()).rejects.toBe(error);
 
-    expect(authStoreMocks.logClientError).toHaveBeenCalledWith(
-      `authStore.${action}`,
-      error,
-      metadata
-    );
+    expect(authStoreMocks.logClientError).toHaveBeenCalledWith(`authStore.${action}`, error);
     expect(useAuthStore.getState().isLoading).toBe(false);
   });
 
