@@ -10,6 +10,7 @@ import type {
   KnowledgeBaseListParams,
 } from '@groundpath/shared/types';
 import type { ApiResponse } from '@groundpath/shared/types';
+import { KNOWLEDGE_BASE_LIST_PAGE_SIZE } from '@/constants/pagination';
 import { apiClient, unwrapResponse } from '@/lib/http';
 import type { UploadOptions } from './documents';
 import { collectCursorPages } from './cursor-pagination';
@@ -39,7 +40,8 @@ export const knowledgeBasesApi = {
 
   async list(): Promise<KnowledgeBaseListItem[]> {
     const response = await collectCursorPages({
-      fetchPage: (cursor) => knowledgeBasesApi.listPage({ pageSize: 100, cursor }),
+      fetchPage: (cursor) =>
+        knowledgeBasesApi.listPage({ pageSize: KNOWLEDGE_BASE_LIST_PAGE_SIZE, cursor }),
       mergePages: (pages) => {
         const firstPage = pages[0]!;
         return {

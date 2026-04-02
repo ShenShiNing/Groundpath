@@ -15,6 +15,7 @@ vi.mock('@/lib/http', () => ({
 }));
 
 import { knowledgeBasesApi } from '@/api/knowledge-bases';
+import { KNOWLEDGE_BASE_LIST_PAGE_SIZE } from '@/constants/pagination';
 
 describe('knowledgeBasesApi', () => {
   beforeEach(() => {
@@ -31,7 +32,12 @@ describe('knowledgeBasesApi', () => {
         { id: 'kb-1', name: 'KB 1' },
         { id: 'kb-2', name: 'KB 2' },
       ],
-      pagination: { pageSize: 100, total: 2, hasMore: false, nextCursor: null },
+      pagination: {
+        pageSize: KNOWLEDGE_BASE_LIST_PAGE_SIZE,
+        total: 2,
+        hasMore: false,
+        nextCursor: null,
+      },
     };
     mocks.get.mockResolvedValue({ data: { success: true, data: responsePayload } });
     mocks.unwrapResponse.mockReturnValue(responsePayload);
@@ -39,7 +45,7 @@ describe('knowledgeBasesApi', () => {
     const result = await knowledgeBasesApi.list();
 
     expect(mocks.get).toHaveBeenCalledWith('/api/v1/knowledge-bases', {
-      params: { pageSize: 100, cursor: undefined },
+      params: { pageSize: KNOWLEDGE_BASE_LIST_PAGE_SIZE, cursor: undefined },
     });
     expect(result).toEqual(responsePayload.knowledgeBases);
   });
