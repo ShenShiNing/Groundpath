@@ -121,7 +121,7 @@ vi.mock('@modules/vector/public/qdrant', () => ({
   ensureCollection: ensureCollectionMock,
 }));
 
-vi.mock('@modules/embedding', () => ({
+vi.mock('@modules/embedding/public/providers', () => ({
   getEmbeddingProviderByType: getEmbeddingProviderByTypeMock,
 }));
 

@@ -3,6 +3,7 @@ import type { Queue } from 'bullmq';
 import { expect, it, vi } from 'vitest';
 import {
   getRealIntegrationDescribe,
+  isRedisUrlReachable,
   loadRealIntegrationEnv,
 } from '../helpers/real-integration';
 
@@ -199,6 +200,22 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
   };
 }
 
+async function getWorkerIntegrationSkipReason(): Promise<string | null> {
+  const envFromFile = loadRealIntegrationEnv();
+  const databaseUrl = process.env.BACKFILL_REAL_DATABASE_URL ?? envFromFile.DATABASE_URL;
+  const redisUrl = process.env.BACKFILL_REAL_REDIS_URL ?? envFromFile.REDIS_URL;
+
+  if (!databaseUrl || !redisUrl) {
+    return 'Skipping real backfill worker integration because DATABASE_URL or REDIS_URL is not configured.';
+  }
+
+  if (!(await isRedisUrlReachable(redisUrl))) {
+    return 'Skipping real backfill worker integration because the configured Redis instance is unreachable.';
+  }
+
+  return null;
+}
+
 function installProcessDocumentMock(
   context: Awaited<ReturnType<typeof createWorkerIntegrationContext>>
 ) {
@@ -240,7 +257,13 @@ function installProcessDocumentMock(
 }
 
 describeRealWorkerIntegration('document index backfill real db/queue worker combination', () => {
-  it('skips two stale backfill generations across repeated version switches and recovery, then completes the latest rerun', async () => {
+  it('skips two stale backfill generations across repeated version switches and recovery, then completes the latest rerun', async (ctx) => {
+    const skipReason = await getWorkerIntegrationSkipReason();
+    if (skipReason) {
+      ctx.skip(skipReason);
+      return;
+    }
+
     const context = await createWorkerIntegrationContext({
       processingRecoveryRequeueEnabled: false,
     });
@@ -420,7 +443,13 @@ describeRealWorkerIntegration('document index backfill real db/queue worker comb
     }
   }, 30_000);
 
-  it('skips stale backfill and stale recovery jobs after version switches, then completes the latest recovery rerun', async () => {
+  it('skips stale backfill and stale recovery jobs after version switches, then completes the latest recovery rerun', async (ctx) => {
+    const skipReason = await getWorkerIntegrationSkipReason();
+    if (skipReason) {
+      ctx.skip(skipReason);
+      return;
+    }
+
     const context = await createWorkerIntegrationContext({
       processingRecoveryRequeueEnabled: true,
     });

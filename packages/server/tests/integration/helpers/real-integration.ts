@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import net from 'node:net';
+import tls from 'node:tls';
 import { describe } from 'vitest';
 
 const packageRoot = path.resolve(import.meta.dirname, '../../../');
@@ -89,4 +91,56 @@ export function getRealIntegrationDescribe(
   flags: string | readonly string[]
 ): typeof describe {
   return (shouldRunRealIntegration(flags) ? describe : describe.skip) as typeof describe;
+}
+
+export async function isRedisUrlReachable(
+  redisUrl: string,
+  timeoutMs: number = 1_000
+): Promise<boolean> {
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(redisUrl);
+  } catch {
+    return false;
+  }
+
+  if (parsedUrl.protocol !== 'redis:' && parsedUrl.protocol !== 'rediss:') {
+    return false;
+  }
+
+  const host = parsedUrl.hostname || '127.0.0.1';
+  const port =
+    parsedUrl.port.length > 0
+      ? Number(parsedUrl.port)
+      : parsedUrl.protocol === 'rediss:'
+        ? 6380
+        : 6379;
+
+  if (!Number.isInteger(port) || port <= 0) {
+    return false;
+  }
+
+  return await new Promise<boolean>((resolve) => {
+    const socket =
+      parsedUrl.protocol === 'rediss:'
+        ? tls.connect({ host, port, servername: host })
+        : net.createConnection({ host, port });
+
+    let settled = false;
+    const finish = (reachable: boolean) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(reachable);
+    };
+
+    socket.unref();
+    socket.setTimeout(timeoutMs);
+    socket.once('timeout', () => finish(false));
+    socket.once('error', () => finish(false));
+    socket.once(parsedUrl.protocol === 'rediss:' ? 'secureConnect' : 'connect', () => finish(true));
+  });
 }

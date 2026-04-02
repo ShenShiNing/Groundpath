@@ -15,7 +15,7 @@ vi.mock('@core/logger', () => ({
   }),
 }));
 
-vi.mock('@modules/rag', () => ({
+vi.mock('@modules/rag/public/search', () => ({
   searchService: { searchInKnowledgeBase: searchInKnowledgeBaseMock },
 }));
 

@@ -3,6 +3,7 @@ import type { Queue } from 'bullmq';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import {
   getRealIntegrationDescribe,
+  isRedisUrlReachable,
   loadRealIntegrationEnv,
 } from '../helpers/real-integration';
 
@@ -28,6 +29,7 @@ describeRealIntegration('document index backfill real db/queue integration', () 
   let getDocumentProcessingQueue: typeof import('@modules/rag/queue/document-processing.queue').getDocumentProcessingQueue;
   let schema: typeof import('@core/db/schema');
   let drizzle: typeof import('drizzle-orm');
+  let skipReason: string | null = null;
 
   beforeAll(async () => {
     vi.resetModules();
@@ -37,9 +39,15 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     const redisUrl = process.env.BACKFILL_REAL_REDIS_URL ?? envFromFile.REDIS_URL;
 
     if (!databaseUrl || !redisUrl) {
-      throw new Error(
-        'Real backfill integration test requires BACKFILL_REAL_DATABASE_URL/BACKFILL_REAL_REDIS_URL or packages/server/.env.development.local'
-      );
+      skipReason =
+        'Skipping real backfill integration because DATABASE_URL or REDIS_URL is not configured.';
+      return;
+    }
+
+    if (!(await isRedisUrlReachable(redisUrl))) {
+      skipReason =
+        'Skipping real backfill integration because the configured Redis instance is unreachable.';
+      return;
     }
 
     Object.assign(process.env, {
@@ -171,7 +179,12 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     Object.assign(process.env, originalEnv);
   });
 
-  it('enqueues one batch, persists progress, and resumes from unseen candidates only', async () => {
+  it('enqueues one batch, persists progress, and resumes from unseen candidates only', async (ctx) => {
+    if (skipReason) {
+      ctx.skip(skipReason);
+      return;
+    }
+
     const { eq } = drizzle;
 
     const firstBatch = await documentIndexBackfillService.enqueueBackfill({

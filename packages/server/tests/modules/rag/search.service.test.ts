@@ -42,7 +42,7 @@ vi.mock('@modules/vector/public/repositories', () => ({
   vectorRepository: vectorRepositoryMock,
 }));
 
-vi.mock('@modules/embedding', () => ({
+vi.mock('@modules/embedding/public/providers', () => ({
   getEmbeddingProviderByType: getEmbeddingProviderByTypeMock,
 }));
 

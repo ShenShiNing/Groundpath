@@ -435,7 +435,7 @@ vi.mock('@modules/vector/public/repositories', () => ({
   },
 }));
 
-vi.mock('@modules/embedding', () => ({
+vi.mock('@modules/embedding/public/providers', () => ({
   getEmbeddingProviderByType: vi.fn(() => ({
     embed: vi.fn(async () => [0.1, 0.2, 0.3]),
   })),

@@ -23,7 +23,7 @@ vi.mock('@modules/document-index/public/rollout', () => ({
   structuredRagRolloutService: mocks.rolloutService,
 }));
 
-vi.mock('@modules/rag', () => ({
+vi.mock('@modules/rag/public/search', () => ({
   searchService: {},
 }));
 

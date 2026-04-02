@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
       alertsEnabled: true,
       alertEmailTo: ['ops@example.com'],
       alertWindowHours: 24,
+      alertCooldownHours: 6,
+      alertReminderHours: 24,
       alertScheduleCron: '0 5 * * *',
       thresholds: {
         fallbackRatio: 35,
@@ -47,7 +49,7 @@ vi.mock('@modules/logs/repositories/system-log.repository', () => ({
   systemLogRepository: mocks.systemLogRepository,
 }));
 
-vi.mock('@modules/auth', () => ({
+vi.mock('@modules/auth/public/email', () => ({
   emailService: mocks.emailService,
 }));
 
