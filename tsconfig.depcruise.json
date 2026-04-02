@@ -1,13 +1,4 @@
 {
   "extends": "./packages/server/tsconfig.json",
-  "compilerOptions": {
-    "baseUrl": "./packages/server",
-    "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@modules/*": ["src/modules/*"],
-      "@config/*": ["src/shared/config/*"],
-      "@tests/*": ["tests/*"]
-    }
-  },
   "include": ["packages/server/src", "packages/server/tests"]
 }
