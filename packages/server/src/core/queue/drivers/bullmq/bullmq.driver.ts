@@ -16,8 +16,9 @@ interface BullmqQueueDriverOptions {
   redisPrefix: string;
 }
 
-type BullmqJobName<Data> = Data extends Job<any, any, infer Name extends string> ? Name : string;
-type BullmqJobData<Data> = Data extends Job<infer JobData, any, any> ? JobData : Data;
+type BullmqQueueInstance<Data> = Queue<Data, void, string>;
+type BullmqAddName<Data> = Parameters<BullmqQueueInstance<Data>['add']>[0];
+type BullmqAddData<Data> = Parameters<BullmqQueueInstance<Data>['add']>[1];
 
 function toRetentionConfig(count?: number): { count: number } | undefined {
   return count === undefined ? undefined : { count };
@@ -43,7 +44,7 @@ function mapBullmqJobForProcessing<Data>(job: Job<Data>): QueueJobSnapshot<Data>
 class BullmqQueueChannel<Data> implements QueueChannel<Data> {
   private readonly connection: ReturnType<typeof createBullmqConnection>;
   private readonly prefix: string;
-  private queue: Queue<Data, void, string> | null = null;
+  private queue: BullmqQueueInstance<Data> | null = null;
 
   constructor(
     private readonly queueName: string,
@@ -53,7 +54,7 @@ class BullmqQueueChannel<Data> implements QueueChannel<Data> {
     this.prefix = buildBullmqPrefix(this.options.redisPrefix);
   }
 
-  private getQueue(): Queue<Data, void, string> {
+  private getQueue(): BullmqQueueInstance<Data> {
     if (!this.queue) {
       this.queue = new Queue<Data, void, string>(this.queueName, {
         connection: this.connection,
@@ -72,8 +73,8 @@ class BullmqQueueChannel<Data> implements QueueChannel<Data> {
 
   async enqueue(name: string, data: Data, options?: { jobId?: string }): Promise<string> {
     const job = await this.getQueue().add(
-      name as BullmqJobName<Data>,
-      data as BullmqJobData<Data>,
+      name as BullmqAddName<Data>,
+      data as BullmqAddData<Data>,
       { jobId: options?.jobId }
     );
     const jobId = job.id?.toString() ?? options?.jobId;
@@ -148,7 +149,7 @@ class BullmqQueueChannel<Data> implements QueueChannel<Data> {
 class BullmqQueueInspector<Data> implements QueueChannelInspector<Data> {
   private readonly connection: ReturnType<typeof createBullmqConnection>;
   private readonly prefix: string;
-  private queue: Queue<Data, void, string> | null = null;
+  private queue: BullmqQueueInstance<Data> | null = null;
 
   constructor(
     private readonly queueName: string,
@@ -158,7 +159,7 @@ class BullmqQueueInspector<Data> implements QueueChannelInspector<Data> {
     this.prefix = buildBullmqPrefix(this.options.redisPrefix);
   }
 
-  private getQueue(): Queue<Data, void, string> {
+  private getQueue(): BullmqQueueInstance<Data> {
     if (!this.queue) {
       this.queue = new Queue<Data, void, string>(this.queueName, {
         connection: this.connection,
