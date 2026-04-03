@@ -49,3 +49,6 @@ export {
 } from './refresh-token.utils';
 
 export { hashOAuthExchangeCode } from './oauth-exchange-code.utils';
+
+export type { ExternalCallPolicy } from './external-call';
+export { executeExternalCall, isRetryableExternalError } from './external-call';

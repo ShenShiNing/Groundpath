@@ -26,3 +26,6 @@ export {
   loggingDefaults,
   structuredRagObservabilityDefaults,
 } from './operations.defaults';
+
+// External service timeout / retry defaults
+export { externalServiceDefaults } from './external-service.defaults';

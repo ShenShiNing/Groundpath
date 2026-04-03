@@ -5,8 +5,10 @@ import type {
   StreamChunk,
 } from './llm-provider.interface';
 import type { LLMProviderType } from '@groundpath/shared/types';
+import { externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 interface OllamaChatResponse {
   message: { content: string };
@@ -24,25 +26,37 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async generate(messages: ChatMessage[], options?: GenerateOptions): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: this.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        stream: false,
-        options: {
-          temperature: options?.temperature,
-          num_predict: options?.maxTokens,
-          top_p: options?.topP,
-        },
-      }),
+    const response = await executeExternalCall({
+      service: 'llm',
+      operation: `${this.name}.generate`,
+      policy: externalServiceConfig.llm,
       signal: options?.signal,
+      execute: (signal) =>
+        fetch(`${this.baseUrl}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: this.model,
+            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            stream: false,
+            options: {
+              temperature: options?.temperature,
+              num_predict: options?.maxTokens,
+              top_p: options?.topP,
+            },
+          }),
+          signal,
+        }).then(async (result) => {
+          if (!result.ok) {
+            throw Errors.external(
+              `Ollama API error: ${result.status} ${result.statusText}`,
+              undefined,
+              result.status
+            );
+          }
+          return result;
+        }),
     });
-
-    if (!response.ok) {
-      throw Errors.external(`Ollama API error: ${response.status} ${response.statusText}`);
-    }
 
     const data = (await response.json()) as OllamaChatResponse;
     return data.message?.content ?? '';

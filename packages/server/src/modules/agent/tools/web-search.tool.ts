@@ -1,6 +1,8 @@
 import type { AgentTool, ToolContext, ToolExecutionResult, ToolDefinition } from './tool.interface';
-import { agentConfig } from '@core/config/env';
+import { agentConfig, externalServiceConfig } from '@core/config/env';
+import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 const logger = createLogger('web-search.tool');
 
@@ -65,30 +67,43 @@ export class WebSearchTool implements AgentTool {
 
     logger.debug({ query: query.substring(0, 80) }, 'Web search tool executing');
 
-    const timeoutSignal = AbortSignal.timeout(agentConfig.toolTimeout);
-    const signals = ctx.signal ? [ctx.signal, timeoutSignal] : [timeoutSignal];
-    const combinedSignal = AbortSignal.any(signals);
-
-    const response = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: apiKey,
-        query,
-        max_results: agentConfig.tavilyMaxResults,
-        include_answer: false,
-        include_raw_content: true,
-      }),
-      signal: combinedSignal,
-    });
-
-    if (!response.ok) {
-      const errText = await response.text().catch(() => 'Unknown error');
-      logger.warn({ status: response.status, errText }, 'Tavily API error');
-      return { content: `Web search failed: ${response.status} ${errText}` };
+    let data: TavilyResponse;
+    try {
+      data = await executeExternalCall<TavilyResponse>({
+        service: 'web_search',
+        operation: 'tavily.search',
+        policy: { ...externalServiceConfig.webSearch, timeoutMs: agentConfig.toolTimeout },
+        signal: ctx.signal,
+        execute: (signal) =>
+          fetch('https://api.tavily.com/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              api_key: apiKey,
+              query,
+              max_results: agentConfig.tavilyMaxResults,
+              include_answer: false,
+              include_raw_content: true,
+            }),
+            signal,
+          }).then(async (response) => {
+            if (!response.ok) {
+              const errText = await response.text().catch(() => 'Unknown error');
+              throw Errors.external(
+                `Tavily API error: ${response.status} ${errText}`,
+                undefined,
+                response.status
+              );
+            }
+            return (await response.json()) as TavilyResponse;
+          }),
+      });
+    } catch (error) {
+      const errText = error instanceof Error ? error.message : String(error);
+      logger.warn({ query, errText }, 'Tavily API error');
+      return { content: `Web search failed: ${errText}` };
     }
 
-    const data = (await response.json()) as TavilyResponse;
     const results = data.results ?? [];
 
     if (results.length === 0) {

@@ -11,6 +11,14 @@ vi.mock('@core/logger', () => ({
 }));
 
 vi.mock('@config/env', () => ({
+  externalServiceConfig: {
+    storage: {
+      timeoutMs: 20_000,
+      maxRetries: 2,
+      baseDelayMs: 500,
+      maxDelayMs: 5_000,
+    },
+  },
   storageConfig: {
     localPath: '/tmp/test-uploads',
     type: 'local',
@@ -57,6 +65,7 @@ vi.mock('@core/errors', () => ({
   Errors: {
     validation: (msg: string) => new Error(msg),
     external: (msg: string) => new Error(msg),
+    timeout: (msg: string) => new Error(msg),
   },
 }));
 

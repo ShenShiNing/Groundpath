@@ -7,6 +7,7 @@ import {
   documentDefaults,
   documentIndexDefaults,
   emailVerificationDefaults,
+  externalServiceDefaults,
   healthDefaults,
   loggingDefaults,
   queueDefaults,
@@ -153,6 +154,18 @@ export const vectorConfig = {
 
 export const llmConfig = {
   modelFetchTimeout: validatedEnv.MODEL_FETCH_TIMEOUT,
+} as const;
+
+export const externalServiceConfig = {
+  llm: externalServiceDefaults.llm,
+  embedding: externalServiceDefaults.embedding,
+  storage: externalServiceDefaults.storage,
+  webSearch: externalServiceDefaults.webSearch,
+  modelFetch: {
+    ...externalServiceDefaults.modelFetch,
+    timeoutMs: validatedEnv.MODEL_FETCH_TIMEOUT,
+  },
+  vlm: externalServiceDefaults.vlm,
 } as const;
 
 export const agentConfig = {

@@ -8,9 +8,11 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType } from '@groundpath/shared/types';
+import { externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { openaiCompatGenerateWithTools } from './openai-compat';
 import { logger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 // DeepSeek uses OpenAI-compatible API format
 interface DeepSeekResponse {
@@ -33,25 +35,37 @@ export class DeepSeekProvider implements LLMProvider {
   }
 
   async generate(messages: ChatMessage[], options?: GenerateOptions): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        temperature: options?.temperature,
-        max_tokens: options?.maxTokens,
-        top_p: options?.topP,
-      }),
+    const response = await executeExternalCall({
+      service: 'llm',
+      operation: `${this.name}.generate`,
+      policy: externalServiceConfig.llm,
       signal: options?.signal,
+      execute: (signal) =>
+        fetch(`${this.baseUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: this.model,
+            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            temperature: options?.temperature,
+            max_tokens: options?.maxTokens,
+            top_p: options?.topP,
+          }),
+          signal,
+        }).then(async (result) => {
+          if (!result.ok) {
+            throw Errors.external(
+              `DeepSeek API error: ${result.status} ${result.statusText}`,
+              undefined,
+              result.status
+            );
+          }
+          return result;
+        }),
     });
-
-    if (!response.ok) {
-      throw Errors.external(`DeepSeek API error: ${response.status} ${response.statusText}`);
-    }
 
     const data = (await response.json()) as DeepSeekResponse;
     const message = data.choices[0]?.message;
@@ -129,6 +143,7 @@ export class DeepSeekProvider implements LLMProvider {
     options: GenerateWithToolsOptions
   ): Promise<ToolGenerateResult> {
     return openaiCompatGenerateWithTools(
+      this.name,
       `${this.baseUrl}/v1/chat/completions`,
       this.apiKey,
       this.model,

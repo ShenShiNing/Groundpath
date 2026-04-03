@@ -1,8 +1,9 @@
 import type { EmbeddingProvider } from '../embedding.types';
-import { embeddingConfig } from '@config/env';
+import { embeddingConfig, externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
 import pLimit from 'p-limit';
+import { executeExternalCall } from '@core/utils/external-call';
 
 const logger = createLogger('embedding.zhipu');
 
@@ -59,41 +60,38 @@ export class ZhipuProvider implements EmbeddingProvider {
       body.dimensions = this.dimensions;
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const data = await executeExternalCall<ZhipuEmbeddingResponse>({
+      service: 'embedding',
+      operation: 'zhipu.embed',
+      policy: externalServiceConfig.embedding,
+      execute: (signal) =>
+        fetch(ZHIPU_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify(body),
+          signal,
+        }).then(async (response) => {
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw Errors.external(
+              `Zhipu API error (${response.status}): ${errorText}`,
+              undefined,
+              response.status
+            );
+          }
+          return (await response.json()) as ZhipuEmbeddingResponse;
+        }),
+    });
 
-    try {
-      const response = await fetch(ZHIPU_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw Errors.external(`Zhipu API error (${response.status}): ${errorText}`);
-      }
-
-      const data = (await response.json()) as ZhipuEmbeddingResponse;
-      if (!data.data?.[0]?.embedding) {
-        throw Errors.external(
-          `Zhipu API returned unexpected response: ${JSON.stringify(data).slice(0, 200)}`
-        );
-      }
-      return data.data[0].embedding;
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        throw Errors.timeout(
-          `Zhipu API request timed out after 30s (input length: ${text.length} chars)`
-        );
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeout);
+    if (!data.data?.[0]?.embedding) {
+      throw Errors.external(
+        `Zhipu API returned unexpected response: ${JSON.stringify(data).slice(0, 200)}`
+      );
     }
+
+    return data.data[0].embedding;
   }
 }

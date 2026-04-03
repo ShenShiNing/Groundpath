@@ -9,8 +9,10 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType, ToolCallInfo } from '@groundpath/shared/types';
+import { externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 export class AnthropicProvider implements LLMProvider {
   readonly name: LLMProviderType = 'anthropic';
@@ -32,17 +34,24 @@ export class AnthropicProvider implements LLMProvider {
         content: m.content,
       }));
 
-    const response = await this.client.messages.create(
-      {
-        model: this.model,
-        max_tokens: options?.maxTokens ?? 4096,
-        ...(systemMessage && { system: systemMessage.content }),
-        messages: chatMessages,
-        temperature: options?.temperature,
-        top_p: options?.topP,
-      },
-      { signal: options?.signal }
-    );
+    const response = await executeExternalCall({
+      service: 'llm',
+      operation: `${this.name}.generate`,
+      policy: externalServiceConfig.llm,
+      signal: options?.signal,
+      execute: (signal) =>
+        this.client.messages.create(
+          {
+            model: this.model,
+            max_tokens: options?.maxTokens ?? 4096,
+            ...(systemMessage && { system: systemMessage.content }),
+            messages: chatMessages,
+            temperature: options?.temperature,
+            top_p: options?.topP,
+          },
+          { signal }
+        ),
+    });
 
     const textBlock = response.content.find((b) => b.type === 'text');
     return textBlock?.text ?? '';
@@ -97,18 +106,25 @@ export class AnthropicProvider implements LLMProvider {
       input_schema: t.parameters as Anthropic.Messages.Tool.InputSchema,
     }));
 
-    const response = await this.client.messages.create(
-      {
-        model: this.model,
-        max_tokens: options.maxTokens ?? 4096,
-        ...(systemMessage && { system: systemMessage.content }),
-        messages: anthropicMessages,
-        tools: anthropicTools,
-        temperature: options.temperature,
-        top_p: options.topP,
-      },
-      { signal: options.signal }
-    );
+    const response = await executeExternalCall({
+      service: 'llm',
+      operation: `${this.name}.generateWithTools`,
+      policy: externalServiceConfig.llm,
+      signal: options.signal,
+      execute: (signal) =>
+        this.client.messages.create(
+          {
+            model: this.model,
+            max_tokens: options.maxTokens ?? 4096,
+            ...(systemMessage && { system: systemMessage.content }),
+            messages: anthropicMessages,
+            tools: anthropicTools,
+            temperature: options.temperature,
+            top_p: options.topP,
+          },
+          { signal }
+        ),
+    });
 
     if (response.stop_reason === 'tool_use') {
       const toolUseBlocks = response.content.filter(

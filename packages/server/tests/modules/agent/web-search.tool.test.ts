@@ -8,6 +8,14 @@ vi.mock('@core/config/env', () => ({
     tavilyMaxResults: 3,
     tavilyContentMaxLength: 500,
   },
+  externalServiceConfig: {
+    webSearch: {
+      timeoutMs: 5000,
+      maxRetries: 2,
+      baseDelayMs: 100,
+      maxDelayMs: 1_000,
+    },
+  },
 }));
 
 vi.mock('@core/logger', () => ({

@@ -11,6 +11,14 @@ vi.mock('@core/logger', () => ({
 }));
 
 vi.mock('@config/env', () => ({
+  externalServiceConfig: {
+    embedding: {
+      timeoutMs: 30_000,
+      maxRetries: 0,
+      baseDelayMs: 500,
+      maxDelayMs: 5_000,
+    },
+  },
   embeddingConfig: {
     concurrency: 2,
     zhipu: { apiKey: 'test-key', model: 'embedding-2', dimensions: 1024 },

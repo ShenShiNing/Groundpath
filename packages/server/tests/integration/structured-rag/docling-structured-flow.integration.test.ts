@@ -21,37 +21,50 @@ vi.mock('@core/db/db.utils', () => ({
   withTransaction: async (callback: (tx: unknown) => Promise<unknown>) => callback({}),
 }));
 
-vi.mock('@config/env', () => ({
-  serverConfig: {
-    nodeEnv: 'test',
-  },
-  loggingConfig: {
-    level: 'silent',
-  },
-  agentConfig: {
-    maxNodeReadTokens: 1200,
-    refFollowMaxDepth: 3,
-    refFollowMaxNodes: 20,
-  },
-  documentIndexConfig: {
-    charsPerToken: 4,
-    pdfTimeoutMs: 30000,
-    pdfConcurrency: 1,
-  },
-  documentConfig: {
-    maxSize: 22_020_096,
-  },
-  storageConfig: {
-    type: 'local',
-    localPath: './uploads',
-    r2: {
-      publicUrl: '',
+vi.mock('@config/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@config/env')>();
+
+  return {
+    ...actual,
+    serverConfig: {
+      ...actual.serverConfig,
+      nodeEnv: 'test',
     },
-    signing: {
-      avatarUrlExpiresIn: 604800,
+    loggingConfig: {
+      ...actual.loggingConfig,
+      level: 'silent',
     },
-  },
-}));
+    agentConfig: {
+      ...actual.agentConfig,
+      maxNodeReadTokens: 1200,
+      refFollowMaxDepth: 3,
+      refFollowMaxNodes: 20,
+    },
+    documentIndexConfig: {
+      ...actual.documentIndexConfig,
+      charsPerToken: 4,
+      pdfTimeoutMs: 30000,
+      pdfConcurrency: 1,
+    },
+    documentConfig: {
+      ...actual.documentConfig,
+      maxSize: 22_020_096,
+    },
+    storageConfig: {
+      ...actual.storageConfig,
+      type: 'local',
+      localPath: './uploads',
+      r2: {
+        ...actual.storageConfig.r2,
+        publicUrl: '',
+      },
+      signing: {
+        ...actual.storageConfig.signing,
+        avatarUrlExpiresIn: 604800,
+      },
+    },
+  };
+});
 
 vi.mock('@core/logger', () => ({
   createLogger: () => ({
