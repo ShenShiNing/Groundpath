@@ -1,7 +1,19 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+vi.mock('@config/env', () => ({
+  externalServiceConfig: {
+    llm: {
+      timeoutMs: 30_000,
+      maxRetries: 0,
+      baseDelayMs: 100,
+      maxDelayMs: 1_000,
+    },
+  },
+}));
+
 vi.mock('@core/logger', () => ({
-  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() },
+  createLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
+  logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
 import { DeepSeekProvider } from '@modules/llm/providers/deepseek.provider';

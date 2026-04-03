@@ -5,8 +5,10 @@ import type {
   StreamChunk,
 } from './llm-provider.interface';
 import type { LLMProviderType } from '@groundpath/shared/types';
+import { externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 /**
  * Custom provider for third-party proxies (OpenAI-compatible API)
@@ -33,26 +35,38 @@ export class CustomProvider implements LLMProvider {
   }
 
   async generate(messages: ChatMessage[], options?: GenerateOptions): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        temperature: options?.temperature,
-        max_tokens: options?.maxTokens,
-        top_p: options?.topP,
-      }),
+    const response = await executeExternalCall({
+      service: 'llm',
+      operation: `${this.name}.generate`,
+      policy: externalServiceConfig.llm,
       signal: options?.signal,
+      execute: (signal) =>
+        fetch(`${this.baseUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          body: JSON.stringify({
+            model: this.model,
+            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            temperature: options?.temperature,
+            max_tokens: options?.maxTokens,
+            top_p: options?.topP,
+          }),
+          signal,
+        }).then(async (result) => {
+          if (!result.ok) {
+            const errorText = await result.text();
+            throw Errors.external(
+              `Custom API error: ${result.status} - ${errorText}`,
+              undefined,
+              result.status
+            );
+          }
+          return result;
+        }),
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw Errors.external(`Custom API error: ${response.status} - ${errorText}`);
-    }
 
     const data = (await response.json()) as CustomResponse;
     const message = data.choices[0]?.message;

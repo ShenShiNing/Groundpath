@@ -10,6 +10,17 @@ vi.mock('@core/logger', () => ({
   logger: loggerMock,
 }));
 
+vi.mock('@config/env', () => ({
+  externalServiceConfig: {
+    llm: {
+      timeoutMs: 30_000,
+      maxRetries: 0,
+      baseDelayMs: 100,
+      maxDelayMs: 1_000,
+    },
+  },
+}));
+
 // ─── Mock SDKs ───
 const { openaiCreateMock, anthropicCreateMock } = vi.hoisted(() => ({
   openaiCreateMock: vi.fn(),

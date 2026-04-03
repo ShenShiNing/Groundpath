@@ -5,8 +5,9 @@ import {
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import type { SignedUrlOptions, StorageProvider } from '../storage.types';
-import { storageConfig } from '@config/env';
+import { externalServiceConfig, storageConfig } from '@config/env';
 import { Errors } from '@core/errors';
+import { executeExternalCall } from '@core/utils/external-call';
 
 export class R2StorageProvider implements StorageProvider {
   private client: S3Client;
@@ -23,23 +24,37 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async upload(key: string, buffer: Buffer, contentType: string): Promise<void> {
-    await this.client.send(
-      new PutObjectCommand({
-        Bucket: storageConfig.r2.bucketName,
-        Key: key,
-        Body: buffer,
-        ContentType: contentType,
-      })
-    );
+    await executeExternalCall({
+      service: 'storage',
+      operation: 'r2.upload',
+      policy: externalServiceConfig.storage,
+      execute: (signal) =>
+        this.client.send(
+          new PutObjectCommand({
+            Bucket: storageConfig.r2.bucketName,
+            Key: key,
+            Body: buffer,
+            ContentType: contentType,
+          }),
+          { abortSignal: signal }
+        ),
+    });
   }
 
   async delete(key: string): Promise<void> {
-    await this.client.send(
-      new DeleteObjectCommand({
-        Bucket: storageConfig.r2.bucketName,
-        Key: key,
-      })
-    );
+    await executeExternalCall({
+      service: 'storage',
+      operation: 'r2.delete',
+      policy: externalServiceConfig.storage,
+      execute: (signal) =>
+        this.client.send(
+          new DeleteObjectCommand({
+            Bucket: storageConfig.r2.bucketName,
+            Key: key,
+          }),
+          { abortSignal: signal }
+        ),
+    });
   }
 
   async getStream(key: string): Promise<{
@@ -47,12 +62,19 @@ export class R2StorageProvider implements StorageProvider {
     contentType: string | undefined;
     contentLength: number | undefined;
   }> {
-    const response = await this.client.send(
-      new GetObjectCommand({
-        Bucket: storageConfig.r2.bucketName,
-        Key: key,
-      })
-    );
+    const response = await executeExternalCall({
+      service: 'storage',
+      operation: 'r2.getStream',
+      policy: externalServiceConfig.storage,
+      execute: (signal) =>
+        this.client.send(
+          new GetObjectCommand({
+            Bucket: storageConfig.r2.bucketName,
+            Key: key,
+          }),
+          { abortSignal: signal }
+        ),
+    });
 
     if (!response.Body) {
       throw Errors.external('No content returned from storage');
@@ -66,12 +88,19 @@ export class R2StorageProvider implements StorageProvider {
   }
 
   async getBuffer(key: string): Promise<Buffer> {
-    const response = await this.client.send(
-      new GetObjectCommand({
-        Bucket: storageConfig.r2.bucketName,
-        Key: key,
-      })
-    );
+    const response = await executeExternalCall({
+      service: 'storage',
+      operation: 'r2.getBuffer',
+      policy: externalServiceConfig.storage,
+      execute: (signal) =>
+        this.client.send(
+          new GetObjectCommand({
+            Bucket: storageConfig.r2.bucketName,
+            Key: key,
+          }),
+          { abortSignal: signal }
+        ),
+    });
 
     const stream = response.Body;
     if (!stream) {

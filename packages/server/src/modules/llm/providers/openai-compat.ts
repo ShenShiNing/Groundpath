@@ -4,7 +4,9 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { ToolCallInfo } from '@groundpath/shared/types';
+import { externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
+import { executeExternalCall } from '@core/utils/external-call';
 
 // --- OpenAI-compatible tool calling types ---
 
@@ -58,6 +60,7 @@ export function agentMessagesToOpenAICompat(messages: AgentMessage[]): OpenAICom
  * Generate a tool-calling response via an OpenAI-compatible chat/completions endpoint.
  */
 export async function openaiCompatGenerateWithTools(
+  providerName: string,
   url: string,
   apiKey: string,
   model: string,
@@ -76,22 +79,32 @@ export async function openaiCompatGenerateWithTools(
     top_p: options.topP,
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
+  const data = await executeExternalCall<OpenAICompatResponse>({
+    service: 'llm',
+    operation: `${providerName}.generateWithTools`,
+    policy: externalServiceConfig.llm,
     signal: options.signal,
+    execute: (signal) =>
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(body),
+        signal,
+      }).then(async (response) => {
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw Errors.external(
+            `API error: ${response.status} - ${errorText}`,
+            undefined,
+            response.status
+          );
+        }
+        return (await response.json()) as OpenAICompatResponse;
+      }),
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw Errors.external(`API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = (await response.json()) as OpenAICompatResponse;
   const choice = data.choices[0];
   if (!choice) {
     return { finishReason: 'text', content: '' };

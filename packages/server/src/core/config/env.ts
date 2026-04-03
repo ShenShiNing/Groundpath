@@ -12,6 +12,7 @@ export {
   documentIndexConfig,
   emailConfig,
   embeddingConfig,
+  externalServiceConfig,
   featureFlags,
   healthConfig,
   llmConfig,

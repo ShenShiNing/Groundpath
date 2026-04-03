@@ -1,8 +1,9 @@
 import OpenAI from 'openai';
 import type { EmbeddingProvider } from '../embedding.types';
-import { embeddingConfig } from '@config/env';
+import { embeddingConfig, externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 const logger = createLogger('embedding.openai');
 
@@ -21,25 +22,43 @@ export class OpenAIProvider implements EmbeddingProvider {
     if (!embeddingConfig.openai.apiKey) {
       throw Errors.validation('OPENAI_API_KEY is required when using openai embedding provider');
     }
-    this.client = new OpenAI({ apiKey: embeddingConfig.openai.apiKey });
+    this.client = new OpenAI({ apiKey: embeddingConfig.openai.apiKey, maxRetries: 0 });
     this.model = embeddingConfig.openai.model;
     this.dimensions = DIMENSIONS_MAP[this.model] ?? 1536;
     logger.info({ model: this.model, dimensions: this.dimensions }, 'OpenAI provider initialized');
   }
 
   async embed(text: string): Promise<number[]> {
-    const response = await this.client.embeddings.create({
-      model: this.model,
-      input: text,
+    const response = await executeExternalCall({
+      service: 'embedding',
+      operation: 'openai.embed',
+      policy: externalServiceConfig.embedding,
+      execute: (signal) =>
+        this.client.embeddings.create(
+          {
+            model: this.model,
+            input: text,
+          },
+          { signal }
+        ),
     });
     return response.data[0]!.embedding;
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
     // OpenAI supports batch input natively
-    const response = await this.client.embeddings.create({
-      model: this.model,
-      input: texts,
+    const response = await executeExternalCall({
+      service: 'embedding',
+      operation: 'openai.embedBatch',
+      policy: externalServiceConfig.embedding,
+      execute: (signal) =>
+        this.client.embeddings.create(
+          {
+            model: this.model,
+            input: texts,
+          },
+          { signal }
+        ),
     });
     // Sort by index to maintain order
     return response.data.sort((a, b) => a.index - b.index).map((item) => item.embedding);

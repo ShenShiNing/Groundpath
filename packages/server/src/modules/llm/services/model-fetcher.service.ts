@@ -2,9 +2,10 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import type { LLMProviderType } from '@groundpath/shared/types';
 import type { ModelInfo, FetchModelsOptions } from '../providers/llm-provider.interface';
-import { llmConfig } from '@config/env';
+import { externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 interface OllamaTagsResponse {
   models: Array<{
@@ -26,13 +27,6 @@ interface OpenAIModelsResponse {
 const OPENAI_CHAT_MODEL_PREFIXES = ['gpt-', 'o1-', 'o3-', 'o4-'];
 
 /**
- * Create an AbortSignal that times out after configured ms
- */
-function createTimeoutSignal(): AbortSignal {
-  return AbortSignal.timeout(llmConfig.modelFetchTimeout);
-}
-
-/**
  * Service for fetching available models from different providers
  */
 export const modelFetcherService = {
@@ -41,28 +35,40 @@ export const modelFetcherService = {
    */
   async fetchModels(provider: LLMProviderType, options: FetchModelsOptions): Promise<ModelInfo[]> {
     try {
-      switch (provider) {
-        case 'openai':
-          return await this.fetchOpenAIModels(options);
-        case 'ollama':
-          return await this.fetchOllamaModels(options);
-        case 'deepseek':
-          return await this.fetchDeepSeekModels(options);
-        case 'zhipu':
-          return await this.fetchZhipuModels(options);
-        case 'anthropic':
-          return await this.fetchAnthropicModels(options);
-        case 'custom':
-          return await this.fetchCustomModels(options);
-        default:
-          return [];
-      }
+      return await executeExternalCall({
+        service: 'model_fetch',
+        operation: provider,
+        policy: externalServiceConfig.modelFetch,
+        execute: (signal) => {
+          switch (provider) {
+            case 'openai':
+              return this.fetchOpenAIModels(options, signal);
+            case 'ollama':
+              return this.fetchOllamaModels(options, signal);
+            case 'deepseek':
+              return this.fetchDeepSeekModels(options, signal);
+            case 'zhipu':
+              return this.fetchZhipuModels(options, signal);
+            case 'anthropic':
+              return this.fetchAnthropicModels(options, signal);
+            case 'custom':
+              return this.fetchCustomModels(options, signal);
+            default:
+              return Promise.resolve([]);
+          }
+        },
+      });
     } catch (error) {
-      const isTimeout = error instanceof DOMException && error.name === 'AbortError';
+      const statusCode =
+        (error as { statusCode?: number }).statusCode ?? (error as { status?: number }).status;
+      const isTimeout =
+        (error as { code?: string }).code === 'TIMEOUT' ||
+        statusCode === 504 ||
+        (error instanceof DOMException && error.name === 'AbortError');
       logger.warn(
         { error, provider, isTimeout },
         isTimeout
-          ? `Model fetch timed out after ${llmConfig.modelFetchTimeout}ms`
+          ? `Model fetch timed out after ${externalServiceConfig.modelFetch.timeoutMs}ms`
           : 'Failed to fetch models'
       );
       return [];
@@ -72,14 +78,18 @@ export const modelFetcherService = {
   /**
    * Fetch models from OpenAI API
    */
-  async fetchOpenAIModels(options: FetchModelsOptions): Promise<ModelInfo[]> {
+  async fetchOpenAIModels(
+    options: FetchModelsOptions,
+    _signal?: AbortSignal
+  ): Promise<ModelInfo[]> {
     if (!options.apiKey) {
       return [];
     }
 
     const client = new OpenAI({
       apiKey: options.apiKey,
-      timeout: llmConfig.modelFetchTimeout,
+      timeout: externalServiceConfig.modelFetch.timeoutMs,
+      maxRetries: 0,
     });
 
     const response = await client.models.list();
@@ -114,17 +124,17 @@ export const modelFetcherService = {
   /**
    * Fetch models from Ollama local server
    */
-  async fetchOllamaModels(options: FetchModelsOptions): Promise<ModelInfo[]> {
+  async fetchOllamaModels(options: FetchModelsOptions, signal?: AbortSignal): Promise<ModelInfo[]> {
     const baseUrl = (options.baseUrl ?? 'http://localhost:11434').replace(/\/$/, '');
 
     const response = await fetch(`${baseUrl}/api/tags`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
-      signal: createTimeoutSignal(),
+      signal,
     });
 
     if (!response.ok) {
-      throw Errors.external(`Ollama API error: ${response.status}`);
+      throw Errors.external(`Ollama API error: ${response.status}`, undefined, response.status);
     }
 
     const data = (await response.json()) as OllamaTagsResponse;
@@ -142,7 +152,10 @@ export const modelFetcherService = {
   /**
    * Fetch models from DeepSeek API
    */
-  async fetchDeepSeekModels(options: FetchModelsOptions): Promise<ModelInfo[]> {
+  async fetchDeepSeekModels(
+    options: FetchModelsOptions,
+    signal?: AbortSignal
+  ): Promise<ModelInfo[]> {
     if (!options.apiKey) {
       return [];
     }
@@ -155,11 +168,11 @@ export const modelFetcherService = {
         Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
       },
-      signal: createTimeoutSignal(),
+      signal,
     });
 
     if (!response.ok) {
-      throw Errors.external(`DeepSeek API error: ${response.status}`);
+      throw Errors.external(`DeepSeek API error: ${response.status}`, undefined, response.status);
     }
 
     const data = (await response.json()) as OpenAIModelsResponse;
@@ -179,7 +192,7 @@ export const modelFetcherService = {
   /**
    * Fetch models from Zhipu API
    */
-  async fetchZhipuModels(options: FetchModelsOptions): Promise<ModelInfo[]> {
+  async fetchZhipuModels(options: FetchModelsOptions, signal?: AbortSignal): Promise<ModelInfo[]> {
     if (!options.apiKey) {
       return [];
     }
@@ -192,11 +205,11 @@ export const modelFetcherService = {
         Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
       },
-      signal: createTimeoutSignal(),
+      signal,
     });
 
     if (!response.ok) {
-      throw Errors.external(`Zhipu API error: ${response.status}`);
+      throw Errors.external(`Zhipu API error: ${response.status}`, undefined, response.status);
     }
 
     const data = (await response.json()) as OpenAIModelsResponse;
@@ -219,14 +232,17 @@ export const modelFetcherService = {
   /**
    * Fetch models from Anthropic official API
    */
-  async fetchAnthropicModels(options: FetchModelsOptions): Promise<ModelInfo[]> {
+  async fetchAnthropicModels(
+    options: FetchModelsOptions,
+    _signal?: AbortSignal
+  ): Promise<ModelInfo[]> {
     if (!options.apiKey) {
       return [];
     }
 
     const client = new Anthropic({
       apiKey: options.apiKey,
-      timeout: llmConfig.modelFetchTimeout,
+      timeout: externalServiceConfig.modelFetch.timeoutMs,
     });
 
     const models: ModelInfo[] = [];
@@ -249,7 +265,7 @@ export const modelFetcherService = {
   /**
    * Fetch all available models from third-party proxy (OpenAI-compatible /v1/models)
    */
-  async fetchCustomModels(options: FetchModelsOptions): Promise<ModelInfo[]> {
+  async fetchCustomModels(options: FetchModelsOptions, signal?: AbortSignal): Promise<ModelInfo[]> {
     if (!options.apiKey || !options.baseUrl) {
       return [];
     }
@@ -262,11 +278,15 @@ export const modelFetcherService = {
         Authorization: `Bearer ${options.apiKey}`,
         'Content-Type': 'application/json',
       },
-      signal: createTimeoutSignal(),
+      signal,
     });
 
     if (!response.ok) {
-      throw Errors.external(`Custom proxy API error: ${response.status}`);
+      throw Errors.external(
+        `Custom proxy API error: ${response.status}`,
+        undefined,
+        response.status
+      );
     }
 
     const data = (await response.json()) as OpenAIModelsResponse;

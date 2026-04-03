@@ -6,6 +6,14 @@ const mocks = vi.hoisted(() => ({
   loggerInfo: vi.fn(),
   loggerError: vi.fn(),
   env: {
+    externalServiceConfig: {
+      vlm: {
+        timeoutMs: 30_000,
+        maxRetries: 2,
+        baseDelayMs: 1000,
+        maxDelayMs: 15_000,
+      },
+    },
     vlmConfig: {
       concurrency: 1,
       timeoutMs: 30_000,
@@ -27,6 +35,7 @@ vi.mock('@core/logger', () => ({
 
 vi.mock('@modules/vlm/vlm.factory', () => ({
   getVLMProvider: () => ({
+    name: 'test',
     describeImage: mocks.describeImage,
   }),
 }));
@@ -45,6 +54,7 @@ describe('vlm.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+    mocks.env.externalServiceConfig.vlm.maxRetries = 2;
   });
 
   it('should pass default maxTokens and temperature to provider', async () => {
@@ -59,6 +69,7 @@ describe('vlm.service', () => {
       userPrompt: 'Describe this image',
       maxTokens: 1024,
       temperature: 0.2,
+      signal: expect.any(AbortSignal),
     });
   });
 
@@ -86,10 +97,13 @@ describe('vlm.service', () => {
 
   it('should timeout long-running VLM calls', async () => {
     vi.useFakeTimers();
+    mocks.env.externalServiceConfig.vlm.maxRetries = 0;
     mocks.describeImage.mockImplementation(() => new Promise<string>(() => {}));
 
     const promise = vlmService.describeImage(baseInput);
-    const expectation = expect(promise).rejects.toThrow('VLM call timed out after 30000ms');
+    const expectation = expect(promise).rejects.toThrow(
+      'External call "vlm.test.describeImage" timed out after 30000ms'
+    );
     await vi.advanceTimersByTimeAsync(30_000);
     await expectation;
   });

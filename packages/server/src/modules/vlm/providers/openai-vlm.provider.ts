@@ -7,7 +7,7 @@ export class OpenAIVLMProvider implements VLMProvider {
   private model: string;
 
   constructor(apiKey: string, model: string, baseUrl?: string) {
-    this.client = new OpenAI({ apiKey, baseURL: baseUrl });
+    this.client = new OpenAI({ apiKey, baseURL: baseUrl, maxRetries: 0 });
     this.model = model;
   }
 

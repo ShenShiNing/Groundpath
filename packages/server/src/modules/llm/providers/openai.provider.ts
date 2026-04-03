@@ -9,8 +9,10 @@ import type {
   ToolGenerateResult,
 } from './llm-provider.interface';
 import type { LLMProviderType, ToolCallInfo } from '@groundpath/shared/types';
+import { externalServiceConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { logger } from '@core/logger';
+import { executeExternalCall } from '@core/utils/external-call';
 
 export class OpenAIProvider implements LLMProvider {
   readonly name: LLMProviderType = 'openai';
@@ -18,21 +20,28 @@ export class OpenAIProvider implements LLMProvider {
   private readonly model: string;
 
   constructor(apiKey: string, model: string) {
-    this.client = new OpenAI({ apiKey });
+    this.client = new OpenAI({ apiKey, maxRetries: 0 });
     this.model = model;
   }
 
   async generate(messages: ChatMessage[], options?: GenerateOptions): Promise<string> {
-    const response = await this.client.chat.completions.create(
-      {
-        model: this.model,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        temperature: options?.temperature,
-        max_tokens: options?.maxTokens,
-        top_p: options?.topP,
-      },
-      { signal: options?.signal }
-    );
+    const response = await executeExternalCall({
+      service: 'llm',
+      operation: `${this.name}.generate`,
+      policy: externalServiceConfig.llm,
+      signal: options?.signal,
+      execute: (signal) =>
+        this.client.chat.completions.create(
+          {
+            model: this.model,
+            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            temperature: options?.temperature,
+            max_tokens: options?.maxTokens,
+            top_p: options?.topP,
+          },
+          { signal }
+        ),
+    });
 
     return response.choices[0]?.message?.content ?? '';
   }
@@ -79,17 +88,24 @@ export class OpenAIProvider implements LLMProvider {
       },
     }));
 
-    const response = await this.client.chat.completions.create(
-      {
-        model: this.model,
-        messages: openaiMessages,
-        tools: openaiTools,
-        temperature: options.temperature,
-        max_tokens: options.maxTokens,
-        top_p: options.topP,
-      },
-      { signal: options.signal }
-    );
+    const response = await executeExternalCall({
+      service: 'llm',
+      operation: `${this.name}.generateWithTools`,
+      policy: externalServiceConfig.llm,
+      signal: options.signal,
+      execute: (signal) =>
+        this.client.chat.completions.create(
+          {
+            model: this.model,
+            messages: openaiMessages,
+            tools: openaiTools,
+            temperature: options.temperature,
+            max_tokens: options.maxTokens,
+            top_p: options.topP,
+          },
+          { signal }
+        ),
+    });
 
     const choice = response.choices[0];
     if (!choice) {
