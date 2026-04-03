@@ -138,6 +138,8 @@
 | 中     | 缓存系统抽象（当前绑定 Redis）                    | 本地开发友好     |
 | 低     | Feature Flag 服务化（支持用户/KB级灰度）          | 灵活发布         |
 
+- **补记（2026-04-04）**: 已补充缓存抽象实施方案，详见 `docs/cache-driver-abstraction-plan.md`。方案将现有 Redis 使用拆为缓存、速率限制、协调锁三类能力，先为 `@core/cache` 引入 `redis` / `memory` driver，再按启用能力决定启动与 readiness 是否必须依赖 Redis，避免把非缓存语义继续堆进缓存接口。
+
 ---
 
 ## 六、API 设计详评
