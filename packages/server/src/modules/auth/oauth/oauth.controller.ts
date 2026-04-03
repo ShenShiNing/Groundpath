@@ -63,7 +63,7 @@ function buildErrorCallbackUrl(error: string, returnUrl: string = '/'): string {
 
 export const oauthController = {
   /**
-   * GET /api/auth/oauth/github
+   * GET /api/v1/auth/oauth/github
    */
   githubAuth: asyncHandler(async (req: Request, res: Response) => {
     const returnUrl = typeof req.query.returnUrl === 'string' ? req.query.returnUrl : '/';
@@ -72,7 +72,7 @@ export const oauthController = {
   }),
 
   /**
-   * GET /api/auth/oauth/github/callback
+   * GET /api/v1/auth/oauth/github/callback
    */
   githubCallback: asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -120,7 +120,7 @@ export const oauthController = {
   }),
 
   /**
-   * GET /api/auth/oauth/google
+   * GET /api/v1/auth/oauth/google
    */
   googleAuth: asyncHandler(async (req: Request, res: Response) => {
     const returnUrl = typeof req.query.returnUrl === 'string' ? req.query.returnUrl : '/';
@@ -129,7 +129,7 @@ export const oauthController = {
   }),
 
   /**
-   * GET /api/auth/oauth/google/callback
+   * GET /api/v1/auth/oauth/google/callback
    */
   googleCallback: asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -177,7 +177,7 @@ export const oauthController = {
   }),
 
   /**
-   * POST /api/auth/oauth/exchange
+   * POST /api/v1/auth/oauth/exchange
    */
   exchange: asyncHandler(async (req: Request, res: Response) => {
     const { code } = getValidatedBody<OAuthExchangeRequest>(res);

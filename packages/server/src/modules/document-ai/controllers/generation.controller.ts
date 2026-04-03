@@ -16,7 +16,7 @@ function paramAsString(value: string | string[] | undefined): string {
 
 export const generationController = {
   /**
-   * POST /api/document-ai/generate - Generate new content (non-streaming)
+   * POST /api/v1/document-ai/generate - Generate new content (non-streaming)
    */
   generate: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -37,7 +37,7 @@ export const generationController = {
   }),
 
   /**
-   * POST /api/document-ai/generate/stream - Stream content generation (SSE)
+   * POST /api/v1/document-ai/generate/stream - Stream content generation (SSE)
    */
   streamGenerate: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -66,7 +66,7 @@ export const generationController = {
   }),
 
   /**
-   * POST /api/document-ai/:id/expand - Expand existing document (non-streaming)
+   * POST /api/v1/document-ai/:id/expand - Expand existing document (non-streaming)
    */
   expand: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -87,7 +87,7 @@ export const generationController = {
   }),
 
   /**
-   * POST /api/document-ai/:id/expand/stream - Stream document expansion (SSE)
+   * POST /api/v1/document-ai/:id/expand/stream - Stream document expansion (SSE)
    */
   streamExpand: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

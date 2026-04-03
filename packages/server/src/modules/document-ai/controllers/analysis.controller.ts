@@ -20,7 +20,7 @@ function paramAsString(value: string | string[] | undefined): string {
 
 export const analysisController = {
   /**
-   * POST /api/document-ai/:id/analyze - Perform comprehensive analysis
+   * POST /api/v1/document-ai/:id/analyze - Perform comprehensive analysis
    */
   analyze: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -40,7 +40,7 @@ export const analysisController = {
   }),
 
   /**
-   * POST /api/document-ai/:id/analyze/keywords - Extract keywords only
+   * POST /api/v1/document-ai/:id/analyze/keywords - Extract keywords only
    */
   extractKeywords: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -56,7 +56,7 @@ export const analysisController = {
   }),
 
   /**
-   * POST /api/document-ai/:id/analyze/entities - Extract entities only
+   * POST /api/v1/document-ai/:id/analyze/entities - Extract entities only
    */
   extractEntities: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -72,7 +72,7 @@ export const analysisController = {
   }),
 
   /**
-   * GET /api/document-ai/:id/analyze/structure - Get document structure (no LLM)
+   * GET /api/v1/document-ai/:id/analyze/structure - Get document structure (no LLM)
    */
   getStructure: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

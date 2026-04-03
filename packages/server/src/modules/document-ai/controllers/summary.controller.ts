@@ -16,7 +16,7 @@ function paramAsString(value: string | string[] | undefined): string {
 
 export const summaryController = {
   /**
-   * POST /api/document-ai/:id/summary - Generate document summary (non-streaming)
+   * POST /api/v1/document-ai/:id/summary - Generate document summary (non-streaming)
    */
   generate: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -35,7 +35,7 @@ export const summaryController = {
   }),
 
   /**
-   * POST /api/document-ai/:id/summary/stream - Stream document summary (SSE)
+   * POST /api/v1/document-ai/:id/summary/stream - Stream document summary (SSE)
    */
   stream: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

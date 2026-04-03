@@ -10,7 +10,7 @@ import type { ResourceType } from '@core/db/schema/system/operation-logs.schema'
 
 export const operationLogController = {
   /**
-   * GET /api/logs/operations
+   * GET /api/v1/logs/operations
    */
   list: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -29,7 +29,7 @@ export const operationLogController = {
   }),
 
   /**
-   * GET /api/logs/operations/resource/:resourceType/:resourceId
+   * GET /api/v1/logs/operations/resource/:resourceType/:resourceId
    */
   resourceHistory: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

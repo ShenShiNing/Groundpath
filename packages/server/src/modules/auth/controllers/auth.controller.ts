@@ -50,7 +50,7 @@ function sendAuthResponse(
  */
 export const authController = {
   /**
-   * POST /api/auth/register
+   * POST /api/v1/auth/register
    */
   register: asyncHandler(async (req: Request, res: Response) => {
     const registerRequest = getValidatedBody<RegisterRequest>(res);
@@ -62,7 +62,7 @@ export const authController = {
   }),
 
   /**
-   * PUT /api/auth/password
+   * PUT /api/v1/auth/password
    */
   changePassword: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -75,7 +75,7 @@ export const authController = {
   }),
 
   /**
-   * POST /api/auth/login
+   * POST /api/v1/auth/login
    */
   login: asyncHandler(async (req: Request, res: Response) => {
     const loginRequest = getValidatedBody<LoginRequest>(res);
@@ -87,7 +87,7 @@ export const authController = {
   }),
 
   /**
-   * POST /api/auth/refresh
+   * POST /api/v1/auth/refresh
    */
   refresh: asyncHandler(async (req: Request, res: Response) => {
     const refreshToken = getRefreshTokenFromRequest(req);
@@ -103,7 +103,7 @@ export const authController = {
   }),
 
   /**
-   * POST /api/auth/logout
+   * POST /api/v1/auth/logout
    */
   logout: asyncHandler(async (req: Request, res: Response) => {
     const sessionId = req.refreshContext?.sid;
@@ -121,7 +121,7 @@ export const authController = {
   }),
 
   /**
-   * POST /api/auth/logout-all
+   * POST /api/v1/auth/logout-all
    */
   logoutAll: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -137,7 +137,7 @@ export const authController = {
   }),
 
   /**
-   * GET /api/auth/me
+   * GET /api/v1/auth/me
    */
   me: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -146,7 +146,7 @@ export const authController = {
   }),
 
   /**
-   * GET /api/auth/sessions
+   * GET /api/v1/auth/sessions
    */
   sessions: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -156,7 +156,7 @@ export const authController = {
   }),
 
   /**
-   * DELETE /api/auth/sessions/:id
+   * DELETE /api/v1/auth/sessions/:id
    */
   revokeSession: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -175,7 +175,7 @@ export const authController = {
   }),
 
   /**
-   * POST /api/auth/register-with-code
+   * POST /api/v1/auth/register-with-code
    */
   registerWithCode: asyncHandler(async (req: Request, res: Response) => {
     const registerRequest = getValidatedBody<RegisterWithCodeRequest>(res);
@@ -187,7 +187,7 @@ export const authController = {
   }),
 
   /**
-   * POST /api/auth/reset-password
+   * POST /api/v1/auth/reset-password
    */
   resetPassword: asyncHandler(async (_req: Request, res: Response) => {
     const resetRequest = getValidatedBody<ResetPasswordRequest>(res);

@@ -12,7 +12,7 @@ function paramAsString(value: string | string[] | undefined): string {
 
 export const messageController = {
   /**
-   * POST /api/chat/conversations/:id/messages - Send message (SSE streaming)
+   * POST /api/v1/chat/conversations/:id/messages - Send message (SSE streaming)
    */
   sendMessage: asyncHandler(async (req: Request, res: Response) => {
     try {
@@ -35,7 +35,7 @@ export const messageController = {
   }),
 
   /**
-   * GET /api/chat/conversations/:id/messages - Get message history
+   * GET /api/v1/chat/conversations/:id/messages - Get message history
    */
   listMessages: asyncHandler(async (req: Request, res: Response) => {
     const conversationId = paramAsString(req.params.id);
