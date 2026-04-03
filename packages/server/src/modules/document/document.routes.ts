@@ -21,6 +21,7 @@ import {
   documentUploadMetadataSchema,
   documentVersionUploadMetadataSchema,
 } from '@groundpath/shared/schemas';
+import { requireDocumentOwnership } from '@modules/document/public/ownership';
 
 const router = express.Router();
 
@@ -121,10 +122,20 @@ router.get('/trash', validateQuery(trashListParamsSchema), documentController.li
 router.delete('/trash', trashClearRateLimiter, documentController.clearTrash);
 
 // Restore document from trash
-router.post('/:id/restore', trashMutationRateLimiter, documentController.restore);
+router.post(
+  '/:id/restore',
+  trashMutationRateLimiter,
+  requireDocumentOwnership(),
+  documentController.restore
+);
 
 // Permanently delete document
-router.delete('/:id/permanent', trashMutationRateLimiter, documentController.permanentDelete);
+router.delete(
+  '/:id/permanent',
+  trashMutationRateLimiter,
+  requireDocumentOwnership(),
+  documentController.permanentDelete
+);
 
 // ==================== Document Routes ====================
 
@@ -141,33 +152,39 @@ router.post(
 router.get('/', validateQuery(documentListParamsSchema), documentController.list);
 
 // Get document content
-router.get('/:id/content', documentController.getContent);
+router.get('/:id/content', requireDocumentOwnership(), documentController.getContent);
 // Save document content
 router.put(
   '/:id/content',
   createSanitizeMiddleware(['changeNote']),
   validateBody(saveDocumentContentSchema),
+  requireDocumentOwnership(),
   documentController.saveContent
 );
 
 // Get document details
-router.get('/:id', documentController.getById);
+router.get('/:id', requireDocumentOwnership(), documentController.getById);
 
 // Update document
-router.patch('/:id', validateBody(updateDocumentRequestSchema), documentController.update);
+router.patch(
+  '/:id',
+  validateBody(updateDocumentRequestSchema),
+  requireDocumentOwnership(),
+  documentController.update
+);
 
 // Delete document
-router.delete('/:id', documentController.delete);
+router.delete('/:id', requireDocumentOwnership(), documentController.delete);
 
 // Download document
-router.get('/:id/download', documentController.download);
+router.get('/:id/download', requireDocumentOwnership(), documentController.download);
 // Preview document (inline)
-router.get('/:id/preview', documentController.preview);
+router.get('/:id/preview', requireDocumentOwnership(), documentController.preview);
 
 // ==================== Version Routes ====================
 
 // Get version history
-router.get('/:id/versions', documentController.getVersionHistory);
+router.get('/:id/versions', requireDocumentOwnership(), documentController.getVersionHistory);
 
 // Upload new version
 router.post(
@@ -175,10 +192,15 @@ router.post(
   generalRateLimiter,
   uploadWithErrorHandling('file'),
   validateBody(documentVersionUploadMetadataSchema),
+  requireDocumentOwnership(),
   documentController.uploadNewVersion
 );
 
 // Restore to specific version
-router.post('/:id/versions/:versionId/restore', documentController.restoreVersion);
+router.post(
+  '/:id/versions/:versionId/restore',
+  requireDocumentOwnership(),
+  documentController.restoreVersion
+);
 
 export default router;

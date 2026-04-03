@@ -75,13 +75,18 @@ router.post('/', validateBody(createKnowledgeBaseSchema), knowledgeBaseControlle
 router.get('/', validateQuery(knowledgeBaseListParamsSchema), knowledgeBaseController.list);
 
 // Get knowledge base details
-router.get('/:id', knowledgeBaseController.getById);
+router.get('/:id', requireKnowledgeBaseOwnership(), knowledgeBaseController.getById);
 
 // Update knowledge base
-router.patch('/:id', validateBody(updateKnowledgeBaseSchema), knowledgeBaseController.update);
+router.patch(
+  '/:id',
+  validateBody(updateKnowledgeBaseSchema),
+  requireKnowledgeBaseOwnership(),
+  knowledgeBaseController.update
+);
 
 // Delete knowledge base
-router.delete('/:id', knowledgeBaseController.delete);
+router.delete('/:id', requireKnowledgeBaseOwnership(), knowledgeBaseController.delete);
 
 // ==================== Document Routes (under knowledge base) ====================
 

@@ -14,6 +14,7 @@ import {
   generateRequestSchema,
   expandRequestSchema,
 } from '@groundpath/shared/schemas';
+import { requireDocumentOwnership } from '@modules/document/public/ownership';
 import { summaryController } from './controllers/summary.controller';
 import { analysisController } from './controllers/analysis.controller';
 import { generationController } from './controllers/generation.controller';
@@ -32,6 +33,7 @@ router.post(
   '/:id/summary',
   aiRateLimiter,
   validateBody(summaryRequestSchema),
+  requireDocumentOwnership(),
   summaryController.generate
 );
 
@@ -40,6 +42,7 @@ router.post(
   '/:id/summary/stream',
   aiRateLimiter,
   validateBody(summaryRequestSchema),
+  requireDocumentOwnership(),
   summaryController.stream
 );
 
@@ -52,6 +55,7 @@ router.post(
   '/:id/analyze',
   aiRateLimiter,
   validateBody(analysisRequestSchema),
+  requireDocumentOwnership(),
   analysisController.analyze
 );
 
@@ -60,6 +64,7 @@ router.post(
   '/:id/analyze/keywords',
   aiRateLimiter,
   validateBody(extractKeywordsRequestSchema),
+  requireDocumentOwnership(),
   analysisController.extractKeywords
 );
 
@@ -68,11 +73,12 @@ router.post(
   '/:id/analyze/entities',
   aiRateLimiter,
   validateBody(extractEntitiesRequestSchema),
+  requireDocumentOwnership(),
   analysisController.extractEntities
 );
 
 // GET /api/v1/document-ai/:id/analyze/structure - Get document structure (no LLM)
-router.get('/:id/analyze/structure', analysisController.getStructure);
+router.get('/:id/analyze/structure', requireDocumentOwnership(), analysisController.getStructure);
 
 // ============================================================================
 // Generation Routes
@@ -99,6 +105,7 @@ router.post(
   '/:id/expand',
   aiRateLimiter,
   validateBody(expandRequestSchema),
+  requireDocumentOwnership(),
   generationController.expand
 );
 
@@ -107,6 +114,7 @@ router.post(
   '/:id/expand/stream',
   aiRateLimiter,
   validateBody(expandRequestSchema),
+  requireDocumentOwnership(),
   generationController.streamExpand
 );
 

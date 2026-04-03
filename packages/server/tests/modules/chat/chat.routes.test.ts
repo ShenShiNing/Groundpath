@@ -142,6 +142,7 @@ describe('chat.routes', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(updateConversationSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(listConversationsSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(searchConversationsSchemaMock);
+    expect(requireConversationOwnershipMock).toHaveBeenCalledTimes(5);
 
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/conversations',
@@ -160,15 +161,18 @@ describe('chat.routes', () => {
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/conversations/:id',
+      conversationOwnershipMiddlewareMock,
       conversationControllerMock.getById
     );
     expect(mockRouter.patch).toHaveBeenCalledWith(
       '/conversations/:id',
       updateConversationValidatorMock,
+      conversationOwnershipMiddlewareMock,
       conversationControllerMock.update
     );
     expect(mockRouter.delete).toHaveBeenCalledWith(
       '/conversations/:id',
+      conversationOwnershipMiddlewareMock,
       conversationControllerMock.delete
     );
   });
@@ -176,7 +180,6 @@ describe('chat.routes', () => {
   it('should register message endpoints', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(sendMessageSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(listMessagesSchemaMock);
-    expect(requireConversationOwnershipMock).toHaveBeenCalledTimes(2);
 
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/conversations/:id/messages',

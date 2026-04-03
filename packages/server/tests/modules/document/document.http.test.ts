@@ -10,6 +10,7 @@ const {
   trashMutationRateLimiterMock,
   trashClearRateLimiterMock,
   documentControllerMock,
+  requireDocumentOwnershipMock,
 } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     if (req.headers.authorization === 'Bearer valid-access') {
@@ -55,6 +56,7 @@ const {
     createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
     trashMutationRateLimiterMock: vi.fn(trashMutationRateLimiter),
     trashClearRateLimiterMock: vi.fn(trashClearRateLimiter),
+    requireDocumentOwnershipMock: vi.fn(() => passthroughSanitize),
     documentControllerMock: {
       listTrash: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'list-trash' })),
       clearTrash: vi.fn((_req, res) =>
@@ -103,6 +105,10 @@ vi.mock('@config/env', async () => {
 
 vi.mock('@modules/document/controllers/document.controller', () => ({
   documentController: documentControllerMock,
+}));
+
+vi.mock('@modules/document/public/ownership', () => ({
+  requireDocumentOwnership: requireDocumentOwnershipMock,
 }));
 
 vi.mock('@core/middleware', async () => {

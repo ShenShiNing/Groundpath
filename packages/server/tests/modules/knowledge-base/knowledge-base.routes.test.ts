@@ -210,6 +210,7 @@ describe('knowledge-base.routes', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(knowledgeBaseDocumentUploadMetadataSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseDocumentListParamsSchemaMock);
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseListParamsSchemaMock);
+    expect(requireKnowledgeBaseOwnershipMock).toHaveBeenCalledTimes(5);
 
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/',
@@ -221,18 +222,26 @@ describe('knowledge-base.routes', () => {
       knowledgeBaseListValidatorMock,
       knowledgeBaseControllerMock.list
     );
-    expect(mockRouter.get).toHaveBeenCalledWith('/:id', knowledgeBaseControllerMock.getById);
+    expect(mockRouter.get).toHaveBeenCalledWith(
+      '/:id',
+      knowledgeBaseOwnershipMiddlewareMock,
+      knowledgeBaseControllerMock.getById
+    );
     expect(mockRouter.patch).toHaveBeenCalledWith(
       '/:id',
       updateKbValidatorMock,
+      knowledgeBaseOwnershipMiddlewareMock,
       knowledgeBaseControllerMock.update
     );
-    expect(mockRouter.delete).toHaveBeenCalledWith('/:id', knowledgeBaseControllerMock.delete);
+    expect(mockRouter.delete).toHaveBeenCalledWith(
+      '/:id',
+      knowledgeBaseOwnershipMiddlewareMock,
+      knowledgeBaseControllerMock.delete
+    );
   });
 
   it('should register document routes with controller handlers', () => {
     expect(validateQueryMock).toHaveBeenCalledWith(knowledgeBaseDocumentListParamsSchemaMock);
-    expect(requireKnowledgeBaseOwnershipMock).toHaveBeenCalledTimes(2);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/documents',
       generalRateLimiterMock,
