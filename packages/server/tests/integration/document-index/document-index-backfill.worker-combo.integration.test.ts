@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import type { Queue } from 'bullmq';
 import { expect, it, vi } from 'vitest';
+import type { QueueChannelInspector } from '@core/queue';
+import type { DocumentProcessingJobData } from '@modules/rag/queue/document-processing.types';
 import {
   getRealIntegrationDescribe,
   isRedisUrlReachable,
@@ -92,11 +93,13 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
   const { documentProcessingBackfillLifecycleListener } =
     await import('@modules/document-index/public/document-processing');
   const {
-    getDocumentProcessingQueue,
     enqueueDocumentProcessing,
     startDocumentProcessingWorker,
     stopDocumentProcessingWorker,
   } = await import('@modules/rag/queue/document-processing.queue');
+  const { getDocumentProcessingQueueInspector } = await import(
+    '@modules/rag/queue/document-processing.queue.testing'
+  );
   registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
   registerDocumentProcessingLifecycleListener(documentProcessingBackfillLifecycleListener);
   const { documentIndexBackfillProgressService } =
@@ -162,7 +165,7 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
     closeDatabase,
     documentIndexBackfillService,
     processingRecoveryService,
-    documentProcessingQueue: getDocumentProcessingQueue() as Queue,
+    documentProcessingQueue: getDocumentProcessingQueueInspector() as QueueChannelInspector<DocumentProcessingJobData>,
     enqueueDocumentProcessing,
     startDocumentProcessingWorker,
     stopDocumentProcessingWorker,
@@ -176,6 +179,8 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
       } catch {
         // ignore worker teardown failures
       }
+
+      await getDocumentProcessingQueueInspector().clear();
 
       const { eq } = drizzle;
 

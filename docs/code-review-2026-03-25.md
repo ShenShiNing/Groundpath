@@ -134,9 +134,11 @@
 | ~~高~~ | ~~完善模块公共 API，统一导出规范~~ ✅             | 防止模块边界腐蚀 |
 | ~~高~~ | ~~Document ↔ RAG 依赖解耦，引入事件/回调模式~~ ✅ | 降低核心模块耦合 |
 | 中     | 引入统一的错误重试策略                            | 外部服务故障容错 |
-| 中     | 队列系统抽象（当前绑定 BullMQ）                   | 可替换性         |
+| ~~中~~ | ~~队列系统抽象（当前绑定 BullMQ）~~ ✅            | 可替换性         |
 | 中     | 缓存系统抽象（当前绑定 Redis）                    | 本地开发友好     |
 | 低     | Feature Flag 服务化（支持用户/KB级灰度）          | 灵活发布         |
+
+- **补记（2026-04-03）**: 已新增 `packages/server/src/core/queue/*` 最小队列驱动抽象，BullMQ 实现下沉到 `drivers/bullmq/*`，并补充 `inline` driver 作为本地/测试适配器。`packages/server/src/modules/rag/queue/document-processing.queue.ts` 现仅保留文档处理领域语义；组合根继续注册 dispatcher，但 `rag.controller.ts`、`processing-recovery.service.ts` 等调用点已改为通过 `@core/document-processing` 端口分发，不再依赖 BullMQ 具体实现。
 
 ---
 

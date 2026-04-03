@@ -1,5 +1,5 @@
-import { Queue, Worker, type Job } from 'bullmq';
-import { getQueueConnection, getQueuePrefix } from '@core/queue';
+import type { QueueChannel, QueueWorkerHandle } from '@core/queue';
+import { getQueueDriver } from '@core/queue';
 import { queueConfig } from '@config/env';
 import {
   emitDocumentProcessingSettled,
@@ -11,37 +11,26 @@ import type {
   DocumentProcessingEnqueueOptions,
   DocumentProcessingJobData,
 } from './document-processing.types';
+import { DOCUMENT_PROCESSING_QUEUE_NAME as QUEUE_NAME } from './document-processing.types';
 
 const logger = createLogger('document-processing.queue');
 
-const QUEUE_NAME = 'document-processing';
+export type DocumentProcessingWorkerHandle = QueueWorkerHandle;
 
-// ==================== Queue ====================
+let documentProcessingQueue: QueueChannel<DocumentProcessingJobData> | null = null;
 
-const connectionOpts = getQueueConnection();
-const prefix = getQueuePrefix();
-
-let documentProcessingQueue: Queue<DocumentProcessingJobData> | null = null;
-
-function createDocumentProcessingQueue(): Queue<DocumentProcessingJobData> {
-  return new Queue<DocumentProcessingJobData>(QUEUE_NAME, {
-    connection: connectionOpts,
-    prefix,
-    defaultJobOptions: {
+function getDocumentProcessingQueueChannel(): QueueChannel<DocumentProcessingJobData> {
+  if (!documentProcessingQueue) {
+    documentProcessingQueue = getQueueDriver().createChannel<DocumentProcessingJobData>(QUEUE_NAME, {
       attempts: queueConfig.maxRetries + 1,
       backoff: {
         type: queueConfig.backoffType,
         delay: queueConfig.backoffDelay,
       },
-      removeOnComplete: { count: 1000 },
-      removeOnFail: { count: 5000 },
-    },
-  });
-}
-
-export function getDocumentProcessingQueue(): Queue<DocumentProcessingJobData> {
-  if (!documentProcessingQueue) {
-    documentProcessingQueue = createDocumentProcessingQueue();
+      concurrency: queueConfig.concurrency,
+      removeOnCompleteCount: 1000,
+      removeOnFailCount: 5000,
+    });
   }
 
   return documentProcessingQueue;
@@ -52,15 +41,8 @@ async function closeDocumentProcessingQueue(): Promise<void> {
     return;
   }
 
-  try {
-    await documentProcessingQueue.close();
-  } catch (error) {
-    if (!(error instanceof Error) || error.message !== 'Connection is closed.') {
-      throw error;
-    }
-  } finally {
-    documentProcessingQueue = null;
-  }
+  await documentProcessingQueue.close();
+  documentProcessingQueue = null;
 }
 
 // ==================== Enqueue Helper ====================
@@ -98,7 +80,7 @@ export async function enqueueDocumentProcessing(
   ].filter((segment): segment is string => Boolean(segment));
   const jobId = jobIdSegments.join('-');
 
-  await getDocumentProcessingQueue().add('process', jobData, { jobId });
+  await getDocumentProcessingQueueChannel().enqueue('process', jobData, { jobId });
   logger.info(
     {
       documentId,
@@ -117,7 +99,7 @@ export async function enqueueDocumentProcessing(
 
 // ==================== Worker ====================
 
-let worker: Worker<DocumentProcessingJobData> | null = null;
+let worker: DocumentProcessingWorkerHandle | null = null;
 
 /**
  * Start the document processing worker.
@@ -126,12 +108,11 @@ let worker: Worker<DocumentProcessingJobData> | null = null;
  * It runs in the same process by default but could be extracted to a
  * standalone process for horizontal scaling.
  */
-export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobData> {
+export function startDocumentProcessingWorker(): DocumentProcessingWorkerHandle {
   if (worker) return worker;
 
-  worker = new Worker<DocumentProcessingJobData>(
-    QUEUE_NAME,
-    async (job: Job<DocumentProcessingJobData>) => {
+  worker = getDocumentProcessingQueueChannel().startWorker(
+    async (job) => {
       const {
         documentId,
         userId,
@@ -140,8 +121,8 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
         reason,
         backfillRunId,
       } = job.data;
-      const attempt = job.attemptsMade + 1;
-      const jobId = job.id?.toString();
+      const attempt = job.attempt;
+      const jobId = job.id;
 
       logger.info(
         {
@@ -217,34 +198,28 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
       );
     },
     {
-      connection: connectionOpts,
-      prefix,
-      concurrency: queueConfig.concurrency,
+      onFailed: (job, err, retryable) => {
+        logger.error(
+          {
+            documentId: job?.data.documentId,
+            targetDocumentVersion: job?.data.targetDocumentVersion,
+            targetIndexVersion: job?.data.targetIndexVersion,
+            reason: job?.data.reason,
+            jobId: job?.id,
+            err,
+            attemptsMade: job?.attempt,
+            retryable,
+          },
+          retryable
+            ? 'Document processing job failed, will retry'
+            : 'Document processing job failed permanently (dead letter)'
+        );
+      },
+      onError: (err) => {
+        logger.error({ err }, 'Document processing worker error');
+      },
     }
   );
-
-  worker.on('failed', (job, err) => {
-    const isRetryable = job && job.attemptsMade < (job.opts?.attempts ?? 1);
-    logger.error(
-      {
-        documentId: job?.data.documentId,
-        targetDocumentVersion: job?.data.targetDocumentVersion,
-        targetIndexVersion: job?.data.targetIndexVersion,
-        reason: job?.data.reason,
-        jobId: job?.id,
-        err,
-        attemptsMade: job?.attemptsMade,
-        retryable: isRetryable,
-      },
-      isRetryable
-        ? 'Document processing job failed, will retry'
-        : 'Document processing job failed permanently (dead letter)'
-    );
-  });
-
-  worker.on('error', (err) => {
-    logger.error({ err }, 'Document processing worker error');
-  });
 
   logger.info(
     { concurrency: queueConfig.concurrency, maxRetries: queueConfig.maxRetries },

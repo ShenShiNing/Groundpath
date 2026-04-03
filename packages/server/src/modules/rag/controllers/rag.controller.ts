@@ -1,11 +1,11 @@
 import type { Request, Response } from 'express';
 import type { Document } from '@core/db/schema/document/documents.schema';
 import type { RagSearchRequest } from '@groundpath/shared/schemas';
+import { dispatchDocumentProcessing } from '@core/document-processing';
 import { sendSuccessResponse, Errors, asyncHandler } from '@core/errors';
 import { getValidatedBody } from '@core/middleware';
 import { requireUserId } from '@core/utils';
 import { searchService } from '../services/search.service';
-import { enqueueDocumentProcessing } from '../queue';
 
 function requireOwnedDocument(res: Response): Document {
   const document = res.locals.ownedResources?.document;
@@ -41,7 +41,7 @@ export const ragController = {
     const document = requireOwnedDocument(res);
     const documentId = document.id;
 
-    await enqueueDocumentProcessing(documentId, userId, {
+    await dispatchDocumentProcessing(documentId, userId, {
       targetDocumentVersion: document.currentVersion,
       reason: 'retry',
     });

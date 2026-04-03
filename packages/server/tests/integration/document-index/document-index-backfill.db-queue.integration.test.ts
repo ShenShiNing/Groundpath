@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import type { Queue } from 'bullmq';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+import type { QueueChannelInspector } from '@core/queue';
+import type { DocumentProcessingJobData } from '@modules/rag/queue/document-processing.types';
 import {
   getRealIntegrationDescribe,
   isRedisUrlReachable,
@@ -25,10 +26,11 @@ describeRealIntegration('document index backfill real db/queue integration', () 
   let db: typeof import('@core/db').db;
   let closeDatabase: typeof import('@core/db').closeDatabase;
   let documentIndexBackfillService: typeof import('@modules/document-index/services/document-index-backfill.service').documentIndexBackfillService;
-  let documentProcessingQueue: Queue | null = null;
+  let documentProcessingQueue: QueueChannelInspector<DocumentProcessingJobData> | null = null;
   let registerDocumentProcessingDispatcher: typeof import('@core/document-processing').registerDocumentProcessingDispatcher;
-  let getDocumentProcessingQueue: typeof import('@modules/rag/queue/document-processing.queue').getDocumentProcessingQueue;
   let enqueueDocumentProcessing: typeof import('@modules/rag/queue/document-processing.queue').enqueueDocumentProcessing;
+  let getDocumentProcessingQueueInspector: typeof import('@modules/rag/queue/document-processing.queue.testing').getDocumentProcessingQueueInspector;
+  let stopDocumentProcessingWorker: typeof import('@modules/rag/queue/document-processing.queue').stopDocumentProcessingWorker;
   let schema: typeof import('@core/db/schema');
   let drizzle: typeof import('drizzle-orm');
   let skipReason: string | null = null;
@@ -67,10 +69,13 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     ({ registerDocumentProcessingDispatcher } = await import('@core/document-processing'));
     ({ documentIndexBackfillService } =
       await import('@modules/document-index/services/document-index-backfill.service'));
-    ({ getDocumentProcessingQueue, enqueueDocumentProcessing } =
+    ({ enqueueDocumentProcessing, stopDocumentProcessingWorker } =
       await import('@modules/rag/queue/document-processing.queue'));
+    ({ getDocumentProcessingQueueInspector } = await import(
+      '@modules/rag/queue/document-processing.queue.testing'
+    ));
     registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
-    documentProcessingQueue = getDocumentProcessingQueue();
+    documentProcessingQueue = getDocumentProcessingQueueInspector();
     schema = await import('@core/db/schema');
     drizzle = await import('drizzle-orm');
 
@@ -149,11 +154,14 @@ describeRealIntegration('document index backfill real db/queue integration', () 
   afterAll(async () => {
     if (documentProcessingQueue) {
       try {
-        await documentProcessingQueue.obliterate({ force: true });
+        await documentProcessingQueue.clear();
       } catch {
         // Ignore queue cleanup failures to preserve DB cleanup.
       }
-      await documentProcessingQueue.close();
+    }
+
+    if (stopDocumentProcessingWorker) {
+      await stopDocumentProcessingWorker();
     }
 
     if (db && schema && drizzle) {

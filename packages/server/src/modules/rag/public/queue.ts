@@ -1,12 +1,12 @@
 export {
-  getDocumentProcessingQueue,
   enqueueDocumentProcessing,
+  type DocumentProcessingWorkerHandle,
   startDocumentProcessingWorker,
   stopDocumentProcessingWorker,
-} from '../queue/document-processing.queue';
+} from '../queue';
 export type {
   DocumentProcessingEnqueueOptions,
   DocumentProcessingJobData,
   DocumentProcessingReason,
-} from '../queue/document-processing.types';
-export { DOCUMENT_PROCESSING_REASONS } from '../queue/document-processing.types';
+} from '../queue';
+export { DOCUMENT_PROCESSING_REASONS } from '../queue';

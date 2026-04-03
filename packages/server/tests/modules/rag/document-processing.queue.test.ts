@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ==================== Mocks ====================
 
 const { queueAddMock, processingServiceMock, lifecycleMock, workerState } = vi.hoisted(() => ({
-  queueAddMock: vi.fn(async () => ({ id: 'job-1' })),
+  queueAddMock: vi.fn(async (_name: string, _data: unknown, options?: { jobId?: string }) => ({
+    id: options?.jobId ?? 'job-1',
+  })),
   processingServiceMock: {
     processDocument: vi.fn(async () => ({ outcome: 'completed' })),
   },
@@ -14,17 +16,30 @@ const { queueAddMock, processingServiceMock, lifecycleMock, workerState } = vi.h
   workerState: {
     processor: undefined as
       | ((job: {
+          id?: string;
+          name: string;
           data: Record<string, unknown>;
           attemptsMade: number;
-          id?: string;
           opts?: { attempts?: number };
         }) => Promise<void>)
       | undefined,
+    events: [] as string[],
   },
+}));
+
+const {
+  queueCloseMock,
+  workerCloseMock,
+  workerWaitUntilReadyMock,
+} = vi.hoisted(() => ({
+  queueCloseMock: vi.fn(async () => undefined),
+  workerCloseMock: vi.fn(async () => undefined),
+  workerWaitUntilReadyMock: vi.fn(async () => undefined),
 }));
 
 vi.mock('@core/config/env', () => ({
   queueConfig: {
+    driver: 'bullmq' as const,
     concurrency: 2,
     maxRetries: 3,
     backoffDelay: 5000,
@@ -54,15 +69,21 @@ vi.mock('bullmq', () => {
   function QueueMock() {
     return {
       add: queueAddMock,
-      close: vi.fn(async () => undefined),
+      close: queueCloseMock,
+      getJob: vi.fn(async () => null),
+      obliterate: vi.fn(async () => undefined),
     };
   }
 
   function WorkerMock(_name: string, processor: typeof workerState.processor) {
     workerState.processor = processor;
+    workerState.events = [];
     return {
-      close: vi.fn(async () => undefined),
-      on: vi.fn(),
+      close: workerCloseMock,
+      waitUntilReady: workerWaitUntilReadyMock,
+      on: vi.fn((eventName: string) => {
+        workerState.events.push(eventName);
+      }),
     };
   }
 
@@ -85,7 +106,6 @@ vi.mock('@core/document-processing', async () => {
 });
 
 import {
-  getDocumentProcessingQueue,
   enqueueDocumentProcessing,
   startDocumentProcessingWorker,
   stopDocumentProcessingWorker,
@@ -98,6 +118,7 @@ describe('document-processing.queue', () => {
     await stopDocumentProcessingWorker();
     vi.clearAllMocks();
     workerState.processor = undefined;
+    workerState.events = [];
   });
 
   describe('enqueueDocumentProcessing', () => {
@@ -177,16 +198,13 @@ describe('document-processing.queue', () => {
   });
 
   describe('startDocumentProcessingWorker', () => {
-    it('should create a worker with event handlers', () => {
+    it('should create a worker with failure and error hooks', () => {
       const worker = startDocumentProcessingWorker();
 
       expect(worker).toBeDefined();
-
-      // Worker's on() should have been called for 'failed' and 'error'
-      const onMock = worker.on as ReturnType<typeof vi.fn>;
-      const eventNames = onMock.mock.calls.map((c: unknown[]) => c[0]);
-      expect(eventNames).toContain('failed');
-      expect(eventNames).toContain('error');
+      expect(worker.waitUntilReady).toBeTypeOf('function');
+      expect(workerState.events).toContain('failed');
+      expect(workerState.events).toContain('error');
     });
 
     it('should emit lifecycle events around processing results', async () => {
@@ -195,6 +213,8 @@ describe('document-processing.queue', () => {
       expect(workerState.processor).toBeTypeOf('function');
 
       await workerState.processor?.({
+        id: 'job-1',
+        name: 'process',
         data: {
           documentId: 'doc-1',
           userId: 'user-1',
@@ -204,7 +224,7 @@ describe('document-processing.queue', () => {
           backfillRunId: 'run-1',
         },
         attemptsMade: 0,
-        id: 'job-1',
+        opts: { attempts: 4 },
       });
 
       expect(lifecycleMock.emitDocumentProcessingStarted).toHaveBeenCalledWith({
@@ -250,6 +270,8 @@ describe('document-processing.queue', () => {
 
       await expect(
         workerState.processor?.({
+          id: 'job-2',
+          name: 'process',
           data: {
             documentId: 'doc-2',
             userId: 'user-2',
@@ -258,7 +280,7 @@ describe('document-processing.queue', () => {
             backfillRunId: 'run-2',
           },
           attemptsMade: 1,
-          id: 'job-2',
+          opts: { attempts: 4 },
         })
       ).resolves.toBeUndefined();
 
@@ -284,9 +306,10 @@ describe('document-processing.queue', () => {
   });
 
   describe('stopDocumentProcessingWorker', () => {
-    it('should close worker and queue without error', async () => {
+    it('should close worker without error', async () => {
       startDocumentProcessingWorker();
       await expect(stopDocumentProcessingWorker()).resolves.not.toThrow();
+      expect(workerCloseMock).toHaveBeenCalled();
     });
 
     it('should no-op when neither worker nor queue was created', async () => {
@@ -294,10 +317,13 @@ describe('document-processing.queue', () => {
     });
 
     it('should close queue if it was created without starting worker', async () => {
-      const queue = getDocumentProcessingQueue();
+      await enqueueDocumentProcessing('doc-queue', 'user-1', {
+        targetDocumentVersion: 1,
+        reason: 'upload',
+      });
 
       await expect(stopDocumentProcessingWorker()).resolves.not.toThrow();
-      expect(queue.close).toHaveBeenCalled();
+      expect(queueCloseMock).toHaveBeenCalled();
     });
   });
 });
