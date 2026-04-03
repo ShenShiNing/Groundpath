@@ -31,7 +31,7 @@ export const userApi = {
   /** 更新用户资料 */
   async updateProfile(data: UpdateProfileRequest): Promise<UserPublicInfo> {
     const response = await apiClient.patch<ApiResponse<UserPublicInfo>>(
-      '/api/v1/user/profile',
+      '/api/v1/users/profile',
       data
     );
     return unwrapResponse(response.data);
@@ -39,7 +39,10 @@ export const userApi = {
 
   /** 更新绑定邮箱 */
   async changeEmail(data: ChangeEmailRequest): Promise<UserPublicInfo> {
-    const response = await apiClient.patch<ApiResponse<UserPublicInfo>>('/api/v1/user/email', data);
+    const response = await apiClient.patch<ApiResponse<UserPublicInfo>>(
+      '/api/v1/users/email',
+      data
+    );
     return unwrapResponse(response.data);
   },
 
@@ -48,7 +51,7 @@ export const userApi = {
     const formData = new FormData();
     formData.append('avatar', file);
     const response = await apiClient.post<ApiResponse<UserPublicInfo>>(
-      '/api/v1/user/avatar',
+      '/api/v1/users/avatar',
       formData,
       {
         headers: {
