@@ -6,10 +6,8 @@ const mocks = vi.hoisted(() => ({
     processingRecoveryBatchSize: 100,
     processingRecoveryRequeueEnabled: false,
   },
-  documentRepository: {
-    listStaleProcessingDocuments: vi.fn(),
-  },
   documentProcessingService: {
+    listStaleProcessingCandidates: vi.fn(),
     recoverStaleProcessingCandidate: vi.fn(),
   },
   processingService: {
@@ -28,10 +26,6 @@ vi.mock('@core/logger', () => ({
     warn: vi.fn(),
     error: vi.fn(),
   }),
-}));
-
-vi.mock('@modules/document/public/repositories', () => ({
-  documentRepository: mocks.documentRepository,
 }));
 
 vi.mock('@modules/document/public/processing', () => ({
@@ -66,7 +60,7 @@ describe('processingRecoveryService', () => {
     const firstStartedAt = new Date('2026-03-11T10:00:00.000Z');
     const secondStartedAt = new Date('2026-03-11T10:15:00.000Z');
 
-    mocks.documentRepository.listStaleProcessingDocuments.mockResolvedValue([
+    mocks.documentProcessingService.listStaleProcessingCandidates.mockResolvedValue([
       {
         id: 'doc-1',
         userId: 'user-1',
@@ -92,10 +86,10 @@ describe('processingRecoveryService', () => {
 
     const result = await processingRecoveryService.recoverStaleProcessing(now);
 
-    expect(mocks.documentRepository.listStaleProcessingDocuments).toHaveBeenCalledWith(
-      new Date('2026-03-11T11:30:00.000Z'),
-      100
-    );
+    expect(mocks.documentProcessingService.listStaleProcessingCandidates).toHaveBeenCalledWith({
+      staleBefore: new Date('2026-03-11T11:30:00.000Z'),
+      limit: 100,
+    });
     expect(mocks.documentProcessingService.recoverStaleProcessingCandidate).toHaveBeenNthCalledWith(
       1,
       {
@@ -131,7 +125,7 @@ describe('processingRecoveryService', () => {
   it('should keep going when one recovery attempt throws', async () => {
     const now = new Date('2026-03-11T12:00:00.000Z');
 
-    mocks.documentRepository.listStaleProcessingDocuments.mockResolvedValue([
+    mocks.documentProcessingService.listStaleProcessingCandidates.mockResolvedValue([
       {
         id: 'doc-1',
         userId: 'user-1',
@@ -169,7 +163,7 @@ describe('processingRecoveryService', () => {
     mocks.env.processingRecoveryRequeueEnabled = true;
     const now = new Date('2026-03-11T12:00:00.000Z');
 
-    mocks.documentRepository.listStaleProcessingDocuments.mockResolvedValue([
+    mocks.documentProcessingService.listStaleProcessingCandidates.mockResolvedValue([
       {
         id: 'doc-1',
         userId: 'user-1',
@@ -205,7 +199,7 @@ describe('processingRecoveryService', () => {
     mocks.env.processingRecoveryRequeueEnabled = true;
     const now = new Date('2026-03-11T12:00:00.000Z');
 
-    mocks.documentRepository.listStaleProcessingDocuments.mockResolvedValue([
+    mocks.documentProcessingService.listStaleProcessingCandidates.mockResolvedValue([
       {
         id: 'doc-1',
         userId: 'user-1',

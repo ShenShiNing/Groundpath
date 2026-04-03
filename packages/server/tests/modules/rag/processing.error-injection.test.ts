@@ -11,9 +11,6 @@ vi.mock('@core/logger', () => ({
 
 // ─── Mock dependencies ───
 const {
-  documentRepositoryMock,
-  documentVersionRepositoryMock,
-  documentChunkRepositoryMock,
   documentProcessingServiceMock,
   knowledgeBaseServiceMock,
   vectorRepositoryMock,
@@ -22,27 +19,15 @@ const {
   ensureCollectionMock,
   getEmbeddingProviderByTypeMock,
   dbMock,
-  withTransactionMock,
   documentParseRouterServiceMock,
   documentIndexServiceMock,
   markdownStructureParserMock,
   docxStructureParserMock,
   pdfStructureParserMock,
 } = vi.hoisted(() => ({
-  documentRepositoryMock: {
-    findById: vi.fn(),
-  },
-  documentVersionRepositoryMock: {
-    findByDocumentAndVersion: vi.fn(),
-  },
-  documentChunkRepositoryMock: {
-    getChunkIdsByDocumentId: vi.fn(),
-    countByDocumentAndVersion: vi.fn(),
-    createMany: vi.fn(),
-    deleteByIds: vi.fn(),
-    deleteByDocumentId: vi.fn(),
-  },
   documentProcessingServiceMock: {
+    getProcessingSnapshot: vi.fn(),
+    getVersionContentSnapshot: vi.fn(),
     markProcessingPending: vi.fn(),
     markProcessingFailed: vi.fn(),
   },
@@ -67,7 +52,6 @@ const {
   dbMock: {
     update: vi.fn(),
   },
-  withTransactionMock: vi.fn(),
   documentParseRouterServiceMock: {
     decideRoute: vi.fn(),
   },
@@ -76,6 +60,7 @@ const {
     completeBuild: vi.fn(),
     failBuild: vi.fn(),
     supersedeBuild: vi.fn(),
+    persistChunkArtifacts: vi.fn(),
     replaceGraph: vi.fn(),
   },
   markdownStructureParserMock: {
@@ -88,24 +73,6 @@ const {
     parseFromStorage: vi.fn(),
     parseFromStorageWithImages: vi.fn(),
   },
-}));
-
-vi.mock('@modules/document/public/repositories', () => ({
-  documentRepository: documentRepositoryMock,
-  documentVersionRepository: documentVersionRepositoryMock,
-  documentChunkRepository: documentChunkRepositoryMock,
-}));
-
-vi.mock('@modules/document/repositories/document.repository', () => ({
-  documentRepository: documentRepositoryMock,
-}));
-
-vi.mock('@modules/document/repositories/document-version.repository', () => ({
-  documentVersionRepository: documentVersionRepositoryMock,
-}));
-
-vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
-  documentChunkRepository: documentChunkRepositoryMock,
 }));
 
 vi.mock('@modules/document/public/processing', () => ({
@@ -154,10 +121,6 @@ vi.mock('uuid', () => ({
   v4: vi.fn(() => 'test-uuid-' + Math.random().toString(36).slice(2, 8)),
 }));
 
-vi.mock('@core/db/db.utils', () => ({
-  withTransaction: withTransactionMock,
-}));
-
 vi.mock('@core/db', () => ({
   db: dbMock,
 }));
@@ -204,13 +167,25 @@ describe('RAG Processing Error Injection', () => {
     };
     dbMock.update.mockReturnValue(updateMock);
 
-    // Default document found
-    documentRepositoryMock.findById.mockResolvedValue({
+    // Default processing snapshot
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue({
       id: docId,
+      userId,
       knowledgeBaseId: kbId,
+      documentType: 'markdown',
       chunkCount: 0,
       currentVersion: 1,
       publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+      activeIndexVersionId: null,
+    });
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
+      textContent: 'Some text content for embedding',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
 
     // Default KB embedding config
@@ -221,8 +196,6 @@ describe('RAG Processing Error Injection', () => {
     });
 
     ensureCollectionMock.mockResolvedValue(undefined);
-    documentChunkRepositoryMock.getChunkIdsByDocumentId.mockResolvedValue([]);
-    documentChunkRepositoryMock.countByDocumentAndVersion.mockResolvedValue(0);
     getEmbeddingProviderByTypeMock.mockReturnValue(embeddingProviderMock);
     documentParseRouterServiceMock.decideRoute.mockReturnValue({
       routeMode: 'chunked',
@@ -239,6 +212,7 @@ describe('RAG Processing Error Injection', () => {
     });
     documentIndexServiceMock.failBuild.mockResolvedValue(undefined);
     documentIndexServiceMock.supersedeBuild.mockResolvedValue(undefined);
+    documentIndexServiceMock.persistChunkArtifacts.mockResolvedValue(undefined);
     documentIndexServiceMock.replaceGraph.mockResolvedValue(undefined);
     markdownStructureParserMock.parse.mockReturnValue({
       nodes: [],
@@ -271,8 +245,13 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should mark as failed and release lock when embedding fails', async () => {
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: 'Some text content for embedding',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
     chunkingServiceMock.chunkText.mockReturnValue([
       { chunkIndex: 0, content: 'Some text', metadata: { startOffset: 0, endOffset: 9 } },
@@ -290,8 +269,13 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should mark as failed when Qdrant upsert fails', async () => {
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: 'Some text',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
     chunkingServiceMock.chunkText.mockReturnValue([
       { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
@@ -308,8 +292,13 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should keep prior build artifacts immutable after successful publish', async () => {
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: 'Some text',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
     chunkingServiceMock.chunkText.mockReturnValue([
       { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
@@ -317,14 +306,11 @@ describe('RAG Processing Error Injection', () => {
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
 
-    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
     documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId);
 
-    expect(documentChunkRepositoryMock.deleteByDocumentId).not.toHaveBeenCalled();
-    expect(documentChunkRepositoryMock.deleteByIds).not.toHaveBeenCalled();
+    expect(documentIndexServiceMock.persistChunkArtifacts).toHaveBeenCalledTimes(1);
     expect(vectorRepositoryMock.deleteByIds).not.toHaveBeenCalled();
     expect(loggerMock.info).toHaveBeenCalledWith(
       expect.objectContaining({ documentId: docId, chunkCount: 1 }),
@@ -345,16 +331,20 @@ describe('RAG Processing Error Injection', () => {
     await processingService.processDocument(docId, userId);
 
     // Should not attempt to find document
-    expect(documentRepositoryMock.findById).not.toHaveBeenCalled();
+    expect(documentProcessingServiceMock.getProcessingSnapshot).not.toHaveBeenCalled();
   });
 
   it('should reset to pending and skip stale target versions', async () => {
-    documentRepositoryMock.findById.mockResolvedValue({
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue({
       id: docId,
+      userId,
       knowledgeBaseId: kbId,
+      documentType: 'markdown',
       chunkCount: 0,
       currentVersion: 2,
       publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+      activeIndexVersionId: null,
     });
     documentProcessingServiceMock.markProcessingPending.mockResolvedValue(true);
 
@@ -364,30 +354,36 @@ describe('RAG Processing Error Injection', () => {
     });
 
     expect(documentProcessingServiceMock.markProcessingPending).toHaveBeenCalledWith(docId);
-    expect(documentVersionRepositoryMock.findByDocumentAndVersion).not.toHaveBeenCalled();
+    expect(documentProcessingServiceMock.getVersionContentSnapshot).not.toHaveBeenCalled();
     expect(chunkingServiceMock.chunkText).not.toHaveBeenCalled();
     expect(documentIndexServiceMock.startBuild).not.toHaveBeenCalled();
   });
 
   it('should append a new build for the same document version without deleting prior chunks', async () => {
-    documentRepositoryMock.findById.mockResolvedValue({
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue({
       id: docId,
+      userId,
       knowledgeBaseId: kbId,
       chunkCount: 1,
       currentVersion: 1,
       documentType: 'markdown',
       publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+      activeIndexVersionId: null,
     });
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: 'Some text',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
     chunkingServiceMock.chunkText.mockReturnValue([
       { chunkIndex: 0, content: 'chunk', metadata: { startOffset: 0, endOffset: 5 } },
     ]);
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
-    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
     documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId, {
@@ -395,32 +391,40 @@ describe('RAG Processing Error Injection', () => {
       reason: 'retry',
     });
 
-    expect(documentChunkRepositoryMock.createMany).toHaveBeenCalled();
-    expect(documentChunkRepositoryMock.createMany).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({
-          documentId: docId,
-          version: 1,
-          indexVersionId: 'idx-build-1',
-        }),
-      ]),
-      {}
+    expect(documentIndexServiceMock.persistChunkArtifacts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        documentId: docId,
+        documentVersion: 1,
+        indexVersionId: 'idx-build-1',
+        chunks: expect.arrayContaining([
+          expect.objectContaining({
+            chunkIndex: 0,
+            content: 'chunk',
+          }),
+        ]),
+      })
     );
-    expect(documentChunkRepositoryMock.deleteByDocumentId).not.toHaveBeenCalled();
-    expect(documentChunkRepositoryMock.deleteByIds).not.toHaveBeenCalled();
   });
 
   it('should continue with chunk fallback when markdown structured parsing fails', async () => {
-    documentRepositoryMock.findById.mockResolvedValue({
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue({
       id: docId,
+      userId,
       knowledgeBaseId: kbId,
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'markdown',
       publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+      activeIndexVersionId: null,
     });
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: 'Some long text',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
     documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-1' });
     documentParseRouterServiceMock.decideRoute.mockReturnValue({
@@ -439,8 +443,6 @@ describe('RAG Processing Error Injection', () => {
     ]);
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
-    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
     documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId);
@@ -463,16 +465,24 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should persist markdown structure graph when structured markdown parse succeeds', async () => {
-    documentRepositoryMock.findById.mockResolvedValue({
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue({
       id: docId,
+      userId,
       knowledgeBaseId: kbId,
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'markdown',
       publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+      activeIndexVersionId: null,
     });
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: '# Heading\n\nBody',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
     documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-2' });
     documentParseRouterServiceMock.decideRoute.mockReturnValue({
@@ -509,9 +519,6 @@ describe('RAG Processing Error Injection', () => {
     ]);
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
-    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-
     await processingService.processDocument(docId, userId);
 
     expect(markdownStructureParserMock.parse).toHaveBeenCalledWith('# Heading\n\nBody');
@@ -532,17 +539,24 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should persist docx structure graph when structured docx parse succeeds', async () => {
-    documentRepositoryMock.findById.mockResolvedValue({
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue({
       id: docId,
+      userId,
       knowledgeBaseId: kbId,
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'docx',
       publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+      activeIndexVersionId: null,
     });
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       storageKey: 'docx-key',
       textContent: 'Docx extracted text',
+      fileName: 'doc.docx',
+      documentType: 'docx',
     });
     documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-docx' });
     documentParseRouterServiceMock.decideRoute.mockReturnValue({
@@ -565,9 +579,6 @@ describe('RAG Processing Error Injection', () => {
     ]);
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
-    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-
     await processingService.processDocument(docId, userId);
 
     expect(docxStructureParserMock.parseFromStorage).toHaveBeenCalledWith('docx-key');
@@ -587,17 +598,24 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should persist pdf structure graph when structured pdf parse succeeds', async () => {
-    documentRepositoryMock.findById.mockResolvedValue({
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue({
       id: docId,
+      userId,
       knowledgeBaseId: kbId,
       chunkCount: 0,
       currentVersion: 1,
       documentType: 'pdf',
       publishGeneration: 1,
+      updatedAt: new Date('2026-03-11T00:00:00.000Z'),
+      activeIndexVersionId: null,
     });
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       storageKey: 'pdf-key',
       textContent: 'Pdf extracted text',
+      fileName: 'doc.pdf',
+      documentType: 'pdf',
     });
     documentIndexServiceMock.startBuild.mockResolvedValue({ id: 'idx-build-pdf' });
     documentParseRouterServiceMock.decideRoute.mockReturnValue({
@@ -620,9 +638,6 @@ describe('RAG Processing Error Injection', () => {
     ]);
     embeddingProviderMock.embedBatch.mockResolvedValue([[0.1, 0.2]]);
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
-    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-
     await processingService.processDocument(docId, userId);
 
     expect(pdfStructureParserMock.parseFromStorageWithImages).toHaveBeenCalledWith('pdf-key');
@@ -642,7 +657,7 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should handle document not found', async () => {
-    documentRepositoryMock.findById.mockResolvedValue(null);
+    documentProcessingServiceMock.getProcessingSnapshot.mockResolvedValue(null);
 
     await processingService.processDocument(docId, userId);
 
@@ -654,11 +669,14 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should handle no text content gracefully', async () => {
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: null,
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
-
-    withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
     chunkingServiceMock.chunkText.mockReturnValue([]);
 
@@ -678,7 +696,9 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should handle double error (processing fails + status update fails)', async () => {
-    documentRepositoryMock.findById.mockRejectedValue(new Error('DB connection lost'));
+    documentProcessingServiceMock.getProcessingSnapshot.mockRejectedValue(
+      new Error('DB connection lost')
+    );
     documentProcessingServiceMock.markProcessingFailed.mockRejectedValue(
       new Error('Still can not connect')
     );
@@ -697,8 +717,13 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should log both cleanup failures after index build is created', async () => {
-    documentVersionRepositoryMock.findByDocumentAndVersion.mockResolvedValue({
+    documentProcessingServiceMock.getVersionContentSnapshot.mockResolvedValue({
+      documentId: docId,
+      version: 1,
       textContent: 'Some text',
+      fileName: 'doc.md',
+      documentType: 'markdown',
+      storageKey: 'doc-key',
     });
     chunkingServiceMock.chunkText.mockImplementation(() => {
       throw new Error('Chunking crashed');
@@ -736,7 +761,7 @@ describe('RAG Processing Error Injection', () => {
   });
 
   it('should always release lock even on error', async () => {
-    documentRepositoryMock.findById.mockRejectedValue(new Error('Crash'));
+    documentProcessingServiceMock.getProcessingSnapshot.mockRejectedValue(new Error('Crash'));
     documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId);

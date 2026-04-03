@@ -370,6 +370,34 @@ vi.mock('@modules/document/public/repositories', () => ({
 
 vi.mock('@modules/document/public/processing', () => ({
   documentProcessingService: {
+    getActiveIndexVersionMap: vi.fn(async (ids: string[]) => {
+      return new Map(
+        ids.map((id) => [
+          id,
+          (state.documents.get(id)?.activeIndexVersionId as string | null) ?? null,
+        ])
+      );
+    }),
+    listStaleProcessingCandidates: vi.fn(
+      async (input: { staleBefore: Date; limit: number }) =>
+        [...state.documents.values()]
+          .filter(
+            (doc) =>
+              doc.processingStatus === 'processing' &&
+              doc.processingStartedAt instanceof Date &&
+              (doc.processingStartedAt as Date) < input.staleBefore
+          )
+          .slice(0, input.limit)
+          .map((doc) => ({
+            id: doc.id as string,
+            userId: doc.userId as string,
+            knowledgeBaseId: doc.knowledgeBaseId as string,
+            title: 'Fixture Document',
+            currentVersion: doc.currentVersion as number,
+            publishGeneration: doc.publishGeneration as number,
+            processingStartedAt: doc.processingStartedAt as Date,
+          }))
+    ),
     recoverStaleProcessingCandidate: vi.fn(
       async (input: { documentId: string; staleBefore: Date }) => {
         const current = state.documents.get(input.documentId);

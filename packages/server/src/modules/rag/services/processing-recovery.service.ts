@@ -1,6 +1,5 @@
 import { documentConfig } from '@config/env';
 import { createLogger } from '@core/logger';
-import { documentRepository } from '@modules/document/public/repositories';
 import { documentProcessingService } from '@modules/document/public/processing';
 import { enqueueDocumentProcessing } from '../queue/document-processing.queue';
 import { processingService } from './processing.service';
@@ -29,10 +28,10 @@ export const processingRecoveryService = {
 
   async recoverStaleProcessing(now: Date = new Date()): Promise<ProcessingRecoveryResult> {
     const staleBefore = this.buildStaleBefore(now);
-    const staleDocuments = await documentRepository.listStaleProcessingDocuments(
+    const staleDocuments = await documentProcessingService.listStaleProcessingCandidates({
       staleBefore,
-      documentConfig.processingRecoveryBatchSize
-    );
+      limit: documentConfig.processingRecoveryBatchSize,
+    });
 
     const recoveredDocumentIds: string[] = [];
     const skippedDocumentIds: string[] = [];
