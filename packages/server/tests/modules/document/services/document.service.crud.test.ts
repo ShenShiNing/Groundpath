@@ -84,8 +84,8 @@ vi.mock('@modules/vector/public/repositories', () => ({
   },
 }));
 
-vi.mock('@modules/rag/queue/document-processing.queue', () => ({
-  enqueueDocumentProcessing: vi.fn(() => Promise.resolve()),
+vi.mock('@core/document-processing', () => ({
+  dispatchDocumentProcessing: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('@core/logger/operation-logger', () => ({

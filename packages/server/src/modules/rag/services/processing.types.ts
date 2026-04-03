@@ -1,15 +1,15 @@
 import type { EmbeddingProvider } from '@modules/embedding/public/providers';
-import {
-  documentRepository,
-  documentVersionRepository,
-} from '@modules/document/public/repositories';
+import type {
+  DocumentProcessingSnapshot,
+  DocumentVersionContentSnapshot,
+} from '@modules/document/public/processing';
+import type { DocumentChunkArtifact } from '@modules/document-index/public/indexing';
 import type {
   DocumentRouteMode,
   DocumentRouteReason,
 } from '@modules/document-index/public/routing';
 import type { ParsedDocumentStructure } from '@modules/document-index/public/parsers';
 import type { DocumentProcessingEnqueueOptions } from '../queue/document-processing.types';
-import type { NewDocumentChunk } from '@core/db/schema/document/document-chunks.schema';
 import type { VectorPoint } from '@modules/vector/public/types';
 
 export interface DocumentProcessingResult {
@@ -17,12 +17,8 @@ export interface DocumentProcessingResult {
   reason?: string;
 }
 
-export type ProcessingDocument = NonNullable<
-  Awaited<ReturnType<typeof documentRepository.findById>>
->;
-export type ProcessingVersion = NonNullable<
-  Awaited<ReturnType<typeof documentVersionRepository.findByDocumentAndVersion>>
->;
+export type ProcessingDocument = DocumentProcessingSnapshot;
+export type ProcessingVersion = DocumentVersionContentSnapshot;
 
 export interface ProcessingRuntimeState {
   collectionName?: string;
@@ -53,7 +49,7 @@ export interface ChunkProcessingArtifacts {
     content: string;
     metadata: Record<string, unknown>;
   }>;
-  chunkRecords: NewDocumentChunk[];
+  chunkArtifacts: DocumentChunkArtifact[];
   vectorPoints: VectorPoint[];
   embeddingProvider: EmbeddingProvider;
 }

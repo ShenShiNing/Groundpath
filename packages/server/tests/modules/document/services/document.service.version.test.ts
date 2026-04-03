@@ -68,7 +68,7 @@ vi.mock('@modules/knowledge-base/public/management', () => ({
   },
 }));
 
-vi.mock('@modules/document/ports/document-processing.port', () => ({
+vi.mock('@core/document-processing', () => ({
   dispatchDocumentProcessing: vi.fn(() => Promise.resolve()),
 }));
 

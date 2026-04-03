@@ -67,7 +67,7 @@ describeRealIntegration('document index lifecycle consistency real db integratio
       logOperation: logOperationMock,
     }));
 
-    vi.doMock('@modules/document/ports/document-processing.port', () => ({
+    vi.doMock('@core/document-processing', () => ({
       dispatchDocumentProcessing: dispatchDocumentProcessingMock,
     }));
 
@@ -99,7 +99,7 @@ describeRealIntegration('document index lifecycle consistency real db integratio
     }
 
     vi.doUnmock('@core/logger/operation-logger');
-    vi.doUnmock('@modules/document/ports/document-processing.port');
+    vi.doUnmock('@core/document-processing');
     vi.doUnmock('@modules/vector/public/repositories');
     vi.resetModules();
 

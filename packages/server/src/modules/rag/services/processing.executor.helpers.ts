@@ -1,9 +1,6 @@
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
-import {
-  documentRepository,
-  documentVersionRepository,
-} from '@modules/document/public/repositories';
+import { documentProcessingService } from '@modules/document/public/processing';
 import { documentIndexService } from '@modules/document-index/public/indexing';
 import { documentParseRouterService } from '@modules/document-index/public/routing';
 import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
@@ -175,7 +172,7 @@ async function handleStaleAfterVectorUpsert(
 export async function prepareProcessingInputs(
   context: ProcessingContext
 ): Promise<ProcessingPreparationOutcome> {
-  const document = await documentRepository.findById(context.documentId);
+  const document = await documentProcessingService.getProcessingSnapshot(context.documentId);
   if (!document) {
     throw Errors.notFound('Document');
   }
@@ -207,7 +204,7 @@ export async function prepareProcessingInputs(
 
   await ensureCollection(collectionName, dimensions);
 
-  const version = await documentVersionRepository.findByDocumentAndVersion(
+  const version = await documentProcessingService.getVersionContentSnapshot(
     context.documentId,
     document.currentVersion
   );
@@ -320,7 +317,9 @@ export async function processPreparedDocument(
   const chunkDelta = chunks.length - prepared.oldChunkCount;
   await persistChunkArtifacts({
     documentId: context.documentId,
-    chunkRecords: artifacts.chunkRecords,
+    documentVersion: prepared.document.currentVersion,
+    indexVersionId: prepared.indexBuildId,
+    chunkArtifacts: artifacts.chunkArtifacts,
   });
 
   if (context.state.parsedStructure) {

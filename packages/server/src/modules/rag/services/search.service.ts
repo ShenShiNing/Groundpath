@@ -1,7 +1,7 @@
 import { ragConfig } from '@config/env';
 import { createLogger } from '@core/logger';
 import { getEmbeddingProviderByType } from '@modules/embedding/public/providers';
-import { documentRepository } from '@modules/document/public/repositories';
+import { documentProcessingService } from '@modules/document/public/processing';
 import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 import { ensureCollection } from '@modules/vector/public/qdrant';
 import { vectorRepository } from '@modules/vector/public/repositories';
@@ -60,7 +60,7 @@ export const searchService = {
         knowledgeBaseId,
       });
 
-      const activeIndexVersionMap = await documentRepository.getActiveIndexVersionMap([
+      const activeIndexVersionMap = await documentProcessingService.getActiveIndexVersionMap([
         ...new Set(candidates.map((result) => result.documentId)),
       ]);
 

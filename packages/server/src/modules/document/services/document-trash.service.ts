@@ -8,6 +8,7 @@ import type {
 import type { Document } from '@core/db/schema/document/documents.schema';
 import { withTransaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';
+import { dispatchDocumentProcessing } from '@core/document-processing';
 import { buildCursorPagination, normalizePageSize } from '@core/utils';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
@@ -15,7 +16,6 @@ import { documentChunkRepository } from '../repositories/document-chunk.reposito
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 import { vectorRepository } from '@modules/vector/public/repositories';
 

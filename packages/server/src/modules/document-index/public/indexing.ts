@@ -1,1 +1,5 @@
-export { documentIndexService } from '../services/document-index.service';
+export {
+  documentIndexService,
+  type DocumentChunkArtifact,
+  type PersistChunkArtifactsInput,
+} from '../services/document-index.service';

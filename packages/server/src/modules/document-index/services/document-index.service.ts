@@ -1,11 +1,29 @@
 import { v4 as uuidv4 } from 'uuid';
 import { withTransaction } from '@core/db/db.utils';
+import { documentChunkRepository } from '@modules/document/public/repositories';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';
 import { documentNodeRepository } from '../repositories/document-node.repository';
 import { documentNodeContentRepository } from '../repositories/document-node-content.repository';
 import { documentEdgeRepository } from '../repositories/document-edge.repository';
 import { documentIndexActivationService } from './document-index-activation.service';
 import type { ParsedDocumentStructure } from './parsers/types';
+
+export interface DocumentChunkArtifact {
+  id: string;
+  chunkIndex: number;
+  content: string;
+  tokenCount: number | null;
+  metadata: Record<string, unknown>;
+  createdBy: string | null;
+  createdAt: Date;
+}
+
+export interface PersistChunkArtifactsInput {
+  documentId: string;
+  documentVersion: number;
+  indexVersionId: string;
+  chunks: DocumentChunkArtifact[];
+}
 
 export interface StartIndexBuildInput {
   documentId: string;
@@ -73,6 +91,26 @@ export const documentIndexService = {
 
   async supersedeBuild(indexVersionId: string) {
     return documentIndexActivationService.markSuperseded(indexVersionId);
+  },
+
+  async persistChunkArtifacts(input: PersistChunkArtifactsInput) {
+    return withTransaction(async (tx) => {
+      await documentChunkRepository.createMany(
+        input.chunks.map((chunk) => ({
+          id: chunk.id,
+          documentId: input.documentId,
+          version: input.documentVersion,
+          indexVersionId: input.indexVersionId,
+          chunkIndex: chunk.chunkIndex,
+          content: chunk.content,
+          tokenCount: chunk.tokenCount,
+          metadata: chunk.metadata,
+          createdBy: chunk.createdBy,
+          createdAt: chunk.createdAt,
+        })),
+        tx
+      );
+    });
   },
 
   async replaceGraph(input: ReplaceGraphInput) {

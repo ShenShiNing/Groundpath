@@ -215,7 +215,7 @@ vi.mock('@core/logger/operation-logger', () => ({
   logOperation: vi.fn(),
 }));
 
-vi.mock('@modules/document/ports/document-processing.port', () => ({
+vi.mock('@core/document-processing', () => ({
   dispatchDocumentProcessing: vi.fn(() => Promise.resolve()),
 }));
 
