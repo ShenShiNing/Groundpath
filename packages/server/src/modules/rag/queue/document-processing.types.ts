@@ -1,23 +1,12 @@
-export const DOCUMENT_PROCESSING_REASONS = [
-  'upload',
-  'edit',
-  'restore',
-  'retry',
-  'backfill',
-  'recovery',
-] as const;
+export { DOCUMENT_PROCESSING_REASONS } from '@core/document-processing';
+export type {
+  DocumentProcessingDispatchOptions as DocumentProcessingEnqueueOptions,
+  DocumentProcessingReason,
+} from '@core/document-processing';
 
-export type DocumentProcessingReason = (typeof DOCUMENT_PROCESSING_REASONS)[number];
+import type { DocumentProcessingDispatchOptions } from '@core/document-processing';
 
-export interface DocumentProcessingEnqueueOptions {
-  targetDocumentVersion: number;
-  targetIndexVersion?: string;
-  reason: DocumentProcessingReason;
-  backfillRunId?: string;
-  jobIdSuffix?: string;
-}
-
-export interface DocumentProcessingJobData extends DocumentProcessingEnqueueOptions {
+export interface DocumentProcessingJobData extends DocumentProcessingDispatchOptions {
   documentId: string;
   userId: string;
 }

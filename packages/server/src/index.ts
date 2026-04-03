@@ -14,13 +14,16 @@ import {
   stopDocumentProcessingWorker,
   enqueueDocumentProcessing,
 } from '@modules/rag/public/queue';
+import { documentProcessingBackfillLifecycleListener } from '@modules/document-index/public/document-processing';
 import { registerDocumentProcessingDispatcher } from './core/document-processing';
+import { registerDocumentProcessingLifecycleListener } from './core/document-processing';
 import { createApp } from './app';
 
 // ==================== Composition Root ====================
 
 // Wire the document → rag dependency via port (breaks circular import)
 registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
+registerDocumentProcessingLifecycleListener(documentProcessingBackfillLifecycleListener);
 
 // ==================== Server Lifecycle ====================
 

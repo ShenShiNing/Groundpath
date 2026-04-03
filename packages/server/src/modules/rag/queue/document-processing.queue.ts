@@ -1,13 +1,16 @@
 import { Queue, Worker, type Job } from 'bullmq';
 import { getQueueConnection, getQueuePrefix } from '@core/queue';
 import { queueConfig } from '@config/env';
+import {
+  emitDocumentProcessingSettled,
+  emitDocumentProcessingStarted,
+} from '@core/document-processing';
 import { processingService } from '../services/processing.service';
 import { createLogger } from '@core/logger';
 import type {
   DocumentProcessingEnqueueOptions,
   DocumentProcessingJobData,
 } from './document-processing.types';
-import { documentIndexBackfillProgressService } from '@modules/document-index/public/backfill-progress';
 
 const logger = createLogger('document-processing.queue');
 
@@ -138,6 +141,7 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
         backfillRunId,
       } = job.data;
       const attempt = job.attemptsMade + 1;
+      const jobId = job.id?.toString();
 
       logger.info(
         {
@@ -147,25 +151,28 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
           targetIndexVersion,
           reason,
           backfillRunId,
-          jobId: job.id,
+          jobId,
           attempt,
         },
         'Processing document job'
       );
 
-      if (backfillRunId) {
-        try {
-          await documentIndexBackfillProgressService.markProcessing({
-            runId: backfillRunId,
-            documentId,
-            jobId: job.id?.toString(),
-          });
-        } catch (error) {
-          logger.warn(
-            { documentId, backfillRunId, jobId: job.id, error },
-            'Failed to mark backfill item as processing'
-          );
-        }
+      try {
+        await emitDocumentProcessingStarted({
+          documentId,
+          userId,
+          targetDocumentVersion,
+          targetIndexVersion,
+          reason,
+          backfillRunId,
+          jobId,
+          attempt,
+        });
+      } catch (error) {
+        logger.warn(
+          { documentId, backfillRunId, jobId, error },
+          'Failed to emit document processing started lifecycle event'
+        );
       }
 
       const result = await processingService.processDocument(documentId, userId, {
@@ -175,20 +182,24 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
         backfillRunId,
       });
 
-      if (backfillRunId) {
-        try {
-          await documentIndexBackfillProgressService.recordOutcome({
-            runId: backfillRunId,
-            documentId,
-            outcome: result.outcome === 'failed' ? 'failed' : result.outcome,
-            error: result.reason,
-          });
-        } catch (error) {
-          logger.warn(
-            { documentId, backfillRunId, jobId: job.id, error },
-            'Failed to record backfill item outcome'
-          );
-        }
+      try {
+        await emitDocumentProcessingSettled({
+          documentId,
+          userId,
+          targetDocumentVersion,
+          targetIndexVersion,
+          reason,
+          backfillRunId,
+          jobId,
+          attempt,
+          outcome: result.outcome,
+          error: result.reason,
+        });
+      } catch (error) {
+        logger.warn(
+          { documentId, backfillRunId, jobId, error },
+          'Failed to emit document processing settled lifecycle event'
+        );
       }
 
       logger.info(
@@ -199,7 +210,7 @@ export function startDocumentProcessingWorker(): Worker<DocumentProcessingJobDat
           targetIndexVersion,
           reason,
           backfillRunId,
-          jobId: job.id,
+          jobId,
           outcome: result.outcome,
         },
         'Document processing job completed'

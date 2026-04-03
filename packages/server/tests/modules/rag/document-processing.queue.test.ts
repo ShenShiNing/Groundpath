@@ -2,17 +2,26 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ==================== Mocks ====================
 
-const { queueAddMock, processingServiceMock, documentIndexBackfillProgressServiceMock } =
-  vi.hoisted(() => ({
-    queueAddMock: vi.fn(async () => ({ id: 'job-1' })),
-    processingServiceMock: {
-      processDocument: vi.fn(async () => ({ outcome: 'completed' })),
-    },
-    documentIndexBackfillProgressServiceMock: {
-      markProcessing: vi.fn(),
-      recordOutcome: vi.fn(),
-    },
-  }));
+const { queueAddMock, processingServiceMock, lifecycleMock, workerState } = vi.hoisted(() => ({
+  queueAddMock: vi.fn(async () => ({ id: 'job-1' })),
+  processingServiceMock: {
+    processDocument: vi.fn(async () => ({ outcome: 'completed' })),
+  },
+  lifecycleMock: {
+    emitDocumentProcessingStarted: vi.fn(),
+    emitDocumentProcessingSettled: vi.fn(),
+  },
+  workerState: {
+    processor: undefined as
+      | ((job: {
+          data: Record<string, unknown>;
+          attemptsMade: number;
+          id?: string;
+          opts?: { attempts?: number };
+        }) => Promise<void>)
+      | undefined,
+  },
+}));
 
 vi.mock('@core/config/env', () => ({
   queueConfig: {
@@ -49,7 +58,8 @@ vi.mock('bullmq', () => {
     };
   }
 
-  function WorkerMock(_name: string, _processor: unknown) {
+  function WorkerMock(_name: string, processor: typeof workerState.processor) {
+    workerState.processor = processor;
     return {
       close: vi.fn(async () => undefined),
       on: vi.fn(),
@@ -63,9 +73,16 @@ vi.mock('@modules/rag/services/processing.service', () => ({
   processingService: processingServiceMock,
 }));
 
-vi.mock('@modules/document-index/public/backfill-progress', () => ({
-  documentIndexBackfillProgressService: documentIndexBackfillProgressServiceMock,
-}));
+vi.mock('@core/document-processing', async () => {
+  const actual = await vi.importActual<typeof import('@core/document-processing')>(
+    '@core/document-processing'
+  );
+  return {
+    ...actual,
+    emitDocumentProcessingStarted: lifecycleMock.emitDocumentProcessingStarted,
+    emitDocumentProcessingSettled: lifecycleMock.emitDocumentProcessingSettled,
+  };
+});
 
 import {
   getDocumentProcessingQueue,
@@ -77,8 +94,10 @@ import {
 // ==================== Tests ====================
 
 describe('document-processing.queue', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await stopDocumentProcessingWorker();
     vi.clearAllMocks();
+    workerState.processor = undefined;
   });
 
   describe('enqueueDocumentProcessing', () => {
@@ -168,6 +187,99 @@ describe('document-processing.queue', () => {
       const eventNames = onMock.mock.calls.map((c: unknown[]) => c[0]);
       expect(eventNames).toContain('failed');
       expect(eventNames).toContain('error');
+    });
+
+    it('should emit lifecycle events around processing results', async () => {
+      startDocumentProcessingWorker();
+
+      expect(workerState.processor).toBeTypeOf('function');
+
+      await workerState.processor?.({
+        data: {
+          documentId: 'doc-1',
+          userId: 'user-1',
+          targetDocumentVersion: 3,
+          targetIndexVersion: 'idx-1',
+          reason: 'backfill',
+          backfillRunId: 'run-1',
+        },
+        attemptsMade: 0,
+        id: 'job-1',
+      });
+
+      expect(lifecycleMock.emitDocumentProcessingStarted).toHaveBeenCalledWith({
+        documentId: 'doc-1',
+        userId: 'user-1',
+        targetDocumentVersion: 3,
+        targetIndexVersion: 'idx-1',
+        reason: 'backfill',
+        backfillRunId: 'run-1',
+        jobId: 'job-1',
+        attempt: 1,
+      });
+      expect(processingServiceMock.processDocument).toHaveBeenCalledWith('doc-1', 'user-1', {
+        targetDocumentVersion: 3,
+        targetIndexVersion: 'idx-1',
+        reason: 'backfill',
+        backfillRunId: 'run-1',
+      });
+      expect(lifecycleMock.emitDocumentProcessingSettled).toHaveBeenCalledWith({
+        documentId: 'doc-1',
+        userId: 'user-1',
+        targetDocumentVersion: 3,
+        targetIndexVersion: 'idx-1',
+        reason: 'backfill',
+        backfillRunId: 'run-1',
+        jobId: 'job-1',
+        attempt: 1,
+        outcome: 'completed',
+        error: undefined,
+      });
+    });
+
+    it('should continue processing when lifecycle emission fails', async () => {
+      lifecycleMock.emitDocumentProcessingStarted.mockRejectedValueOnce(
+        new Error('listener failed')
+      );
+      processingServiceMock.processDocument.mockResolvedValueOnce({
+        outcome: 'skipped',
+        reason: 'stale_target_version',
+      });
+
+      startDocumentProcessingWorker();
+
+      await expect(
+        workerState.processor?.({
+          data: {
+            documentId: 'doc-2',
+            userId: 'user-2',
+            targetDocumentVersion: 4,
+            reason: 'backfill',
+            backfillRunId: 'run-2',
+          },
+          attemptsMade: 1,
+          id: 'job-2',
+        })
+      ).resolves.toBeUndefined();
+
+      expect(processingServiceMock.processDocument).toHaveBeenCalledWith('doc-2', 'user-2', {
+        targetDocumentVersion: 4,
+        targetIndexVersion: undefined,
+        reason: 'backfill',
+        backfillRunId: 'run-2',
+      });
+      expect(lifecycleMock.emitDocumentProcessingSettled).toHaveBeenCalledWith({
+        documentId: 'doc-2',
+        userId: 'user-2',
+        targetDocumentVersion: 4,
+        targetIndexVersion: undefined,
+        reason: 'backfill',
+        backfillRunId: 'run-2',
+        jobId: 'job-2',
+        attempt: 2,
+        outcome: 'skipped',
+        error: 'stale_target_version',
+      });
     });
   });
 
