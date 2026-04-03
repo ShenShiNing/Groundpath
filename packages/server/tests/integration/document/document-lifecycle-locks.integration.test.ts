@@ -1,9 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
-import {
-  getRealIntegrationDescribe,
-  loadRealIntegrationEnv,
-} from '../helpers/real-integration';
+import { getRealIntegrationDescribe, loadRealIntegrationEnv } from '../helpers/real-integration';
 
 const describeRealIntegration = getRealIntegrationDescribe(
   'RUN_REAL_DOCUMENT_LIFECYCLE_INTEGRATION'
@@ -67,7 +64,7 @@ describeRealIntegration('document lifecycle real db integration', () => {
       logOperation: logOperationMock,
     }));
 
-    vi.doMock('@modules/document/ports/document-processing.port', () => ({
+    vi.doMock('@core/document-processing', () => ({
       dispatchDocumentProcessing: dispatchDocumentProcessingMock,
     }));
 
@@ -123,7 +120,7 @@ describeRealIntegration('document lifecycle real db integration', () => {
     }
 
     vi.doUnmock('@core/logger/operation-logger');
-    vi.doUnmock('@modules/document/ports/document-processing.port');
+    vi.doUnmock('@core/document-processing');
     vi.doUnmock('@modules/vector/public/repositories');
     vi.doUnmock('@modules/document/repositories/document-chunk.repository');
     vi.resetModules();

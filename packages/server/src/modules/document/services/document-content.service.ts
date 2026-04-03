@@ -8,13 +8,13 @@ import type {
 import type { Document } from '@core/db/schema/document/documents.schema';
 import { withTransaction } from '@core/db/db.utils';
 import { Errors } from '@core/errors';
+import { dispatchDocumentProcessing } from '@core/document-processing';
 import { documentConfig } from '@config/env';
 import { documentRepository } from '../repositories/document.repository';
 import { documentVersionRepository } from '../repositories/document-version.repository';
 import { documentStorageService } from './document-storage.service';
 import { createLogger } from '@core/logger';
 import { logOperation } from '@core/logger/operation-logger';
-import { dispatchDocumentProcessing } from '../ports/document-processing.port';
 import { storageProvider } from '@modules/storage/public/provider';
 import type { RequestContext } from './document-upload.service';
 import { toDocumentInfo } from './document-upload.service';
