@@ -133,10 +133,12 @@
 | ------ | ------------------------------------------------- | ---------------- |
 | ~~高~~ | ~~完善模块公共 API，统一导出规范~~ ✅             | 防止模块边界腐蚀 |
 | ~~高~~ | ~~Document ↔ RAG 依赖解耦，引入事件/回调模式~~ ✅ | 降低核心模块耦合 |
-| 中     | 引入统一的错误重试策略                            | 外部服务故障容错 |
+| ~~中~~ | ~~引入统一的错误重试策略~~ ✅                     | 外部服务故障容错 |
 | 中     | 队列系统抽象（当前绑定 BullMQ）                   | 可替换性         |
 | 中     | 缓存系统抽象（当前绑定 Redis）                    | 本地开发友好     |
 | 低     | Feature Flag 服务化（支持用户/KB级灰度）          | 灵活发布         |
+
+- **补记（2026-04-03）**: 已新增统一外部调用执行器 `packages/server/src/core/utils/external-call.ts`，配置收口到 `packages/server/src/core/config/defaults/external-service.defaults.ts`。首批覆盖 VLM、LLM 非流式调用、Embedding、R2 对象存储、Tavily Web Search 与模型枚举接口，统一处理 timeout / retry / exponential backoff / jitter。流式响应暂不自动重试，避免 token 重放。提交：`fix/unified-external-retry` 分支，`bd125c2`。
 
 ---
 
@@ -252,6 +254,7 @@
 
 - [x] 完善各模块 index.ts 公共 API 导出 ✅
 - [x] Document ↔ RAG 依赖解耦，统一切换到 `@core/document-processing` 共享契约 + lifecycle listener ✅（`b9a7717`）
+- [x] 引入统一的外部服务错误重试策略 ✅（`bd125c2`）
 - [x] 日志表月分区 + 软删会话消息清理 ✅
 - [x] Zustand 选择器合并 ✅
 - [x] ChatMessage 添加 memo ✅
