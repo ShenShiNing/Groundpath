@@ -92,14 +92,10 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
     await import('@core/document-processing');
   const { documentProcessingBackfillLifecycleListener } =
     await import('@modules/document-index/public/document-processing');
-  const {
-    enqueueDocumentProcessing,
-    startDocumentProcessingWorker,
-    stopDocumentProcessingWorker,
-  } = await import('@modules/rag/queue/document-processing.queue');
-  const { getDocumentProcessingQueueInspector } = await import(
-    '@modules/rag/queue/document-processing.queue.testing'
-  );
+  const { enqueueDocumentProcessing, startDocumentProcessingWorker, stopDocumentProcessingWorker } =
+    await import('@modules/rag/queue/document-processing.queue');
+  const { getDocumentProcessingQueueInspector } =
+    await import('@modules/rag/queue/document-processing.queue.testing');
   registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
   registerDocumentProcessingLifecycleListener(documentProcessingBackfillLifecycleListener);
   const { documentIndexBackfillProgressService } =

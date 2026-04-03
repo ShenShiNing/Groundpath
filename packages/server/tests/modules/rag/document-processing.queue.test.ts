@@ -27,11 +27,7 @@ const { queueAddMock, processingServiceMock, lifecycleMock, workerState } = vi.h
   },
 }));
 
-const {
-  queueCloseMock,
-  workerCloseMock,
-  workerWaitUntilReadyMock,
-} = vi.hoisted(() => ({
+const { queueCloseMock, workerCloseMock, workerWaitUntilReadyMock } = vi.hoisted(() => ({
   queueCloseMock: vi.fn(async () => undefined),
   workerCloseMock: vi.fn(async () => undefined),
   workerWaitUntilReadyMock: vi.fn(async () => undefined),

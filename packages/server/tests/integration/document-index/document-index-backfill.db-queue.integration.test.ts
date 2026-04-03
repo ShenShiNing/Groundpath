@@ -71,9 +71,8 @@ describeRealIntegration('document index backfill real db/queue integration', () 
       await import('@modules/document-index/services/document-index-backfill.service'));
     ({ enqueueDocumentProcessing, stopDocumentProcessingWorker } =
       await import('@modules/rag/queue/document-processing.queue'));
-    ({ getDocumentProcessingQueueInspector } = await import(
-      '@modules/rag/queue/document-processing.queue.testing'
-    ));
+    ({ getDocumentProcessingQueueInspector } =
+      await import('@modules/rag/queue/document-processing.queue.testing'));
     registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
     documentProcessingQueue = getDocumentProcessingQueueInspector();
     schema = await import('@core/db/schema');

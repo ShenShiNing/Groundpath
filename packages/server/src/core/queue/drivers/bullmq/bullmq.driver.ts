@@ -86,10 +86,7 @@ class BullmqQueueChannel<Data> implements QueueChannel<Data> {
     return jobId;
   }
 
-  startWorker(
-    processor: QueueProcessor<Data>,
-    hooks?: QueueWorkerHooks<Data>
-  ): QueueWorkerHandle {
+  startWorker(processor: QueueProcessor<Data>, hooks?: QueueWorkerHooks<Data>): QueueWorkerHandle {
     const worker = new Worker<Data>(
       this.queueName,
       async (job) => processor(mapBullmqJobForProcessing(job)),
@@ -202,7 +199,10 @@ class BullmqQueueInspector<Data> implements QueueChannelInspector<Data> {
 
 export function createBullmqQueueDriver(options: BullmqQueueDriverOptions): QueueDriver {
   return {
-    createChannel<Data>(queueName: string, channelOptions: QueueChannelOptions): QueueChannel<Data> {
+    createChannel<Data>(
+      queueName: string,
+      channelOptions: QueueChannelOptions
+    ): QueueChannel<Data> {
       return new BullmqQueueChannel(queueName, { ...options, ...channelOptions });
     },
     inspectChannel<Data>(queueName: string): QueueChannelInspector<Data> {

@@ -1,4 +1,10 @@
-import { cacheConfig, coordinationConfig, featureFlags, queueConfig, rateLimitConfig } from '@config/env';
+import {
+  cacheConfig,
+  coordinationConfig,
+  featureFlags,
+  queueConfig,
+  rateLimitConfig,
+} from '@config/env';
 import {
   getRedisRequirementReasons,
   isCacheRedisBacked,

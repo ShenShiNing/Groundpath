@@ -87,9 +87,7 @@ export function shouldRunRealIntegration(flags: string | readonly string[]): boo
   return flagList.some((flag) => process.env[flag] === '1' || envFromFile[flag] === '1');
 }
 
-export function getRealIntegrationDescribe(
-  flags: string | readonly string[]
-): typeof describe {
+export function getRealIntegrationDescribe(flags: string | readonly string[]): typeof describe {
   return (shouldRunRealIntegration(flags) ? describe : describe.skip) as typeof describe;
 }
 

@@ -94,10 +94,7 @@ class InlineQueueChannel<Data> implements QueueChannel<Data> {
     return jobId;
   }
 
-  startWorker(
-    processor: QueueProcessor<Data>,
-    hooks?: QueueWorkerHooks<Data>
-  ): QueueWorkerHandle {
+  startWorker(processor: QueueProcessor<Data>, hooks?: QueueWorkerHooks<Data>): QueueWorkerHandle {
     if (this.state.worker && !this.state.worker.closed) {
       return this.state.worker.handle;
     }

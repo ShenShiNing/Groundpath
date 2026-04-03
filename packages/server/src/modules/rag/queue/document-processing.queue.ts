@@ -23,16 +23,19 @@ let documentProcessingQueue: QueueChannel<DocumentProcessingJobData> | null = nu
 
 function getDocumentProcessingQueueChannel(): QueueChannel<DocumentProcessingJobData> {
   if (!documentProcessingQueue) {
-    documentProcessingQueue = getQueueDriver().createChannel<DocumentProcessingJobData>(QUEUE_NAME, {
-      attempts: queueConfig.maxRetries + 1,
-      backoff: {
-        type: queueConfig.backoffType,
-        delay: queueConfig.backoffDelay,
-      },
-      concurrency: queueConfig.concurrency,
-      removeOnCompleteCount: 1000,
-      removeOnFailCount: 5000,
-    });
+    documentProcessingQueue = getQueueDriver().createChannel<DocumentProcessingJobData>(
+      QUEUE_NAME,
+      {
+        attempts: queueConfig.maxRetries + 1,
+        backoff: {
+          type: queueConfig.backoffType,
+          delay: queueConfig.backoffDelay,
+        },
+        concurrency: queueConfig.concurrency,
+        removeOnCompleteCount: 1000,
+        removeOnFailCount: 5000,
+      }
+    );
   }
 
   return documentProcessingQueue;

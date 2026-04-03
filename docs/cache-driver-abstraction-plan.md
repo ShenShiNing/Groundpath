@@ -9,11 +9,11 @@
 
 当前仓库里存在三类 Redis 使用方式，它们的语义并不相同：
 
-| 类别 | 现有入口 | 典型文件 | 语义 |
-| --- | --- | --- | --- |
-| KV 缓存 | `@core/cache` | `packages/server/src/core/cache/cache.service.ts` | TTL、按前缀失效、cache-aside |
-| 速率限制计数器 | `@core/middleware` | `packages/server/src/core/middleware/rate-limit.middleware.ts` | 原子递增、窗口 TTL |
-| 分布式协调锁 | `@core/redis` 直连 | `packages/server/src/modules/vector/vector-cleanup.service.ts` | `SET NX PX` + compare-and-delete |
+| 类别           | 现有入口           | 典型文件                                                       | 语义                             |
+| -------------- | ------------------ | -------------------------------------------------------------- | -------------------------------- |
+| KV 缓存        | `@core/cache`      | `packages/server/src/core/cache/cache.service.ts`              | TTL、按前缀失效、cache-aside     |
+| 速率限制计数器 | `@core/middleware` | `packages/server/src/core/middleware/rate-limit.middleware.ts` | 原子递增、窗口 TTL               |
+| 分布式协调锁   | `@core/redis` 直连 | `packages/server/src/modules/vector/vector-cleanup.service.ts` | `SET NX PX` + compare-and-delete |
 
 同时，进程启动和健康检查仍然把 Redis 当作无条件必需依赖：
 
@@ -51,11 +51,11 @@
 
 延续队列抽象的思路，Redis 不再被视为“单一基础设施”，而是拆成三个独立能力面：
 
-| 能力面 | 建议模块 | 默认 driver | 本地可选 driver |
-| --- | --- | --- | --- |
-| 缓存 | `core/cache/*` | `redis` | `memory` |
-| 速率限制计数 | `core/rate-limit/*` | `redis` | `memory` 或 `noop` |
-| 协调锁 | `core/coordination/*` | `redis` | `memory` |
+| 能力面       | 建议模块              | 默认 driver | 本地可选 driver    |
+| ------------ | --------------------- | ----------- | ------------------ |
+| 缓存         | `core/cache/*`        | `redis`     | `memory`           |
+| 速率限制计数 | `core/rate-limit/*`   | `redis`     | `memory` 或 `noop` |
+| 协调锁       | `core/coordination/*` | `redis`     | `memory`           |
 
 这条 review 主要落在第一项，但为了兑现“本地开发友好”，启动编排必须同时识别后两项是否仍然要求 Redis。
 
@@ -63,11 +63,11 @@
 
 第一阶段新增以下环境变量：
 
-| 变量 | 建议值 | 默认值 | 用途 |
-| --- | --- | --- | --- |
-| `CACHE_DRIVER` | `redis` \| `memory` | `redis` | 选择缓存实现 |
+| 变量                | 建议值                        | 默认值  | 用途             |
+| ------------------- | ----------------------------- | ------- | ---------------- |
+| `CACHE_DRIVER`      | `redis` \| `memory`           | `redis` | 选择缓存实现     |
 | `RATE_LIMIT_DRIVER` | `redis` \| `memory` \| `noop` | `redis` | 选择速率限制存储 |
-| `LOCK_DRIVER` | `redis` \| `memory` | `redis` | 选择协调锁实现 |
+| `LOCK_DRIVER`       | `redis` \| `memory`           | `redis` | 选择协调锁实现   |
 
 说明：
 
