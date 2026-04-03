@@ -46,12 +46,12 @@
 
 不是所有“布尔配置”都应该服务化。长期维护下，应先分层。
 
-| 分类 | 典型项 | 管理方式 | 说明 |
-| ---- | ---- | ---- | ---- |
-| 基础设施 / 运维开关 | `DISABLE_RATE_LIMIT`、`QUEUE_DRIVER`、`CACHE_DRIVER`、`LOCK_DRIVER` | 保持 `env` | 启动期生效或故障期必须可用，不应依赖数据库 |
-| 调度 / 维护开关 | `COUNTER_SYNC_ENABLED`、`DOCUMENT_PROCESSING_RECOVERY_ENABLED`、`LOG_CLEANUP_ENABLED`、`BACKFILL_SCHEDULE_ENABLED` | 保持 `env` | 更接近运维能力启停，不属于产品发布 |
-| 高风险业务能力总闸 | `STRUCTURED_RAG_ENABLED`、`IMAGE_DESCRIPTION_ENABLED` | `env` + 服务双控 | `env` 负责 kill switch，服务负责灰度与放量 |
-| 业务发布规则 | `STRUCTURED_RAG_ROLLOUT_MODE`、`STRUCTURED_RAG_INTERNAL_USER_IDS`、`STRUCTURED_RAG_INTERNAL_KB_IDS` | 迁入服务 | 这部分才是 Feature Flag 服务化的核心对象 |
+| 分类                | 典型项                                                                                                             | 管理方式         | 说明                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------- | ------------------------------------------ |
+| 基础设施 / 运维开关 | `DISABLE_RATE_LIMIT`、`QUEUE_DRIVER`、`CACHE_DRIVER`、`LOCK_DRIVER`                                                | 保持 `env`       | 启动期生效或故障期必须可用，不应依赖数据库 |
+| 调度 / 维护开关     | `COUNTER_SYNC_ENABLED`、`DOCUMENT_PROCESSING_RECOVERY_ENABLED`、`LOG_CLEANUP_ENABLED`、`BACKFILL_SCHEDULE_ENABLED` | 保持 `env`       | 更接近运维能力启停，不属于产品发布         |
+| 高风险业务能力总闸  | `STRUCTURED_RAG_ENABLED`、`IMAGE_DESCRIPTION_ENABLED`                                                              | `env` + 服务双控 | `env` 负责 kill switch，服务负责灰度与放量 |
+| 业务发布规则        | `STRUCTURED_RAG_ROLLOUT_MODE`、`STRUCTURED_RAG_INTERNAL_USER_IDS`、`STRUCTURED_RAG_INTERNAL_KB_IDS`                | 迁入服务         | 这部分才是 Feature Flag 服务化的核心对象   |
 
 ### 3.2 第一批纳管能力
 

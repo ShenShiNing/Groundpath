@@ -161,15 +161,15 @@ packages/server/src/core/db/schema/system/feature-flag-rollouts.schema.ts
 
 建议字段：
 
-| 字段 | 说明 |
-| ---- | ---- |
-| `key` | 主键，和代码定义一致 |
-| `status` | `active` / `paused` / `archived` |
-| `default_variant` | 运行时默认 variant，可覆盖代码默认值 |
-| `version` | 规则快照版本，每次变更自增 |
-| `notes` | 运行时备注 |
-| `created_by` / `updated_by` | 变更人 |
-| `created_at` / `updated_at` | 审计时间 |
+| 字段                        | 说明                                 |
+| --------------------------- | ------------------------------------ |
+| `key`                       | 主键，和代码定义一致                 |
+| `status`                    | `active` / `paused` / `archived`     |
+| `default_variant`           | 运行时默认 variant，可覆盖代码默认值 |
+| `version`                   | 规则快照版本，每次变更自增           |
+| `notes`                     | 运行时备注                           |
+| `created_by` / `updated_by` | 变更人                               |
+| `created_at` / `updated_at` | 审计时间                             |
 
 ### 4.2 `feature_flag_targets`
 
@@ -180,17 +180,17 @@ packages/server/src/core/db/schema/system/feature-flag-rollouts.schema.ts
 
 建议字段：
 
-| 字段 | 说明 |
-| ---- | ---- |
-| `id` | 主键 |
-| `flag_key` | 关联 `feature_flags.key` |
-| `subject_type` | `user` / `knowledge_base` |
-| `subject_id` | 目标实体 ID |
-| `variant` | 命中后返回的 variant |
-| `start_at` / `end_at` | 可选生效时间窗 |
-| `metadata` | 备注或来源信息 |
-| `created_by` / `updated_by` | 审计字段 |
-| `created_at` / `updated_at` | 审计时间 |
+| 字段                        | 说明                      |
+| --------------------------- | ------------------------- |
+| `id`                        | 主键                      |
+| `flag_key`                  | 关联 `feature_flags.key`  |
+| `subject_type`              | `user` / `knowledge_base` |
+| `subject_id`                | 目标实体 ID               |
+| `variant`                   | 命中后返回的 variant      |
+| `start_at` / `end_at`       | 可选生效时间窗            |
+| `metadata`                  | 备注或来源信息            |
+| `created_by` / `updated_by` | 审计字段                  |
+| `created_at` / `updated_at` | 审计时间                  |
 
 约束建议：
 
@@ -205,18 +205,18 @@ packages/server/src/core/db/schema/system/feature-flag-rollouts.schema.ts
 
 建议字段：
 
-| 字段 | 说明 |
-| ---- | ---- |
-| `id` | 主键 |
-| `flag_key` | 关联 `feature_flags.key` |
-| `scope_type` | `user` / `knowledge_base` |
-| `percentage` | `0-100` |
-| `variant` | 命中后返回的 variant |
-| `bucket_salt` | 哈希盐，保证桶稳定 |
-| `start_at` / `end_at` | 可选生效时间窗 |
-| `metadata` | 备注 |
-| `created_by` / `updated_by` | 审计字段 |
-| `created_at` / `updated_at` | 审计时间 |
+| 字段                        | 说明                      |
+| --------------------------- | ------------------------- |
+| `id`                        | 主键                      |
+| `flag_key`                  | 关联 `feature_flags.key`  |
+| `scope_type`                | `user` / `knowledge_base` |
+| `percentage`                | `0-100`                   |
+| `variant`                   | 命中后返回的 variant      |
+| `bucket_salt`               | 哈希盐，保证桶稳定        |
+| `start_at` / `end_at`       | 可选生效时间窗            |
+| `metadata`                  | 备注                      |
+| `created_by` / `updated_by` | 审计字段                  |
+| `created_at` / `updated_at` | 审计时间                  |
 
 设计取舍：
 
@@ -437,12 +437,12 @@ variants：
 
 ### 10.2 与现有 env 的映射
 
-| 现有项 | 迁移后角色 |
-| ---- | ---- |
-| `STRUCTURED_RAG_ENABLED` | 保留为 env kill switch |
-| `STRUCTURED_RAG_ROLLOUT_MODE` | 迁移为服务规则 |
+| 现有项                             | 迁移后角色                    |
+| ---------------------------------- | ----------------------------- |
+| `STRUCTURED_RAG_ENABLED`           | 保留为 env kill switch        |
+| `STRUCTURED_RAG_ROLLOUT_MODE`      | 迁移为服务规则                |
 | `STRUCTURED_RAG_INTERNAL_USER_IDS` | 迁移为 `feature_flag_targets` |
-| `STRUCTURED_RAG_INTERNAL_KB_IDS` | 迁移为 `feature_flag_targets` |
+| `STRUCTURED_RAG_INTERNAL_KB_IDS`   | 迁移为 `feature_flag_targets` |
 
 ### 10.3 模块内收口
 
