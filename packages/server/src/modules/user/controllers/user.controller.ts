@@ -8,7 +8,7 @@ import { requireUserId } from '@core/utils';
 
 export const userController = {
   /**
-   * PATCH /api/v1/user/profile
+   * PATCH /api/v1/users/profile
    */
   updateProfile: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -19,7 +19,7 @@ export const userController = {
   }),
 
   /**
-   * PATCH /api/v1/user/email
+   * PATCH /api/v1/users/email
    */
   changeEmail: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -30,7 +30,7 @@ export const userController = {
   }),
 
   /**
-   * POST /api/v1/user/avatar
+   * POST /api/v1/users/avatar
    */
   uploadAvatar: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

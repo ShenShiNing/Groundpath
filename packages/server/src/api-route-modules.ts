@@ -44,7 +44,7 @@ export const apiRouteModules: ApiRouteModuleMount[] = [
   { id: 'auth', basePath: `${API_V1}/auth`, router: authRoutes },
   { id: 'email', basePath: `${API_V1}/auth/email`, router: emailRoutes },
   { id: 'oauth', basePath: `${API_V1}/auth/oauth`, router: oauthRoutes },
-  { id: 'user', basePath: `${API_V1}/user`, router: userRoutes },
+  { id: 'user', basePath: `${API_V1}/users`, router: userRoutes },
   { id: 'document', basePath: `${API_V1}/documents`, router: documentRoutes },
   { id: 'knowledge-base', basePath: `${API_V1}/knowledge-bases`, router: knowledgeBaseRoutes },
   { id: 'logs', basePath: `${API_V1}/logs`, router: logsRoutes },
