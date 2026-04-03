@@ -5,6 +5,8 @@ const {
   RouterMock,
   authenticateMock,
   validateBodyMock,
+  requireDocumentOwnershipMock,
+  documentOwnershipMiddlewareMock,
   summaryRequestSchemaMock,
   analysisRequestSchemaMock,
   extractKeywordsRequestSchemaMock,
@@ -40,6 +42,7 @@ const {
   const extractEntitiesValidator = vi.fn();
   const generateValidator = vi.fn();
   const expandValidator = vi.fn();
+  const documentOwnershipMiddleware = vi.fn();
 
   return {
     mockRouter: hoistedRouter,
@@ -54,6 +57,8 @@ const {
       if (schema === expandRequestSchema) return expandValidator;
       return vi.fn();
     }),
+    requireDocumentOwnershipMock: vi.fn(() => documentOwnershipMiddleware),
+    documentOwnershipMiddlewareMock: documentOwnershipMiddleware,
     summaryRequestSchemaMock: summaryRequestSchema,
     analysisRequestSchemaMock: analysisRequestSchema,
     extractKeywordsRequestSchemaMock: extractKeywordsRequestSchema,
@@ -104,6 +109,10 @@ vi.mock('@groundpath/shared/schemas', () => ({
   expandRequestSchema: expandRequestSchemaMock,
 }));
 
+vi.mock('@modules/document/public/ownership', () => ({
+  requireDocumentOwnership: requireDocumentOwnershipMock,
+}));
+
 vi.mock('@modules/document-ai/controllers/summary.controller', () => ({
   summaryController: summaryControllerMock,
 }));
@@ -130,16 +139,19 @@ describe('document-ai.routes', () => {
 
   it('should register summary endpoints', () => {
     expect(validateBodyMock).toHaveBeenCalledWith(summaryRequestSchemaMock);
+    expect(requireDocumentOwnershipMock).toHaveBeenCalledTimes(8);
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/summary',
       expect.any(Function),
       summaryValidatorMock,
+      documentOwnershipMiddlewareMock,
       summaryControllerMock.generate
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/summary/stream',
       expect.any(Function),
       summaryValidatorMock,
+      documentOwnershipMiddlewareMock,
       summaryControllerMock.stream
     );
   });
@@ -152,22 +164,26 @@ describe('document-ai.routes', () => {
       '/:id/analyze',
       expect.any(Function),
       analysisValidatorMock,
+      documentOwnershipMiddlewareMock,
       analysisControllerMock.analyze
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze/keywords',
       expect.any(Function),
       extractKeywordsValidatorMock,
+      documentOwnershipMiddlewareMock,
       analysisControllerMock.extractKeywords
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/analyze/entities',
       expect.any(Function),
       extractEntitiesValidatorMock,
+      documentOwnershipMiddlewareMock,
       analysisControllerMock.extractEntities
     );
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/:id/analyze/structure',
+      documentOwnershipMiddlewareMock,
       analysisControllerMock.getStructure
     );
   });
@@ -192,12 +208,14 @@ describe('document-ai.routes', () => {
       '/:id/expand',
       expect.any(Function),
       expandValidatorMock,
+      documentOwnershipMiddlewareMock,
       generationControllerMock.expand
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/expand/stream',
       expect.any(Function),
       expandValidatorMock,
+      documentOwnershipMiddlewareMock,
       generationControllerMock.streamExpand
     );
   });

@@ -9,6 +9,7 @@ const {
   summaryControllerMock,
   analysisControllerMock,
   generationControllerMock,
+  requireDocumentOwnershipMock,
 } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -39,6 +40,7 @@ const {
 
   return {
     authenticateMock: vi.fn(authenticate),
+    requireDocumentOwnershipMock: vi.fn(() => (_req, _res, next) => next()),
     summaryControllerMock: {
       generate: vi.fn((_req, res) => res.status(200).json({ success: true, route: 'summary' })),
       stream: vi.fn((_req, res) =>
@@ -88,6 +90,10 @@ vi.mock('@modules/document-ai/controllers/analysis.controller', () => ({
 
 vi.mock('@modules/document-ai/controllers/generation.controller', () => ({
   generationController: generationControllerMock,
+}));
+
+vi.mock('@modules/document/public/ownership', () => ({
+  requireDocumentOwnership: requireDocumentOwnershipMock,
 }));
 
 import documentAiRoutes from '@modules/document-ai/document-ai.routes';

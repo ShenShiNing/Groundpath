@@ -13,6 +13,7 @@ const {
   generalRateLimiterMock,
   documentServiceMock,
   requireKnowledgeBaseOwnershipMock,
+  requireDocumentOwnershipMock,
 } = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     if (req.headers.authorization === 'Bearer valid-access') {
@@ -46,6 +47,7 @@ const {
     generalRateLimiterMock: vi.fn(passthroughMiddleware),
     documentServiceMock: documentService,
     requireKnowledgeBaseOwnershipMock: vi.fn(() => passthroughMiddleware),
+    requireDocumentOwnershipMock: vi.fn(() => passthroughMiddleware),
   };
 });
 
@@ -59,6 +61,10 @@ vi.mock('@modules/document/public/documents', () => ({
 
 vi.mock('@modules/knowledge-base/public/ownership', () => ({
   requireKnowledgeBaseOwnership: requireKnowledgeBaseOwnershipMock,
+}));
+
+vi.mock('@modules/document/public/ownership', () => ({
+  requireDocumentOwnership: requireDocumentOwnershipMock,
 }));
 
 vi.mock('@core/middleware', async () => {

@@ -12,7 +12,9 @@ export function requireDocumentOwnership(options: DocumentOwnershipOptions = {})
   return requireResourceOwnership({
     resourceKey: 'document',
     missingResourceMessage: 'Document ID required',
-    resolveResourceId: options.resolveResourceId ?? ((req) => getParamId(req, 'documentId')),
+    resolveResourceId:
+      options.resolveResourceId ??
+      ((req) => getParamId(req, 'documentId') ?? getParamId(req, 'id')),
     resolveOwnedResource: async ({ userId, resourceId }) => {
       const document = await documentRepository.findByIdAndUser(resourceId, userId);
       if (!document) {

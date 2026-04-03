@@ -4,7 +4,12 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { RequestHandler } from 'express';
 import type { HttpTestBody } from '@tests/helpers/http';
 
-const { authenticateMock, generalRateLimiterMock, documentServiceMock } = vi.hoisted(() => {
+const {
+  authenticateMock,
+  generalRateLimiterMock,
+  documentServiceMock,
+  requireDocumentOwnershipMock,
+} = vi.hoisted(() => {
   const authenticate: RequestHandler = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader === 'Bearer valid-access') {
@@ -31,6 +36,7 @@ const { authenticateMock, generalRateLimiterMock, documentServiceMock } = vi.hoi
   return {
     authenticateMock: vi.fn(authenticate),
     generalRateLimiterMock: vi.fn(passthrough),
+    requireDocumentOwnershipMock: vi.fn(() => passthrough),
     documentServiceMock: {
       upload: vi.fn(async () => ({
         id: 'doc-1',
@@ -78,6 +84,10 @@ vi.mock('@modules/document/services/document.service', () => ({
   documentContentService: {
     getContent: vi.fn(),
   },
+}));
+
+vi.mock('@modules/document/public/ownership', () => ({
+  requireDocumentOwnership: requireDocumentOwnershipMock,
 }));
 
 import documentRoutes from '@modules/document/document.routes';

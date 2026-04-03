@@ -29,13 +29,14 @@ router.get(
   validateQuery(searchConversationsSchema),
   conversationController.search
 );
-router.get('/conversations/:id', conversationController.getById);
+router.get('/conversations/:id', requireConversationOwnership(), conversationController.getById);
 router.patch(
   '/conversations/:id',
   validateBody(updateConversationSchema),
+  requireConversationOwnership(),
   conversationController.update
 );
-router.delete('/conversations/:id', conversationController.delete);
+router.delete('/conversations/:id', requireConversationOwnership(), conversationController.delete);
 
 // Message endpoints
 router.post(

@@ -25,6 +25,8 @@ const {
   uploadValidatorMock,
   uploadVersionValidatorMock,
   documentControllerMock,
+  requireDocumentOwnershipMock,
+  documentOwnershipMiddlewareMock,
   multerFactoryMock,
   multerMemoryStorageMock,
   multerSingleMock,
@@ -62,6 +64,7 @@ const {
     sanitizeCallCount++;
     return sanitizeCallCount === 1 ? sanitizeMultipartFields : sanitizeInlineContent;
   });
+  const documentOwnershipMiddleware = vi.fn();
 
   const hoistedMulterSingle = vi.fn();
   const hoistedMulterMemoryStorage = vi.fn(() => ({ type: 'memory-storage' }));
@@ -134,6 +137,8 @@ const {
       uploadNewVersion: vi.fn(),
       restoreVersion: vi.fn(),
     },
+    requireDocumentOwnershipMock: vi.fn(() => documentOwnershipMiddleware),
+    documentOwnershipMiddlewareMock: documentOwnershipMiddleware,
     multerFactoryMock: hoistedMulterFactory,
     multerMemoryStorageMock: hoistedMulterMemoryStorage,
     multerSingleMock: hoistedMulterSingle,
@@ -159,6 +164,10 @@ vi.mock('@config/env', () => ({
 
 vi.mock('@modules/document/controllers/document.controller', () => ({
   documentController: documentControllerMock,
+}));
+
+vi.mock('@modules/document/public/ownership', () => ({
+  requireDocumentOwnership: requireDocumentOwnershipMock,
 }));
 
 vi.mock('@core/middleware', () => ({
@@ -226,6 +235,7 @@ describe('document.routes', () => {
   });
 
   it('should register trash endpoints', () => {
+    expect(requireDocumentOwnershipMock).toHaveBeenCalledTimes(12);
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/trash',
       trashListValidatorMock,
@@ -239,11 +249,13 @@ describe('document.routes', () => {
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/restore',
       trashMutationRateLimiterMock,
+      documentOwnershipMiddlewareMock,
       documentControllerMock.restore
     );
     expect(mockRouter.delete).toHaveBeenCalledWith(
       '/:id/permanent',
       trashMutationRateLimiterMock,
+      documentOwnershipMiddlewareMock,
       documentControllerMock.permanentDelete
     );
   });
@@ -261,27 +273,50 @@ describe('document.routes', () => {
       listValidatorMock,
       documentControllerMock.list
     );
-    expect(mockRouter.get).toHaveBeenCalledWith('/:id/content', documentControllerMock.getContent);
+    expect(mockRouter.get).toHaveBeenCalledWith(
+      '/:id/content',
+      documentOwnershipMiddlewareMock,
+      documentControllerMock.getContent
+    );
     expect(mockRouter.put).toHaveBeenCalledWith(
       '/:id/content',
       sanitizeInlineContentMock,
       saveContentValidatorMock,
+      documentOwnershipMiddlewareMock,
       documentControllerMock.saveContent
     );
-    expect(mockRouter.get).toHaveBeenCalledWith('/:id', documentControllerMock.getById);
+    expect(mockRouter.get).toHaveBeenCalledWith(
+      '/:id',
+      documentOwnershipMiddlewareMock,
+      documentControllerMock.getById
+    );
     expect(mockRouter.patch).toHaveBeenCalledWith(
       '/:id',
       updateValidatorMock,
+      documentOwnershipMiddlewareMock,
       documentControllerMock.update
     );
-    expect(mockRouter.delete).toHaveBeenCalledWith('/:id', documentControllerMock.delete);
-    expect(mockRouter.get).toHaveBeenCalledWith('/:id/download', documentControllerMock.download);
-    expect(mockRouter.get).toHaveBeenCalledWith('/:id/preview', documentControllerMock.preview);
+    expect(mockRouter.delete).toHaveBeenCalledWith(
+      '/:id',
+      documentOwnershipMiddlewareMock,
+      documentControllerMock.delete
+    );
+    expect(mockRouter.get).toHaveBeenCalledWith(
+      '/:id/download',
+      documentOwnershipMiddlewareMock,
+      documentControllerMock.download
+    );
+    expect(mockRouter.get).toHaveBeenCalledWith(
+      '/:id/preview',
+      documentOwnershipMiddlewareMock,
+      documentControllerMock.preview
+    );
   });
 
   it('should register version endpoints', () => {
     expect(mockRouter.get).toHaveBeenCalledWith(
       '/:id/versions',
+      documentOwnershipMiddlewareMock,
       documentControllerMock.getVersionHistory
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
@@ -289,10 +324,12 @@ describe('document.routes', () => {
       expect.any(Function),
       [expect.any(Function), sanitizeMultipartFieldsMock],
       uploadVersionValidatorMock,
+      documentOwnershipMiddlewareMock,
       documentControllerMock.uploadNewVersion
     );
     expect(mockRouter.post).toHaveBeenCalledWith(
       '/:id/versions/:versionId/restore',
+      documentOwnershipMiddlewareMock,
       documentControllerMock.restoreVersion
     );
   });
