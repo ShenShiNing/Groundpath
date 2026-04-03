@@ -6,7 +6,7 @@ const {
   getEmbeddingProviderByTypeMock,
   embeddingProviderMock,
   vectorRepositoryMock,
-  documentRepositoryMock,
+  documentProcessingServiceMock,
   loggerMock,
 } = vi.hoisted(() => ({
   knowledgeBaseServiceMock: {
@@ -20,7 +20,7 @@ const {
   vectorRepositoryMock: {
     search: vi.fn(),
   },
-  documentRepositoryMock: {
+  documentProcessingServiceMock: {
     getActiveIndexVersionMap: vi.fn(),
   },
   loggerMock: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -46,8 +46,8 @@ vi.mock('@modules/embedding/public/providers', () => ({
   getEmbeddingProviderByType: getEmbeddingProviderByTypeMock,
 }));
 
-vi.mock('@modules/document/public/repositories', () => ({
-  documentRepository: documentRepositoryMock,
+vi.mock('@modules/document/public/processing', () => ({
+  documentProcessingService: documentProcessingServiceMock,
 }));
 
 import { searchService } from '@modules/rag/services/search.service';
@@ -87,7 +87,7 @@ describe('searchService.searchInKnowledgeBase', () => {
         indexVersionId: 'idx-active',
       },
     ]);
-    documentRepositoryMock.getActiveIndexVersionMap.mockResolvedValue(
+    documentProcessingServiceMock.getActiveIndexVersionMap.mockResolvedValue(
       new Map([['doc-1', 'idx-active']])
     );
 
@@ -135,7 +135,7 @@ describe('searchService.searchInKnowledgeBase', () => {
         indexVersionId: 'idx-active',
       },
     ]);
-    documentRepositoryMock.getActiveIndexVersionMap.mockResolvedValue(
+    documentProcessingServiceMock.getActiveIndexVersionMap.mockResolvedValue(
       new Map([['doc-1', 'idx-active']])
     );
 
