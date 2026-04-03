@@ -97,7 +97,7 @@ async function streamDownload(req: Request, res: Response): Promise<void> {
 
 export const documentController = {
   /**
-   * POST /api/documents
+   * POST /api/v1/documents
    */
   upload: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -137,7 +137,7 @@ export const documentController = {
   }),
 
   /**
-   * GET /api/documents
+   * GET /api/v1/documents
    */
   list: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -148,7 +148,7 @@ export const documentController = {
   }),
 
   /**
-   * GET /api/documents/:id
+   * GET /api/v1/documents/:id
    */
   getById: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -162,7 +162,7 @@ export const documentController = {
   }),
 
   /**
-   * GET /api/documents/:id/content
+   * GET /api/v1/documents/:id/content
    */
   getContent: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -176,7 +176,7 @@ export const documentController = {
   }),
 
   /**
-   * PUT /api/documents/:id/content
+   * PUT /api/v1/documents/:id/content
    */
   saveContent: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -196,7 +196,7 @@ export const documentController = {
   }),
 
   /**
-   * PATCH /api/documents/:id
+   * PATCH /api/v1/documents/:id
    */
   update: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -211,7 +211,7 @@ export const documentController = {
   }),
 
   /**
-   * DELETE /api/documents/:id
+   * DELETE /api/v1/documents/:id
    */
   delete: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -225,14 +225,14 @@ export const documentController = {
   }),
 
   /**
-   * GET /api/documents/:id/download
+   * GET /api/v1/documents/:id/download
    */
   download: asyncHandler(async (req: Request, res: Response) => {
     await streamDownload(req, res);
   }),
 
   /**
-   * GET /api/documents/:id/preview (always inline)
+   * GET /api/v1/documents/:id/preview (always inline)
    */
   preview: asyncHandler(async (req: Request, res: Response) => {
     req.query.inline = '1';
@@ -242,7 +242,7 @@ export const documentController = {
   // ==================== Trash Operations ====================
 
   /**
-   * GET /api/documents/trash
+   * GET /api/v1/documents/trash
    */
   listTrash: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -252,7 +252,7 @@ export const documentController = {
   }),
 
   /**
-   * POST /api/documents/:id/restore
+   * POST /api/v1/documents/:id/restore
    */
   restore: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -266,7 +266,7 @@ export const documentController = {
   }),
 
   /**
-   * DELETE /api/documents/:id/permanent
+   * DELETE /api/v1/documents/:id/permanent
    */
   permanentDelete: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -280,7 +280,7 @@ export const documentController = {
   }),
 
   /**
-   * DELETE /api/documents/trash
+   * DELETE /api/v1/documents/trash
    */
   clearTrash: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -294,7 +294,7 @@ export const documentController = {
   // ==================== Version Operations ====================
 
   /**
-   * POST /api/documents/:id/versions
+   * POST /api/v1/documents/:id/versions
    */
   uploadNewVersion: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -331,7 +331,7 @@ export const documentController = {
   }),
 
   /**
-   * GET /api/documents/:id/versions
+   * GET /api/v1/documents/:id/versions
    */
   getVersionHistory: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -345,7 +345,7 @@ export const documentController = {
   }),
 
   /**
-   * POST /api/documents/:id/versions/:versionId/restore
+   * POST /api/v1/documents/:id/versions/:versionId/restore
    */
   restoreVersion: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

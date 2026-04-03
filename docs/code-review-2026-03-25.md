@@ -57,7 +57,7 @@
 
 - **文件**: `packages/server/src/api-route-modules.ts`、各前端 API 文件
 - **描述**: 所有路由在 `/api/` 下无版本前缀，未来 API 演进将破坏向后兼容。
-- **修复**: 在 `api-route-modules.ts` 中定义 `API_V1 = '/api/v1'` 常量，所有业务路由统一迁移至 `/api/v1/` 前缀。文件服务路由（`/api/files/`、`/api/uploads/`）和健康检查端点（`/api/hello`）保持不变（URL 存储在数据库中或属于系统级路由）。同步更新：OpenAPI paths、前端 API 客户端、CSRF 路径配置、OAuth 回调 URL 默认值、cookie 路径（含旧路径清理向后兼容）、404 handler（提供迁移提示）。
+- **修复**: 在 `api-route-modules.ts` 中定义 `API_V1 = '/api/v1'` 常量，所有业务路由统一迁移至 `/api/v1/` 前缀。文件服务路由（`/api/files/`、`/api/uploads/`）和健康检查端点（`/api/hello`）保持不变（URL 存储在数据库中或属于系统级路由）。同步更新：OpenAPI paths、前端 API 客户端、CSRF 路径配置、OAuth 回调 URL 默认值、cookie 路径（含旧路径清理向后兼容）、404 handler（提供迁移提示）、控制器/路由注释中的示例路径。
 - **提交**: `feat/api-versioning` 分支
 
 ---
@@ -156,13 +156,13 @@
 
 ### 6.2 改进建议
 
-| 优先级 | 建议                                       | 说明               |
-| ------ | ------------------------------------------ | ------------------ |
-| 高     | 添加 API 版本前缀 `/api/v1/`               | 向后兼容的演进基础 |
-| 高     | 统一控制器风格为 asyncHandler              | 消除重复 try-catch |
-| 中     | 创建 `requireResourceOwnership` 中间件     | 集中权限检查       |
-| 中     | URL 命名一致性: `/api/user` → `/api/users` | RESTful 规范       |
-| 低     | 维护 API CHANGELOG                         | 变更追踪           |
+| 优先级 | 建议                                             | 说明               |
+| ------ | ------------------------------------------------ | ------------------ |
+| ~~高~~ | ~~添加 API 版本前缀 `/api/v1/`~~ ✅              | 向后兼容的演进基础 |
+| 高     | 统一控制器风格为 asyncHandler                    | 消除重复 try-catch |
+| 中     | 创建 `requireResourceOwnership` 中间件           | 集中权限检查       |
+| 中     | URL 命名一致性: `/api/v1/user` → `/api/v1/users` | RESTful 规范       |
+| 低     | 维护 API CHANGELOG                               | 变更追踪           |
 
 ---
 

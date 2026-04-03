@@ -17,13 +17,13 @@ router.use(authenticate);
 // ==================== Login Logs ====================
 
 /**
- * GET /api/logs/login
+ * GET /api/v1/logs/login
  * List current user's login history
  */
 router.get('/login', validateQuery(loginLogQuerySchema), logsRouteHandlers.loginLogController.list);
 
 /**
- * GET /api/logs/login/recent
+ * GET /api/v1/logs/login/recent
  * Get recent login history (simplified)
  */
 router.get('/login/recent', logsRouteHandlers.loginLogController.recent);
@@ -44,7 +44,7 @@ router.get(
 // ==================== Operation Logs ====================
 
 /**
- * GET /api/logs/operations
+ * GET /api/v1/logs/operations
  * List current user's operation history
  */
 router.get(
@@ -54,7 +54,7 @@ router.get(
 );
 
 /**
- * GET /api/logs/operations/resource/:resourceType/:resourceId
+ * GET /api/v1/logs/operations/resource/:resourceType/:resourceId
  * Get operation history for a specific resource
  */
 router.get(

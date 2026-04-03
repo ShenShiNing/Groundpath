@@ -8,7 +8,7 @@ import { getValidatedQuery } from '@core/middleware';
 
 export const loginLogController = {
   /**
-   * GET /api/logs/login
+   * GET /api/v1/logs/login
    */
   list: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -27,7 +27,7 @@ export const loginLogController = {
   }),
 
   /**
-   * GET /api/logs/login/recent
+   * GET /api/v1/logs/login/recent
    */
   recent: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

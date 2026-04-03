@@ -13,7 +13,7 @@ import { requireUserId } from '@core/utils';
 
 export const llmConfigController = {
   /**
-   * GET /api/llm/config - Get user's LLM configuration
+   * GET /api/v1/llm/config - Get user's LLM configuration
    */
   getConfig: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -22,7 +22,7 @@ export const llmConfigController = {
   }),
 
   /**
-   * PUT /api/llm/config - Create or update LLM configuration
+   * PUT /api/v1/llm/config - Create or update LLM configuration
    */
   updateConfig: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -32,7 +32,7 @@ export const llmConfigController = {
   }),
 
   /**
-   * DELETE /api/llm/config - Delete user's LLM configuration
+   * DELETE /api/v1/llm/config - Delete user's LLM configuration
    */
   deleteConfig: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -41,7 +41,7 @@ export const llmConfigController = {
   }),
 
   /**
-   * POST /api/llm/test-connection - Test provider connection
+   * POST /api/v1/llm/test-connection - Test provider connection
    */
   testConnection: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -51,7 +51,7 @@ export const llmConfigController = {
   }),
 
   /**
-   * GET /api/llm/providers - List available providers and models
+   * GET /api/v1/llm/providers - List available providers and models
    */
   getProviders: asyncHandler(async (_req: Request, res: Response) => {
     const providers = llmConfigService.getProviders();
@@ -59,7 +59,7 @@ export const llmConfigController = {
   }),
 
   /**
-   * POST /api/llm/models - Fetch available models for a provider
+   * POST /api/v1/llm/models - Fetch available models for a provider
    */
   fetchModels: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

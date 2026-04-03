@@ -54,7 +54,7 @@ function requireKnowledgeBaseId(req: Request): string {
 
 export const knowledgeBaseController = {
   /**
-   * POST /api/knowledge-bases
+   * POST /api/v1/knowledge-bases
    */
   create: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -64,7 +64,7 @@ export const knowledgeBaseController = {
   }),
 
   /**
-   * GET /api/knowledge-bases
+   * GET /api/v1/knowledge-bases
    */
   list: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -74,7 +74,7 @@ export const knowledgeBaseController = {
   }),
 
   /**
-   * GET /api/knowledge-bases/:id
+   * GET /api/v1/knowledge-bases/:id
    */
   getById: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -84,7 +84,7 @@ export const knowledgeBaseController = {
   }),
 
   /**
-   * PATCH /api/knowledge-bases/:id
+   * PATCH /api/v1/knowledge-bases/:id
    */
   update: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -95,7 +95,7 @@ export const knowledgeBaseController = {
   }),
 
   /**
-   * DELETE /api/knowledge-bases/:id
+   * DELETE /api/v1/knowledge-bases/:id
    */
   delete: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -105,7 +105,7 @@ export const knowledgeBaseController = {
   }),
 
   /**
-   * POST /api/knowledge-bases/:id/documents
+   * POST /api/v1/knowledge-bases/:id/documents
    */
   uploadDocument: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -141,7 +141,7 @@ export const knowledgeBaseController = {
   }),
 
   /**
-   * GET /api/knowledge-bases/:id/documents
+   * GET /api/v1/knowledge-bases/:id/documents
    */
   listDocuments: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);

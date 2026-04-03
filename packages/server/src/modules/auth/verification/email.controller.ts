@@ -11,7 +11,7 @@ import { getClientIp, normalizeEmail } from '@core/utils';
 
 export const emailController = {
   /**
-   * POST /api/auth/email/send-code
+   * POST /api/v1/auth/email/send-code
    */
   sendCode: asyncHandler(async (req: Request, res: Response) => {
     const { email: rawEmail, type } = getValidatedBody<SendVerificationCodeRequest>(res);
@@ -53,7 +53,7 @@ export const emailController = {
   }),
 
   /**
-   * POST /api/auth/email/verify-code
+   * POST /api/v1/auth/email/verify-code
    */
   verifyCode: asyncHandler(async (_req: Request, res: Response) => {
     const { email: rawEmail, code, type } = getValidatedBody<VerifyCodeRequest>(res);

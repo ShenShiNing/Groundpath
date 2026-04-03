@@ -17,7 +17,7 @@ function paramAsString(value: string | string[] | undefined): string {
 
 export const conversationController = {
   /**
-   * POST /api/chat/conversations - Create a new conversation
+   * POST /api/v1/chat/conversations - Create a new conversation
    */
   create: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -27,7 +27,7 @@ export const conversationController = {
   }),
 
   /**
-   * GET /api/chat/conversations - List conversations
+   * GET /api/v1/chat/conversations - List conversations
    */
   list: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -37,7 +37,7 @@ export const conversationController = {
   }),
 
   /**
-   * GET /api/chat/conversations/search - Search conversations by message content
+   * GET /api/v1/chat/conversations/search - Search conversations by message content
    */
   search: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -47,7 +47,7 @@ export const conversationController = {
   }),
 
   /**
-   * GET /api/chat/conversations/:id - Get conversation with messages
+   * GET /api/v1/chat/conversations/:id - Get conversation with messages
    */
   getById: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -58,7 +58,7 @@ export const conversationController = {
   }),
 
   /**
-   * PATCH /api/chat/conversations/:id - Update conversation
+   * PATCH /api/v1/chat/conversations/:id - Update conversation
    */
   update: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
@@ -69,7 +69,7 @@ export const conversationController = {
   }),
 
   /**
-   * DELETE /api/chat/conversations/:id - Delete conversation
+   * DELETE /api/v1/chat/conversations/:id - Delete conversation
    */
   delete: asyncHandler(async (req: Request, res: Response) => {
     const userId = requireUserId(req);
