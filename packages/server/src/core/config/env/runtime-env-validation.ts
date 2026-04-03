@@ -1,4 +1,5 @@
 import type { Env } from './schema';
+import { getRedisRequirementReasons } from './infra-drivers';
 
 type FieldErrors = Record<string, string[]>;
 
@@ -143,6 +144,30 @@ function validateOAuthConfig(env: Env, fieldErrors: FieldErrors): void {
   );
 }
 
+function validateRedisConfig(env: Env, fieldErrors: FieldErrors): void {
+  const redisRequirementReasons = getRedisRequirementReasons({
+    CACHE_DRIVER: env.CACHE_DRIVER,
+    QUEUE_DRIVER: env.QUEUE_DRIVER,
+    RATE_LIMIT_DRIVER: env.RATE_LIMIT_DRIVER,
+    LOCK_DRIVER: env.LOCK_DRIVER,
+    DISABLE_RATE_LIMIT: env.DISABLE_RATE_LIMIT,
+  });
+
+  if (redisRequirementReasons.length === 0) {
+    return;
+  }
+
+  if (!isBlank(env.REDIS_URL)) {
+    return;
+  }
+
+  addFieldError(
+    fieldErrors,
+    'REDIS_URL',
+    `REDIS_URL is required when ${redisRequirementReasons.join(', ')}.`
+  );
+}
+
 export function getRuntimeEnvFieldErrors(env: Env): FieldErrors {
   const fieldErrors: FieldErrors = {};
 
@@ -151,6 +176,7 @@ export function getRuntimeEnvFieldErrors(env: Env): FieldErrors {
   validateVlmConfig(env, fieldErrors);
   validateStorageConfig(env, fieldErrors);
   validateOAuthConfig(env, fieldErrors);
+  validateRedisConfig(env, fieldErrors);
 
   return fieldErrors;
 }

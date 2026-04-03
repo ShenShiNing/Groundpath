@@ -20,6 +20,7 @@ describe('shared/health/health.service', () => {
       pingDatabase: vi.fn().mockResolvedValue(undefined),
       pingRedis: vi.fn().mockResolvedValue(undefined),
       pingQdrant: vi.fn().mockResolvedValue(undefined),
+      isRedisRequired: () => true,
       now: () => new Date('2026-03-22T00:00:00.000Z'),
     });
 
@@ -39,6 +40,7 @@ describe('shared/health/health.service', () => {
       pingDatabase: vi.fn().mockRejectedValue(new Error('db unavailable')),
       pingRedis: vi.fn().mockResolvedValue(undefined),
       pingQdrant: vi.fn().mockRejectedValue(new Error('qdrant unavailable')),
+      isRedisRequired: () => true,
       now: () => new Date('2026-03-22T00:00:00.000Z'),
     });
 
@@ -50,5 +52,25 @@ describe('shared/health/health.service', () => {
         qdrant: { status: 'down', error: 'qdrant unavailable' },
       },
     });
+  });
+
+  it('omits redis when no active capability requires it', async () => {
+    const pingRedis = vi.fn().mockResolvedValue(undefined);
+    const service = createHealthService({
+      pingDatabase: vi.fn().mockResolvedValue(undefined),
+      pingRedis,
+      pingQdrant: vi.fn().mockResolvedValue(undefined),
+      isRedisRequired: () => false,
+      now: () => new Date('2026-03-22T00:00:00.000Z'),
+    });
+
+    await expect(service.getReadiness()).resolves.toMatchObject({
+      status: 'ready',
+      checks: {
+        database: { status: 'up', required: true },
+        qdrant: { status: 'up', required: true },
+      },
+    });
+    expect(pingRedis).not.toHaveBeenCalled();
   });
 });

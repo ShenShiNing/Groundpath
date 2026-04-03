@@ -40,6 +40,10 @@ export const redisConfig = {
   prefix: validatedEnv.REDIS_PREFIX,
 } as const;
 
+export const cacheConfig = {
+  driver: validatedEnv.CACHE_DRIVER,
+} as const;
+
 export const authConfig = {
   jwt: {
     secret: validatedEnv.JWT_SECRET,
@@ -172,7 +176,16 @@ export const vlmConfig = {
 
 export const queueConfig = {
   ...queueDefaults,
+  driver: validatedEnv.QUEUE_DRIVER,
   concurrency: validatedEnv.QUEUE_CONCURRENCY,
+} as const;
+
+export const rateLimitConfig = {
+  driver: validatedEnv.RATE_LIMIT_DRIVER,
+} as const;
+
+export const coordinationConfig = {
+  driver: validatedEnv.LOCK_DRIVER,
 } as const;
 
 export const healthConfig = {

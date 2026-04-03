@@ -134,11 +134,12 @@
 | ~~高~~ | ~~完善模块公共 API，统一导出规范~~ ✅             | 防止模块边界腐蚀 |
 | ~~高~~ | ~~Document ↔ RAG 依赖解耦，引入事件/回调模式~~ ✅ | 降低核心模块耦合 |
 | 中     | 引入统一的错误重试策略                            | 外部服务故障容错 |
-| 中     | 队列系统抽象（当前绑定 BullMQ）                   | 可替换性         |
-| 中     | 缓存系统抽象（当前绑定 Redis）                    | 本地开发友好     |
+| ~~中~~ | ~~队列系统抽象（当前绑定 BullMQ）~~ ✅            | 可替换性         |
+| ~~中~~ | ~~缓存系统抽象（当前绑定 Redis）~~ ✅             | 本地开发友好     |
 | 低     | Feature Flag 服务化（支持用户/KB级灰度）          | 灵活发布         |
 
 - **补记（2026-04-04）**: 已补充缓存抽象实施方案，详见 `docs/cache-driver-abstraction-plan.md`。方案将现有 Redis 使用拆为缓存、速率限制、协调锁三类能力，先为 `@core/cache` 引入 `redis` / `memory` driver，再按启用能力决定启动与 readiness 是否必须依赖 Redis，避免把非缓存语义继续堆进缓存接口。
+- **补记（2026-04-04）**: 已在服务端落地队列与缓存 driver 化。`packages/server/src/core/queue/*` 现支持 `bullmq` / `inline`，`packages/server/src/core/cache/*` 支持 `redis` / `memory`，并新增 `RATE_LIMIT_DRIVER`、`LOCK_DRIVER` 与 Redis 条件校验；启动与 health readiness 已按启用能力判断 Redis 是否必需，本地可通过 `CACHE_DRIVER=memory`、`QUEUE_DRIVER=inline`、`RATE_LIMIT_DRIVER=noop`、`LOCK_DRIVER=memory` 无 Redis 启动。
 
 ---
 

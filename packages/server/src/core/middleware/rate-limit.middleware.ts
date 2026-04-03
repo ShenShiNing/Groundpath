@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@groundpath/shared';
-import { documentConfig, featureFlags, serverConfig } from '@config/env';
+import { documentConfig, featureFlags, rateLimitConfig, serverConfig } from '@config/env';
 import { Errors } from '@core/errors';
 import { sendErrorResponse } from '@core/errors/response';
 import { createLogger } from '@core/logger';
-import { buildRedisKey, getRedisClient } from '@core/redis';
+import { getRateLimitStore } from '@core/rate-limit';
 import { getClientIp } from '../utils/request.utils';
 
 interface RateLimitOptions {
@@ -22,34 +22,11 @@ interface AccountRateLimitResult {
 
 const logger = createLogger('rate-limit.middleware');
 
-const INCREMENT_WINDOW_SCRIPT = `
-local current = redis.call('INCR', KEYS[1])
-if current == 1 then
-  redis.call('PEXPIRE', KEYS[1], ARGV[1])
-end
-local ttl = redis.call('PTTL', KEYS[1])
-if ttl < 0 then
-  ttl = tonumber(ARGV[1])
-  redis.call('PEXPIRE', KEYS[1], ttl)
-end
-return {current, ttl}
-`;
-
 async function incrementCounter(
   key: string,
   windowMs: number
 ): Promise<{ count: number; ttlMs: number }> {
-  const redis = getRedisClient();
-  const fullKey = buildRedisKey(key);
-  const result = await redis.eval(INCREMENT_WINDOW_SCRIPT, 1, fullKey, windowMs.toString());
-
-  if (!Array.isArray(result) || result.length < 2) {
-    throw Errors.internal('Invalid Redis rate limiter response');
-  }
-
-  const count = Number(result[0]);
-  const ttlMs = Math.max(Number(result[1]), 0);
-  return { count, ttlMs };
+  return getRateLimitStore().incrementWindow(key, windowMs);
 }
 
 function setRateLimitHeaders(
@@ -64,7 +41,11 @@ function setRateLimitHeaders(
 }
 
 function isRateLimitDisabled(): boolean {
-  return serverConfig.nodeEnv === 'test' || featureFlags.disableRateLimit;
+  return (
+    serverConfig.nodeEnv === 'test' ||
+    featureFlags.disableRateLimit ||
+    rateLimitConfig.driver === 'noop'
+  );
 }
 
 function getScopedRateLimitKey(scope: string, req: Request): string {
@@ -116,14 +97,14 @@ export function createRateLimiter(options: RateLimitOptions) {
       setRateLimitHeaders(res, options.maxRequests, options.maxRequests - count, resetAt);
       next();
     } catch (error) {
-      logger.error({ err: error }, 'Rate limiter redis operation failed');
+      logger.error({ err: error }, 'Rate limiter store operation failed');
       next(Errors.internal('Rate limiter unavailable'));
     }
   };
 }
 
 export function cleanupRateLimiters(): void {
-  // Redis-backed limiter does not require interval cleanup.
+  // Driver-backed limiter does not require interval cleanup.
 }
 
 export const loginRateLimiter = createRateLimiter({
@@ -213,7 +194,7 @@ export async function checkAccountRateLimit(email: string): Promise<AccountRateL
       remainingAttempts: Math.max(0, ACCOUNT_MAX_ATTEMPTS - count),
     };
   } catch (error) {
-    logger.error({ err: error, email }, 'Account rate limiter redis operation failed');
+    logger.error({ err: error, email }, 'Account rate limiter store operation failed');
     throw Errors.internal('Authentication rate limiter unavailable');
   }
 }
@@ -223,8 +204,8 @@ export async function resetAccountRateLimit(email: string): Promise<void> {
     return;
   }
 
-  const key = buildRedisKey(`ratelimit:account:${email.toLowerCase().trim()}`);
-  await getRedisClient().del(key);
+  const key = `ratelimit:account:${email.toLowerCase().trim()}`;
+  await getRateLimitStore().reset(key);
 }
 
 export async function incrementAccountRateLimit(email: string): Promise<void> {

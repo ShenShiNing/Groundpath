@@ -1,7 +1,9 @@
 export { env } from './env/validated-env';
 export type { Env } from './env/schema';
 export {
+  cacheConfig,
   chatConfig,
+  coordinationConfig,
   agentConfig,
   authConfig,
   backfillConfig,
@@ -19,6 +21,7 @@ export {
   oauthConfig,
   queueConfig,
   ragConfig,
+  rateLimitConfig,
   redisConfig,
   serverConfig,
   storageConfig,
