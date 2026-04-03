@@ -95,6 +95,48 @@ module.exports = {
         path: '^packages/server/src/modules/(agent|auth|chat|document|document-ai|document-index|embedding|knowledge-base|llm|logs|rag|storage|user|vector|vlm)/index\\.ts$',
       },
     },
+
+    // ── Rule 9: Document orchestration modules must not depend on the RAG queue directly ──
+    {
+      name: 'no-document-processing-direct-rag-queue-import',
+      severity: 'error',
+      comment:
+        'Document and document-index must dispatch document processing through the shared contract, not rag/public/queue directly.',
+      from: {
+        path: '^packages/server/src/modules/(document|document-index)/',
+      },
+      to: {
+        path: '^packages/server/src/modules/rag/public/queue\\.ts$',
+      },
+    },
+
+    // ── Rule 10: RAG must not reach back into document-index progress APIs ──
+    {
+      name: 'no-rag-to-document-index-backfill-progress',
+      severity: 'error',
+      comment:
+        'RAG lifecycle updates must go through document-processing listeners, not document-index backfill progress services.',
+      from: {
+        path: '^packages/server/src/modules/rag/',
+      },
+      to: {
+        path: '^packages/server/src/modules/document-index/public/backfill-progress\\.ts$',
+      },
+    },
+
+    // ── Rule 11: Only the composition root may wire document-processing lifecycle listeners ──
+    {
+      name: 'no-non-root-document-processing-listener-import',
+      severity: 'error',
+      comment:
+        'document-index lifecycle listener wiring belongs in packages/server/src/index.ts, not in feature modules or core runtime code.',
+      from: {
+        path: '^packages/server/src/(?!index\\.ts$).+\\.ts$',
+      },
+      to: {
+        path: '^packages/server/src/modules/document-index/public/document-processing\\.ts$',
+      },
+    },
   ],
   options: {
     doNotFollow: {
