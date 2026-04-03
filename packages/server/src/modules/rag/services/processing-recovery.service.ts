@@ -1,7 +1,7 @@
 import { documentConfig } from '@config/env';
+import { dispatchDocumentProcessing } from '@core/document-processing';
 import { createLogger } from '@core/logger';
 import { documentProcessingService } from '@modules/document/public/processing';
-import { enqueueDocumentProcessing } from '../queue/document-processing.queue';
 import { processingService } from './processing.service';
 
 const logger = createLogger('processing-recovery.service');
@@ -64,7 +64,7 @@ export const processingRecoveryService = {
 
         if (documentConfig.processingRecoveryRequeueEnabled) {
           try {
-            const jobId = await enqueueDocumentProcessing(document.id, document.userId, {
+            const jobId = await dispatchDocumentProcessing(document.id, document.userId, {
               targetDocumentVersion: document.currentVersion,
               reason: 'recovery',
               jobIdSuffix: `recovery-g${document.publishGeneration + 1}`,

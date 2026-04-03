@@ -96,8 +96,8 @@ vi.mock('@modules/rag/services/processing.service', () => ({
   processingService: processingServiceMock,
 }));
 
-vi.mock('@modules/rag/queue', () => ({
-  enqueueDocumentProcessing: enqueueDocumentProcessingMock,
+vi.mock('@core/document-processing', () => ({
+  dispatchDocumentProcessing: enqueueDocumentProcessingMock,
 }));
 
 vi.mock('@modules/document/public/repositories', () => ({

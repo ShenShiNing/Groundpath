@@ -185,6 +185,7 @@ export const vlmConfig = {
 
 export const queueConfig = {
   ...queueDefaults,
+  driver: validatedEnv.QUEUE_DRIVER,
   concurrency: validatedEnv.QUEUE_CONCURRENCY,
 } as const;
 

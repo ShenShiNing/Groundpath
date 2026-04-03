@@ -36,8 +36,8 @@ vi.mock('@modules/rag/services/processing.service', () => ({
   processingService: mocks.processingService,
 }));
 
-vi.mock('@modules/rag/queue/document-processing.queue', () => ({
-  enqueueDocumentProcessing: mocks.enqueueDocumentProcessing,
+vi.mock('@core/document-processing', () => ({
+  dispatchDocumentProcessing: mocks.enqueueDocumentProcessing,
 }));
 
 import { processingRecoveryService } from '@modules/rag/services/processing-recovery.service';

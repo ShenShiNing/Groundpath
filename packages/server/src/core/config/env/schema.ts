@@ -99,6 +99,7 @@ const llmSchema = z.object({
 });
 
 const queueSchema = z.object({
+  QUEUE_DRIVER: z.enum(['bullmq', 'inline']).default('bullmq'),
   QUEUE_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(3),
 });
 
