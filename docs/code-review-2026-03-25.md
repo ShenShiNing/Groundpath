@@ -139,6 +139,12 @@
 | 低     | Feature Flag 服务化（支持用户/KB级灰度）          | 灵活发布         |
 
 - **补记（2026-04-03）**: 已新增统一外部调用执行器 `packages/server/src/core/utils/external-call.ts`，配置收口到 `packages/server/src/core/config/defaults/external-service.defaults.ts`。首批覆盖 VLM、LLM 非流式调用、Embedding、R2 对象存储、Tavily Web Search 与模型枚举接口，统一处理 timeout / retry / exponential backoff / jitter。流式响应暂不自动重试，避免 token 重放。提交：`fix/unified-external-retry` 分支，`bd125c2`。
+- **修复方案（队列系统抽象）**:
+  1. 在 `packages/server/src/core/queue` 定义最小队列能力接口（如 `QueueDriver`、`QueueProducer`、`QueueConsumer`、`QueuedJob`），只保留当前业务真正需要的能力：`enqueue`、`start`、`close`、`jobId`、`attempt`。业务模块禁止直接暴露 BullMQ 的 `Queue` / `Worker` / `Job` 类型。
+  2. 将 BullMQ 实现下沉到 `packages/server/src/core/queue/drivers/bullmq/*`，把连接解析、retry/backoff、`removeOnComplete` / `removeOnFail` 等实现细节全部收口到 adapter。新增 `QUEUE_DRIVER=bullmq` 配置项，并按仓库规范同步更新 `packages/server/src/core/config/env/schema.ts`、`packages/server/src/core/config/env/configs.ts`、`packages/server/.env.example`。
+  3. 重构 `packages/server/src/modules/rag/queue/document-processing.queue.ts`：保留文档处理的领域语义，但改为依赖 `QueueProducer` / `QueueConsumer` 端口。`modules/rag/public/*` 只导出 `enqueueDocumentProcessing`、`startDocumentProcessingWorker`、`stopDocumentProcessingWorker` 这类领域能力，不再暴露 `getDocumentProcessingQueue()` 这种基础设施对象。
+  4. 组合根和调用方统一走领域端口：`packages/server/src/index.ts` 负责选择驱动并完成注册；`packages/server/src/modules/rag/controllers/rag.controller.ts`、`packages/server/src/modules/rag/services/processing-recovery.service.ts` 等调用点统一通过 `@core/document-processing` 或 RAG `public/*` 出口入队，移除对具体 BullMQ 文件路径的直接依赖。
+  5. 增加一个 `inline` / `in-memory` driver 作为测试与本地开发适配器，覆盖“入队去重、重试次数透传、生命周期事件、恢复后重入幂等”集成测试。落地顺序建议采用“两步走”：先保持 BullMQ 为默认实现完成无行为变化重构，再补第二驱动验证抽象边界是否稳定。
 
 ---
 
