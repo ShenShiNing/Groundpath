@@ -1,2 +1,5 @@
-export { registerDocumentProcessingDispatcher } from '../ports/document-processing.port';
-export type { DocumentProcessingDispatcher } from '../ports/document-processing.port';
+export { registerDocumentProcessingDispatcher } from '@core/document-processing';
+export type {
+  DocumentProcessingDispatchOptions,
+  DocumentProcessingDispatcher,
+} from '@core/document-processing';

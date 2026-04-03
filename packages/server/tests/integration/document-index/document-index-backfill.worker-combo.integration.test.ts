@@ -87,12 +87,14 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
     await import('@modules/document-index/services/document-index-backfill.service');
   const { processingRecoveryService } =
     await import('@modules/rag/services/processing-recovery.service');
+  const { registerDocumentProcessingDispatcher } = await import('@core/document-processing');
   const {
     getDocumentProcessingQueue,
     enqueueDocumentProcessing,
     startDocumentProcessingWorker,
     stopDocumentProcessingWorker,
   } = await import('@modules/rag/queue/document-processing.queue');
+  registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
   const { documentIndexBackfillProgressService } =
     await import('@modules/document-index/services/document-index-backfill-progress.service');
   const schema = await import('@core/db/schema');

@@ -14,7 +14,7 @@ import {
   stopDocumentProcessingWorker,
   enqueueDocumentProcessing,
 } from '@modules/rag/public/queue';
-import { registerDocumentProcessingDispatcher } from '@modules/document/public/processing';
+import { registerDocumentProcessingDispatcher } from './core/document-processing';
 import { createApp } from './app';
 
 // ==================== Composition Root ====================

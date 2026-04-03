@@ -26,7 +26,9 @@ describeRealIntegration('document index backfill real db/queue integration', () 
   let closeDatabase: typeof import('@core/db').closeDatabase;
   let documentIndexBackfillService: typeof import('@modules/document-index/services/document-index-backfill.service').documentIndexBackfillService;
   let documentProcessingQueue: Queue | null = null;
+  let registerDocumentProcessingDispatcher: typeof import('@core/document-processing').registerDocumentProcessingDispatcher;
   let getDocumentProcessingQueue: typeof import('@modules/rag/queue/document-processing.queue').getDocumentProcessingQueue;
+  let enqueueDocumentProcessing: typeof import('@modules/rag/queue/document-processing.queue').enqueueDocumentProcessing;
   let schema: typeof import('@core/db/schema');
   let drizzle: typeof import('drizzle-orm');
   let skipReason: string | null = null;
@@ -62,9 +64,12 @@ describeRealIntegration('document index backfill real db/queue integration', () 
     });
 
     ({ db, closeDatabase } = await import('@core/db'));
+    ({ registerDocumentProcessingDispatcher } = await import('@core/document-processing'));
     ({ documentIndexBackfillService } =
       await import('@modules/document-index/services/document-index-backfill.service'));
-    ({ getDocumentProcessingQueue } = await import('@modules/rag/queue/document-processing.queue'));
+    ({ getDocumentProcessingQueue, enqueueDocumentProcessing } =
+      await import('@modules/rag/queue/document-processing.queue'));
+    registerDocumentProcessingDispatcher({ enqueue: enqueueDocumentProcessing });
     documentProcessingQueue = getDocumentProcessingQueue();
     schema = await import('@core/db/schema');
     drizzle = await import('drizzle-orm');

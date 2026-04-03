@@ -451,6 +451,16 @@ vi.mock('@modules/rag/queue/document-processing.queue', () => ({
   ),
 }));
 
+vi.mock('@core/document-processing', () => ({
+  dispatchDocumentProcessing: vi.fn(
+    async (documentId: string, userId: string, options: Record<string, unknown>) => {
+      const jobId = `job-${documentId}-v${options.targetDocumentVersion as number}`;
+      state.queuedJobs.push({ jobId, documentId, userId, ...options });
+      return jobId;
+    }
+  ),
+}));
+
 vi.mock('@modules/document-index/services/document-index-backfill-progress.service', () => ({
   documentIndexBackfillProgressService: {
     createRun: vi.fn(async (options: Record<string, unknown>) => {

@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
     listBackfillCandidates: vi.fn(),
     countBackfillCandidates: vi.fn(),
   },
-  enqueueDocumentProcessing: vi.fn(async () => 'job-1'),
+  dispatchDocumentProcessing: vi.fn(async () => 'job-1'),
   backfillProgress: {
     ensureRunAvailable: vi.fn(),
     createRun: vi.fn(),
@@ -44,8 +44,8 @@ vi.mock('@modules/document/public/repositories', () => ({
   documentRepository: mocks.documentRepository,
 }));
 
-vi.mock('@modules/rag/queue/document-processing.queue', () => ({
-  enqueueDocumentProcessing: mocks.enqueueDocumentProcessing,
+vi.mock('@core/document-processing', () => ({
+  dispatchDocumentProcessing: mocks.dispatchDocumentProcessing,
 }));
 
 vi.mock('@modules/document-index/services/document-index-backfill-progress.service', () => ({
@@ -144,7 +144,7 @@ describe('documentIndexBackfillService', () => {
       offset: 20,
     });
 
-    expect(mocks.enqueueDocumentProcessing).not.toHaveBeenCalled();
+    expect(mocks.dispatchDocumentProcessing).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       dryRun: true,
       enqueuedCount: 0,
@@ -188,12 +188,12 @@ describe('documentIndexBackfillService', () => {
       limit: 2,
     });
 
-    expect(mocks.enqueueDocumentProcessing).toHaveBeenNthCalledWith(1, 'doc-1', 'user-1', {
+    expect(mocks.dispatchDocumentProcessing).toHaveBeenNthCalledWith(1, 'doc-1', 'user-1', {
       targetDocumentVersion: 3,
       reason: 'backfill',
       backfillRunId: 'run-1',
     });
-    expect(mocks.enqueueDocumentProcessing).toHaveBeenNthCalledWith(2, 'doc-2', 'user-2', {
+    expect(mocks.dispatchDocumentProcessing).toHaveBeenNthCalledWith(2, 'doc-2', 'user-2', {
       targetDocumentVersion: 1,
       reason: 'backfill',
       backfillRunId: 'run-1',
@@ -313,7 +313,7 @@ describe('documentIndexBackfillService', () => {
         enqueuedAt: null,
         completedAt: null,
       });
-    mocks.enqueueDocumentProcessing
+    mocks.dispatchDocumentProcessing
       .mockResolvedValueOnce('job-1')
       .mockRejectedValueOnce(new Error('queue unavailable'));
 
