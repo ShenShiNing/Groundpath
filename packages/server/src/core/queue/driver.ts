@@ -1,4 +1,5 @@
 import { queueConfig, redisConfig } from '@config/env';
+import { requireRedisUrl } from '@core/redis';
 import { createBullmqQueueDriver } from './drivers/bullmq/bullmq.driver';
 import { createInlineQueueDriver } from './drivers/inline/inline.driver';
 import type { QueueDriver } from './types';
@@ -12,7 +13,7 @@ function createConfiguredQueueDriver(): QueueDriver {
     case 'bullmq':
     default:
       return createBullmqQueueDriver({
-        redisUrl: redisConfig.url,
+        redisUrl: requireRedisUrl(),
         redisPrefix: redisConfig.prefix,
       });
   }

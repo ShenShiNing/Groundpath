@@ -133,23 +133,14 @@
 | ------ | ------------------------------------------------- | ---------------- |
 | ~~高~~ | ~~完善模块公共 API，统一导出规范~~ ✅             | 防止模块边界腐蚀 |
 | ~~高~~ | ~~Document ↔ RAG 依赖解耦，引入事件/回调模式~~ ✅ | 降低核心模块耦合 |
-
-<<<<<<< HEAD
-| ~~中~~ | ~~引入统一的错误重试策略~~ ✅ | 外部服务故障容错 |
-| ~~中~~ | ~~队列系统抽象（当前绑定 BullMQ）~~ ✅ | 可替换性 |
-| 中 | 缓存系统抽象（当前绑定 Redis） | 本地开发友好 |
-| 低 | Feature Flag 服务化（支持用户/KB级灰度） | 灵活发布 |
+| ~~中~~ | ~~引入统一的错误重试策略~~ ✅                     | 外部服务故障容错 |
+| ~~中~~ | ~~队列系统抽象（当前绑定 BullMQ）~~ ✅            | 可替换性         |
+| ~~中~~ | ~~缓存系统抽象（当前绑定 Redis）~~ ✅             | 本地开发友好     |
+| 低     | Feature Flag 服务化（支持用户/KB级灰度）          | 灵活发布         |
 
 - **补记（2026-04-03）**: 已新增统一外部调用执行器 `packages/server/src/core/utils/external-call.ts`，配置收口到 `packages/server/src/core/config/defaults/external-service.defaults.ts`。首批覆盖 VLM、LLM 非流式调用、Embedding、R2 对象存储、Tavily Web Search 与模型枚举接口，统一处理 timeout / retry / exponential backoff / jitter。流式响应暂不自动重试，避免 token 重放。提交：`fix/unified-external-retry` 分支，`bd125c2`。
-- # **补记（2026-04-03）**: 已新增 `packages/server/src/core/queue/*` 最小队列驱动抽象，BullMQ 实现下沉到 `drivers/bullmq/*`，并补充 `inline` driver 作为本地/测试适配器。`packages/server/src/modules/rag/queue/document-processing.queue.ts` 现仅保留文档处理领域语义；组合根继续注册 dispatcher，但 `rag.controller.ts`、`processing-recovery.service.ts` 等调用点已改为通过 `@core/document-processing` 端口分发，不再依赖 BullMQ 具体实现。
-
-  | 中 | 引入统一的错误重试策略 | 外部服务故障容错 |
-  | ~~中~~ | ~~队列系统抽象（当前绑定 BullMQ）~~ ✅ | 可替换性 |
-  | 中 | 缓存系统抽象（当前绑定 Redis） | 本地开发友好 |
-  | 低 | Feature Flag 服务化（支持用户/KB级灰度） | 灵活发布 |
-
 - **补记（2026-04-03）**: 已新增 `packages/server/src/core/queue/*` 最小队列驱动抽象，BullMQ 实现下沉到 `drivers/bullmq/*`，并补充 `inline` driver 作为本地/测试适配器。`packages/server/src/modules/rag/queue/document-processing.queue.ts` 现仅保留文档处理领域语义；组合根继续注册 dispatcher，但 `rag.controller.ts`、`processing-recovery.service.ts` 等调用点已改为通过 `@core/document-processing` 端口分发，不再依赖 BullMQ 具体实现。
-  > > > > > > > refactor/queue-driver-abstraction
+- **补记（2026-04-04）**: 已在服务端落地缓存、速率限制与协调锁的 driver 化边界。`packages/server/src/core/cache/*` 现支持 `redis` / `memory`，`packages/server/src/core/rate-limit/*` 支持 `redis` / `memory` / `noop`，`packages/server/src/core/coordination/*` 支持 `redis` / `memory`；并新增 `CACHE_DRIVER`、`RATE_LIMIT_DRIVER`、`LOCK_DRIVER` 与 Redis 条件校验。启动与 health readiness 已按启用能力判断 Redis 是否必需，本地可通过 `CACHE_DRIVER=memory`、`QUEUE_DRIVER=inline`、`RATE_LIMIT_DRIVER=noop`、`LOCK_DRIVER=memory` 无 Redis 启动。
 
 ---
 

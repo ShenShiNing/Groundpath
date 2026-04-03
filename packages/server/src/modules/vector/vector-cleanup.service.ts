@@ -1,52 +1,16 @@
-import { randomUUID } from 'node:crypto';
 import { vectorConfig } from '@config/env';
-import { buildRedisKey, getRedisClient } from '@core/redis';
+import { getCoordinationDriver, type CoordinationLock } from '@core/coordination';
 import { createLogger } from '@core/logger';
 import { getQdrantClient } from './qdrant.client';
 import { vectorRepository } from './vector.repository';
 
 const logger = createLogger('vector-cleanup.service');
-const CLEANUP_LOCK_KEY = buildRedisKey('vector:cleanup:lock');
-const RELEASE_LOCK_SCRIPT = `
-if redis.call('get', KEYS[1]) == ARGV[1] then
-  return redis.call('del', KEYS[1])
-end
-return 0
-`;
+const CLEANUP_LOCK_KEY = 'vector:cleanup:lock';
 
 export interface VectorCleanupResult {
   collectionsProcessed: number;
   totalPurged: number;
   errors: number;
-}
-
-interface CleanupLock {
-  key: string;
-  token: string;
-}
-
-async function acquireCleanupLock(): Promise<CleanupLock | null> {
-  const token = randomUUID();
-  const result = await getRedisClient().set(
-    CLEANUP_LOCK_KEY,
-    token,
-    'PX',
-    vectorConfig.cleanupLockTtlMs,
-    'NX'
-  );
-
-  if (result !== 'OK') {
-    return null;
-  }
-
-  return {
-    key: CLEANUP_LOCK_KEY,
-    token,
-  };
-}
-
-async function releaseCleanupLock(lock: CleanupLock): Promise<void> {
-  await getRedisClient().eval(RELEASE_LOCK_SCRIPT, 1, lock.key, lock.token);
 }
 
 export const vectorCleanupService = {
@@ -62,10 +26,13 @@ export const vectorCleanupService = {
       totalPurged: 0,
       errors: 0,
     };
-    let lock: CleanupLock | null = null;
+    let lock: CoordinationLock | null = null;
 
     try {
-      lock = await acquireCleanupLock();
+      lock = await getCoordinationDriver().acquireLock(
+        CLEANUP_LOCK_KEY,
+        vectorConfig.cleanupLockTtlMs
+      );
       if (!lock) {
         logger.info('Skipping vector cleanup because another cleanup run already holds the lock');
         return result;
@@ -136,7 +103,7 @@ export const vectorCleanupService = {
     } finally {
       if (lock) {
         try {
-          await releaseCleanupLock(lock);
+          await lock.release();
         } catch (error) {
           logger.warn({ error }, 'Failed to release vector cleanup lock');
         }

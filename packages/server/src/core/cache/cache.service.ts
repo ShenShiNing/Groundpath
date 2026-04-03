@@ -1,5 +1,5 @@
 import { createLogger } from '@core/logger';
-import { buildRedisKey, getRedisClient } from '@core/redis';
+import { getCacheDriver } from './driver';
 
 const logger = createLogger('cache.service');
 
@@ -27,16 +27,11 @@ class CacheService {
   }
 
   private key(key: string): string {
-    return buildRedisKey(`${this.namespace}:${key}`);
-  }
-
-  private pattern(prefix: string): string {
-    return buildRedisKey(`${this.namespace}:${prefix}*`);
+    return `${this.namespace}:${key}`;
   }
 
   async get<T>(key: string): Promise<T | null> {
-    const redis = getRedisClient();
-    const value = await redis.get(this.key(key));
+    const value = await getCacheDriver().get(this.key(key));
 
     if (!value) {
       this.stats.misses++;
@@ -54,40 +49,16 @@ class CacheService {
   }
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    const redis = getRedisClient();
     const ttl = ttlSeconds ?? this.defaultTtl;
-    await redis.set(this.key(key), JSON.stringify(value), 'EX', ttl);
+    await getCacheDriver().set(this.key(key), JSON.stringify(value), ttl);
   }
 
   async delete(key: string): Promise<boolean> {
-    const redis = getRedisClient();
-    const deleted = await redis.del(this.key(key));
-    return deleted > 0;
+    return getCacheDriver().delete(this.key(key));
   }
 
   async deleteByPrefix(prefix: string): Promise<number> {
-    const redis = getRedisClient();
-    let totalDeleted = 0;
-    let cursor = '0';
-
-    do {
-      const [nextCursor, keys] = await redis.scan(
-        cursor,
-        'MATCH',
-        this.pattern(prefix),
-        'COUNT',
-        200
-      );
-      cursor = nextCursor;
-
-      if (keys.length === 0) {
-        continue;
-      }
-
-      totalDeleted += await redis.del(...keys);
-    } while (cursor !== '0');
-
-    return totalDeleted;
+    return getCacheDriver().deleteByPrefix(this.key(prefix));
   }
 
   async clear(): Promise<void> {
@@ -95,17 +66,7 @@ class CacheService {
   }
 
   async getStats(): Promise<CacheStats & { hitRate: string }> {
-    let size = 0;
-    let cursor = '0';
-    const redis = getRedisClient();
-
-    do {
-      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', this.pattern(''), 'COUNT', 200);
-      cursor = nextCursor;
-      size += keys.length;
-    } while (cursor !== '0');
-
-    this.stats.size = size;
+    this.stats.size = await getCacheDriver().countByPrefix(this.key(''));
     const total = this.stats.hits + this.stats.misses;
     const hitRate = total > 0 ? ((this.stats.hits / total) * 100).toFixed(2) + '%' : '0%';
 
@@ -149,4 +110,5 @@ export const shortCache = new CacheService({
   namespace: 'short-cache',
 });
 
+export type { CacheOptions as CacheServiceOptions };
 export { CacheService };

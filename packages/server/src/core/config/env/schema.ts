@@ -20,8 +20,12 @@ const databaseSchema = z.object({
 });
 
 const redisSchema = z.object({
-  REDIS_URL: z.string().min(1),
+  REDIS_URL: z.string().default(''),
   REDIS_PREFIX: z.string().default(BRAND_CONFIG.redisPrefix),
+});
+
+const cacheSchema = z.object({
+  CACHE_DRIVER: z.enum(['redis', 'memory']).default('redis'),
 });
 
 const authSchema = z.object({
@@ -103,6 +107,14 @@ const queueSchema = z.object({
   QUEUE_CONCURRENCY: z.coerce.number().int().min(1).max(20).default(3),
 });
 
+const rateLimitSchema = z.object({
+  RATE_LIMIT_DRIVER: z.enum(['redis', 'memory', 'noop']).default('redis'),
+});
+
+const coordinationSchema = z.object({
+  LOCK_DRIVER: z.enum(['redis', 'memory']).default('redis'),
+});
+
 const backfillScheduleSchema = z.object({
   BACKFILL_SCHEDULE_CRON: z.string().default('0 2 * * *'),
 });
@@ -146,12 +158,15 @@ const featureFlagsSchema = z.object({
 export const envSchema = serverSchema
   .extend(databaseSchema.shape)
   .extend(redisSchema.shape)
+  .extend(cacheSchema.shape)
   .extend(authSchema.shape)
   .extend(emailSchema.shape)
   .extend(oauthSchema.shape)
   .extend(storageSchema.shape)
   .extend(documentScheduleSchema.shape)
   .extend(queueSchema.shape)
+  .extend(rateLimitSchema.shape)
+  .extend(coordinationSchema.shape)
   .extend(backfillScheduleSchema.shape)
   .extend(embeddingSchema.shape)
   .extend(vectorSchema.shape)

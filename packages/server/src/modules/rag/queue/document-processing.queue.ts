@@ -17,8 +17,9 @@ const logger = createLogger('document-processing.queue');
 
 export type DocumentProcessingWorkerHandle = QueueWorkerHandle;
 
-let documentProcessingQueue: QueueChannel<DocumentProcessingJobData> | null = null;
+// ==================== Queue ====================
 
+let documentProcessingQueue: QueueChannel<DocumentProcessingJobData> | null = null;
 function getDocumentProcessingQueueChannel(): QueueChannel<DocumentProcessingJobData> {
   if (!documentProcessingQueue) {
     documentProcessingQueue = getQueueDriver().createChannel<DocumentProcessingJobData>(

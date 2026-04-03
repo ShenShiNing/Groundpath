@@ -378,25 +378,24 @@ vi.mock('@modules/document/public/processing', () => ({
         ])
       );
     }),
-    listStaleProcessingCandidates: vi.fn(
-      async (input: { staleBefore: Date; limit: number }) =>
-        [...state.documents.values()]
-          .filter(
-            (doc) =>
-              doc.processingStatus === 'processing' &&
-              doc.processingStartedAt instanceof Date &&
-              (doc.processingStartedAt as Date) < input.staleBefore
-          )
-          .slice(0, input.limit)
-          .map((doc) => ({
-            id: doc.id as string,
-            userId: doc.userId as string,
-            knowledgeBaseId: doc.knowledgeBaseId as string,
-            title: 'Fixture Document',
-            currentVersion: doc.currentVersion as number,
-            publishGeneration: doc.publishGeneration as number,
-            processingStartedAt: doc.processingStartedAt as Date,
-          }))
+    listStaleProcessingCandidates: vi.fn(async (input: { staleBefore: Date; limit: number }) =>
+      [...state.documents.values()]
+        .filter(
+          (doc) =>
+            doc.processingStatus === 'processing' &&
+            doc.processingStartedAt instanceof Date &&
+            (doc.processingStartedAt as Date) < input.staleBefore
+        )
+        .slice(0, input.limit)
+        .map((doc) => ({
+          id: doc.id as string,
+          userId: doc.userId as string,
+          knowledgeBaseId: doc.knowledgeBaseId as string,
+          title: 'Fixture Document',
+          currentVersion: doc.currentVersion as number,
+          publishGeneration: doc.publishGeneration as number,
+          processingStartedAt: doc.processingStartedAt as Date,
+        }))
     ),
     recoverStaleProcessingCandidate: vi.fn(
       async (input: { documentId: string; staleBefore: Date }) => {

@@ -19,16 +19,20 @@ function redactRedisUrl(url: string): string {
   }
 }
 
-function normalizePrefix(prefix: string): string {
-  const trimmed = prefix.trim();
-  if (!trimmed) {
-    return '';
+export function requireRedisUrl(): string {
+  const url = redisConfig.url.trim();
+
+  if (!url) {
+    throw Errors.validation(
+      'REDIS_URL is required when Redis-backed cache, queue, rate limiting, or coordination is enabled.'
+    );
   }
-  return trimmed.endsWith(':') ? trimmed : `${trimmed}:`;
+
+  return url;
 }
 
 function createRedisClient(): Redis {
-  const client = new Redis(redisConfig.url, {
+  const client = new Redis(requireRedisUrl(), {
     lazyConnect: true,
     maxRetriesPerRequest: 1,
   });
@@ -49,7 +53,7 @@ export function getRedisClient(): Redis {
 
 export async function connectRedis(): Promise<void> {
   const client = getRedisClient();
-  const safeUrl = redactRedisUrl(redisConfig.url);
+  const safeUrl = redactRedisUrl(requireRedisUrl());
 
   try {
     if (client.status !== 'ready') {
@@ -79,8 +83,4 @@ export async function closeRedis(): Promise<void> {
 
   redisClient = null;
   logger.info('Redis connection closed');
-}
-
-export function buildRedisKey(key: string): string {
-  return `${normalizePrefix(redisConfig.prefix)}${key}`;
 }

@@ -1,10 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
-import {
-  getRealIntegrationDescribe,
-  loadRealIntegrationEnv,
-} from '../helpers/real-integration';
+import { getRealIntegrationDescribe, loadRealIntegrationEnv } from '../helpers/real-integration';
 
 const describeRealIntegration = getRealIntegrationDescribe('RUN_REAL_USER_UNIQUENESS_INTEGRATION');
 
@@ -56,10 +53,7 @@ describeRealIntegration('user soft-delete uniqueness real db integration', () =>
     Object.assign(process.env, envFromFile, {
       NODE_ENV: 'test',
       DATABASE_URL: databaseUrl,
-      REDIS_URL:
-        envFromFile.TEST_REDIS_URL ??
-        envFromFile.REDIS_URL ??
-        'redis://127.0.0.1:6379',
+      REDIS_URL: envFromFile.TEST_REDIS_URL ?? envFromFile.REDIS_URL ?? 'redis://127.0.0.1:6379',
       JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
       ENCRYPTION_KEY: 'test-encryption-key-at-least-32-chars',
       EMAIL_VERIFICATION_SECRET: 'test-email-verification-secret',

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { healthConfig } from '@config/env';
 import { db } from '@core/db';
 import { getRedisClient } from '@core/redis';
+import { isRedisRequired } from '@core/redis';
 import { getQdrantClient } from '@modules/vector/public/qdrant';
 
 export type HealthStatus = 'up' | 'down';
@@ -24,7 +25,7 @@ export interface LivenessReport {
 export interface ReadinessReport {
   status: ReadinessStatus;
   timestamp: string;
-  checks: Record<HealthDependencyName, HealthDependencyResult>;
+  checks: Partial<Record<HealthDependencyName, HealthDependencyResult>>;
 }
 
 interface HealthServiceDependencies {
@@ -34,6 +35,7 @@ interface HealthServiceDependencies {
   now: () => Date;
   uptimeSeconds: () => number;
   readinessTimeoutMs: number;
+  isRedisRequired: () => boolean;
 }
 
 const defaultDependencies: HealthServiceDependencies = {
@@ -49,6 +51,7 @@ const defaultDependencies: HealthServiceDependencies = {
   now: () => new Date(),
   uptimeSeconds: () => process.uptime(),
   readinessTimeoutMs: healthConfig.readinessTimeoutMs,
+  isRedisRequired,
 };
 
 function toErrorMessage(error: unknown): string {
@@ -129,13 +132,15 @@ export function createHealthService(
       };
     },
     async getReadiness() {
-      const checks = Object.fromEntries(
-        await Promise.all([
-          runDependencyCheck('database', deps.readinessTimeoutMs, deps.pingDatabase),
-          runDependencyCheck('redis', deps.readinessTimeoutMs, deps.pingRedis),
-          runDependencyCheck('qdrant', deps.readinessTimeoutMs, deps.pingQdrant),
-        ])
-      ) as ReadinessReport['checks'];
+      const checkTasks = [
+        runDependencyCheck('database', deps.readinessTimeoutMs, deps.pingDatabase),
+        ...(deps.isRedisRequired()
+          ? [runDependencyCheck('redis', deps.readinessTimeoutMs, deps.pingRedis)]
+          : []),
+        runDependencyCheck('qdrant', deps.readinessTimeoutMs, deps.pingQdrant),
+      ];
+
+      const checks = Object.fromEntries(await Promise.all(checkTasks)) as ReadinessReport['checks'];
 
       const status = Object.values(checks).every((check) => check.status === 'up')
         ? 'ready'

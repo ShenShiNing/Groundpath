@@ -7,7 +7,7 @@ import { logger } from '@core/logger';
 import { systemLogger } from '@core/logger/system-logger';
 import { initializeScheduler } from '@core/scheduler';
 import { closeDatabase } from '@core/db';
-import { closeRedis, connectRedis } from '@core/redis';
+import { closeRedis, connectRedis, isRedisRequired } from '@core/redis';
 import { createShutdownHandler } from '@core/server/shutdown';
 import {
   startDocumentProcessingWorker,
@@ -59,7 +59,10 @@ function onServerStart(): void {
  * Start the HTTP server
  */
 async function startServer(): Promise<void> {
-  await connectRedis();
+  const redisRequired = isRedisRequired();
+  if (redisRequired) {
+    await connectRedis();
+  }
 
   const app = createApp();
   const server = createServer(app);
@@ -71,7 +74,7 @@ async function startServer(): Promise<void> {
   // Register shutdown handlers
   const shutdown = createShutdownHandler(server, {
     closeDatabase,
-    closeRedis,
+    closeRedis: redisRequired ? closeRedis : async () => undefined,
     closeWorkers: stopDocumentProcessingWorker,
     logger,
     shutdownTimeout: serverConfig.shutdownTimeout,
