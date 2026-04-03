@@ -5,8 +5,13 @@ import { startTestServer, stopTestServer } from './helpers/e2e.helpers';
 
 const VALID_KB_ID = '123e4567-e89b-12d3-a456-426614174000';
 
-const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock } = vi.hoisted(
-  () => {
+const {
+  authenticateMock,
+  createSanitizeMiddlewareMock,
+  requireDocumentOwnershipMock,
+  passthroughMiddleware,
+  documentControllerMock,
+} = vi.hoisted(() => {
     const authenticate: RequestHandler = (req, res, next) => {
       if (req.headers.authorization === 'Bearer valid-access') {
         req.user = {
@@ -27,6 +32,7 @@ const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock }
     };
 
     const passthroughSanitize: RequestHandler = (_req, _res, next) => next();
+    const passthroughOwnership: RequestHandler = (_req, _res, next) => next();
 
     // In-memory document store for journey tests
     const docs = new Map<string, { id: string; title: string; deleted: boolean }>();
@@ -35,6 +41,8 @@ const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock }
     return {
       authenticateMock: vi.fn(authenticate),
       createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
+      requireDocumentOwnershipMock: vi.fn(() => passthroughOwnership),
+      passthroughMiddleware: passthroughOwnership,
       documentControllerMock: {
         upload: vi.fn((_req, res) => {
           docCounter++;
@@ -114,8 +122,7 @@ const { authenticateMock, createSanitizeMiddlewareMock, documentControllerMock }
         }),
       },
     };
-  }
-);
+  });
 
 vi.mock('@config/env', async () => {
   const actual = await vi.importActual<typeof import('@config/env')>('@config/env');
@@ -132,12 +139,19 @@ vi.mock('@modules/document/controllers/document.controller', () => ({
   documentController: documentControllerMock,
 }));
 
+vi.mock('@modules/document/public/ownership', () => ({
+  requireDocumentOwnership: requireDocumentOwnershipMock,
+}));
+
 vi.mock('@core/middleware', async () => {
   const actual = await vi.importActual<typeof import('@core/middleware')>('@core/middleware');
   return {
     ...actual,
     authenticate: authenticateMock,
     createSanitizeMiddleware: createSanitizeMiddlewareMock,
+    generalRateLimiter: passthroughMiddleware,
+    trashMutationRateLimiter: passthroughMiddleware,
+    trashClearRateLimiter: passthroughMiddleware,
   };
 });
 
