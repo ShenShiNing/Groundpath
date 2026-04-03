@@ -10,3 +10,8 @@ export {
   type DocumentProcessingLifecycleListener,
   type DocumentProcessingReason,
 } from '@core/document-processing';
+export {
+  documentProcessingService,
+  type MarkDocumentProcessingFailedInput,
+  type RecoverStaleProcessingCandidateInput,
+} from '../services/document-processing.service';

@@ -368,6 +368,32 @@ vi.mock('@modules/document/public/repositories', () => ({
   },
 }));
 
+vi.mock('@modules/document/public/processing', () => ({
+  documentProcessingService: {
+    recoverStaleProcessingCandidate: vi.fn(
+      async (input: { documentId: string; staleBefore: Date }) => {
+        const current = state.documents.get(input.documentId);
+        if (
+          !current ||
+          current.processingStatus !== 'processing' ||
+          !(current.processingStartedAt instanceof Date) ||
+          !((current.processingStartedAt as Date) < input.staleBefore)
+        ) {
+          return false;
+        }
+        state.documents.set(input.documentId, {
+          ...current,
+          processingStatus: 'pending',
+          processingError: null,
+          processingStartedAt: null,
+          publishGeneration: (current.publishGeneration as number) + 1,
+        });
+        return true;
+      }
+    ),
+  },
+}));
+
 vi.mock('@modules/rag/services/processing.service', () => ({
   processingService: {
     releaseProcessingLock: vi.fn(),

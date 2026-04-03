@@ -1,6 +1,7 @@
 import { documentConfig } from '@config/env';
 import { createLogger } from '@core/logger';
 import { documentRepository } from '@modules/document/public/repositories';
+import { documentProcessingService } from '@modules/document/public/processing';
 import { enqueueDocumentProcessing } from '../queue/document-processing.queue';
 import { processingService } from './processing.service';
 
@@ -40,10 +41,10 @@ export const processingRecoveryService = {
 
     for (const document of staleDocuments) {
       try {
-        const recovered = await documentRepository.resetStaleProcessingDocument(
-          document.id,
-          staleBefore
-        );
+        const recovered = await documentProcessingService.recoverStaleProcessingCandidate({
+          documentId: document.id,
+          staleBefore,
+        });
 
         if (!recovered) {
           skippedDocumentIds.push(document.id);

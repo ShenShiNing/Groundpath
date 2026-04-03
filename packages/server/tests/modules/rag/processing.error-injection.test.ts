@@ -14,6 +14,7 @@ const {
   documentRepositoryMock,
   documentVersionRepositoryMock,
   documentChunkRepositoryMock,
+  documentProcessingServiceMock,
   knowledgeBaseServiceMock,
   vectorRepositoryMock,
   embeddingProviderMock,
@@ -30,8 +31,6 @@ const {
 } = vi.hoisted(() => ({
   documentRepositoryMock: {
     findById: vi.fn(),
-    updateProcessingStatus: vi.fn(),
-    updateProcessingStatusWithPublishGeneration: vi.fn(),
   },
   documentVersionRepositoryMock: {
     findByDocumentAndVersion: vi.fn(),
@@ -42,6 +41,10 @@ const {
     createMany: vi.fn(),
     deleteByIds: vi.fn(),
     deleteByDocumentId: vi.fn(),
+  },
+  documentProcessingServiceMock: {
+    markProcessingPending: vi.fn(),
+    markProcessingFailed: vi.fn(),
   },
   knowledgeBaseServiceMock: {
     getEmbeddingConfig: vi.fn(),
@@ -103,6 +106,10 @@ vi.mock('@modules/document/repositories/document-version.repository', () => ({
 
 vi.mock('@modules/document/repositories/document-chunk.repository', () => ({
   documentChunkRepository: documentChunkRepositoryMock,
+}));
+
+vi.mock('@modules/document/public/processing', () => ({
+  documentProcessingService: documentProcessingServiceMock,
 }));
 
 vi.mock('@modules/knowledge-base/public/management', () => ({
@@ -275,12 +282,11 @@ describe('RAG Processing Error Injection', () => {
     await processingService.processDocument(docId, userId);
 
     // Should mark as failed
-    expect(documentRepositoryMock.updateProcessingStatusWithPublishGeneration).toHaveBeenCalledWith(
-      docId,
-      1,
-      'failed',
-      expect.stringContaining('Embedding API timeout')
-    );
+    expect(documentProcessingServiceMock.markProcessingFailed).toHaveBeenCalledWith({
+      documentId: docId,
+      expectedPublishGeneration: 1,
+      message: expect.stringContaining('Embedding API timeout'),
+    });
   });
 
   it('should mark as failed when Qdrant upsert fails', async () => {
@@ -295,11 +301,10 @@ describe('RAG Processing Error Injection', () => {
 
     await processingService.processDocument(docId, userId);
 
-    expect(documentRepositoryMock.updateProcessingStatus).toHaveBeenCalledWith(
-      docId,
-      'failed',
-      'Vector storage failed - please retry processing'
-    );
+    expect(documentProcessingServiceMock.markProcessingFailed).toHaveBeenCalledWith({
+      documentId: docId,
+      message: 'Vector storage failed - please retry processing',
+    });
   });
 
   it('should keep prior build artifacts immutable after successful publish', async () => {
@@ -314,7 +319,7 @@ describe('RAG Processing Error Injection', () => {
 
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+    documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId);
 
@@ -351,18 +356,14 @@ describe('RAG Processing Error Injection', () => {
       currentVersion: 2,
       publishGeneration: 1,
     });
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+    documentProcessingServiceMock.markProcessingPending.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId, {
       targetDocumentVersion: 1,
       reason: 'edit',
     });
 
-    expect(documentRepositoryMock.updateProcessingStatus).toHaveBeenCalledWith(
-      docId,
-      'pending',
-      null
-    );
+    expect(documentProcessingServiceMock.markProcessingPending).toHaveBeenCalledWith(docId);
     expect(documentVersionRepositoryMock.findByDocumentAndVersion).not.toHaveBeenCalled();
     expect(chunkingServiceMock.chunkText).not.toHaveBeenCalled();
     expect(documentIndexServiceMock.startBuild).not.toHaveBeenCalled();
@@ -387,7 +388,7 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+    documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId, {
       targetDocumentVersion: 1,
@@ -440,7 +441,7 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+    documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId);
 
@@ -510,7 +511,6 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
     await processingService.processDocument(docId, userId);
 
@@ -567,7 +567,6 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
     await processingService.processDocument(docId, userId);
 
@@ -623,7 +622,6 @@ describe('RAG Processing Error Injection', () => {
     vectorRepositoryMock.upsert.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
     documentChunkRepositoryMock.createMany.mockResolvedValue(undefined);
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
 
     await processingService.processDocument(docId, userId);
 
@@ -648,11 +646,11 @@ describe('RAG Processing Error Injection', () => {
 
     await processingService.processDocument(docId, userId);
 
-    expect(documentRepositoryMock.updateProcessingStatus).toHaveBeenCalledWith(
-      docId,
-      'failed',
-      expect.stringContaining('Document not found')
-    );
+    expect(documentProcessingServiceMock.markProcessingFailed).toHaveBeenCalledWith({
+      documentId: docId,
+      expectedPublishGeneration: undefined,
+      message: expect.stringContaining('Document not found'),
+    });
   });
 
   it('should handle no text content gracefully', async () => {
@@ -661,7 +659,7 @@ describe('RAG Processing Error Injection', () => {
     });
 
     withTransactionMock.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => cb({}));
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+    documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
     chunkingServiceMock.chunkText.mockReturnValue([]);
 
     await processingService.processDocument(docId, userId);
@@ -681,7 +679,7 @@ describe('RAG Processing Error Injection', () => {
 
   it('should handle double error (processing fails + status update fails)', async () => {
     documentRepositoryMock.findById.mockRejectedValue(new Error('DB connection lost'));
-    documentRepositoryMock.updateProcessingStatus.mockRejectedValue(
+    documentProcessingServiceMock.markProcessingFailed.mockRejectedValue(
       new Error('Still can not connect')
     );
 
@@ -706,7 +704,7 @@ describe('RAG Processing Error Injection', () => {
       throw new Error('Chunking crashed');
     });
     documentIndexServiceMock.failBuild.mockRejectedValue(new Error('Index cleanup failed'));
-    documentRepositoryMock.updateProcessingStatusWithPublishGeneration.mockRejectedValue(
+    documentProcessingServiceMock.markProcessingFailed.mockRejectedValue(
       new Error('Status cleanup failed')
     );
 
@@ -716,12 +714,11 @@ describe('RAG Processing Error Injection', () => {
       'idx-build-1',
       'Chunking crashed'
     );
-    expect(documentRepositoryMock.updateProcessingStatusWithPublishGeneration).toHaveBeenCalledWith(
-      docId,
-      1,
-      'failed',
-      'Chunking crashed'
-    );
+    expect(documentProcessingServiceMock.markProcessingFailed).toHaveBeenCalledWith({
+      documentId: docId,
+      expectedPublishGeneration: 1,
+      message: 'Chunking crashed',
+    });
     expect(loggerMock.error).toHaveBeenCalledWith(
       expect.objectContaining({
         documentId: docId,
@@ -740,7 +737,7 @@ describe('RAG Processing Error Injection', () => {
 
   it('should always release lock even on error', async () => {
     documentRepositoryMock.findById.mockRejectedValue(new Error('Crash'));
-    documentRepositoryMock.updateProcessingStatus.mockResolvedValue(undefined);
+    documentProcessingServiceMock.markProcessingFailed.mockResolvedValue(true);
 
     await processingService.processDocument(docId, userId);
 

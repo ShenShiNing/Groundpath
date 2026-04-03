@@ -3,6 +3,7 @@ import { documentConfig } from '@config/env';
 import type { EmbeddingProviderType } from '@modules/embedding/public/providers';
 import { getEmbeddingProviderByType } from '@modules/embedding/public/providers';
 import { documentChunkRepository, documentRepository } from '@modules/document/public/repositories';
+import { documentProcessingService } from '@modules/document/public/processing';
 import { documentIndexService } from '@modules/document-index/public/indexing';
 import type { ParsedDocumentStructure } from '@modules/document-index/public/parsers';
 import { chunkingService } from './chunking.service';
@@ -21,7 +22,7 @@ import type {
 const logger = createLogger('processing.service');
 
 export async function resetToPending(documentId: string): Promise<void> {
-  await documentRepository.updateProcessingStatus(documentId, 'pending', null);
+  await documentProcessingService.markProcessingPending(documentId);
 }
 
 export async function isStaleTargetVersion(
@@ -199,11 +200,10 @@ export async function upsertVectorPointsOrFail(input: {
       { documentId: input.documentId, collectionName: input.collectionName, error },
       'Qdrant upsert failed - aborting before MySQL changes'
     );
-    await documentRepository.updateProcessingStatus(
-      input.documentId,
-      'failed',
-      'Vector storage failed - please retry processing'
-    );
+    await documentProcessingService.markProcessingFailed({
+      documentId: input.documentId,
+      message: 'Vector storage failed - please retry processing',
+    });
     throw error;
   }
 }
@@ -323,14 +323,5 @@ export async function markProcessingFailedWithFence(input: {
   expectedPublishGeneration?: number;
   message: string;
 }): Promise<boolean> {
-  if (input.expectedPublishGeneration === undefined) {
-    return documentRepository.updateProcessingStatus(input.documentId, 'failed', input.message);
-  }
-
-  return documentRepository.updateProcessingStatusWithPublishGeneration(
-    input.documentId,
-    input.expectedPublishGeneration,
-    'failed',
-    input.message
-  );
+  return documentProcessingService.markProcessingFailed(input);
 }
