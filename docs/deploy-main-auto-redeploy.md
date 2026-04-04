@@ -96,7 +96,45 @@ cp deploy/hysteria/client.yaml.example deploy/hysteria/client.yaml
 
 并把根目录 `.env.production` 里的 `ENABLE_HYSTERIA_PROXY=true`。
 
-### 2. 配置 OpenResty 蓝绿切换点
+### 2. 配置源站 HTTPS 证书
+
+如果 `groundpath.one` 的 DNS 在 Cloudflare 中是橙云代理，并且 SSL/TLS 模式使用 `Full` 或 `Full (strict)`，那 Cloudflare 会先和你的源站 `443` 做 TLS 握手。当前仓库的蓝绿部署只负责把应用切到 `127.0.0.1:18081/18082`，不会替你签发或续期源站证书。
+
+这意味着:
+
+- 应用健康检查通过，不代表公网 HTTPS 已经可用
+- 源站 `443` 没有可用证书、证书链不完整、私钥不匹配，或者 OpenResty 根本没监听 `443`，Cloudflare 都可能直接返回 `525 SSL handshake failed`
+
+至少完成下面一项:
+
+- 在 1Panel 的站点设置中启用 HTTPS，并为 `groundpath.one` 和 `www.groundpath.one` 申请/安装证书
+- 或者手动把证书和私钥放到:
+
+```bash
+mkdir -p /www/sites/groundpath.one/ssl
+# fullchain.pem / privkey.pem 的文件名需要和站点配置保持一致
+```
+
+仓库里的 [deploy/groundpath.one.openresty.conf](../deploy/groundpath.one.openresty.conf) 默认读取:
+
+- `/www/sites/groundpath.one/ssl/fullchain.pem`
+- `/www/sites/groundpath.one/ssl/privkey.pem`
+
+配置完证书后，先在生产机验证 OpenResty 配置，再 reload:
+
+```bash
+openresty -t
+openresty -s reload
+```
+
+如果你想快速确认是不是这个问题，最直接的检查是:
+
+```bash
+ss -lntp | grep ':443'
+openssl s_client -connect 127.0.0.1:443 -servername groundpath.one </dev/null
+```
+
+### 3. 配置 OpenResty 蓝绿切换点
 
 仓库里的 [deploy/groundpath.one.openresty.conf](../deploy/groundpath.one.openresty.conf) 已经改成通过 include 文件决定当前 upstream。
 
@@ -127,7 +165,7 @@ location / {
 2. `.env.production`
 3. `.env`
 
-### 3. 首次引导基础设施
+### 4. 首次引导基础设施
 
 ```bash
 cd /opt/groundpath
