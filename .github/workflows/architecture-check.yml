@@ -55,12 +55,12 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.server
+          file: ./packages/server/Dockerfile
           push: false
 
       - name: Build client image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile.client
+          file: ./packages/client/Dockerfile
           push: false

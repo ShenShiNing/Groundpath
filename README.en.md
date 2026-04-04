@@ -172,6 +172,7 @@ Docker Compose notes:
 - `mysql`, `redis`, `qdrant`, and `server` stay on the internal Compose network and are not published to the host
 - `client` is the only host-facing entrypoint and acts as the reverse proxy
 - The boot flow runs database migrations first and starts `server` only after the migration job completes successfully
+- `packages/server/Dockerfile` and `packages/client/Dockerfile` live with their services; the `docker/` directory only stores infrastructure assets such as the Nginx template
 
 ### Option B: Local Development
 
@@ -249,9 +250,11 @@ See [AGENTS.md](./AGENTS.md) and [docs/architecture-guardrails.md](./docs/archit
 ```text
 .
 ├─ packages/
-│  ├─ client/   # React + Vite frontend
-│  ├─ server/   # Express + TypeScript backend
+│  ├─ client/   # React + Vite frontend (includes packages/client/Dockerfile)
+│  ├─ server/   # Express + TypeScript backend (includes packages/server/Dockerfile)
 │  └─ shared/   # Shared types, constants, and Zod contracts
+├─ docker/
+│  └─ nginx/    # Runtime infrastructure config such as the Nginx template
 ├─ docs/
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md
