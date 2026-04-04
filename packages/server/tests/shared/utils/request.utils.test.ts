@@ -22,6 +22,21 @@ describe('request.utils > getClientIp', () => {
     expect(getClientIp(req)).toBe('127.0.0.1');
   });
 
+  it('should prefer forwarded public ip when trust proxy is enabled', () => {
+    const req = {
+      ip: '172.20.0.2',
+      headers: {
+        'x-forwarded-for': '198.51.100.60, 172.20.0.1',
+      },
+      app: {
+        get: (key: string) => (key === 'trust proxy' ? true : undefined),
+      },
+      socket: { remoteAddress: '172.20.0.3' },
+    } as Request;
+
+    expect(getClientIp(req)).toBe('198.51.100.60');
+  });
+
   it('should return null when both req.ip and socket.remoteAddress are missing', () => {
     const req = {
       ip: undefined,
