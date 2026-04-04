@@ -8,7 +8,7 @@ describe('request.utils > getClientIp', () => {
     const req = {
       ip: '203.0.113.10',
       socket: { remoteAddress: '127.0.0.1' },
-    } as Request;
+    } as unknown as Request;
 
     expect(getClientIp(req)).toBe('203.0.113.10');
   });
