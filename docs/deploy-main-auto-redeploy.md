@@ -57,6 +57,11 @@
 
 说明:
 
+- `Deploy Main` job 绑定了 `environment: production`
+- 如果你使用 environment secrets，请在 `Settings -> Environments -> production -> Secrets and variables -> Actions` 中配置
+- 如果你使用 repository secrets，也可以直接在仓库 `Settings -> Secrets and variables -> Actions` 中配置
+- 工作流现在会在 SSH 之前先做预检；缺少 `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_PATH` / `DEPLOY_SSH_PRIVATE_KEY` 时，会直接列出缺失项
+- `GHCR_READ_USERNAME` 和 `GHCR_READ_TOKEN` 需要成对配置；若镜像公开，可以两者都不填
 - 生产机自身也必须能 `git fetch` / `git pull` 这个仓库
 - 如果仓库是私有的，给生产机配置只读 deploy key 或只读 PAT
 
