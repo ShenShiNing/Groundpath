@@ -12,117 +12,117 @@ const {
   passthroughMiddleware,
   documentControllerMock,
 } = vi.hoisted(() => {
-    const authenticate: RequestHandler = (req, res, next) => {
-      if (req.headers.authorization === 'Bearer valid-access') {
-        req.user = {
-          sub: 'user-1',
-          sid: 'sid-1',
-          email: 'user@example.com',
-          username: 'user1',
-          status: 'active' as const,
-          emailVerified: true,
-        };
-        next();
-        return;
-      }
-      res.status(401).json({
-        success: false,
-        error: { code: 'UNAUTHORIZED', message: 'Missing or invalid access token' },
-      });
-    };
+  const authenticate: RequestHandler = (req, res, next) => {
+    if (req.headers.authorization === 'Bearer valid-access') {
+      req.user = {
+        sub: 'user-1',
+        sid: 'sid-1',
+        email: 'user@example.com',
+        username: 'user1',
+        status: 'active' as const,
+        emailVerified: true,
+      };
+      next();
+      return;
+    }
+    res.status(401).json({
+      success: false,
+      error: { code: 'UNAUTHORIZED', message: 'Missing or invalid access token' },
+    });
+  };
 
-    const passthroughSanitize: RequestHandler = (_req, _res, next) => next();
-    const passthroughOwnership: RequestHandler = (_req, _res, next) => next();
+  const passthroughSanitize: RequestHandler = (_req, _res, next) => next();
+  const passthroughOwnership: RequestHandler = (_req, _res, next) => next();
 
-    // In-memory document store for journey tests
-    const docs = new Map<string, { id: string; title: string; deleted: boolean }>();
-    let docCounter = 0;
+  // In-memory document store for journey tests
+  const docs = new Map<string, { id: string; title: string; deleted: boolean }>();
+  let docCounter = 0;
 
-    return {
-      authenticateMock: vi.fn(authenticate),
-      createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
-      requireDocumentOwnershipMock: vi.fn(() => passthroughOwnership),
-      passthroughMiddleware: passthroughOwnership,
-      documentControllerMock: {
-        upload: vi.fn((_req, res) => {
-          docCounter++;
-          const doc = { id: `doc-${docCounter}`, title: `Document ${docCounter}`, deleted: false };
-          docs.set(doc.id, doc);
-          res.status(201).json({ success: true, data: { document: doc } });
-        }),
-        list: vi.fn((_req, res) => {
-          const items = Array.from(docs.values()).filter((d) => !d.deleted);
-          res.status(200).json({
-            success: true,
-            data: { items, pagination: { page: 1, pageSize: 20, total: items.length } },
-          });
-        }),
-        getById: vi.fn((req, res) => {
-          const doc = docs.get(req.params.id);
-          if (!doc || doc.deleted) {
-            res
-              .status(404)
-              .json({ success: false, error: { code: 'NOT_FOUND', message: 'Not found' } });
-            return;
-          }
-          res.status(200).json({ success: true, data: { document: doc } });
-        }),
-        update: vi.fn((req, res) => {
-          res.status(200).json({ success: true, data: { document: { id: req.params.id } } });
-        }),
-        getContent: vi.fn((_req, res) => {
-          res.status(200).json({ success: true, data: { content: 'file content' } });
-        }),
-        saveContent: vi.fn((_req, res) => {
-          res.status(200).json({ success: true, data: { message: 'Saved' } });
-        }),
-        // Soft delete (move to trash)
-        delete: vi.fn((req, res) => {
-          const doc = docs.get(req.params.id);
-          if (doc) doc.deleted = true;
-          res.status(200).json({ success: true, data: { message: 'Moved to trash' } });
-        }),
-        // Trash operations
-        listTrash: vi.fn((_req, res) => {
-          const items = Array.from(docs.values()).filter((d) => d.deleted);
-          res.status(200).json({
-            success: true,
-            data: { items, pagination: { page: 1, pageSize: 20, total: items.length } },
-          });
-        }),
-        clearTrash: vi.fn((_req, res) => {
-          for (const [key, doc] of docs.entries()) {
-            if (doc.deleted) docs.delete(key);
-          }
-          res.status(200).json({ success: true, data: { message: 'Trash cleared' } });
-        }),
-        restore: vi.fn((req, res) => {
-          const doc = docs.get(req.params.id);
-          if (doc) doc.deleted = false;
-          res.status(200).json({ success: true, data: { document: doc } });
-        }),
-        permanentDelete: vi.fn((req, res) => {
-          docs.delete(req.params.id);
-          res.status(200).json({ success: true, data: { message: 'Permanently deleted' } });
-        }),
-        download: vi.fn((_req, res) => {
-          res.status(200).json({ success: true, data: { url: '/download' } });
-        }),
-        preview: vi.fn((_req, res) => {
-          res.status(200).json({ success: true, data: { url: '/preview' } });
-        }),
-        getVersionHistory: vi.fn((_req, res) => {
-          res.status(200).json({ success: true, data: { versions: [] } });
-        }),
-        uploadNewVersion: vi.fn((_req, res) => {
-          res.status(201).json({ success: true, data: { version: { id: 'v-2', version: 2 } } });
-        }),
-        restoreVersion: vi.fn((_req, res) => {
-          res.status(200).json({ success: true, data: { message: 'Version restored' } });
-        }),
-      },
-    };
-  });
+  return {
+    authenticateMock: vi.fn(authenticate),
+    createSanitizeMiddlewareMock: vi.fn(() => passthroughSanitize),
+    requireDocumentOwnershipMock: vi.fn(() => passthroughOwnership),
+    passthroughMiddleware: passthroughOwnership,
+    documentControllerMock: {
+      upload: vi.fn((_req, res) => {
+        docCounter++;
+        const doc = { id: `doc-${docCounter}`, title: `Document ${docCounter}`, deleted: false };
+        docs.set(doc.id, doc);
+        res.status(201).json({ success: true, data: { document: doc } });
+      }),
+      list: vi.fn((_req, res) => {
+        const items = Array.from(docs.values()).filter((d) => !d.deleted);
+        res.status(200).json({
+          success: true,
+          data: { items, pagination: { page: 1, pageSize: 20, total: items.length } },
+        });
+      }),
+      getById: vi.fn((req, res) => {
+        const doc = docs.get(req.params.id);
+        if (!doc || doc.deleted) {
+          res
+            .status(404)
+            .json({ success: false, error: { code: 'NOT_FOUND', message: 'Not found' } });
+          return;
+        }
+        res.status(200).json({ success: true, data: { document: doc } });
+      }),
+      update: vi.fn((req, res) => {
+        res.status(200).json({ success: true, data: { document: { id: req.params.id } } });
+      }),
+      getContent: vi.fn((_req, res) => {
+        res.status(200).json({ success: true, data: { content: 'file content' } });
+      }),
+      saveContent: vi.fn((_req, res) => {
+        res.status(200).json({ success: true, data: { message: 'Saved' } });
+      }),
+      // Soft delete (move to trash)
+      delete: vi.fn((req, res) => {
+        const doc = docs.get(req.params.id);
+        if (doc) doc.deleted = true;
+        res.status(200).json({ success: true, data: { message: 'Moved to trash' } });
+      }),
+      // Trash operations
+      listTrash: vi.fn((_req, res) => {
+        const items = Array.from(docs.values()).filter((d) => d.deleted);
+        res.status(200).json({
+          success: true,
+          data: { items, pagination: { page: 1, pageSize: 20, total: items.length } },
+        });
+      }),
+      clearTrash: vi.fn((_req, res) => {
+        for (const [key, doc] of docs.entries()) {
+          if (doc.deleted) docs.delete(key);
+        }
+        res.status(200).json({ success: true, data: { message: 'Trash cleared' } });
+      }),
+      restore: vi.fn((req, res) => {
+        const doc = docs.get(req.params.id);
+        if (doc) doc.deleted = false;
+        res.status(200).json({ success: true, data: { document: doc } });
+      }),
+      permanentDelete: vi.fn((req, res) => {
+        docs.delete(req.params.id);
+        res.status(200).json({ success: true, data: { message: 'Permanently deleted' } });
+      }),
+      download: vi.fn((_req, res) => {
+        res.status(200).json({ success: true, data: { url: '/download' } });
+      }),
+      preview: vi.fn((_req, res) => {
+        res.status(200).json({ success: true, data: { url: '/preview' } });
+      }),
+      getVersionHistory: vi.fn((_req, res) => {
+        res.status(200).json({ success: true, data: { versions: [] } });
+      }),
+      uploadNewVersion: vi.fn((_req, res) => {
+        res.status(201).json({ success: true, data: { version: { id: 'v-2', version: 2 } } });
+      }),
+      restoreVersion: vi.fn((_req, res) => {
+        res.status(200).json({ success: true, data: { message: 'Version restored' } });
+      }),
+    },
+  };
+});
 
 vi.mock('@config/env', async () => {
   const actual = await vi.importActual<typeof import('@config/env')>('@config/env');
