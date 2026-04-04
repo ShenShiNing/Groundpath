@@ -41,6 +41,45 @@ jobs:
       GHCR_USERNAME: ${{ secrets.GHCR_READ_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
     steps:
+      - name: Validate deployment configuration
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY_PRESENT: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY != '' && 'true' || '' }}
+        run: |
+          missing=()
+
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_PATH; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${DEPLOY_SSH_KEY_PRESENT:-}" != "true" ]; then
+            missing+=("DEPLOY_SSH_PRIVATE_KEY")
+          fi
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            {
+              echo "### Production deployment is not configured"
+              echo
+              echo "Missing required GitHub Actions secrets:"
+              for name in "${missing[@]}"; do
+                echo "- \`$name\`"
+              done
+              echo
+              echo "This job runs with \`environment: production\`."
+              echo "Configure the secrets in repository settings or in the \`production\` environment."
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            printf '::error title=Missing deployment secrets::Missing required secrets: %s. Configure them in repository settings or the production environment.\n' "$(IFS=', '; echo "${missing[*]}")"
+            exit 1
+          fi
+
+          if { [ -n "${GHCR_USERNAME:-}" ] && [ -z "${GHCR_TOKEN:-}" ]; } || { [ -z "${GHCR_USERNAME:-}" ] && [ -n "${GHCR_TOKEN:-}" ]; }; then
+            echo "::error title=Incomplete GHCR credentials::Set both GHCR_READ_USERNAME and GHCR_READ_TOKEN, or leave both unset when the GHCR images are public."
+            exit 1
+          fi
+
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.1
         with:
