@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { MutableRefObject, RefObject } from 'react';
+import type { RefObject } from 'react';
 import { ChatMessage } from '@/components/chat';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -21,8 +21,8 @@ export interface ChatPageConversationProps {
   onCopyMessage: (content: string, format: CopyFormat) => void;
   onRetry: (messageId: string) => void;
   onEditMessage: (messageId: string, content: string) => void | Promise<void>;
-  /** Mutable ref set by VirtualMessageList so the scroll-focus hook can ask the virtualizer to render a specific message */
-  ensureMessageVisibleRef?: MutableRefObject<((messageId: string) => void) | null>;
+  /** Ref set by VirtualMessageList so the scroll-focus hook can ask the virtualizer to render a specific message */
+  ensureMessageVisibleRef?: RefObject<((messageId: string) => void) | null>;
 }
 
 function canEditMessage(
