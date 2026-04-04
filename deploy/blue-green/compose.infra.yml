@@ -1,0 +1,73 @@
+networks:
+  groundpath-backplane:
+    name: groundpath-backplane
+
+volumes:
+  groundpath-mysql-data:
+    name: groundpath-mysql-data
+  groundpath-redis-data:
+    name: groundpath-redis-data
+  groundpath-qdrant-data:
+    name: groundpath-qdrant-data
+
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    command:
+      - mysqld
+      - --default-time-zone=+00:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-groundpath}
+      MYSQL_USER: ${MYSQL_USER:-groundpath}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      TZ: UTC
+    volumes:
+      - groundpath-mysql-data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mysqladmin ping -h 127.0.0.1 -u${MYSQL_USER:-groundpath} -p${MYSQL_PASSWORD:-groundpath}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - groundpath-backplane
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - groundpath-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - groundpath-backplane
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      - groundpath-qdrant-data:/qdrant/storage
+    networks:
+      - groundpath-backplane
+
+  hy2-client:
+    image: tobyxdd/hysteria:latest
+    restart: unless-stopped
+    profiles: ['proxy']
+    volumes:
+      - ../hysteria/client.yaml:/etc/hysteria.yaml:ro
+    command: ['client', '-c', '/etc/hysteria.yaml']
+    networks:
+      - groundpath-backplane

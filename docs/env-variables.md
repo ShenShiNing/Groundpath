@@ -2,9 +2,9 @@
 
 > 生成日期: 2026-04-04
 >
-> 来源: `packages/server/.env.example` + `packages/server/src/core/config/env/schema.ts`
+> 来源: 仓库根目录 `.env.example` + `packages/server/src/core/config/env/schema.ts`
 >
-> 注: 本文仅覆盖服务端运行时变量, 不包含根目录 Docker Compose 使用的 `CLIENT_PORT`、`MYSQL_ROOT_PASSWORD`、`MYSQL_DATABASE`、`MYSQL_USER`、`MYSQL_PASSWORD` 等编排变量。
+> 注: 本文仅覆盖服务端 schema 校验的运行时变量。根目录 `.env.example` 还包含 Docker Compose / 蓝绿部署使用的编排变量, 例如 `CLIENT_PORT`、`MYSQL_*`、`GHCR_NAMESPACE`。
 
 ## 架构概览
 

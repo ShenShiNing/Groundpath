@@ -76,7 +76,7 @@
 - `env/schema.ts` → `packages/server/src/core/config/env/schema.ts`
 - `env/configs.ts` → `packages/server/src/core/config/env/configs.ts`
 - `defaults/*.defaults.ts` → `packages/server/src/core/config/defaults/*.defaults.ts`
-- `.env.example` → `packages/server/.env.example`
+- `.env.example` → 仓库根目录 `.env.example`
 
 配置装配与对外出口也按下面理解：
 
@@ -86,7 +86,7 @@
 
 新增配置相关约定时，文档同步规则如下：
 
-1. 新增环境变量：同时更新 `packages/server/.env.example` 和 `packages/server/src/core/config/env/schema.ts`
+1. 新增环境变量：同时更新仓库根目录 `.env.example` 和 `packages/server/src/core/config/env/schema.ts`
 2. 新增业务默认值：写入 `packages/server/src/core/config/defaults/*.defaults.ts`
 3. 新增配置对象：在 `packages/server/src/core/config/env/configs.ts` 组装，并通过 `packages/server/src/core/config/env.ts` 对外暴露
 

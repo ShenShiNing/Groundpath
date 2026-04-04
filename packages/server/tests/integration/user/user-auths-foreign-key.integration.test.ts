@@ -95,7 +95,7 @@ describeRealIntegration('user_auths foreign key real db integration', () => {
 
     if (!databaseUrl) {
       throw new Error(
-        'Real user_auths FK integration test requires USER_AUTHS_FK_REAL_DATABASE_URL or packages/server/.env.development.local'
+        'Real user_auths FK integration test requires USER_AUTHS_FK_REAL_DATABASE_URL or repo root .env.development.local'
       );
     }
 

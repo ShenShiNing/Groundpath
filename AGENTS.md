@@ -28,10 +28,10 @@
 
 ## 配置与默认值
 
-- 基础设施（连接、密钥、provider 选择、feature flags、cron）→ `packages/server/src/core/config/env/schema.ts` + `packages/server/.env.example`。
+- 基础设施（连接、密钥、provider 选择、feature flags、cron）→ `packages/server/src/core/config/env/schema.ts` + 仓库根目录 `.env.example`。
 - 业务常量（批次大小、TTL、阈值、超时、重试策略）→ `packages/server/src/core/config/defaults/*.defaults.ts`，使用 `as const` 导出。
 - `packages/server/src/core/config/env/configs.ts` 合并 env 与 defaults；配置对象通过 `packages/server/src/core/config/env.ts` 对外暴露。
-- 新增环境变量：同步更新 `packages/server/.env.example` + Zod schema。新增业务默认值：写入对应的 `*.defaults.ts`。
+- 新增环境变量：同步更新仓库根目录 `.env.example` + Zod schema。新增业务默认值：写入对应的 `*.defaults.ts`。
 
 ## 测试
 

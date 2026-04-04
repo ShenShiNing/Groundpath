@@ -55,7 +55,7 @@ async function createWorkerIntegrationContext(options: WorkerIntegrationContextO
 
   if (!databaseUrl || !redisUrl) {
     throw new Error(
-      'Real worker integration test requires BACKFILL_REAL_DATABASE_URL/BACKFILL_REAL_REDIS_URL or packages/server/.env.development.local'
+      'Real worker integration test requires BACKFILL_REAL_DATABASE_URL/BACKFILL_REAL_REDIS_URL or repo root .env.development.local'
     );
   }
 

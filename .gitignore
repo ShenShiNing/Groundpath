@@ -26,7 +26,9 @@ coverage
 # Environment variables
 .env
 .env.*
+!.env.example
 deploy/hysteria/client.yaml
+deploy/blue-green/.runtime/
 
 # Cache files
 .cache

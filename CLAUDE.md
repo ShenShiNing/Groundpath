@@ -21,10 +21,10 @@
 
 ## Config & Defaults
 
-- Infrastructure (connections, secrets, providers, feature flags, crons) → `packages/server/src/core/config/env/schema.ts` + `packages/server/.env.example`.
+- Infrastructure (connections, secrets, providers, feature flags, crons) → `packages/server/src/core/config/env/schema.ts` + repository-root `.env.example`.
 - Business constants (batch sizes, TTLs, thresholds, timeouts, retries) → `packages/server/src/core/config/defaults/*.defaults.ts` as `as const`.
 - `packages/server/src/core/config/env/configs.ts` merges env and defaults; config objects are exposed through `packages/server/src/core/config/env.ts`.
-- New env vars: update `packages/server/.env.example` + Zod schema. New defaults: put them in the appropriate `*.defaults.ts`.
+- New env vars: update the repository-root `.env.example` + Zod schema. New defaults: put them in the appropriate `*.defaults.ts`.
 
 ## Testing
 

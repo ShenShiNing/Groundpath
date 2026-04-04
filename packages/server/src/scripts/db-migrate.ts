@@ -13,14 +13,14 @@ import mysql from 'mysql2/promise';
 
 // Load environment files (same logic as drizzle.config.ts)
 const nodeEnv = process.env.NODE_ENV || 'development';
-const envDir = path.resolve(import.meta.dirname, '../..');
+const envDir = path.resolve(import.meta.dirname, '../../../../');
 dotenv.config({ path: path.join(envDir, `.env.${nodeEnv}.local`) });
 dotenv.config({ path: path.join(envDir, `.env.${nodeEnv}`) });
 dotenv.config({ path: path.join(envDir, '.env') });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  console.error('❌ DATABASE_URL is not set. Please check your .env files.');
+  console.error('❌ DATABASE_URL is not set. Please check the root .env files.');
   process.exit(1);
 }
 

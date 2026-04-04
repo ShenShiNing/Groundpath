@@ -2,7 +2,8 @@ import path from 'path';
 import { defineProject } from 'vitest/config';
 import { loadEnv } from 'vite';
 
-const env = loadEnv('test', __dirname, '');
+const repoRoot = path.resolve(__dirname, '../..');
+const env = loadEnv('test', repoRoot, '');
 
 export default defineProject({
   resolve: {

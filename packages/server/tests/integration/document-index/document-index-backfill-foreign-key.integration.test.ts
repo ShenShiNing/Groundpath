@@ -309,7 +309,7 @@ describeRealIntegration('document index backfill foreign key real db integration
 
     if (!databaseUrl) {
       throw new Error(
-        'Real backfill FK integration test requires BACKFILL_FK_REAL_DATABASE_URL or packages/server/.env.development.local'
+        'Real backfill FK integration test requires BACKFILL_FK_REAL_DATABASE_URL or repo root .env.development.local'
       );
     }
 

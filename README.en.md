@@ -137,8 +137,8 @@ The repository is organized as a `pnpm` monorepo:
 
 Shortest path:
 
-1. Create a `.env` file in the repository root.
-2. Fill in the required values from the example below.
+1. Run `Copy-Item .env.example .env` in the repository root.
+2. Adjust the root `.env` values as needed.
 3. Run `pnpm docker:up`.
 
 ```dotenv
@@ -172,12 +172,13 @@ Docker Compose notes:
 - `mysql`, `redis`, `qdrant`, and `server` stay on the internal Compose network and are not published to the host
 - `client` is the only host-facing entrypoint and acts as the reverse proxy
 - The boot flow runs database migrations first and starts `server` only after the migration job completes successfully
+- For zero-downtime production deployment on every `main` push, see [docs/deploy-main-auto-redeploy.md](./docs/deploy-main-auto-redeploy.md)
 
 ### Option B: Local Development
 
 ```bash
 pnpm install
-Copy-Item packages/server/.env.example packages/server/.env
+Copy-Item .env.example .env.development.local
 pnpm -F @groundpath/server db:push
 pnpm dev
 ```
@@ -217,7 +218,7 @@ Conditionally required configuration:
 
 </details>
 
-For full server-side configuration details, see [docs/env-variables.md](./docs/env-variables.md) and [packages/server/.env.example](./packages/server/.env.example). When using Docker Compose, the root `.env` file also needs the orchestration variables `CLIENT_PORT` and `MYSQL_*`.
+All server-side entrypoints now read only repository-root `.env*` files and no longer load `packages/server/.env*`. For full configuration details, see [docs/env-variables.md](./docs/env-variables.md) and [.env.example](./.env.example). The root `.env.example` already includes server, Docker Compose, and blue-green deployment examples.
 
 ## Common Commands
 

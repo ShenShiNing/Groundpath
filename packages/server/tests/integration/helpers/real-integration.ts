@@ -4,9 +4,9 @@ import net from 'node:net';
 import tls from 'node:tls';
 import { describe } from 'vitest';
 
-const packageRoot = path.resolve(import.meta.dirname, '../../../');
-const developmentEnvPath = path.join(packageRoot, '.env.development.local');
-const testEnvPath = path.join(packageRoot, '.env.test.local');
+const repoRoot = path.resolve(import.meta.dirname, '../../../../..');
+const developmentEnvPath = path.join(repoRoot, '.env.development.local');
+const testEnvPath = path.join(repoRoot, '.env.test.local');
 
 function readEnvFile(filePath: string): Record<string, string> {
   const env: Record<string, string> = {};

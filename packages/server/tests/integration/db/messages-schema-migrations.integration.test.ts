@@ -23,7 +23,7 @@ function getDatabaseUrl(): URL {
 
   if (!rawUrl) {
     throw new Error(
-      'Real messages schema migration integration test requires MESSAGES_SCHEMA_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or packages/server/.env.development.local'
+      'Real messages schema migration integration test requires MESSAGES_SCHEMA_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or repo root .env.development.local'
     );
   }
 
