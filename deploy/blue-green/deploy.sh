@@ -52,10 +52,35 @@ resolve_root_env_file() {
 
 source_root_env() {
   [ -f "$ROOT_ENV_FILE" ] || fail "Missing root env file: $ROOT_ENV_FILE"
-  set -a
-  # shellcheck disable=SC1090
-  . <(tr -d '\r' < "$ROOT_ENV_FILE")
-  set +a
+  while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+    local line="${raw_line%$'\r'}"
+
+    case "$line" in
+      '' | \#*)
+        continue
+        ;;
+    esac
+
+    local key="${line%%=*}"
+    local value="${line#*=}"
+
+    key="${key#"${key%%[![:space:]]*}"}"
+    key="${key%"${key##*[![:space:]]}"}"
+
+    if [ -z "$key" ] || [ "$key" = "$line" ]; then
+      continue
+    fi
+
+    if [ "${value#\"}" != "$value" ] && [ "${value%\"}" != "$value" ]; then
+      value="${value#\"}"
+      value="${value%\"}"
+    elif [ "${value#\'}" != "$value" ] && [ "${value%\'}" != "$value" ]; then
+      value="${value#\'}"
+      value="${value%\'}"
+    fi
+
+    export "$key=$value"
+  done < "$ROOT_ENV_FILE"
 }
 
 lowercase() {
