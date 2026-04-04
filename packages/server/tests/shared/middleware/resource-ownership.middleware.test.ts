@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { Request, RequestHandler, Response } from 'express';
 import { AppError } from '@core/errors/app-error';
 import { requireResourceOwnership } from '@core/middleware/resource-ownership.middleware';

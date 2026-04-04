@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useElementVirtualizer } from './useElementVirtualizer';
 
 interface UseVirtualListOptions {
   count: number;
@@ -10,7 +10,7 @@ interface UseVirtualListOptions {
 export function useVirtualList({ count, estimateSize, overscan = 5 }: UseVirtualListOptions) {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const virtualizer = useVirtualizer({
+  const virtualizer = useElementVirtualizer({
     count,
     getScrollElement: () => parentRef.current,
     estimateSize: () => estimateSize,

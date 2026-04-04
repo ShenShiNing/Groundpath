@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
 import type { MutableRefObject, RefObject } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChatMessage } from '@/components/chat';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import type { CopyFormat } from '@/lib/chat';
 import type { ChatMessage as ChatStoreMessage, Citation } from '@/stores';
+import { useElementVirtualizer } from '@/hooks/useElementVirtualizer';
 import { useTranslation } from 'react-i18next';
 
 const VIRTUAL_THRESHOLD = 50;
@@ -58,7 +58,7 @@ function VirtualMessageList({
 }: Omit<ChatPageConversationProps, 'selectedKnowledgeBaseId'>) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const virtualizer = useVirtualizer({
+  const virtualizer = useElementVirtualizer({
     count: messages.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => ESTIMATED_MESSAGE_HEIGHT,

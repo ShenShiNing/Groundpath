@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { useElementVirtualizer } from './useElementVirtualizer';
 
 interface BreakpointColumns {
   /** min-width → column count, checked in descending order */
@@ -50,7 +50,7 @@ export function useVirtualGrid<T>({
 
   const rowCount = Math.ceil(items.length / columnCount);
 
-  const virtualizer = useVirtualizer({
+  const virtualizer = useElementVirtualizer({
     count: rowCount,
     getScrollElement: () => parentRef.current,
     estimateSize: () => estimateRowHeight + gap,

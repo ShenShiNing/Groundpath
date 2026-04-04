@@ -89,7 +89,7 @@ export class OllamaProvider implements EmbeddingProvider {
           }),
       });
       return data.embeddings;
-    } catch (error) {
+    } catch {
       // Fall back to sequential embedding for other errors
     }
 
