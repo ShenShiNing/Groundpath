@@ -2,7 +2,7 @@ name: groundpath
 
 x-server-build: &server-build
   context: .
-  dockerfile: Dockerfile.server
+  dockerfile: packages/server/Dockerfile
 
 x-server-env: &server-env
   NODE_ENV: production
@@ -178,7 +178,7 @@ services:
   client:
     build:
       context: .
-      dockerfile: Dockerfile.client
+      dockerfile: packages/client/Dockerfile
     restart: unless-stopped
     depends_on:
       server:

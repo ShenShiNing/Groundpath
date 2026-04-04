@@ -4,7 +4,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import type { SignedUrlOptions, StorageProvider } from '../storage.types';
 import { serverConfig, storageConfig } from '@config/env';
-import { generateSignedUrl } from '@core/utils';
+import { generateSignedUrl } from '@core/utils/file-signing.utils';
 import { Errors } from '@core/errors';
 
 export class LocalStorageProvider implements StorageProvider {

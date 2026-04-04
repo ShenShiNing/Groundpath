@@ -53,7 +53,13 @@
 - `@modules/document-index/public/artifact-cleanup`
 - `@modules/document-index/public/indexing`
 
-仓库里的 `dependency-cruiser` 已经对以上模块的跨模块 root barrel import 报错，避免“文档要求走 `public/*`，代码却还能偷走根出口”的回退。
+服务端模块边界门禁统一收口在 `packages/server/tools/architecture/`：
+
+- `packages/server/tools/architecture/dependency-cruiser.cjs`
+- `packages/server/tools/architecture/known-violations.json`
+- `packages/server/tools/architecture/tsconfig.depcruise.json`
+
+这里的 `dependency-cruiser` 规则已经对以上模块的跨模块 root barrel import 报错，避免“文档要求走 `public/*`，代码却还能偷走根出口”的回退。
 
 ### 2.3 public 入口变宽时
 
@@ -98,7 +104,7 @@
 pnpm architecture:check
 ```
 
-如果你改了 dependency-cruiser 规则、baseline 或 public API 结构，建议同时补充：
+如果你改了 `packages/server/tools/architecture/*` 里的 dependency-cruiser 规则、baseline 或 public API 结构，建议同时补充：
 
 ```bash
 pnpm architecture:check:all

@@ -48,7 +48,7 @@
 
 ### ~~H-3: 模块公共 API 导出不完整~~ ✅ 已修复
 
-- **文件**: 各模块 `index.ts`、`.dependency-cruiser.cjs`
+- **文件**: 各模块 `index.ts`、`packages/server/tools/architecture/dependency-cruiser.cjs`
 - **描述**: 仅 `rag/index.ts` 有完整的公共 API，其他模块允许跨模块深入导入，绕过 dependency-cruiser 规则。
 - **修复**: 修复 3 处跨模块深入导入（chat→agent、user→auth、document-index→rag），统一改为通过模块 barrel/public API。加强 dependency-cruiser Rule 6：覆盖所有子目录（不限于 services/repositories），严重级别 warn→error。保留 llm→agent/tools/tool.interface 类型导入例外以避免循环依赖。
 - **提交**: `refactor/module-public-api` 分支，`e636c57`

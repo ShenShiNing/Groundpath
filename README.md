@@ -173,6 +173,7 @@ Docker Compose 说明：
 - `client` 是唯一对宿主机开放的入口，用作统一入口和反向代理
 - 启动流程会先执行一次数据库迁移，迁移成功后才拉起 `server`
 - 生产环境如需在 `main` push 后自动部署，并在新版本健康后再切流，见 [docs/deploy-main-auto-redeploy.md](./docs/deploy-main-auto-redeploy.md)
+- `packages/server/Dockerfile` 与 `packages/client/Dockerfile` 跟随各自服务维护；`docker/` 目录仅放 Nginx 模板等基础设施配置
 
 国内机房如需访问 Google OAuth、OpenAI 等海外服务，可在根目录 `.env` 为 `server` 容器增加出站代理：
 
@@ -298,9 +299,11 @@ pnpm dev
 ```text
 .
 ├─ packages/
-│  ├─ client/   # React + Vite 前端
-│  ├─ server/   # Express + TypeScript 后端
+│  ├─ client/   # React + Vite 前端（含 packages/client/Dockerfile）
+│  ├─ server/   # Express + TypeScript 后端（含 packages/server/Dockerfile）
 │  └─ shared/   # 共享类型、常量、Zod 契约
+├─ docker/
+│  └─ nginx/    # Nginx 模板等基础设施运行时配置
 ├─ docs/
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md

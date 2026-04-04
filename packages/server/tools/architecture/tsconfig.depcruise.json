@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "types": ["node"],
+    "paths": {
+      "@core/*": ["src/core/*"],
+      "@modules/*": ["src/modules/*"],
+      "@config/*": ["src/core/config/*"],
+      "@tests/*": ["tests/*"]
+    }
+  },
+  "files": ["../../src/index.ts"]
+}
