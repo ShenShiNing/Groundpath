@@ -54,7 +54,7 @@ source_root_env() {
   [ -f "$ROOT_ENV_FILE" ] || fail "Missing root env file: $ROOT_ENV_FILE"
   set -a
   # shellcheck disable=SC1090
-  . "$ROOT_ENV_FILE"
+  . <(tr -d '\r' < "$ROOT_ENV_FILE")
   set +a
 }
 
@@ -181,7 +181,7 @@ create_runtime_env_file() {
   local client_image="$4"
   local env_file="$RUNTIME_DIR/${color}.env"
 
-  cp "$ROOT_ENV_FILE" "$env_file"
+  tr -d '\r' < "$ROOT_ENV_FILE" > "$env_file"
 
   cat >> "$env_file" <<EOF
 DEPLOY_RUNTIME_ENV_FILE=$env_file
