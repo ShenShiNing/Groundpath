@@ -241,9 +241,10 @@ switch_openresty_upstream() {
   local include_path="${OPENRESTY_INCLUDE_PATH:-/www/sites/groundpath.one/proxy/groundpath-active.inc}"
   local tmp_path="${include_path}.tmp"
   local reload_command="${OPENRESTY_RELOAD_COMMAND:-openresty -s reload}"
+  local upstream_host="${OPENRESTY_UPSTREAM_HOST:-127.0.0.1}"
 
   mkdir -p "$(dirname "$include_path")"
-  printf 'set $groundpath_client_upstream http://127.0.0.1:%s;\n' "$port" > "$tmp_path"
+  printf 'set $groundpath_client_upstream http://%s:%s;\n' "$upstream_host" "$port" > "$tmp_path"
   mv "$tmp_path" "$include_path"
 
   log "Reloading OpenResty with: $reload_command"

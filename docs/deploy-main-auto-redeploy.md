@@ -212,6 +212,8 @@ git-4b74c768e0d6fdbf5af7c0e9f3a1f87f7c0b1234
   改 `BLUE_CLIENT_PORT` / `GREEN_CLIENT_PORT`
 - 想改 OpenResty include 路径:
   改 `OPENRESTY_INCLUDE_PATH`
+- OpenResty 跑在容器里, upstream 不能写 `127.0.0.1`:
+  设置 `CLIENT_HOST_BIND=0.0.0.0`，并在根目录 `.env.production` 里设置 `OPENRESTY_UPSTREAM_HOST` 为容器可访问到的宿主机地址
 - OpenResty reload 需要 sudo:
   把 `OPENRESTY_RELOAD_COMMAND` 改成例如 `sudo openresty -s reload`
 - GHCR 镜像名不按默认规则:
