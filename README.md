@@ -172,6 +172,7 @@ Docker Compose 说明：
 - `mysql` / `redis` / `qdrant` / `server` 默认只在 Compose 内网暴露，不再映射宿主机端口
 - `client` 是唯一对宿主机开放的入口，用作统一入口和反向代理
 - 启动流程会先执行一次数据库迁移，迁移成功后才拉起 `server`
+- 生产环境如需在 `main` push 后自动部署，并在新版本健康后再切流，见 [docs/deploy-main-auto-redeploy.md](./docs/deploy-main-auto-redeploy.md)
 
 国内机房如需访问 Google OAuth、OpenAI 等海外服务，可在根目录 `.env` 为 `server` 容器增加出站代理：
 

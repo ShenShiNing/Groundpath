@@ -172,6 +172,7 @@ Docker Compose notes:
 - `mysql`, `redis`, `qdrant`, and `server` stay on the internal Compose network and are not published to the host
 - `client` is the only host-facing entrypoint and acts as the reverse proxy
 - The boot flow runs database migrations first and starts `server` only after the migration job completes successfully
+- For zero-downtime production deployment on every `main` push, see [docs/deploy-main-auto-redeploy.md](./docs/deploy-main-auto-redeploy.md)
 
 ### Option B: Local Development
 

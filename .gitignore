@@ -27,6 +27,8 @@ coverage
 .env
 .env.*
 deploy/hysteria/client.yaml
+deploy/blue-green/shared.env
+deploy/blue-green/.runtime/
 
 # Cache files
 .cache
