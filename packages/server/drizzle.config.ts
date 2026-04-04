@@ -1,15 +1,15 @@
+import path from 'node:path';
 import dotenv from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
-// Load environment files in order of priority
-// process.cwd() returns the directory where the command is run (packages/server)
+const repoRoot = path.resolve(import.meta.dirname, '../..');
 const nodeEnv = process.env.NODE_ENV || 'development';
-dotenv.config({ path: `.env.${nodeEnv}.local` });
-dotenv.config({ path: `.env.${nodeEnv}` });
-dotenv.config({ path: '.env' });
+dotenv.config({ path: path.join(repoRoot, `.env.${nodeEnv}.local`) });
+dotenv.config({ path: path.join(repoRoot, `.env.${nodeEnv}`) });
+dotenv.config({ path: path.join(repoRoot, '.env') });
 
 if (!process.env.DATABASE_URL) {
-  console.error('❌ DATABASE_URL is not set. Please check your .env files.');
+  console.error('❌ DATABASE_URL is not set. Please check the root .env files.');
   process.exit(1);
 }
 

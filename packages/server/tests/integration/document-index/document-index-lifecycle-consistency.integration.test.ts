@@ -49,7 +49,7 @@ describeRealIntegration('document index lifecycle consistency real db integratio
 
     if (!databaseUrl || !redisUrl) {
       throw new Error(
-        'Real document index lifecycle integration test requires DOCUMENT_INDEX_LIFECYCLE_REAL_DATABASE_URL/DOCUMENT_INDEX_LIFECYCLE_REAL_REDIS_URL or packages/server/.env.development.local'
+        'Real document index lifecycle integration test requires DOCUMENT_INDEX_LIFECYCLE_REAL_DATABASE_URL/DOCUMENT_INDEX_LIFECYCLE_REAL_REDIS_URL or repo root .env.development.local'
       );
     }
 

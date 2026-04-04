@@ -46,7 +46,7 @@ describeRealIntegration('document lifecycle real db integration', () => {
 
     if (!databaseUrl || !redisUrl) {
       throw new Error(
-        'Real document lifecycle integration test requires DOCUMENT_LIFECYCLE_REAL_DATABASE_URL/DOCUMENT_LIFECYCLE_REAL_REDIS_URL or packages/server/.env.development.local'
+        'Real document lifecycle integration test requires DOCUMENT_LIFECYCLE_REAL_DATABASE_URL/DOCUMENT_LIFECYCLE_REAL_REDIS_URL or repo root .env.development.local'
       );
     }
 

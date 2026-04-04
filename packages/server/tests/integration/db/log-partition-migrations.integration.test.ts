@@ -21,7 +21,7 @@ function getDatabaseUrl(): URL {
 
   if (!rawUrl) {
     throw new Error(
-      'Real log partition migration integration test requires LOG_PARTITION_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or packages/server/.env.development.local'
+      'Real log partition migration integration test requires LOG_PARTITION_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or repo root .env.development.local'
     );
   }
 

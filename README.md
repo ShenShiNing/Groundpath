@@ -137,8 +137,8 @@ flowchart LR
 
 最短路径：
 
-1. 在仓库根目录创建 `.env`
-2. 参考下面示例填入必填值
+1. 在仓库根目录执行 `Copy-Item .env.example .env`
+2. 按需修改根目录 `.env`
 3. 运行 `pnpm docker:up`
 
 ```dotenv
@@ -226,7 +226,7 @@ docker compose logs -f hy2-client
 
 ```bash
 pnpm install
-Copy-Item packages/server/.env.example packages/server/.env
+Copy-Item .env.example .env.development.local
 pnpm -F @groundpath/server db:push
 pnpm dev
 ```
@@ -266,7 +266,7 @@ pnpm dev
 
 </details>
 
-更完整的服务端配置说明见 [docs/env-variables.md](./docs/env-variables.md) 和 [packages/server/.env.example](./packages/server/.env.example)。使用 Docker Compose 时，还需要在根目录 `.env` 中提供 `CLIENT_PORT` 与 `MYSQL_*` 这组编排变量。
+服务端所有入口现在统一只读取仓库根目录 `.env*`，不再读取 `packages/server/.env*`。更完整的配置说明见 [docs/env-variables.md](./docs/env-variables.md) 和 [.env.example](./.env.example)。根目录 `.env.example` 已包含服务端、Docker Compose 与蓝绿部署需要的变量样例。
 
 ## 常用命令
 

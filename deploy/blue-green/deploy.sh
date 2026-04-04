@@ -3,13 +3,15 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/../.." && pwd)"
 INFRA_COMPOSE_FILE="$SCRIPT_DIR/compose.infra.yml"
 APP_COMPOSE_FILE="$SCRIPT_DIR/compose.app.yml"
-SHARED_ENV_FILE="${DEPLOY_SHARED_ENV_FILE:-$SCRIPT_DIR/shared.env}"
 RUNTIME_DIR="$SCRIPT_DIR/.runtime"
 STATE_FILE="$RUNTIME_DIR/active-color"
 INFRA_PROJECT_NAME="${INFRA_PROJECT_NAME:-groundpath-infra}"
 APP_PROJECT_PREFIX="${APP_PROJECT_PREFIX:-groundpath}"
+DEPLOY_ENVIRONMENT="${DEPLOY_ENVIRONMENT:-production}"
+ROOT_ENV_FILE="${DEPLOY_ROOT_ENV_FILE:-}"
 
 log() {
   printf '[deploy] %s\n' "$*"
@@ -24,11 +26,35 @@ require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
 }
 
-source_shared_env() {
-  [ -f "$SHARED_ENV_FILE" ] || fail "Missing shared env file: $SHARED_ENV_FILE"
+resolve_root_env_file() {
+  if [ -n "$ROOT_ENV_FILE" ]; then
+    [ -f "$ROOT_ENV_FILE" ] || fail "Missing root env file: $ROOT_ENV_FILE"
+    printf '%s' "$ROOT_ENV_FILE"
+    return
+  fi
+
+  local candidates=(
+    "$REPO_ROOT/.env.${DEPLOY_ENVIRONMENT}.local"
+    "$REPO_ROOT/.env.${DEPLOY_ENVIRONMENT}"
+    "$REPO_ROOT/.env"
+  )
+
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if [ -f "$candidate" ]; then
+      printf '%s' "$candidate"
+      return
+    fi
+  done
+
+  fail "Missing root env file. Expected one of: ${candidates[*]}"
+}
+
+source_root_env() {
+  [ -f "$ROOT_ENV_FILE" ] || fail "Missing root env file: $ROOT_ENV_FILE"
   set -a
   # shellcheck disable=SC1090
-  . "$SHARED_ENV_FILE"
+  . "$ROOT_ENV_FILE"
   set +a
 }
 
@@ -69,7 +95,7 @@ project_for_color() {
 }
 
 compose_infra() {
-  docker compose -f "$INFRA_COMPOSE_FILE" --project-name "$INFRA_PROJECT_NAME" "$@"
+  docker compose --env-file "$ROOT_ENV_FILE" -f "$INFRA_COMPOSE_FILE" --project-name "$INFRA_PROJECT_NAME" "$@"
 }
 
 compose_app() {
@@ -155,10 +181,10 @@ create_runtime_env_file() {
   local client_image="$4"
   local env_file="$RUNTIME_DIR/${color}.env"
 
-  cp "$SHARED_ENV_FILE" "$env_file"
+  cp "$ROOT_ENV_FILE" "$env_file"
 
   cat >> "$env_file" <<EOF
-DEPLOY_SHARED_ENV_FILE=$env_file
+DEPLOY_RUNTIME_ENV_FILE=$env_file
 CLIENT_HOST_BIND=${CLIENT_HOST_BIND:-127.0.0.1}
 CLIENT_PORT=$port
 SERVER_IMAGE=$server_image
@@ -261,8 +287,9 @@ main() {
   require_command docker
   require_command curl
 
-  source_shared_env
   mkdir -p "$RUNTIME_DIR"
+  ROOT_ENV_FILE="$(resolve_root_env_file)"
+  source_root_env
 
   local active
   active="$(current_color)"

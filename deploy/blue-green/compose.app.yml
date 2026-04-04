@@ -101,7 +101,7 @@ services:
     image: ${SERVER_IMAGE:?SERVER_IMAGE is required}
     restart: 'no'
     env_file:
-      - ${DEPLOY_SHARED_ENV_FILE:?DEPLOY_SHARED_ENV_FILE is required}
+      - ${DEPLOY_RUNTIME_ENV_FILE:?DEPLOY_RUNTIME_ENV_FILE is required}
     environment: *server-env
     command: ['pnpm', '--filter', '@groundpath/server', 'db:migrate:prod']
     extra_hosts:
@@ -113,7 +113,7 @@ services:
     image: ${SERVER_IMAGE:?SERVER_IMAGE is required}
     restart: unless-stopped
     env_file:
-      - ${DEPLOY_SHARED_ENV_FILE:?DEPLOY_SHARED_ENV_FILE is required}
+      - ${DEPLOY_RUNTIME_ENV_FILE:?DEPLOY_RUNTIME_ENV_FILE is required}
     environment: *server-env
     volumes:
       - groundpath-uploads-data:/data/uploads

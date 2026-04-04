@@ -35,8 +35,8 @@
   蓝绿应用编排
 - `deploy/blue-green/deploy.sh`
   服务器侧部署脚本
-- `deploy/blue-green/shared.env.example`
-  服务器运行时配置样例
+- `.env.example`
+  仓库根目录统一配置样例，开发 / Compose / 蓝绿部署共用
 - `deploy/blue-green/groundpath-active.inc.example`
   OpenResty 当前活动 upstream include 样例
 
@@ -69,10 +69,10 @@
 ```bash
 git clone <your-repo> /opt/groundpath
 cd /opt/groundpath
-cp deploy/blue-green/shared.env.example deploy/blue-green/shared.env
+cp .env.example .env.production
 ```
 
-然后编辑 `deploy/blue-green/shared.env`，至少填这些值:
+然后编辑根目录 `.env.production`，至少填这些值:
 
 - `GHCR_NAMESPACE`
 - `GHCR_REPOSITORY`
@@ -89,7 +89,7 @@ cp deploy/blue-green/shared.env.example deploy/blue-green/shared.env
 cp deploy/hysteria/client.yaml.example deploy/hysteria/client.yaml
 ```
 
-并把 `shared.env` 里的 `ENABLE_HYSTERIA_PROXY=true`。
+并把根目录 `.env.production` 里的 `ENABLE_HYSTERIA_PROXY=true`。
 
 ### 2. 配置 OpenResty 蓝绿切换点
 
@@ -115,6 +115,12 @@ location / {
 ```
 
 部署脚本每次切流时都会重写 `groundpath-active.inc`，然后执行 `OPENRESTY_RELOAD_COMMAND`。
+
+部署脚本默认按以下顺序读取仓库根目录环境文件:
+
+1. `.env.production.local`
+2. `.env.production`
+3. `.env`
 
 ### 3. 首次引导基础设施
 
@@ -204,7 +210,7 @@ git-4b74c768e0d6fdbf5af7c0e9f3a1f87f7c0b1234
 - OpenResty reload 需要 sudo:
   把 `OPENRESTY_RELOAD_COMMAND` 改成例如 `sudo openresty -s reload`
 - GHCR 镜像名不按默认规则:
-  在 `shared.env` 中设置 `SERVER_IMAGE_REPOSITORY` / `CLIENT_IMAGE_REPOSITORY`
+  在根目录 `.env.production` 中设置 `SERVER_IMAGE_REPOSITORY` / `CLIENT_IMAGE_REPOSITORY`
 
 ## 不建议的方案
 

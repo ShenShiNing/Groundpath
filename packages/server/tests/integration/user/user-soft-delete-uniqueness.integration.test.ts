@@ -46,7 +46,7 @@ describeRealIntegration('user soft-delete uniqueness real db integration', () =>
 
     if (!databaseUrl) {
       throw new Error(
-        'Real user uniqueness integration test requires USER_UNIQUENESS_REAL_DATABASE_URL or packages/server/.env.development.local'
+        'Real user uniqueness integration test requires USER_UNIQUENESS_REAL_DATABASE_URL or repo root .env.development.local'
       );
     }
 

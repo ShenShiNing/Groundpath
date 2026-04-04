@@ -22,7 +22,7 @@ function getDatabaseUrl(): URL {
 
   if (!rawUrl) {
     throw new Error(
-      'Real auth schema migration integration test requires AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or packages/server/.env.development.local'
+      'Real auth schema migration integration test requires AUTH_SCHEMA_MIGRATIONS_REAL_DATABASE_URL, TEST_DATABASE_URL, DATABASE_URL, or repo root .env.development.local'
     );
   }
 
