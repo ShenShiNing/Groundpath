@@ -113,6 +113,25 @@ describe('auth login http > ip resolution', () => {
     expect(authServiceMock.login).toHaveBeenCalledWith(loginBody, '203.0.113.10', userAgent);
   });
 
+  it('should prefer CF-Connecting-IP when the forwarded chain only contains proxy hops', async () => {
+    const { server, baseUrl } = await startLoginServer(true);
+    servers.push(server);
+
+    const response = await fetch(`${baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'user-agent': userAgent,
+        'cf-connecting-ip': '198.51.100.25',
+        'x-forwarded-for': '172.20.0.1',
+      },
+      body: JSON.stringify(loginBody),
+    });
+
+    expect(response.status).toBe(200);
+    expect(authServiceMock.login).toHaveBeenCalledWith(loginBody, '198.51.100.25', userAgent);
+  });
+
   it('should ignore X-Forwarded-For when trust proxy is disabled', async () => {
     const { server, baseUrl } = await startLoginServer(false);
     servers.push(server);

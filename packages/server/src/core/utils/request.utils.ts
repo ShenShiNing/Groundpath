@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 import type { Request } from 'express';
 import { AppError } from '@core/errors/app-error';
 
@@ -63,12 +64,103 @@ export function normalizeIpAddress(ipAddress: string | null | undefined): string
   return normalized || null;
 }
 
+function normalizeValidIpAddress(ipAddress: string | null | undefined): string | null {
+  const normalized = normalizeIpAddress(ipAddress);
+  if (!normalized || isIP(normalized) === 0) {
+    return null;
+  }
+  return normalized;
+}
+
 export function isPrivateIpAddress(ipAddress: string): boolean {
   return PRIVATE_IP_PATTERNS.some((pattern) => pattern.test(ipAddress));
 }
 
 function isTrustProxyEnabled(req: Request): boolean {
   return typeof req.app?.get === 'function' && Boolean(req.app.get('trust proxy'));
+}
+
+function getHeaderValue(req: Request, headerName: string): string | string[] | undefined {
+  return req.headers?.[headerName.toLowerCase()];
+}
+
+function getFirstPublicIpAddress(ipAddresses: string[]): string | null {
+  return ipAddresses.find((ipAddress) => !isPrivateIpAddress(ipAddress)) ?? null;
+}
+
+function getBestIpAddress(ipAddresses: string[]): string | null {
+  return getFirstPublicIpAddress(ipAddresses) ?? ipAddresses[0] ?? null;
+}
+
+function extractIpCandidatesFromHeaderValue(headerValue: string | string[] | undefined): string[] {
+  if (!headerValue) {
+    return [];
+  }
+
+  const headerValues = Array.isArray(headerValue) ? headerValue : [headerValue];
+  return headerValues
+    .flatMap((value) => value.split(','))
+    .map((value) => normalizeValidIpAddress(value))
+    .filter((value): value is string => value !== null);
+}
+
+function extractForwardedHeaderIpCandidates(headerValue: string | string[] | undefined): string[] {
+  if (!headerValue) {
+    return [];
+  }
+
+  const headerValues = Array.isArray(headerValue) ? headerValue : [headerValue];
+
+  return headerValues
+    .flatMap((value) => value.split(','))
+    .map((entry) =>
+      entry
+        .split(';')
+        .map((segment) => segment.trim())
+        .find((segment) => segment.toLowerCase().startsWith('for='))
+    )
+    .map((segment) => {
+      if (!segment) {
+        return null;
+      }
+
+      const rawValue = segment
+        .slice(4)
+        .trim()
+        .replace(/^"+|"+$/g, '');
+      return normalizeValidIpAddress(rawValue);
+    })
+    .filter((value): value is string => value !== null);
+}
+
+function getTrustedProxyClientIp(req: Request): string | null {
+  const trustedClientHeaders = [
+    getHeaderValue(req, 'cf-connecting-ip'),
+    getHeaderValue(req, 'true-client-ip'),
+    getHeaderValue(req, 'x-client-ip'),
+  ];
+  const trustedClientIps = trustedClientHeaders
+    .map((headerValue) =>
+      normalizeValidIpAddress(Array.isArray(headerValue) ? headerValue[0] : headerValue)
+    )
+    .filter((value): value is string => value !== null);
+  const trustedClientIp = getBestIpAddress(trustedClientIps);
+  if (trustedClientIp) {
+    return trustedClientIp;
+  }
+
+  const forwardedChainIps = [
+    ...extractIpCandidatesFromHeaderValue(getHeaderValue(req, 'x-original-forwarded-for')),
+    ...extractIpCandidatesFromHeaderValue(getHeaderValue(req, 'x-forwarded-for')),
+    ...extractForwardedHeaderIpCandidates(getHeaderValue(req, 'forwarded')),
+  ];
+  const forwardedChainIp = getBestIpAddress(forwardedChainIps);
+  if (forwardedChainIp) {
+    return forwardedChainIp;
+  }
+
+  const realIpHeader = getHeaderValue(req, 'x-real-ip');
+  return normalizeValidIpAddress(Array.isArray(realIpHeader) ? realIpHeader[0] : realIpHeader);
 }
 
 /**
@@ -84,28 +176,19 @@ function isTrustProxyEnabled(req: Request): boolean {
  * @see https://expressjs.com/en/guide/behind-proxies.html
  */
 export function getClientIp(req: Request): string | null {
-  const requestIp = normalizeIpAddress(req.ip ?? null);
+  const requestIp = normalizeValidIpAddress(req.ip ?? null);
   if (requestIp && !isPrivateIpAddress(requestIp)) {
     return requestIp;
   }
 
   if (isTrustProxyEnabled(req)) {
-    const forwardedForHeader = req.headers?.['x-forwarded-for'];
-    const forwardedIp = normalizeIpAddress(
-      Array.isArray(forwardedForHeader) ? forwardedForHeader[0] : forwardedForHeader
-    );
-    if (forwardedIp) {
-      return forwardedIp;
-    }
-
-    const realIpHeader = req.headers?.['x-real-ip'];
-    const realIp = normalizeIpAddress(Array.isArray(realIpHeader) ? realIpHeader[0] : realIpHeader);
-    if (realIp) {
-      return realIp;
+    const trustedProxyIp = getTrustedProxyClientIp(req);
+    if (trustedProxyIp) {
+      return trustedProxyIp;
     }
   }
 
-  return requestIp ?? normalizeIpAddress(req.socket.remoteAddress ?? null);
+  return requestIp ?? normalizeValidIpAddress(req.socket.remoteAddress ?? null);
 }
 
 /**

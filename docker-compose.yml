@@ -10,7 +10,7 @@ x-server-env: &server-env
   SERVER_TIMEOUT: ${SERVER_TIMEOUT:-30000}
   SERVER_KEEP_ALIVE_TIMEOUT: ${SERVER_KEEP_ALIVE_TIMEOUT:-65000}
   SHUTDOWN_TIMEOUT: ${SHUTDOWN_TIMEOUT:-10000}
-  TRUST_PROXY: ${TRUST_PROXY:-1}
+  TRUST_PROXY: ${TRUST_PROXY:-true}
   FRONTEND_URL: ${FRONTEND_URL:?FRONTEND_URL is required}
   # Node.js builtin outbound proxy support for fetch()/http(s).
   # Requires a recent Node 22.x image with NODE_USE_ENV_PROXY=1 enabled.

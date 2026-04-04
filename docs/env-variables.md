@@ -30,17 +30,22 @@
 
 ## 一、Server (服务端)
 
-| 变量                        | 必填 | 默认值                  | 状态 | 说明                                                                              |
-| --------------------------- | :--: | ----------------------- | :--: | --------------------------------------------------------------------------------- |
-| `NODE_ENV`                  |  否  | `development`           | 活跃 | 运行环境: `development` / `production` / `test`                                   |
-| `PORT`                      |  否  | `3000`                  | 活跃 | HTTP 监听端口                                                                     |
-| `SERVER_TIMEOUT`            |  否  | `30000`                 | 活跃 | 请求超时时间 (ms)                                                                 |
-| `SERVER_KEEP_ALIVE_TIMEOUT` |  否  | `65000`                 | 活跃 | Keep-Alive 超时 (ms), 应大于反向代理超时                                          |
-| `SHUTDOWN_TIMEOUT`          |  否  | `10000`                 | 活跃 | 优雅关闭等待时间 (ms)                                                             |
-| `TRUST_PROXY`               |  否  | —                       | 活跃 | 反向代理信任设置, 影响 IP 检测和速率限制. 值: `true` / `1` / `loopback` / 具体 IP |
-| `FRONTEND_URL`              |  否  | `http://localhost:5173` | 活跃 | 前端地址, 用于 CORS 和 OAuth 回调                                                 |
+| 变量                        | 必填 | 默认值                  | 状态 | 说明                                                                                                 |
+| --------------------------- | :--: | ----------------------- | :--: | ---------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                  |  否  | `development`           | 活跃 | 运行环境: `development` / `production` / `test`                                                      |
+| `PORT`                      |  否  | `3000`                  | 活跃 | HTTP 监听端口                                                                                        |
+| `SERVER_TIMEOUT`            |  否  | `30000`                 | 活跃 | 请求超时时间 (ms)                                                                                    |
+| `SERVER_KEEP_ALIVE_TIMEOUT` |  否  | `65000`                 | 活跃 | Keep-Alive 超时 (ms), 应大于反向代理超时                                                             |
+| `SHUTDOWN_TIMEOUT`          |  否  | `10000`                 | 活跃 | 优雅关闭等待时间 (ms)                                                                                |
+| `TRUST_PROXY`               |  否  | —                       | 活跃 | 反向代理信任设置, 影响 IP 检测、速率限制和 Geo-IP. 多层代理部署推荐 `true`; `1` 仅适用于恰好一层代理 |
+| `FRONTEND_URL`              |  否  | `http://localhost:5173` | 活跃 | 前端地址, 用于 CORS 和 OAuth 回调                                                                    |
 
 **引用**: `serverConfig` 被 13 个文件引用 — 中间件、路由、OAuth、存储、日志等
+
+**生产提示**:
+
+- 仓库自带的 Docker Compose 部署链路通常是 `OpenResty/1Panel -> client(Nginx) -> server(Node)`，属于多层代理，推荐将 `TRUST_PROXY` 设为 `true`。
+- 若登录日志中 IP 固定为 `172.16.0.0/12`、`10.0.0.0/8`、`192.168.0.0/16` 等私网地址，说明上游代理没有把真实来源 IP 正确恢复/透传，Geo-IP 字段会随之全部为空。
 
 ---
 

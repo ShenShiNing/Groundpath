@@ -229,12 +229,16 @@
 
 ### 9.2 待改进
 
-| 优先级 | 建议                           | 说明                                |
-| ------ | ------------------------------ | ----------------------------------- |
+| 优先级 | 建议                           | 说明                                                                     |
+| ------ | ------------------------------ | ------------------------------------------------------------------------ |
 | ~~高~~ | ~~文件上传添加 magic number 验证~~ ✅ | 已在上传服务中增加 PDF / DOCX / 文本文档内容签名校验，避免伪造 MIME/扩展名绕过 |
-| 中     | 前端 PII 脱敏                  | 邮箱不应出现在错误日志              |
-| 中     | 生产环境强制启用速率限制       | `disableRateLimit` 不应在 prod 生效 |
-| 低     | 日志中 IP 脱敏                 | 显示前三个八位组                    |
+| 中     | ~~前端 PII 脱敏~~ ✅           | `authStore` 不再附带邮箱 metadata，客户端 logger 默认脱敏邮箱/密码/token |
+| 中     | 后端日志 PII 脱敏              | Pino `redact` 与业务日志仍需继续收口                                     |
+| ~~中~~ | ~~生产环境真实来源 IP 透传~~ ✅ | 已增强代理头 IP 解析与部署示例，修复多层代理下 Geo-IP 采集为空的问题      |
+| 中     | 生产环境强制启用速率限制       | `disableRateLimit` 不应在 prod 生效                                      |
+| 低     | 日志中 IP 脱敏                 | 显示前三个八位组                                                         |
+
+- **补记（2026-04-04）**: 已在服务端增强代理头 IP 解析，新增对 `CF-Connecting-IP` / `True-Client-IP` / `Forwarded` / `X-Forwarded-For` 的兜底提取；同时将 Compose 默认 `TRUST_PROXY` 调整为 `true`，并在 OpenResty 部署样例中补充 `real_ip_header` / `set_real_ip_from` / `real_ip_recursive`，修复多层代理下登录日志易落 `172.20.0.1` 等私网地址、导致 Geo-IP 字段全部为空的问题。
 
 - **补记（2026-04-04）**: 已在 `packages/server/src/modules/document/services/document-storage.service.ts` 中接入基于文件内容的签名校验，并提取 `document-file-validation.ts` 统一解析扩展名 / MIME / magic number；当前覆盖 PDF（`%PDF-`）、DOCX（ZIP 头 + Word 核心条目）及 text/markdown 的文本特征校验，并补充对应单元测试。提交：`fix/upload-magic-number-validation` 分支，`aae1adc`。
 
@@ -268,7 +272,9 @@
 ### 第 4 周 — 安全加固
 
 - [x] 文件上传 magic number 验证 ✅（`aae1adc`）
-- [ ] PII 脱敏（前端日志 + 后端日志）
+- [x] 前端 PII 脱敏（浏览器错误日志）✅
+- [ ] 后端日志 PII / IP 脱敏
+- [x] 生产环境真实来源 IP 透传与 Geo-IP 采集 ✅
 - [ ] 生产环境强制速率限制
 - [x] 资源所有权验证中间件 ✅
 

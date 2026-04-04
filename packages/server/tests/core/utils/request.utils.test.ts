@@ -38,6 +38,31 @@ describe('request.utils', () => {
     expect(getClientIp(req)).toBe('203.0.113.20');
   });
 
+  it('prefers vendor client-ip headers before private proxy hops', () => {
+    const req = createRequest({
+      ip: '172.20.0.2',
+      trustProxy: true,
+      headers: {
+        'cf-connecting-ip': '198.51.100.42',
+        'x-forwarded-for': '172.20.0.1',
+      },
+    });
+
+    expect(getClientIp(req)).toBe('198.51.100.42');
+  });
+
+  it('parses RFC 7239 forwarded headers when available', () => {
+    const req = createRequest({
+      ip: '172.20.0.2',
+      trustProxy: true,
+      headers: {
+        forwarded: 'for=198.51.100.24;proto=https;by=172.20.0.1',
+      },
+    });
+
+    expect(getClientIp(req)).toBe('198.51.100.24');
+  });
+
   it('keeps the direct request ip when it is already public', () => {
     const req = createRequest({
       ip: '203.0.113.30',
