@@ -71,7 +71,9 @@ module.exports = {
       comment:
         'Cross-module imports must go through the target module public/* API or root barrel (index.ts), not into internal files.',
       from: { path: '^packages/server/src/modules/([^/]+)/' },
-      to: { path: '^packages/server/src/modules/(?!$1/)[^/]+/(?!public/|index\\.ts$).+\\.ts$' },
+      to: {
+        path: '^packages/server/src/modules/(?!$1/)[^/]+/(?!public/|index\\.ts$).+\\.ts$',
+      },
     },
 
     // ── Rule 7: Core/scripts must only consume module public APIs ──
@@ -143,7 +145,7 @@ module.exports = {
       path: ['node_modules', '\\.d\\.ts$'],
     },
     tsPreCompilationDeps: true,
-    tsConfig: { fileName: './tsconfig.depcruise.json' },
+    tsConfig: { fileName: './packages/server/tools/architecture/tsconfig.depcruise.json' },
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default'],

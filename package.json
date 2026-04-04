@@ -21,9 +21,9 @@
     "format:check": "prettier --check .",
     "lint": "eslint . --cache --cache-location .cache/eslint/.eslintcache",
     "lint:fix": "eslint . --fix --cache --cache-location .cache/eslint/.eslintcache",
-    "architecture:check": "depcruise packages/server/src --config .dependency-cruiser.cjs --ignore-known",
-    "architecture:check:all": "depcruise packages/server/src --config .dependency-cruiser.cjs",
-    "architecture:baseline": "depcruise packages/server/src --config .dependency-cruiser.cjs --output-type baseline > .dependency-cruiser-known-violations.json",
+    "architecture:check": "depcruise packages/server/src --config packages/server/tools/architecture/dependency-cruiser.cjs --ignore-known packages/server/tools/architecture/known-violations.json",
+    "architecture:check:all": "depcruise packages/server/src --config packages/server/tools/architecture/dependency-cruiser.cjs",
+    "architecture:baseline": "depcruise packages/server/src --config packages/server/tools/architecture/dependency-cruiser.cjs --output-type baseline --output-to packages/server/tools/architecture/known-violations.json",
     "prepare": "husky"
   },
   "lint-staged": {
