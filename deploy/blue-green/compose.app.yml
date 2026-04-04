@@ -100,8 +100,6 @@ services:
   migrate:
     image: ${SERVER_IMAGE:?SERVER_IMAGE is required}
     restart: 'no'
-    env_file:
-      - ${DEPLOY_RUNTIME_ENV_FILE:?DEPLOY_RUNTIME_ENV_FILE is required}
     environment: *server-env
     command: ['pnpm', '--filter', '@groundpath/server', 'db:migrate:prod']
     extra_hosts:
@@ -112,8 +110,6 @@ services:
   server:
     image: ${SERVER_IMAGE:?SERVER_IMAGE is required}
     restart: unless-stopped
-    env_file:
-      - ${DEPLOY_RUNTIME_ENV_FILE:?DEPLOY_RUNTIME_ENV_FILE is required}
     environment: *server-env
     volumes:
       - groundpath-uploads-data:/data/uploads
