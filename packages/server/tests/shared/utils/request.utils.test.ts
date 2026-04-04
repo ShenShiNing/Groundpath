@@ -17,7 +17,7 @@ describe('request.utils > getClientIp', () => {
     const req = {
       ip: undefined,
       socket: { remoteAddress: '127.0.0.1' },
-    } as Request;
+    } as unknown as Request;
 
     expect(getClientIp(req)).toBe('127.0.0.1');
   });
@@ -32,7 +32,7 @@ describe('request.utils > getClientIp', () => {
         get: (key: string) => (key === 'trust proxy' ? true : undefined),
       },
       socket: { remoteAddress: '172.20.0.3' },
-    } as Request;
+    } as unknown as Request;
 
     expect(getClientIp(req)).toBe('198.51.100.60');
   });
@@ -41,7 +41,7 @@ describe('request.utils > getClientIp', () => {
     const req = {
       ip: undefined,
       socket: { remoteAddress: undefined },
-    } as Request;
+    } as unknown as Request;
 
     expect(getClientIp(req)).toBeNull();
   });
@@ -51,13 +51,13 @@ describe('request.utils > requireUserId', () => {
   it('should return req.user.sub when authenticated', () => {
     const req = {
       user: { sub: 'user-123' },
-    } as Request;
+    } as unknown as Request;
 
     expect(requireUserId(req)).toBe('user-123');
   });
 
   it('should throw UNAUTHORIZED when req.user.sub is missing', () => {
-    const req = {} as Request;
+    const req = {} as unknown as Request;
 
     expect(() => requireUserId(req)).toThrow(AppError);
 
