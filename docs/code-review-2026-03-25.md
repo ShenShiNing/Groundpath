@@ -225,16 +225,18 @@
 - 参数化查询（Drizzle ORM）
 - HttpOnly + Secure Cookie
 - `timingSafeEqual` 防时序攻击
-- 文件上传 MIME + 扩展名双重检查
+- 文件上传 MIME + 扩展名 + 内容签名（magic number）校验
 
 ### 9.2 待改进
 
 | 优先级 | 建议                           | 说明                                |
 | ------ | ------------------------------ | ----------------------------------- |
-| 高     | 文件上传添加 magic number 验证 | 仅检查 MIME/扩展名不够              |
+| ~~高~~ | ~~文件上传添加 magic number 验证~~ ✅ | 已在上传服务中增加 PDF / DOCX / 文本文档内容签名校验，避免伪造 MIME/扩展名绕过 |
 | 中     | 前端 PII 脱敏                  | 邮箱不应出现在错误日志              |
 | 中     | 生产环境强制启用速率限制       | `disableRateLimit` 不应在 prod 生效 |
 | 低     | 日志中 IP 脱敏                 | 显示前三个八位组                    |
+
+- **补记（2026-04-04）**: 已在 `packages/server/src/modules/document/services/document-storage.service.ts` 中接入基于文件内容的签名校验，并提取 `document-file-validation.ts` 统一解析扩展名 / MIME / magic number；当前覆盖 PDF（`%PDF-`）、DOCX（ZIP 头 + Word 核心条目）及 text/markdown 的文本特征校验，并补充对应单元测试。提交：`fix/upload-magic-number-validation` 分支，`aae1adc`。
 
 ---
 
@@ -265,7 +267,7 @@
 
 ### 第 4 周 — 安全加固
 
-- [ ] 文件上传 magic number 验证
+- [x] 文件上传 magic number 验证 ✅（`aae1adc`）
 - [ ] PII 脱敏（前端日志 + 后端日志）
 - [ ] 生产环境强制速率限制
 - [x] 资源所有权验证中间件 ✅

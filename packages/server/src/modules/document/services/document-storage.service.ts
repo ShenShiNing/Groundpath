@@ -5,55 +5,26 @@ import type { DocumentType } from '@groundpath/shared/types';
 import { documentConfig, storageConfig } from '@config/env';
 import { createLogger } from '@core/logger';
 import { storageProvider } from '@modules/storage/public/provider';
+import {
+  getAllowedDocumentExtensions,
+  getAllowedDocumentMimeTypes,
+  getDocumentTypeFromExtension,
+  getDocumentTypeFromMimeType,
+  getMimeTypeFromExtension,
+  getSignatureMismatchError,
+  isAllowedDocumentExtension,
+  isAllowedDocumentMimeType,
+  matchesDocumentSignature,
+  resolveDocumentDescriptor,
+} from './document-file-validation';
 
 const logger = createLogger('document-storage');
-
-/**
- * Allowed document MIME types
- */
-const ALLOWED_MIME_TYPES: Record<string, DocumentType> = {
-  'application/pdf': 'pdf',
-  'text/markdown': 'markdown',
-  'text/x-markdown': 'markdown',
-  'text/plain': 'text',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-};
-
-/**
- * Extension to DocumentType mapping (fallback when MIME type is unreliable)
- */
-const EXTENSION_TO_DOCTYPE: Record<string, DocumentType> = {
-  pdf: 'pdf',
-  md: 'markdown',
-  markdown: 'markdown',
-  txt: 'text',
-  docx: 'docx',
-};
-
-/**
- * Extension to preferred MIME type mapping
- */
-const EXTENSION_TO_MIME: Record<string, string> = {
-  pdf: 'application/pdf',
-  md: 'text/markdown',
-  markdown: 'text/markdown',
-  txt: 'text/plain',
-  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-};
 
 /**
  * Get max file size from config (default 21 MiB)
  */
 function getMaxFileSize(): number {
   return documentConfig.maxSize;
-}
-
-/**
- * Get file extension from filename
- */
-function getFileExtension(filename: string): string {
-  const parts = filename.split('.');
-  return parts.length > 1 ? (parts.pop() ?? '').toLowerCase() : '';
 }
 
 type FileValidationResult = { valid: true } | { valid: false; error: string };
@@ -66,66 +37,65 @@ export const documentStorageService = {
    * Check if a MIME type is allowed
    */
   isAllowedMimeType(mimeType: string): boolean {
-    return mimeType in ALLOWED_MIME_TYPES;
+    return isAllowedDocumentMimeType(mimeType);
   },
 
   /**
    * Check if a file extension is allowed
    */
   isAllowedExtension(extension: string): boolean {
-    return extension.toLowerCase() in EXTENSION_TO_DOCTYPE;
+    return isAllowedDocumentExtension(extension);
   },
 
   /**
    * Get document type from MIME type
    */
   getDocumentType(mimeType: string): DocumentType {
-    return ALLOWED_MIME_TYPES[mimeType] ?? 'other';
+    return getDocumentTypeFromMimeType(mimeType);
   },
 
   /**
    * Get document type from file extension
    */
   getDocumentTypeByExtension(extension: string): DocumentType {
-    return EXTENSION_TO_DOCTYPE[extension.toLowerCase()] ?? 'other';
+    return getDocumentTypeFromExtension(extension);
   },
 
   /**
    * Get preferred MIME type from file extension
    */
   getMimeTypeByExtension(extension: string): string | undefined {
-    return EXTENSION_TO_MIME[extension.toLowerCase()];
+    return getMimeTypeFromExtension(extension);
   },
 
   /**
    * Get list of allowed MIME types
    */
   getAllowedMimeTypes(): string[] {
-    return Object.keys(ALLOWED_MIME_TYPES);
+    return getAllowedDocumentMimeTypes();
   },
 
   /**
    * Get list of allowed extensions
    */
   getAllowedExtensions(): string[] {
-    return Object.keys(EXTENSION_TO_DOCTYPE);
+    return getAllowedDocumentExtensions();
   },
 
   /**
-   * Validate file before upload (checks both MIME type and extension)
+   * Validate file before upload (checks type declaration, size, and file signature)
    */
   validateFile(file: {
+    buffer: Buffer;
     mimetype: string;
     size: number;
     originalname?: string;
   }): FileValidationResult {
-    const ext = file.originalname ? getFileExtension(file.originalname) : '';
-
-    // Check MIME type first, then fallback to extension
-    const isMimeAllowed = this.isAllowedMimeType(file.mimetype);
-    const isExtAllowed = ext ? this.isAllowedExtension(ext) : false;
-
-    if (!isMimeAllowed && !isExtAllowed) {
+    const descriptor = resolveDocumentDescriptor({
+      mimetype: file.mimetype,
+      originalname: file.originalname,
+    });
+    if (!descriptor) {
       const allowedExts = this.getAllowedExtensions().join(', ');
       return { valid: false, error: `Invalid file type. Allowed extensions: ${allowedExts}` };
     }
@@ -134,6 +104,10 @@ export const documentStorageService = {
     if (file.size > maxSize) {
       const maxMB = Math.round(maxSize / (1024 * 1024));
       return { valid: false, error: `File too large. Maximum size is ${maxMB}MB` };
+    }
+
+    if (!matchesDocumentSignature(file.buffer, descriptor.documentType)) {
+      return { valid: false, error: getSignatureMismatchError(descriptor.documentType) };
     }
 
     return { valid: true };
@@ -152,34 +126,24 @@ export const documentStorageService = {
     documentType: DocumentType;
     resolvedMimeType: string;
   }> {
-    const ext = getFileExtension(file.originalname);
-
-    // Determine document type: prefer MIME type, fallback to extension
-    let documentType: DocumentType;
-    let resolvedMimeType: string;
-
-    if (this.isAllowedMimeType(file.mimetype)) {
-      documentType = this.getDocumentType(file.mimetype);
-      resolvedMimeType = file.mimetype;
-    } else if (ext && this.isAllowedExtension(ext)) {
-      // Fallback: use extension to determine type
-      documentType = this.getDocumentTypeByExtension(ext);
-      resolvedMimeType = this.getMimeTypeByExtension(ext) ?? file.mimetype;
-    } else {
-      documentType = 'other';
-      resolvedMimeType = file.mimetype;
+    const descriptor = resolveDocumentDescriptor({
+      mimetype: file.mimetype,
+      originalname: file.originalname,
+    });
+    if (!descriptor) {
+      throw new Error(`Unsupported document type for upload: ${file.originalname}`);
     }
 
-    const key = `documents/${userId}/${uuidv4()}.${ext || 'bin'}`;
+    const key = `documents/${userId}/${uuidv4()}.${descriptor.fileExtension || 'bin'}`;
 
-    await storageProvider.upload(key, file.buffer, resolvedMimeType);
+    await storageProvider.upload(key, file.buffer, descriptor.resolvedMimeType);
 
     return {
       storageKey: key,
       storageUrl: storageProvider.getPublicUrl(key),
-      fileExtension: ext,
-      documentType,
-      resolvedMimeType,
+      fileExtension: descriptor.fileExtension,
+      documentType: descriptor.documentType,
+      resolvedMimeType: descriptor.resolvedMimeType,
     };
   },
 
