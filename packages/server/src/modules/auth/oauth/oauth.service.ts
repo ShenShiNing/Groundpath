@@ -3,8 +3,14 @@ import { AUTH_ERROR_CODES } from '@groundpath/shared';
 import { parseDeviceInfo } from '@groundpath/shared/utils';
 import type { AuthResponse, DeviceInfo } from '@groundpath/shared/types';
 import type { User } from '@core/db/schema/user/users.schema';
+import { withTransaction, type Transaction } from '@core/db/db.utils';
 import type { AccessTokenSubject } from '@core/types';
-import { generateOAuthStateToken, toUserPublicInfo, verifyOAuthStateToken } from '@core/utils';
+import {
+  generateOAuthStateToken,
+  normalizeEmail,
+  toUserPublicInfo,
+  verifyOAuthStateToken,
+} from '@core/utils';
 import { Errors } from '@core/errors';
 import { userService } from '@modules/user/public/management';
 import { userAuthRepository } from '../repositories/user-auth.repository';
@@ -18,6 +24,157 @@ import { createLogger } from '@core/logger';
 import { fingerprintIpAddress } from '@core/logger/redaction';
 
 const logger = createLogger('oauth.service');
+const OAUTH_USERNAME_RETRY_LIMIT = 20;
+
+class RetryWithExistingOAuthBindingError extends Error {
+  constructor() {
+    super('OAuth binding already exists; retry with the persisted binding');
+    this.name = 'RetryWithExistingOAuthBindingError';
+  }
+}
+
+function isDuplicateEntryError(error: unknown): error is { code?: string; errno?: number } {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const duplicateError = error as { code?: string; errno?: number };
+  return duplicateError.code === 'ER_DUP_ENTRY' || duplicateError.errno === 1062;
+}
+
+async function getOAuthUserByIdOrThrow(userId: string, tx: Transaction): Promise<User> {
+  const user = await userService.findById(userId, tx);
+
+  if (!user) {
+    throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+  }
+
+  return user;
+}
+
+async function syncExistingOAuthBinding(
+  authId: string,
+  userId: string,
+  authData: {
+    accessToken: string;
+    profile: Record<string, unknown>;
+  },
+  tx: Transaction
+): Promise<User> {
+  await userAuthRepository.updateAuthData(authId, authData, tx);
+  return getOAuthUserByIdOrThrow(userId, tx);
+}
+
+async function findOrCreateOAuthAccountUser(
+  userData: OAuthUserData,
+  tx: Transaction
+): Promise<{ user: User; createdNewUser: boolean }> {
+  const normalizedEmail = normalizeEmail(userData.email);
+  const existingUser = await userService.findByEmail(normalizedEmail, tx);
+
+  if (existingUser) {
+    return {
+      user: existingUser,
+      createdNewUser: false,
+    };
+  }
+
+  for (let attempt = 0; attempt < OAUTH_USERNAME_RETRY_LIMIT; attempt++) {
+    const uniqueUsername = await generateUniqueUsername(userData.username, tx);
+
+    try {
+      const newUser = await userService.create(
+        {
+          id: uuidv4(),
+          username: uniqueUsername,
+          email: normalizedEmail,
+          password: null,
+          avatarUrl: userData.avatarUrl,
+          status: 'active',
+          emailVerified: true,
+        },
+        tx
+      );
+
+      return {
+        user: newUser,
+        createdNewUser: true,
+      };
+    } catch (error) {
+      if (!isDuplicateEntryError(error)) {
+        throw error;
+      }
+
+      const conflictedUser = await userService.findByEmail(normalizedEmail, tx);
+      if (conflictedUser) {
+        return {
+          user: conflictedUser,
+          createdNewUser: false,
+        };
+      }
+    }
+  }
+
+  throw Errors.internal('Failed to allocate a unique username for OAuth user');
+}
+
+async function createOrReuseOAuthBinding(
+  user: User,
+  createdNewUser: boolean,
+  userData: OAuthUserData,
+  tx: Transaction
+): Promise<User> {
+  try {
+    await userAuthRepository.create(
+      {
+        id: uuidv4(),
+        userId: user.id,
+        authType: userData.providerType,
+        authId: userData.providerId,
+        authData: {
+          accessToken: userData.accessToken,
+          profile: userData.profile,
+        },
+      },
+      tx
+    );
+
+    return user;
+  } catch (error) {
+    if (!isDuplicateEntryError(error)) {
+      throw error;
+    }
+
+    const existingAuth = await userAuthRepository.findByAuthTypeAndId(
+      userData.providerType,
+      userData.providerId,
+      tx
+    );
+
+    if (!existingAuth) {
+      throw error;
+    }
+
+    if (createdNewUser && existingAuth.userId !== user.id) {
+      throw new RetryWithExistingOAuthBindingError();
+    }
+
+    await userAuthRepository.updateAuthData(
+      existingAuth.id,
+      {
+        accessToken: userData.accessToken,
+        profile: userData.profile,
+      },
+      tx
+    );
+
+    if (existingAuth.userId === user.id) {
+      return user;
+    }
+
+    return getOAuthUserByIdOrThrow(existingAuth.userId, tx);
+  }
+}
 
 // ==================== State Store ====================
 
@@ -95,78 +252,62 @@ export async function buildAuthResponse(
  * Find existing user or create new one for OAuth
  */
 export async function findOrCreateOAuthUser(userData: OAuthUserData): Promise<User> {
-  const { providerType, providerId, email, username, avatarUrl, accessToken, profile } = userData;
+  try {
+    return await withTransaction(async (tx) => {
+      const existingAuth = await userAuthRepository.findByAuthTypeAndId(
+        userData.providerType,
+        userData.providerId,
+        tx
+      );
 
-  // Check if OAuth account is already linked
-  const existingAuth = await userAuthRepository.findByAuthTypeAndId(providerType, providerId);
+      if (existingAuth) {
+        return syncExistingOAuthBinding(
+          existingAuth.id,
+          existingAuth.userId,
+          {
+            accessToken: userData.accessToken,
+            profile: userData.profile,
+          },
+          tx
+        );
+      }
 
-  if (existingAuth) {
-    // Update OAuth token and profile
-    await userAuthRepository.updateAuthData(existingAuth.id, {
-      accessToken,
-      profile,
+      const { user, createdNewUser } = await findOrCreateOAuthAccountUser(userData, tx);
+      return createOrReuseOAuthBinding(user, createdNewUser, userData, tx);
     });
-
-    // Return existing user
-    const user = await userService.findById(existingAuth.userId);
-    if (!user) {
-      throw Errors.auth(AUTH_ERROR_CODES.USER_NOT_FOUND, 'User not found', 404);
+  } catch (error) {
+    if (!(error instanceof RetryWithExistingOAuthBindingError)) {
+      throw error;
     }
-    return user;
   }
 
-  // Check if email exists - link OAuth to existing account
-  const existingUser = await userService.findByEmail(email.toLowerCase().trim());
+  return withTransaction(async (tx) => {
+    const existingAuth = await userAuthRepository.findByAuthTypeAndId(
+      userData.providerType,
+      userData.providerId,
+      tx
+    );
 
-  if (existingUser) {
-    // Link OAuth to existing user
-    await userAuthRepository.create({
-      id: uuidv4(),
-      userId: existingUser.id,
-      authType: providerType,
-      authId: providerId,
-      authData: {
-        accessToken,
-        profile,
+    if (!existingAuth) {
+      throw Errors.internal('OAuth binding could not be resolved after concurrent create');
+    }
+
+    return syncExistingOAuthBinding(
+      existingAuth.id,
+      existingAuth.userId,
+      {
+        accessToken: userData.accessToken,
+        profile: userData.profile,
       },
-    });
-
-    return existingUser;
-  }
-
-  // Create new user (without password)
-  const userId = uuidv4();
-  const uniqueUsername = await generateUniqueUsername(username);
-
-  const newUser = await userService.create({
-    id: userId,
-    username: uniqueUsername,
-    email: email.toLowerCase().trim(),
-    password: null, // OAuth users have no password
-    avatarUrl,
-    status: 'active',
-    emailVerified: true, // OAuth email is verified
+      tx
+    );
   });
-
-  // Create auth record
-  await userAuthRepository.create({
-    id: uuidv4(),
-    userId: newUser.id,
-    authType: providerType,
-    authId: providerId,
-    authData: {
-      accessToken,
-      profile,
-    },
-  });
-
-  return newUser;
 }
 
 /**
  * Generate a unique username based on base name
  */
-export async function generateUniqueUsername(baseName: string): Promise<string> {
+export async function generateUniqueUsername(baseName: string, tx?: Transaction): Promise<string> {
   // Sanitize the name: remove special characters, replace spaces with underscores
   let baseUsername = baseName
     .toLowerCase()
@@ -182,7 +323,7 @@ export async function generateUniqueUsername(baseName: string): Promise<string> 
   let username = baseUsername;
   let suffix = 0;
 
-  while (await userService.existsByUsername(username)) {
+  while (await userService.existsByUsername(username, tx)) {
     suffix++;
     username = `${baseUsername}${suffix}`;
   }
