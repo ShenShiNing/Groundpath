@@ -2,7 +2,7 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import { defineConfig } from 'drizzle-kit';
 
-const repoRoot = path.resolve(import.meta.dirname, '../..');
+const repoRoot = path.resolve(__dirname, '../..');
 const nodeEnv = process.env.NODE_ENV || 'development';
 dotenv.config({ path: path.join(repoRoot, `.env.${nodeEnv}.local`) });
 dotenv.config({ path: path.join(repoRoot, `.env.${nodeEnv}`) });

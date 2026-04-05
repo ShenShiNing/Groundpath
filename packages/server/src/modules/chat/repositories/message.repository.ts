@@ -1,9 +1,11 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db } from '@core/db';
 import { getDbContext, type Transaction } from '@core/db/db.utils';
 import { messages, type Message, type NewMessage } from '@core/db/schema/ai/messages.schema';
 import { conversations } from '@core/db/schema/ai/conversations.schema';
 import type { ConversationSearchItem } from '@groundpath/shared/types';
+
+let lastGeneratedMessageCreatedAtMs = 0;
 
 function buildBooleanSearchQuery(query: string): string {
   const normalized = query.trim();
@@ -57,14 +59,43 @@ function buildSnippetExpr(query: string) {
   return { positionExpr, snippetExpr };
 }
 
+function allocateMessageCreatedAt(): Date {
+  const nextCreatedAtMs = Math.max(Date.now(), lastGeneratedMessageCreatedAtMs + 1);
+  lastGeneratedMessageCreatedAtMs = nextCreatedAtMs;
+  return new Date(nextCreatedAtMs);
+}
+
+function withGeneratedCreatedAt(data: NewMessage): NewMessage {
+  if (data.createdAt instanceof Date) {
+    lastGeneratedMessageCreatedAtMs = Math.max(
+      lastGeneratedMessageCreatedAtMs,
+      data.createdAt.getTime()
+    );
+    return data;
+  }
+
+  return {
+    ...data,
+    createdAt: allocateMessageCreatedAt(),
+  };
+}
+
+function buildMessagesAfterCondition(target: Pick<Message, 'createdAt' | 'id'>) {
+  return or(
+    gt(messages.createdAt, target.createdAt),
+    and(eq(messages.createdAt, target.createdAt), gt(messages.id, target.id))
+  )!;
+}
+
 export const messageRepository = {
   /**
    * Create a new message
    */
   async create(data: NewMessage, tx?: Transaction): Promise<Message> {
     const ctx = getDbContext(tx);
-    await ctx.insert(messages).values(data);
-    const result = await ctx.select().from(messages).where(eq(messages.id, data.id)).limit(1);
+    const payload = withGeneratedCreatedAt(data);
+    await ctx.insert(messages).values(payload);
+    const result = await ctx.select().from(messages).where(eq(messages.id, payload.id)).limit(1);
     return result[0]!;
   },
 
@@ -77,9 +108,10 @@ export const messageRepository = {
     }
 
     const ctx = getDbContext(tx);
-    await ctx.insert(messages).values(data);
+    const payload = data.map(withGeneratedCreatedAt);
+    await ctx.insert(messages).values(payload);
 
-    const ids = data.map((message) => message.id);
+    const ids = payload.map((message) => message.id);
     const result = await ctx.select().from(messages).where(inArray(messages.id, ids));
     const messagesById = new Map(result.map((message) => [message.id, message]));
 
@@ -107,7 +139,7 @@ export const messageRepository = {
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
-      .orderBy(asc(messages.createdAt))
+      .orderBy(asc(messages.createdAt), asc(messages.id))
       .limit(options?.limit ?? 100)
       .offset(options?.offset ?? 0);
   },
@@ -120,7 +152,7 @@ export const messageRepository = {
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
-      .orderBy(desc(messages.createdAt))
+      .orderBy(desc(messages.createdAt), desc(messages.id))
       .limit(limit);
 
     // Reverse to get chronological order
@@ -147,7 +179,7 @@ export const messageRepository = {
       .select({ createdAt: messages.createdAt })
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
-      .orderBy(desc(messages.createdAt))
+      .orderBy(desc(messages.createdAt), desc(messages.id))
       .limit(1);
 
     return result[0]?.createdAt ?? null;
@@ -172,7 +204,7 @@ export const messageRepository = {
    */
   async deleteAfterMessage(conversationId: string, afterMessageId: string): Promise<void> {
     const target = await db
-      .select({ createdAt: messages.createdAt })
+      .select({ createdAt: messages.createdAt, id: messages.id })
       .from(messages)
       .where(eq(messages.id, afterMessageId))
       .limit(1);
@@ -184,7 +216,7 @@ export const messageRepository = {
       .where(
         and(
           eq(messages.conversationId, conversationId),
-          gt(messages.createdAt, target[0].createdAt)
+          buildMessagesAfterCondition(target[0])
         )
       );
   },
@@ -285,7 +317,8 @@ export const messageRepository = {
         .orderBy(
           sql`CASE WHEN ${exactPositionExpr} > 0 THEN 0 ELSE 1 END`,
           desc(fulltextScoreExpr),
-          desc(messages.createdAt)
+          desc(messages.createdAt),
+          desc(messages.id)
         )
         .limit(limit)
         .offset(offset);
@@ -336,7 +369,7 @@ export const messageRepository = {
       .from(messages)
       .innerJoin(conversations, eq(messages.conversationId, conversations.id))
       .where(likeCondition)
-      .orderBy(asc(exactPositionExpr), desc(messages.createdAt))
+      .orderBy(asc(exactPositionExpr), desc(messages.createdAt), desc(messages.id))
       .limit(limit)
       .offset(offset);
 

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   mysqlTable,
   varchar,
@@ -28,11 +29,11 @@ export const messages = mysqlTable(
     metadata: json('metadata').$type<MessageMetadata>(),
 
     // Timestamp
-    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdAt: timestamp('created_at', { fsp: 3 }).default(sql`(now(3))`).notNull(),
   },
   (table) => [
     index('conversation_id_idx').on(table.conversationId),
-    index('conversation_created_idx').on(table.conversationId, table.createdAt),
+    index('conversation_created_idx').on(table.conversationId, table.createdAt, table.id),
     foreignKey({
       columns: [table.conversationId],
       foreignColumns: [conversations.id],

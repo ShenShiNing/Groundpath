@@ -171,4 +171,38 @@ describeRealIntegration('messages schema migrations integration', () => {
     expect(searchRows[0]?.id).toBe(matchingMessageId);
     expect(Number(searchRows[0]?.score ?? 0)).toBeGreaterThan(0);
   });
+
+  it('stores message timestamps with millisecond precision and a stable conversation ordering index', async () => {
+    const [columnRows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT
+          DATETIME_PRECISION AS datetimePrecision
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'messages'
+          AND column_name = 'created_at'
+      `
+    );
+
+    expect(Number(columnRows[0]?.datetimePrecision ?? -1)).toBe(3);
+
+    const [indexRows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT
+          COLUMN_NAME AS columnName,
+          SEQ_IN_INDEX AS seqInIndex
+        FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'messages'
+          AND index_name = 'conversation_created_idx'
+        ORDER BY seq_in_index ASC
+      `
+    );
+
+    expect(indexRows.map((row) => row.columnName)).toEqual([
+      'conversation_id',
+      'created_at',
+      'id',
+    ]);
+  });
 });
