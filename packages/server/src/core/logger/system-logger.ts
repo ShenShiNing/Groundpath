@@ -1,6 +1,7 @@
 import { createLogger } from '@core/logger';
 import { systemLogRepository, type CreateSystemLogInput } from '@modules/logs/public/repositories';
 import type { LogLevel, LogCategory } from '@core/db/schema/system/system-logs.schema';
+import { sanitizeLogMetadata } from './redaction';
 
 const logger = createLogger('system-logger');
 
@@ -24,6 +25,7 @@ export interface LogSystemEventParams {
 export function logSystemEvent(params: LogSystemEventParams): void {
   const input: CreateSystemLogInput = {
     ...params,
+    metadata: sanitizeLogMetadata(params.metadata),
   };
 
   systemLogRepository.create(input).catch((error) => {

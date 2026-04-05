@@ -236,7 +236,7 @@
 | 中     | 后端日志 PII 脱敏                     | Pino `redact` 与业务日志仍需继续收口                                           |
 | ~~中~~ | ~~生产环境真实来源 IP 透传~~ ✅       | 已增强代理头 IP 解析与部署示例，修复多层代理下 Geo-IP 采集为空的问题           |
 | 中     | 生产环境强制启用速率限制              | `disableRateLimit` 不应在 prod 生效                                            |
-| 低     | 日志中 IP 脱敏                        | 显示前三个八位组                                                               |
+| ~~低~~ | ~~日志中 IP 脱敏~~ ✅                 | 运行时日志、系统日志元数据、登录/操作日志出参统一掩码；IPv4 保留前三个八位组   |
 
 - **补记（2026-04-04）**: 已在服务端增强代理头 IP 解析，新增对 `CF-Connecting-IP` / `True-Client-IP` / `Forwarded` / `X-Forwarded-For` 的兜底提取；同时将 Compose 默认 `TRUST_PROXY` 调整为 `true`，并在 OpenResty 部署样例中补充 `real_ip_header` / `set_real_ip_from` / `real_ip_recursive`，修复多层代理下登录日志易落 `172.20.0.1` 等私网地址、导致 Geo-IP 字段全部为空的问题。
 

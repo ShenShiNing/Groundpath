@@ -1,9 +1,10 @@
 import type { OperationLog } from '@core/db/schema/system/operation-logs.schema';
 import { buildPagination } from '@core/utils';
+import { maskIpAddressForLog } from '@core/logger/redaction';
 import {
   operationLogRepository,
   type OperationLogListParams,
-} from '../repositories/operation-log.repository';
+} from '@modules/logs/repositories/operation-log.repository';
 
 export interface OperationLogListItem {
   id: string;
@@ -48,7 +49,7 @@ function toOperationLogListItem(log: OperationLog): OperationLogListItem {
     action: log.action,
     description: log.description,
     status: log.status,
-    ipAddress: log.ipAddress,
+    ipAddress: maskIpAddressForLog(log.ipAddress),
     createdAt: log.createdAt,
   };
 }
