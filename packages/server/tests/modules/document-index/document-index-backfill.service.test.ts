@@ -85,28 +85,31 @@ describe('documentIndexBackfillService', () => {
       hasMore: false,
     });
     mocks.backfillProgress.createRun.mockResolvedValue({
-      id: 'run-1',
-      status: 'running',
-      trigger: 'manual',
-      knowledgeBaseId: 'kb-1',
-      documentType: null,
-      includeIndexed: false,
-      includeProcessing: false,
-      batchSize: 50,
-      enqueueDelayMs: 0,
-      candidateCount: 1,
-      enqueuedCount: 0,
-      completedCount: 0,
-      failedCount: 0,
-      skippedCount: 0,
-      cursorOffset: 0,
-      hasMore: false,
-      lastError: null,
-      startedAt: new Date('2026-03-09T10:00:00.000Z'),
-      completedAt: null,
-      createdBy: null,
-      createdAt: new Date('2026-03-09T10:00:00.000Z'),
-      updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+      run: {
+        id: 'run-1',
+        status: 'running',
+        trigger: 'manual',
+        knowledgeBaseId: 'kb-1',
+        documentType: null,
+        includeIndexed: false,
+        includeProcessing: false,
+        batchSize: 50,
+        enqueueDelayMs: 0,
+        candidateCount: 1,
+        enqueuedCount: 0,
+        completedCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+        cursorOffset: 0,
+        hasMore: false,
+        lastError: null,
+        startedAt: new Date('2026-03-09T10:00:00.000Z'),
+        completedAt: null,
+        createdBy: null,
+        createdAt: new Date('2026-03-09T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+      },
+      created: true,
     });
     mocks.backfillProgress.ensureItem.mockResolvedValue({
       id: 'item-1',
@@ -336,6 +339,139 @@ describe('documentIndexBackfillService', () => {
       error: 'queue unavailable',
     });
     expect(result.enqueuedCount).toBe(1);
+  });
+
+  it('re-enters via runId when scheduled run creation reuses an existing active run', async () => {
+    mocks.documentRepository.listBackfillCandidates
+      .mockResolvedValueOnce({
+        documents: [
+          {
+            id: 'doc-stale',
+            userId: 'user-1',
+            title: 'Stale Plan',
+            knowledgeBaseId: 'kb-1',
+            documentType: 'pdf',
+            currentVersion: 1,
+            activeIndexVersionId: null,
+            processingStatus: 'completed',
+            updatedAt: new Date('2026-03-09T09:00:00.000Z'),
+          },
+        ],
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        documents: [
+          {
+            id: 'doc-fresh',
+            userId: 'user-1',
+            title: 'Fresh Plan',
+            knowledgeBaseId: 'kb-1',
+            documentType: 'pdf',
+            currentVersion: 2,
+            activeIndexVersionId: null,
+            processingStatus: 'completed',
+            updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+          },
+        ],
+        hasMore: false,
+      });
+    mocks.backfillProgress.createRun.mockResolvedValueOnce({
+      run: {
+        id: 'run-scheduled-1',
+        status: 'running',
+        trigger: 'scheduled',
+        knowledgeBaseId: 'kb-1',
+        documentType: null,
+        includeIndexed: false,
+        includeProcessing: false,
+        batchSize: 50,
+        enqueueDelayMs: 0,
+        candidateCount: 10,
+        enqueuedCount: 3,
+        completedCount: 3,
+        failedCount: 0,
+        skippedCount: 0,
+        cursorOffset: 3,
+        hasMore: true,
+        lastError: null,
+        startedAt: new Date('2026-03-09T10:00:00.000Z'),
+        completedAt: null,
+        createdBy: null,
+        createdAt: new Date('2026-03-09T10:00:00.000Z'),
+        updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+      },
+      created: false,
+    });
+    mocks.backfillProgress.ensureRunAvailable.mockResolvedValue({
+      id: 'run-scheduled-1',
+      status: 'running',
+      trigger: 'scheduled',
+      knowledgeBaseId: 'kb-1',
+      documentType: null,
+      includeIndexed: false,
+      includeProcessing: false,
+      batchSize: 50,
+      enqueueDelayMs: 0,
+      candidateCount: 10,
+      enqueuedCount: 3,
+      completedCount: 3,
+      failedCount: 0,
+      skippedCount: 0,
+      cursorOffset: 3,
+      hasMore: true,
+      lastError: null,
+      startedAt: new Date('2026-03-09T10:00:00.000Z'),
+      completedAt: null,
+      createdBy: null,
+      createdAt: new Date('2026-03-09T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+    });
+    mocks.backfillProgress.ensureItem.mockResolvedValueOnce({
+      id: 'item-fresh',
+      runId: 'run-scheduled-1',
+      documentId: 'doc-fresh',
+      userId: 'user-1',
+      knowledgeBaseId: 'kb-1',
+      documentVersion: 2,
+      status: 'pending',
+      jobId: null,
+      error: null,
+      createdAt: new Date('2026-03-09T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+      enqueuedAt: null,
+      completedAt: null,
+    });
+
+    const result = await documentIndexBackfillService.enqueueBackfill({
+      trigger: 'scheduled',
+    });
+
+    expect(mocks.documentRepository.listBackfillCandidates).toHaveBeenNthCalledWith(1, {
+      knowledgeBaseId: undefined,
+      documentType: undefined,
+      includeIndexed: undefined,
+      includeProcessing: undefined,
+      excludeRunId: undefined,
+      limit: 50,
+      offset: 0,
+    });
+    expect(mocks.documentRepository.listBackfillCandidates).toHaveBeenNthCalledWith(2, {
+      knowledgeBaseId: 'kb-1',
+      documentType: undefined,
+      includeIndexed: false,
+      includeProcessing: false,
+      excludeRunId: 'run-scheduled-1',
+      limit: 50,
+      offset: 0,
+    });
+    expect(mocks.dispatchDocumentProcessing).toHaveBeenCalledTimes(1);
+    expect(mocks.dispatchDocumentProcessing).toHaveBeenCalledWith('doc-fresh', 'user-1', {
+      targetDocumentVersion: 2,
+      reason: 'backfill',
+      backfillRunId: 'run-scheduled-1',
+    });
+    expect(result.runId).toBe('run-scheduled-1');
+    expect(result.offset).toBe(3);
   });
 
   it('serializes scheduled backfill execution through the coordination helper', async () => {

@@ -38,7 +38,7 @@ vi.mock('@modules/document-index/repositories/document-index-backfill-item.repos
 
 import { documentIndexBackfillProgressService } from '@modules/document-index/services/document-index-backfill-progress.service';
 
-describe('documentIndexBackfillProgressService.ensureItem', () => {
+describe('documentIndexBackfillProgressService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -112,5 +112,70 @@ describe('documentIndexBackfillProgressService.ensureItem', () => {
     });
 
     expect(result).toMatchObject({ id: 'concurrent-item' });
+  });
+
+  it('creates scheduled runs normally when there is no uniqueness race', async () => {
+    mocks.runRepository.create.mockResolvedValue({
+      id: 'generated-backfill-item-id',
+      status: 'running',
+      trigger: 'scheduled',
+    });
+
+    const result = await documentIndexBackfillProgressService.createRun({
+      batchSize: 50,
+      enqueueDelayMs: 0,
+      candidateCount: 3,
+      trigger: 'scheduled',
+    });
+
+    expect(result).toEqual({
+      run: {
+        id: 'generated-backfill-item-id',
+        status: 'running',
+        trigger: 'scheduled',
+      },
+      created: true,
+    });
+  });
+
+  it('reuses the active scheduled run after a duplicate insert race', async () => {
+    mocks.runRepository.create.mockRejectedValue({ code: 'ER_DUP_ENTRY' });
+    mocks.runRepository.findLatestActiveRun.mockResolvedValue({
+      id: 'scheduled-run-1',
+      status: 'running',
+      trigger: 'scheduled',
+    });
+
+    const result = await documentIndexBackfillProgressService.createRun({
+      batchSize: 50,
+      enqueueDelayMs: 0,
+      candidateCount: 3,
+      trigger: 'scheduled',
+    });
+
+    expect(mocks.runRepository.findLatestActiveRun).toHaveBeenCalledWith('scheduled');
+    expect(result).toEqual({
+      run: {
+        id: 'scheduled-run-1',
+        status: 'running',
+        trigger: 'scheduled',
+      },
+      created: false,
+    });
+  });
+
+  it('rethrows duplicate errors for non-scheduled runs', async () => {
+    mocks.runRepository.create.mockRejectedValue({ code: 'ER_DUP_ENTRY' });
+
+    await expect(
+      documentIndexBackfillProgressService.createRun({
+        batchSize: 50,
+        enqueueDelayMs: 0,
+        candidateCount: 1,
+        trigger: 'manual',
+      })
+    ).rejects.toMatchObject({ code: 'ER_DUP_ENTRY' });
+
+    expect(mocks.runRepository.findLatestActiveRun).not.toHaveBeenCalled();
   });
 });

@@ -34,24 +34,44 @@ export interface BackfillRunCreateOptions {
   createdBy?: string;
 }
 
+export interface BackfillRunCreateResult {
+  run: DocumentIndexBackfillRun;
+  created: boolean;
+}
+
 export const documentIndexBackfillProgressService = {
-  async createRun(options: BackfillRunCreateOptions): Promise<DocumentIndexBackfillRun> {
+  async createRun(options: BackfillRunCreateOptions): Promise<BackfillRunCreateResult> {
     const runId = uuidv4();
-    return documentIndexBackfillRunRepository.create({
-      id: runId,
-      status: 'running',
-      trigger: options.trigger ?? 'manual',
-      knowledgeBaseId: options.knowledgeBaseId,
-      documentType: options.documentType,
-      includeIndexed: options.includeIndexed ?? false,
-      includeProcessing: options.includeProcessing ?? false,
-      batchSize: options.batchSize,
-      enqueueDelayMs: options.enqueueDelayMs,
-      candidateCount: options.candidateCount,
-      cursorOffset: options.cursorOffset ?? 0,
-      hasMore: true,
-      createdBy: options.createdBy,
-    });
+    try {
+      const run = await documentIndexBackfillRunRepository.create({
+        id: runId,
+        status: 'running',
+        trigger: options.trigger ?? 'manual',
+        knowledgeBaseId: options.knowledgeBaseId,
+        documentType: options.documentType,
+        includeIndexed: options.includeIndexed ?? false,
+        includeProcessing: options.includeProcessing ?? false,
+        batchSize: options.batchSize,
+        enqueueDelayMs: options.enqueueDelayMs,
+        candidateCount: options.candidateCount,
+        cursorOffset: options.cursorOffset ?? 0,
+        hasMore: true,
+        createdBy: options.createdBy,
+      });
+
+      return { run, created: true };
+    } catch (error) {
+      if (!isDuplicateEntryError(error) || (options.trigger ?? 'manual') !== 'scheduled') {
+        throw error;
+      }
+
+      const activeRun = await documentIndexBackfillRunRepository.findLatestActiveRun('scheduled');
+      if (activeRun) {
+        return { run: activeRun, created: false };
+      }
+
+      throw error;
+    }
   },
 
   async getRun(runId: string): Promise<DocumentIndexBackfillRun | undefined> {

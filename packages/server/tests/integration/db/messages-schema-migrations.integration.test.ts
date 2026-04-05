@@ -13,6 +13,7 @@ const describeRealIntegration = getRealIntegrationDescribe(
   'RUN_REAL_MESSAGES_SCHEMA_MIGRATIONS_INTEGRATION'
 );
 const MESSAGES_CONTENT_FULLTEXT_INDEX = 'messages_content_fulltext_idx';
+const MESSAGES_SEQUENCE_UNIQUE_INDEX = 'messages_sequence_unique_idx';
 
 function getDatabaseUrl(): URL {
   const rawUrl = resolveRealIntegrationEnvValue([
@@ -170,5 +171,143 @@ describeRealIntegration('messages schema migrations integration', () => {
     expect(searchRows).toHaveLength(1);
     expect(searchRows[0]?.id).toBe(matchingMessageId);
     expect(Number(searchRows[0]?.score ?? 0)).toBeGreaterThan(0);
+  });
+
+  it('adds a stable auto-increment sequence for message ordering and edit truncation semantics', async () => {
+    const userId = randomUUID();
+    const conversationId = randomUUID();
+    const firstMessageId = randomUUID();
+    const secondMessageId = randomUUID();
+    const thirdMessageId = randomUUID();
+    const sharedTimestamp = '2026-04-01 00:00:00';
+
+    await testConnection.query(
+      `
+        INSERT INTO users (
+          id, username, email, password, status, email_verified, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+      `,
+      [
+        userId,
+        `message-seq-${Date.now()}`,
+        `message-seq-${Date.now()}@example.com`,
+        null,
+        'active',
+        true,
+      ]
+    );
+
+    await testConnection.query(
+      `
+        INSERT INTO conversations (
+          id, user_id, title, created_at, updated_at
+        ) VALUES (?, ?, ?, NOW(), NOW())
+      `,
+      [conversationId, userId, 'Sequence verification conversation']
+    );
+
+    await testConnection.query(
+      `
+        INSERT INTO messages (
+          id, conversation_id, role, content, created_at
+        ) VALUES
+          (?, ?, ?, ?, ?),
+          (?, ?, ?, ?, ?),
+          (?, ?, ?, ?, ?)
+      `,
+      [
+        firstMessageId,
+        conversationId,
+        'user',
+        'First same-second message',
+        sharedTimestamp,
+        secondMessageId,
+        conversationId,
+        'assistant',
+        'Second same-second message',
+        sharedTimestamp,
+        thirdMessageId,
+        conversationId,
+        'assistant',
+        'Third same-second message',
+        sharedTimestamp,
+      ]
+    );
+
+    const [columnRows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT COLUMN_NAME AS columnName, EXTRA AS extra
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'messages'
+          AND column_name = 'sequence'
+      `
+    );
+
+    expect(columnRows).toHaveLength(1);
+    expect(String(columnRows[0]?.extra ?? '')).toContain('auto_increment');
+
+    const [indexRows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT INDEX_NAME AS indexName, COLUMN_NAME AS columnName, NON_UNIQUE AS nonUnique
+        FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'messages'
+          AND index_name = ?
+      `,
+      [MESSAGES_SEQUENCE_UNIQUE_INDEX]
+    );
+
+    expect(indexRows).toHaveLength(1);
+    expect(indexRows[0]?.columnName).toBe('sequence');
+    expect(Number(indexRows[0]?.nonUnique ?? 1)).toBe(0);
+
+    const [orderedRows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT id, sequence
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY sequence ASC
+      `,
+      [conversationId]
+    );
+
+    expect(orderedRows.map((row) => row.id)).toEqual([
+      firstMessageId,
+      secondMessageId,
+      thirdMessageId,
+    ]);
+    expect(Number(orderedRows[0]?.sequence ?? 0)).toBeGreaterThan(0);
+    expect(Number(orderedRows[1]?.sequence ?? 0)).toBe(Number(orderedRows[0]?.sequence ?? 0) + 1);
+
+    const [targetRows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT sequence
+        FROM messages
+        WHERE id = ?
+      `,
+      [secondMessageId]
+    );
+
+    await testConnection.query(
+      `
+        DELETE FROM messages
+        WHERE conversation_id = ?
+          AND sequence > ?
+      `,
+      [conversationId, Number(targetRows[0]?.sequence ?? 0)]
+    );
+
+    const [remainingRows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT id
+        FROM messages
+        WHERE conversation_id = ?
+        ORDER BY sequence ASC
+      `,
+      [conversationId]
+    );
+
+    expect(remainingRows.map((row) => row.id)).toEqual([firstMessageId, secondMessageId]);
   });
 });

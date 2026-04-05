@@ -139,7 +139,7 @@ export const documentIndexBackfillService = {
         includeIndexed: options.includeIndexed,
         includeProcessing: options.includeProcessing,
       });
-      const run = await documentIndexBackfillProgressService.createRun({
+      const createRunResult = await documentIndexBackfillProgressService.createRun({
         knowledgeBaseId: options.knowledgeBaseId,
         documentType: options.documentType,
         includeIndexed: options.includeIndexed,
@@ -151,7 +151,15 @@ export const documentIndexBackfillService = {
         trigger: options.trigger ?? 'manual',
         createdBy: options.createdBy,
       });
-      runId = run.id;
+      runId = createRunResult.run.id;
+
+      if (!createRunResult.created) {
+        return this.enqueueBackfill({
+          ...options,
+          runId,
+          trigger: options.trigger ?? 'manual',
+        });
+      }
     }
 
     if (!runId) {

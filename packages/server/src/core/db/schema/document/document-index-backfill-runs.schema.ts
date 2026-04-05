@@ -7,8 +7,10 @@ import {
   mysqlTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from 'drizzle-orm/mysql-core';
+import { sql } from 'drizzle-orm';
 import { users } from '../user/users.schema';
 import { knowledgeBases } from './knowledge-bases.schema';
 
@@ -41,6 +43,11 @@ export const documentIndexBackfillRuns = mysqlTable(
 
     lastError: text('last_error'),
 
+    activeScheduledSlot: varchar('active_scheduled_slot', { length: 32 }).generatedAlwaysAs(
+      sql`(case when \`trigger\` = 'scheduled' and \`status\` in ('running', 'draining') then 'scheduled' else null end)`,
+      { mode: 'stored' }
+    ),
+
     startedAt: timestamp('started_at').defaultNow().notNull(),
     completedAt: timestamp('completed_at'),
 
@@ -54,6 +61,9 @@ export const documentIndexBackfillRuns = mysqlTable(
     index('document_index_backfill_kb_idx').on(table.knowledgeBaseId),
     index('document_index_backfill_created_by_idx').on(table.createdBy),
     index('document_index_backfill_created_at_idx').on(table.createdAt),
+    uniqueIndex('document_index_backfill_active_scheduled_unique_idx').on(
+      table.activeScheduledSlot
+    ),
     foreignKey({
       columns: [table.knowledgeBaseId],
       foreignColumns: [knowledgeBases.id],

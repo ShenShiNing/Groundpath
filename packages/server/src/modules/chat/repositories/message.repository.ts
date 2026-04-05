@@ -97,7 +97,7 @@ export const messageRepository = {
   },
 
   /**
-   * List messages for a conversation (ordered by creation time)
+   * List messages for a conversation using the stable database sequence.
    */
   async listByConversation(
     conversationId: string,
@@ -107,20 +107,20 @@ export const messageRepository = {
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
-      .orderBy(asc(messages.createdAt))
+      .orderBy(asc(messages.sequence))
       .limit(options?.limit ?? 100)
       .offset(options?.offset ?? 0);
   },
 
   /**
-   * Get recent messages for context (most recent first, then reversed)
+   * Get recent messages for context (most recent sequence first, then reversed)
    */
   async getRecentMessages(conversationId: string, limit: number = 10): Promise<Message[]> {
     const result = await db
       .select()
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
-      .orderBy(desc(messages.createdAt))
+      .orderBy(desc(messages.sequence))
       .limit(limit);
 
     // Reverse to get chronological order
@@ -147,7 +147,7 @@ export const messageRepository = {
       .select({ createdAt: messages.createdAt })
       .from(messages)
       .where(eq(messages.conversationId, conversationId))
-      .orderBy(desc(messages.createdAt))
+      .orderBy(desc(messages.sequence))
       .limit(1);
 
     return result[0]?.createdAt ?? null;
@@ -172,7 +172,7 @@ export const messageRepository = {
    */
   async deleteAfterMessage(conversationId: string, afterMessageId: string): Promise<void> {
     const target = await db
-      .select({ createdAt: messages.createdAt })
+      .select({ sequence: messages.sequence })
       .from(messages)
       .where(eq(messages.id, afterMessageId))
       .limit(1);
@@ -184,7 +184,7 @@ export const messageRepository = {
       .where(
         and(
           eq(messages.conversationId, conversationId),
-          gt(messages.createdAt, target[0].createdAt)
+          gt(messages.sequence, target[0].sequence)
         )
       );
   },
@@ -285,7 +285,8 @@ export const messageRepository = {
         .orderBy(
           sql`CASE WHEN ${exactPositionExpr} > 0 THEN 0 ELSE 1 END`,
           desc(fulltextScoreExpr),
-          desc(messages.createdAt)
+          desc(messages.createdAt),
+          desc(messages.sequence)
         )
         .limit(limit)
         .offset(offset);
@@ -336,7 +337,7 @@ export const messageRepository = {
       .from(messages)
       .innerJoin(conversations, eq(messages.conversationId, conversations.id))
       .where(likeCondition)
-      .orderBy(asc(exactPositionExpr), desc(messages.createdAt))
+      .orderBy(asc(exactPositionExpr), desc(messages.createdAt), desc(messages.sequence))
       .limit(limit)
       .offset(offset);
 
