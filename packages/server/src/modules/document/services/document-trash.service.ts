@@ -200,58 +200,65 @@ export const documentTrashService = {
    * Permanently delete a document
    *
    * Order of operations (compensation-safe):
-   * 1. Soft-delete vectors BEFORE DB hard-delete — makes them invisible to
-   *    search immediately. If this fails, abort so DB records remain intact
-   *    and the user can retry.
-   * 2. DB transaction — hard-deletes metadata.
+   * 1. Lock the knowledge base and document in a DB transaction.
+   * 2. While holding the locks, confirm the document is still in trash and
+   *    soft-delete vectors before hard-deleting metadata. If vector soft-delete
+   *    fails, abort so DB records remain intact and the user can retry.
    * 3. Best-effort cleanup — storage files + physical vector deletion.
    *    The daily vector-cleanup job sweeps any soft-deleted vectors that
    *    fail to be physically removed here.
    */
   async permanentDelete(documentId: string, userId: string, ctx?: RequestContext): Promise<void> {
     const startTime = Date.now();
-    const document = await documentRepository.findDeletedByIdAndUser(documentId, userId);
-    if (!document) {
-      throw Errors.auth(
-        DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND as 'DOCUMENT_NOT_FOUND',
-        'Document not found in trash',
-        404
-      );
-    }
-
-    // Get version list before transaction (needed for storage cleanup)
-    const versions = await documentVersionRepository.listByDocumentId(documentId);
-
-    // Collect storage keys for cleanup after DB transaction
-    const storageKeys = versions.map((v) => v.storageKey);
-
-    // STEP 1: Soft-delete vectors BEFORE DB hard-delete.
-    // This ensures vectors are excluded from search immediately.
-    // If Qdrant is unreachable, we abort so the user can retry later
-    // (DB records stay intact → no orphaned vectors).
-    const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(document.knowledgeBaseId);
-    const softDeleted = await vectorRepository.markAsDeleted(embeddingConfig.collectionName, {
+    const ownedDocument = await documentRepository.findByIdAndUserIncludingDeleted(
       documentId,
-    });
-    if (!softDeleted) {
-      throw Errors.external(
-        'Failed to mark vectors as deleted in Qdrant — aborting permanent delete to prevent orphaned vectors. Please retry later.',
-        { documentId }
-      );
+      userId
+    );
+    if (!ownedDocument) {
+      throw documentNotFoundInTrashError();
     }
 
-    // STEP 2: DB transaction — removes metadata.
-    // If this fails, vectors are soft-deleted but the document is still in
-    // trash; restoring it will re-dispatch processing and create new vectors.
-    await withTransaction(async (tx) => {
+    const embeddingConfig = await knowledgeBaseService.getEmbeddingConfig(
+      ownedDocument.knowledgeBaseId
+    );
+
+    const deletion = await withTransaction(async (tx) => {
+      await knowledgeBaseService.lockOwnership(ownedDocument.knowledgeBaseId, userId, tx);
+
+      const lockedDocument = await documentRepository.lockByIdAndUser(documentId, userId, tx);
+      if (!lockedDocument?.deletedAt) {
+        throw documentNotFoundInTrashError();
+      }
+
+      const versions = await documentVersionRepository.listByDocumentId(documentId, tx);
+      const storageKeys = versions.map((version) => version.storageKey);
+
+      // Hold the document lock across the vector visibility cutover so restore
+      // cannot race between soft-delete and the metadata hard-delete.
+      const softDeleted = await vectorRepository.markAsDeleted(embeddingConfig.collectionName, {
+        documentId,
+      });
+      if (!softDeleted) {
+        throw Errors.external(
+          'Failed to mark vectors as deleted in Qdrant — aborting permanent delete to prevent orphaned vectors. Please retry later.',
+          { documentId }
+        );
+      }
+
       await documentChunkRepository.deleteByDocumentId(documentId, tx);
       await documentVersionRepository.deleteByDocumentId(documentId, tx);
       await documentRepository.hardDelete(documentId, tx);
+
+      return {
+        document: lockedDocument,
+        storageKeys,
+        versionsDeleted: versions.length,
+      };
     });
 
     // STEP 3: Best-effort cleanup of storage files.
     // Orphaned files are acceptable — a background cleanup job can sweep them.
-    for (const key of storageKeys) {
+    for (const key of deletion.storageKeys) {
       try {
         await documentStorageService.deleteDocument(key);
       } catch (err) {
@@ -278,13 +285,13 @@ export const documentTrashService = {
       userId,
       resourceType: 'document',
       resourceId: documentId,
-      resourceName: document.title,
+      resourceName: deletion.document.title,
       action: 'document.permanent_delete',
-      description: `Permanently deleted document: ${document.title}`,
+      description: `Permanently deleted document: ${deletion.document.title}`,
       metadata: {
-        fileName: document.fileName,
-        fileSize: document.fileSize,
-        versionsDeleted: versions.length,
+        fileName: deletion.document.fileName,
+        fileSize: deletion.document.fileSize,
+        versionsDeleted: deletion.versionsDeleted,
       },
       ipAddress: ctx?.ipAddress ?? null,
       userAgent: ctx?.userAgent ?? null,

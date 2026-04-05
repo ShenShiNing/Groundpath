@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import { DOCUMENT_ERROR_CODES } from '@groundpath/shared';
 import { getRealIntegrationDescribe, loadRealIntegrationEnv } from '../helpers/real-integration';
 
 const describeRealIntegration = getRealIntegrationDescribe(
@@ -8,12 +9,15 @@ const describeRealIntegration = getRealIntegrationDescribe(
 
 const runtimeState = vi.hoisted(() => ({
   failChunkDelete: false,
+  getEmbeddingConfigBlocker: null as Promise<void> | null,
 }));
 
 const dispatchDocumentProcessingMock = vi.hoisted(() =>
   vi.fn(() => Promise.resolve('document-processing-job'))
 );
+const knowledgeBaseGetEmbeddingConfigMock = vi.hoisted(() => vi.fn());
 const logOperationMock = vi.hoisted(() => vi.fn());
+const vectorMarkAsDeletedMock = vi.hoisted(() => vi.fn(() => Promise.resolve(true)));
 const vectorDeleteMock = vi.hoisted(() => vi.fn(() => Promise.resolve(true)));
 
 type DbModule = typeof import('@core/db');
@@ -68,8 +72,30 @@ describeRealIntegration('document lifecycle real db integration', () => {
       dispatchDocumentProcessing: dispatchDocumentProcessingMock,
     }));
 
+    vi.doMock('@modules/knowledge-base/public/management', async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import('@modules/knowledge-base/public/management')>();
+
+      knowledgeBaseGetEmbeddingConfigMock.mockImplementation(async (kbId: string) => {
+        if (runtimeState.getEmbeddingConfigBlocker) {
+          await runtimeState.getEmbeddingConfigBlocker;
+        }
+
+        return actual.knowledgeBaseService.getEmbeddingConfig(kbId);
+      });
+
+      return {
+        ...actual,
+        knowledgeBaseService: {
+          ...actual.knowledgeBaseService,
+          getEmbeddingConfig: knowledgeBaseGetEmbeddingConfigMock,
+        },
+      };
+    });
+
     vi.doMock('@modules/vector/public/repositories', () => ({
       vectorRepository: {
+        markAsDeleted: vectorMarkAsDeletedMock,
         deleteByDocumentId: vectorDeleteMock,
       },
     }));
@@ -109,8 +135,11 @@ describeRealIntegration('document lifecycle real db integration', () => {
 
   beforeEach(() => {
     runtimeState.failChunkDelete = false;
+    runtimeState.getEmbeddingConfigBlocker = null;
     dispatchDocumentProcessingMock.mockClear();
+    knowledgeBaseGetEmbeddingConfigMock.mockClear();
     logOperationMock.mockClear();
+    vectorMarkAsDeletedMock.mockClear();
     vectorDeleteMock.mockClear();
   });
 
@@ -121,6 +150,7 @@ describeRealIntegration('document lifecycle real db integration', () => {
 
     vi.doUnmock('@core/logger/operation-logger');
     vi.doUnmock('@core/document-processing');
+    vi.doUnmock('@modules/knowledge-base/public/management');
     vi.doUnmock('@modules/vector/public/repositories');
     vi.doUnmock('@modules/document/repositories/document-chunk.repository');
     vi.resetModules();
@@ -275,6 +305,14 @@ describeRealIntegration('document lifecycle real db integration', () => {
     return rows[0];
   }
 
+  async function getDocumentVersions(documentId: string) {
+    const { eq } = drizzle;
+    return db
+      .select()
+      .from(schema.documentVersions)
+      .where(eq(schema.documentVersions.documentId, documentId));
+  }
+
   it('keeps delete idempotent and decrements counters only once', async () => {
     const fixture = await createFixture({
       documentCount: 1,
@@ -325,6 +363,64 @@ describeRealIntegration('document lifecycle real db integration', () => {
       expect(knowledgeBase?.documentCount).toBe(1);
       expect(dispatchDocumentProcessingMock).toHaveBeenCalledTimes(1);
     } finally {
+      await cleanupFixture(fixture);
+    }
+  });
+
+  it('does not hard delete a document restored before permanent delete enters the transaction', async () => {
+    const fixture = await createFixture({
+      deletedAt: new Date('2026-03-20T00:00:00.000Z'),
+      deletedBy: 'seed-user',
+      documentCount: 0,
+      totalChunks: 0,
+      chunkCount: 0,
+      currentVersion: 1,
+      processingStatus: 'pending',
+      versions: [{ version: 1 }],
+    });
+
+    let releaseGetEmbeddingConfig: (() => void) | undefined;
+    runtimeState.getEmbeddingConfigBlocker = new Promise<void>((resolve) => {
+      releaseGetEmbeddingConfig = resolve;
+    });
+
+    try {
+      const permanentDeletePromise = documentService.permanentDelete(
+        fixture.documentId,
+        fixture.userId
+      );
+
+      await vi.waitFor(() => {
+        expect(knowledgeBaseGetEmbeddingConfigMock).toHaveBeenCalledTimes(1);
+      });
+
+      await documentService.restore(fixture.documentId, fixture.userId);
+
+      releaseGetEmbeddingConfig?.();
+      runtimeState.getEmbeddingConfigBlocker = null;
+
+      await expect(permanentDeletePromise).rejects.toMatchObject({
+        code: DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND,
+        statusCode: 404,
+      });
+
+      const document = await getDocument(fixture.documentId);
+      const knowledgeBase = await getKnowledgeBase(fixture.knowledgeBaseId);
+      const versions = await getDocumentVersions(fixture.documentId);
+
+      expect(document).toMatchObject({
+        id: fixture.documentId,
+        deletedAt: null,
+        processingStatus: 'pending',
+      });
+      expect(knowledgeBase?.documentCount).toBe(1);
+      expect(versions).toHaveLength(1);
+      expect(dispatchDocumentProcessingMock).toHaveBeenCalledTimes(1);
+      expect(vectorMarkAsDeletedMock).not.toHaveBeenCalled();
+      expect(vectorDeleteMock).not.toHaveBeenCalled();
+    } finally {
+      releaseGetEmbeddingConfig?.();
+      runtimeState.getEmbeddingConfigBlocker = null;
       await cleanupFixture(fixture);
     }
   });

@@ -28,8 +28,9 @@ export const documentVersionRepository = {
   /**
    * Get all versions for a document (ordered by version desc)
    */
-  async listByDocumentId(documentId: string): Promise<DocumentVersion[]> {
-    return db
+  async listByDocumentId(documentId: string, tx?: Transaction): Promise<DocumentVersion[]> {
+    const ctx = getDbContext(tx);
+    return ctx
       .select()
       .from(documentVersions)
       .where(eq(documentVersions.documentId, documentId))

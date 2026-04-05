@@ -120,6 +120,7 @@ import {
 } from '@modules/document/public/repositories';
 import { documentStorageService } from '@modules/document/public/storage';
 import { documentTrashService } from '@modules/document/services/document-trash.service';
+import { vectorRepository } from '@modules/vector/public/repositories';
 
 // ==================== listTrash ====================
 // 场景：查询已删除的文档（回收站）
@@ -301,7 +302,10 @@ describe('documentService > permanentDelete', () => {
   // 场景 1：成功永久删除
   // 应先从 R2 删除文件，然后硬删除数据库记录
   it('should delete from storage and hard delete from database', async () => {
-    vi.mocked(documentRepository.findDeletedByIdAndUser).mockResolvedValue(mockDeletedDocument);
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(
+      mockDeletedDocument
+    );
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDeletedDocument);
     vi.mocked(documentVersionRepository.listByDocumentId).mockResolvedValue([mockDocumentVersion]);
     vi.mocked(documentStorageService.deleteDocument).mockResolvedValue(undefined);
     vi.mocked(documentRepository.hardDelete).mockResolvedValue(undefined);
@@ -326,7 +330,10 @@ describe('documentService > permanentDelete', () => {
   // 场景 2：R2 存储删除失败 — 仍然应该硬删除数据库记录
   // R2 错误应被捕获记录，不影响数据库操作
   it('should still hard delete database record when R2 deletion fails', async () => {
-    vi.mocked(documentRepository.findDeletedByIdAndUser).mockResolvedValue(mockDeletedDocument);
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(
+      mockDeletedDocument
+    );
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDeletedDocument);
     vi.mocked(documentVersionRepository.listByDocumentId).mockResolvedValue([mockDocumentVersion]);
     vi.mocked(documentStorageService.deleteDocument).mockRejectedValue(
       new Error('R2 connection timeout')
@@ -349,7 +356,7 @@ describe('documentService > permanentDelete', () => {
 
   // 场景 3：回收站中找不到文档
   it('should throw DOCUMENT_NOT_FOUND when document not in trash', async () => {
-    vi.mocked(documentRepository.findDeletedByIdAndUser).mockResolvedValue(undefined);
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(undefined);
 
     let actual: { code: string } | null = null;
     try {
@@ -366,6 +373,28 @@ describe('documentService > permanentDelete', () => {
 
     expect(actual?.code).toBe(DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND);
     expect(documentStorageService.deleteDocument).not.toHaveBeenCalled();
+    expect(documentRepository.hardDelete).not.toHaveBeenCalled();
+  });
+
+  // 场景 4：并发恢复后，永久删除在事务内发现文档已不在回收站，应直接终止
+  it('should abort permanent delete when document is restored before the locked recheck', async () => {
+    vi.mocked(documentRepository.findByIdAndUserIncludingDeleted).mockResolvedValue(
+      mockDeletedDocument
+    );
+    vi.mocked(documentRepository.lockByIdAndUser).mockResolvedValue(mockDocument);
+
+    let actual: { code: string; statusCode: number } | null = null;
+    try {
+      await documentService.permanentDelete('doc-deleted-1', mockUserId);
+    } catch (error) {
+      actual = { code: (error as AppError).code, statusCode: (error as AppError).statusCode };
+    }
+
+    expect(actual).toEqual({
+      code: DOCUMENT_ERROR_CODES.DOCUMENT_NOT_FOUND,
+      statusCode: 404,
+    });
+    expect(vi.mocked(vectorRepository.markAsDeleted)).not.toHaveBeenCalled();
     expect(documentRepository.hardDelete).not.toHaveBeenCalled();
   });
 });
