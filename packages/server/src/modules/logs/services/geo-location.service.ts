@@ -1,5 +1,10 @@
 import { createLogger } from '@core/logger';
 import { isPrivateIpAddress, normalizeIpAddress } from '@core/utils';
+import {
+  describeTextForLog,
+  fingerprintIpAddress,
+  summarizeErrorForLog,
+} from '@core/logger/redaction';
 
 const logger = createLogger('geo-location.service');
 
@@ -89,7 +94,7 @@ async function fetchProviderGeoLocation(
 
     if (!response.ok) {
       logger.warn(
-        { ip: ipAddress, provider, status: response.status },
+        { ipFingerprint: fingerprintIpAddress(ipAddress), provider, status: response.status },
         'Geo-location API returned non-OK status'
       );
       return null;
@@ -102,13 +107,27 @@ async function fetchProviderGeoLocation(
         : mapIpApiResponse(data as IpApiResponse);
 
     if (!mapped || !hasResolvedLocation(mapped)) {
-      logger.debug({ ip: ipAddress, provider, data }, 'Geo-location lookup returned no result');
+      logger.debug(
+        {
+          ipFingerprint: fingerprintIpAddress(ipAddress),
+          provider,
+          responseSummary: describeTextForLog(JSON.stringify(data)),
+        },
+        'Geo-location lookup returned no result'
+      );
       return null;
     }
 
     return mapped;
   } catch (error) {
-    logger.debug({ ip: ipAddress, provider, error }, 'Geo-location provider failed');
+    logger.debug(
+      {
+        ipFingerprint: fingerprintIpAddress(ipAddress),
+        provider,
+        error: summarizeErrorForLog(error),
+      },
+      'Geo-location provider failed'
+    );
     return null;
   }
 }
@@ -128,7 +147,10 @@ export async function getGeoLocation(ipAddress: string | null): Promise<GeoLocat
 
   // Skip private IPs
   if (isPrivateIpAddress(normalizedIp)) {
-    logger.debug({ ip: normalizedIp }, 'Skipping geo-location lookup for private IP');
+    logger.debug(
+      { ipFingerprint: fingerprintIpAddress(normalizedIp) },
+      'Skipping geo-location lookup for private IP'
+    );
     return EMPTY_GEO_LOCATION;
   }
 

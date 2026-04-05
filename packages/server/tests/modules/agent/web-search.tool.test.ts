@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ToolContext } from '@modules/agent/tools/tool.interface';
 
+const loggerMock = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+
 vi.mock('@core/config/env', () => ({
   agentConfig: {
     tavilyApiKey: 'test-tavily-key',
@@ -19,12 +26,7 @@ vi.mock('@core/config/env', () => ({
 }));
 
 vi.mock('@core/logger', () => ({
-  createLogger: () => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  }),
+  createLogger: () => loggerMock,
 }));
 
 import { WebSearchTool } from '@modules/agent/tools/web-search.tool';
@@ -149,6 +151,30 @@ describe('WebSearchTool', () => {
 
     expect(result.content).toContain('Web search failed');
     expect(result.content).toContain('429');
+  });
+
+  it('should log a summarized query instead of the raw query text', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 429,
+      text: () => Promise.resolve('Rate limit exceeded'),
+    });
+
+    await tool.execute({ query: 'alice@example.com reset token' }, baseCtx);
+
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        querySummary: {
+          length: 'alice@example.com reset token'.length,
+          fingerprint: expect.any(String),
+        },
+        errText: expect.stringContaining('429'),
+      }),
+      'Tavily API error'
+    );
+    expect(JSON.stringify(loggerMock.warn.mock.calls[0]?.[0])).not.toContain(
+      'alice@example.com reset token'
+    );
   });
 
   it('should handle API error when text() also fails', async () => {

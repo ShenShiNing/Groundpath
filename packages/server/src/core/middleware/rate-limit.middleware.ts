@@ -4,6 +4,7 @@ import { documentConfig, featureFlags, rateLimitConfig, serverConfig } from '@co
 import { Errors } from '@core/errors';
 import { sendErrorResponse } from '@core/errors/response';
 import { createLogger } from '@core/logger';
+import { describeTextForLog, maskEmailForLog } from '@core/logger/redaction';
 import { getRateLimitStore } from '@core/rate-limit';
 import { getClientIp } from '../utils/request.utils';
 
@@ -194,7 +195,14 @@ export async function checkAccountRateLimit(email: string): Promise<AccountRateL
       remainingAttempts: Math.max(0, ACCOUNT_MAX_ATTEMPTS - count),
     };
   } catch (error) {
-    logger.error({ err: error, email }, 'Account rate limiter store operation failed');
+    logger.error(
+      {
+        err: error,
+        emailMasked: maskEmailForLog(email),
+        emailFingerprint: describeTextForLog(email)?.fingerprint ?? null,
+      },
+      'Account rate limiter store operation failed'
+    );
     throw Errors.internal('Authentication rate limiter unavailable');
   }
 }

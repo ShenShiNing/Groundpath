@@ -2,7 +2,6 @@ import express, { type Express } from 'express';
 import cookieParser from 'cookie-parser';
 import { serverConfig } from '@config/env';
 import { logger } from '@core/logger';
-import { requestLogger } from '@core/logger/request-logger';
 import { healthRoutes } from '@core/health';
 import {
   errorMiddleware,
@@ -40,8 +39,6 @@ function setupMiddleware(app: Express): void {
   app.use(corsMiddleware);
   app.use(requestIdMiddleware);
   app.use(requestLoggerMiddleware);
-
-  app.use(requestLogger);
   app.use(express.json());
   app.use(cookieParser());
 

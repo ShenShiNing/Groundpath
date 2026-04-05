@@ -21,6 +21,7 @@ import type { ChatMessage } from '@modules/llm/public/runtime';
 import { documentContentService } from '@modules/document/public/content';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
+import { describeTextForLog } from '@core/logger/redaction';
 import { documentAIConfig } from '@config/env';
 import {
   buildKeywordExtractionPrompt,
@@ -329,7 +330,10 @@ export const analysisService = {
     const parsed = parseJsonResponse<{ keywords: Keyword[] }>(response);
 
     if (!parsed?.keywords) {
-      logger.warn({ response }, 'Failed to parse keywords response');
+      logger.warn(
+        { responseSummary: describeTextForLog(response) },
+        'Failed to parse keywords response'
+      );
       return [];
     }
 
@@ -362,7 +366,10 @@ export const analysisService = {
     const parsed = parseJsonResponse<{ entities: Entity[] }>(response);
 
     if (!parsed?.entities) {
-      logger.warn({ response }, 'Failed to parse entities response');
+      logger.warn(
+        { responseSummary: describeTextForLog(response) },
+        'Failed to parse entities response'
+      );
       return [];
     }
 
@@ -395,7 +402,10 @@ export const analysisService = {
     const parsed = parseJsonResponse<{ topics: Topic[] }>(response);
 
     if (!parsed?.topics) {
-      logger.warn({ response }, 'Failed to parse topics response');
+      logger.warn(
+        { responseSummary: describeTextForLog(response) },
+        'Failed to parse topics response'
+      );
       return [];
     }
 

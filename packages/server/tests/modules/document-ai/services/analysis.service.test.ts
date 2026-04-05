@@ -14,13 +14,15 @@ import {
 
 // ==================== Mocks ====================
 
+const loggerMock = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+}));
+
 vi.mock('@core/logger', () => ({
-  createLogger: vi.fn(() => ({
-    warn: vi.fn(),
-    info: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-  })),
+  createLogger: vi.fn(() => loggerMock),
 }));
 
 vi.mock('@modules/document/public/content', () => ({
@@ -232,6 +234,27 @@ describe('analysisService > extractKeywords', () => {
 
     // The maxKeywords is passed to the prompt
     expect(mockLLMProvider.generate).toHaveBeenCalled();
+  });
+
+  it('should log only a summarized response when parsing fails', async () => {
+    vi.mocked(documentContentService.getContent).mockResolvedValue(mockDocumentContent);
+    vi.mocked(mockLLMProvider.generate).mockResolvedValue('secret raw llm response');
+
+    const result = await analysisService.extractKeywords(mockUserId, mockDocumentId);
+
+    expect(result.keywords).toEqual([]);
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responseSummary: {
+          length: 'secret raw llm response'.length,
+          fingerprint: expect.any(String),
+        },
+      }),
+      'Failed to parse keywords response'
+    );
+    expect(JSON.stringify(loggerMock.warn.mock.calls[0]?.[0])).not.toContain(
+      'secret raw llm response'
+    );
   });
 });
 

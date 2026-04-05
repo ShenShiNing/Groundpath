@@ -28,6 +28,9 @@ export const loggingDefaults = {
   partitioning: {
     futureMonths: 6,
   },
+  redaction: {
+    fingerprintLength: 12,
+  },
 } as const;
 
 /** Structured-RAG alert windows, thresholds, and report period */
