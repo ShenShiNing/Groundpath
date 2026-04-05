@@ -532,7 +532,10 @@ vi.mock('@modules/document-index/services/document-index-backfill-progress.servi
         trigger: options.trigger ?? 'manual',
       };
       state.backfillRuns.set(run.id, run);
-      return run;
+      return {
+        run,
+        created: true,
+      };
     }),
     ensureRunAvailable: vi.fn(async (runId: string) => {
       const run = state.backfillRuns.get(runId);
