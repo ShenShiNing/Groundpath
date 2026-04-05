@@ -144,8 +144,29 @@ function validateOAuthConfig(env: Env, fieldErrors: FieldErrors): void {
   );
 }
 
+function validateRateLimitConfig(env: Env, fieldErrors: FieldErrors): void {
+  if (env.NODE_ENV !== 'production') return;
+
+  if (env.DISABLE_RATE_LIMIT) {
+    addFieldError(
+      fieldErrors,
+      'DISABLE_RATE_LIMIT',
+      'DISABLE_RATE_LIMIT cannot be true in production.'
+    );
+  }
+
+  if (env.RATE_LIMIT_DRIVER === 'noop') {
+    addFieldError(
+      fieldErrors,
+      'RATE_LIMIT_DRIVER',
+      'RATE_LIMIT_DRIVER=noop is not allowed in production.'
+    );
+  }
+}
+
 function validateRedisConfig(env: Env, fieldErrors: FieldErrors): void {
   const redisRequirementReasons = getRedisRequirementReasons({
+    NODE_ENV: env.NODE_ENV,
     CACHE_DRIVER: env.CACHE_DRIVER,
     QUEUE_DRIVER: env.QUEUE_DRIVER,
     RATE_LIMIT_DRIVER: env.RATE_LIMIT_DRIVER,
@@ -176,6 +197,7 @@ export function getRuntimeEnvFieldErrors(env: Env): FieldErrors {
   validateVlmConfig(env, fieldErrors);
   validateStorageConfig(env, fieldErrors);
   validateOAuthConfig(env, fieldErrors);
+  validateRateLimitConfig(env, fieldErrors);
   validateRedisConfig(env, fieldErrors);
 
   return fieldErrors;

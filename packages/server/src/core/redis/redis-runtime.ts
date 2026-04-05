@@ -4,6 +4,7 @@ import {
   featureFlags,
   queueConfig,
   rateLimitConfig,
+  serverConfig,
 } from '@config/env';
 import {
   getRedisRequirementReasons,
@@ -23,6 +24,7 @@ export function queueRequiresRedis(): boolean {
 
 export function rateLimitRequiresRedis(): boolean {
   return isRateLimitRedisBacked({
+    NODE_ENV: serverConfig.nodeEnv,
     RATE_LIMIT_DRIVER: rateLimitConfig.driver,
     DISABLE_RATE_LIMIT: featureFlags.disableRateLimit,
   });
@@ -34,6 +36,7 @@ export function coordinationRequiresRedis(): boolean {
 
 export function getRuntimeRedisRequirementReasons(): string[] {
   return getRedisRequirementReasons({
+    NODE_ENV: serverConfig.nodeEnv,
     CACHE_DRIVER: cacheConfig.driver,
     QUEUE_DRIVER: queueConfig.driver,
     RATE_LIMIT_DRIVER: rateLimitConfig.driver,
