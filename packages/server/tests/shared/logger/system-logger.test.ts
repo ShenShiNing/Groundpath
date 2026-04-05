@@ -42,6 +42,7 @@ describe('systemLogger', () => {
       userAgent: 'Mozilla/5.0',
       query,
       nested: {
+        ip: '2001:db8::1',
         response,
       },
     });
@@ -57,6 +58,7 @@ describe('systemLogger', () => {
             fingerprint: expect.any(String),
           },
           nested: {
+            ip: expect.stringMatching(/^ip_[a-f0-9]{12}$/),
             response: {
               length: response.length,
               fingerprint: expect.any(String),
@@ -69,6 +71,7 @@ describe('systemLogger', () => {
     const metadata = mocks.repository.create.mock.calls[0]?.[0]?.metadata;
     expect(JSON.stringify(metadata)).not.toContain('alice@example.com');
     expect(JSON.stringify(metadata)).not.toContain('203.0.113.42');
+    expect(JSON.stringify(metadata)).not.toContain('2001:db8::1');
     expect(JSON.stringify(metadata)).not.toContain('very secret document body');
   });
 });

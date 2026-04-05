@@ -1,6 +1,6 @@
 import pino from 'pino';
 import { serverConfig, loggingConfig } from '@config/env';
-import { summarizeErrorForLog } from './redaction';
+import { sanitizeLogMetadata, summarizeErrorForLog } from './redaction';
 
 const logLevel =
   serverConfig.nodeEnv === 'test'
@@ -49,6 +49,9 @@ export const logger = pino({
   serializers: {
     err: summarizeErrorForLog,
     error: summarizeErrorForLog,
+  },
+  formatters: {
+    log: (object) => sanitizeLogMetadata(object) as Record<string, unknown>,
   },
   redact: {
     paths: [...LOGGER_REDACT_PATHS],

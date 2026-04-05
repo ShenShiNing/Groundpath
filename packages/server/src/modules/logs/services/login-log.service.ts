@@ -1,6 +1,7 @@
 import type { LoginLog } from '@core/db/schema/system/login-logs.schema';
 import type { PaginationMeta } from '@core/utils';
 import { buildPagination } from '@core/utils';
+import { maskIpAddressForLog } from '@core/logger/redaction';
 import { loginLogRepository, type LoginLogListParams } from '@modules/auth/public/login-logs';
 
 export interface LoginLogListItem {
@@ -32,7 +33,7 @@ function toLoginLogListItem(log: LoginLog): LoginLogListItem {
     authType: log.authType,
     success: log.success,
     failureReason: log.failureReason,
-    ipAddress: log.ipAddress,
+    ipAddress: maskIpAddressForLog(log.ipAddress),
     deviceType: log.deviceType,
     browser: log.browser,
     os: log.os,
