@@ -46,6 +46,15 @@ export interface DocumentIndexBackfillResult {
   runId?: string;
 }
 
+export type ScheduledDocumentIndexBackfillResult =
+  | DocumentIndexBackfillResult
+  | {
+      runId?: string;
+      status: 'running' | 'draining' | 'completed' | 'failed' | 'cancelled' | 'skipped';
+      hasMore: boolean;
+      message: string;
+    };
+
 function sleep(ms: number): Promise<void> {
   if (ms <= 0) return Promise.resolve();
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -226,8 +235,8 @@ export const documentIndexBackfillService = {
     return documentIndexBackfillProgressService.listRecentRuns(limit);
   },
 
-  async runScheduledBackfill() {
-    return runExclusiveTask(
+  async runScheduledBackfill(): Promise<ScheduledDocumentIndexBackfillResult> {
+    return runExclusiveTask<ScheduledDocumentIndexBackfillResult>(
       async () => {
         const activeRun =
           await documentIndexBackfillProgressService.getLatestActiveRun('scheduled');
