@@ -1,9 +1,11 @@
+import { runExclusiveTask } from '@core/coordination';
 import { chatConfig } from '@core/config/env/configs';
 import { createLogger } from '@core/logger';
 import { systemLogger } from '@core/logger/system-logger';
 import { conversationRepository } from '../repositories/conversation.repository';
 
 const logger = createLogger('conversation-cleanup.service');
+const CONVERSATION_CLEANUP_LOCK_KEY = 'chat:conversation-cleanup:lock';
 
 export interface ConversationCleanupResult {
   deletedConversations: number;
@@ -56,5 +58,20 @@ export const conversationCleanupService = {
     );
 
     return result;
+  },
+
+  async runScheduledCleanup(now: Date = new Date()): Promise<ConversationCleanupResult> {
+    return runExclusiveTask(() => this.cleanup(now), {
+      key: CONVERSATION_CLEANUP_LOCK_KEY,
+      logger,
+      lockBusyMessage:
+        'Skipping soft-deleted conversation cleanup because another instance already holds the lock',
+      lockLostMessage: 'Failed to extend soft-deleted conversation cleanup lock',
+      releaseFailedMessage: 'Failed to release soft-deleted conversation cleanup lock',
+      onLocked: () => ({
+        deletedConversations: 0,
+        durationMs: 0,
+      }),
+    });
   },
 };

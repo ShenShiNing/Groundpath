@@ -23,6 +23,7 @@ export { healthDefaults } from './health.defaults';
 export {
   queueDefaults,
   backfillDefaults,
+  coordinationDefaults,
   loggingDefaults,
   structuredRagObservabilityDefaults,
 } from './operations.defaults';

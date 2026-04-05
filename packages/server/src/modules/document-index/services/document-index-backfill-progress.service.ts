@@ -9,6 +9,15 @@ import type { DocumentIndexBackfillRun } from '@core/db/schema/document/document
 
 const logger = createLogger('document-index-backfill-progress.service');
 
+function isDuplicateEntryError(error: unknown): error is { code: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'ER_DUP_ENTRY'
+  );
+}
+
 export type BackfillRunTrigger = 'manual' | 'scheduled';
 export type BackfillItemOutcome = 'completed' | 'failed' | 'skipped';
 
@@ -66,15 +75,31 @@ export const documentIndexBackfillProgressService = {
     );
     if (existing) return existing;
 
-    return documentIndexBackfillItemRepository.create({
-      id: uuidv4(),
-      runId: params.runId,
-      documentId: params.documentId,
-      userId: params.userId,
-      knowledgeBaseId: params.knowledgeBaseId,
-      documentVersion: params.documentVersion,
-      status: 'pending',
-    });
+    try {
+      return await documentIndexBackfillItemRepository.create({
+        id: uuidv4(),
+        runId: params.runId,
+        documentId: params.documentId,
+        userId: params.userId,
+        knowledgeBaseId: params.knowledgeBaseId,
+        documentVersion: params.documentVersion,
+        status: 'pending',
+      });
+    } catch (error) {
+      if (!isDuplicateEntryError(error)) {
+        throw error;
+      }
+
+      const concurrentItem = await documentIndexBackfillItemRepository.findByRunAndDocument(
+        params.runId,
+        params.documentId
+      );
+      if (concurrentItem) {
+        return concurrentItem;
+      }
+
+      throw error;
+    }
   },
 
   async markEnqueued(params: { runId: string; documentId: string; jobId?: string }): Promise<void> {

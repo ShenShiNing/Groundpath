@@ -41,9 +41,9 @@ export function initializeScheduler(): void {
         logger.info('Running scheduled cleanup tasks...');
 
         const results = await Promise.allSettled([
-          logCleanupService.runCleanup(),
-          conversationCleanupService.cleanup(),
-          tokenCleanupService.runCleanup(),
+          logCleanupService.runScheduledCleanup(),
+          conversationCleanupService.runScheduledCleanup(),
+          tokenCleanupService.runScheduledCleanup(),
           vectorCleanupService.runCleanup(),
         ]);
 
@@ -156,7 +156,7 @@ export function initializeScheduler(): void {
         logger.info('Running stale document processing recovery...');
 
         try {
-          const result = await processingRecoveryService.recoverStaleProcessing();
+          const result = await processingRecoveryService.runScheduledRecovery();
           systemLogger.schedulerRun(
             'document-processing.recovery',
             'Stale document processing recovery completed',
@@ -185,7 +185,7 @@ export function initializeScheduler(): void {
         logger.info('Running immutable document build cleanup...');
 
         try {
-          const result = await documentIndexArtifactCleanupService.cleanup();
+          const result = await documentIndexArtifactCleanupService.runScheduledCleanup();
           systemLogger.schedulerRun(
             'document-index.artifact-cleanup',
             'Immutable document build cleanup completed',

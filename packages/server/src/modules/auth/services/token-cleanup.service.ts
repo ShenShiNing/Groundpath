@@ -1,9 +1,11 @@
 import { loggingConfig } from '@core/config/env';
+import { runExclusiveTask } from '@core/coordination';
 import { createLogger } from '@core/logger';
 import { systemLogger } from '@core/logger/system-logger';
 import { refreshTokenRepository } from '../repositories/refresh-token.repository';
 
 const logger = createLogger('token-cleanup.service');
+const TOKEN_CLEANUP_LOCK_KEY = 'auth:token-cleanup:lock';
 
 export interface TokenCleanupResult {
   refreshTokensDeleted: number;
@@ -42,5 +44,19 @@ export const tokenCleanupService = {
     });
 
     return result;
+  },
+
+  async runScheduledCleanup(): Promise<TokenCleanupResult> {
+    return runExclusiveTask(() => this.runCleanup(), {
+      key: TOKEN_CLEANUP_LOCK_KEY,
+      logger,
+      lockBusyMessage: 'Skipping token cleanup because another instance already holds the lock',
+      lockLostMessage: 'Failed to extend token cleanup lock',
+      releaseFailedMessage: 'Failed to release token cleanup lock',
+      onLocked: () => ({
+        refreshTokensDeleted: 0,
+        durationMs: 0,
+      }),
+    });
   },
 };

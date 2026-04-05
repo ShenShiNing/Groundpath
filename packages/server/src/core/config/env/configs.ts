@@ -3,6 +3,7 @@ import {
   authDefaults,
   backfillDefaults,
   chatDefaults,
+  coordinationDefaults,
   documentAIDefaults,
   documentDefaults,
   documentIndexDefaults,
@@ -199,6 +200,7 @@ export const rateLimitConfig = {
 
 export const coordinationConfig = {
   driver: validatedEnv.LOCK_DRIVER,
+  ...coordinationDefaults,
 } as const;
 
 export const healthConfig = {

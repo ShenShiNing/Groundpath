@@ -15,6 +15,12 @@ export const backfillDefaults = {
   enqueueDelayMs: 0,
 } as const;
 
+/** Coordination defaults for scheduled/background tasks */
+export const coordinationDefaults = {
+  scheduledTaskLockTtlMs: 15 * 60_000,
+  scheduledTaskLockRenewIntervalMs: 60_000,
+} as const;
+
 /** Log retention periods and cleanup batch size */
 export const loggingDefaults = {
   retention: {

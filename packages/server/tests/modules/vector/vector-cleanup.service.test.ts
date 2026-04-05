@@ -1,16 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
-  acquireLockMock,
-  releaseLockMock,
+  runExclusiveTaskMock,
   getQdrantClientMock,
   purgeDeletedVectorsMock,
   loggerInfoMock,
   loggerWarnMock,
   loggerErrorMock,
 } = vi.hoisted(() => ({
-  acquireLockMock: vi.fn(),
-  releaseLockMock: vi.fn(),
+  runExclusiveTaskMock: vi.fn(),
   getQdrantClientMock: vi.fn(),
   purgeDeletedVectorsMock: vi.fn(),
   loggerInfoMock: vi.fn(),
@@ -38,9 +36,7 @@ vi.mock('@modules/vector/vector.repository', () => ({
 }));
 
 vi.mock('@core/coordination', () => ({
-  getCoordinationDriver: vi.fn(() => ({
-    acquireLock: acquireLockMock,
-  })),
+  runExclusiveTask: runExclusiveTaskMock,
 }));
 
 vi.mock('@core/logger', () => ({
@@ -56,11 +52,7 @@ import { vectorCleanupService } from '@modules/vector/vector-cleanup.service';
 describe('vector-cleanup.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    releaseLockMock.mockResolvedValue(undefined);
-    acquireLockMock.mockResolvedValue({
-      key: 'vector:cleanup:lock',
-      release: releaseLockMock,
-    });
+    runExclusiveTaskMock.mockImplementation((task) => task());
   });
 
   it('should purge deleted vectors from all collections', async () => {
@@ -81,7 +73,6 @@ describe('vector-cleanup.service', () => {
     });
     expect(purgeDeletedVectorsMock).toHaveBeenNthCalledWith(1, 'kb_1', expect.any(Number));
     expect(purgeDeletedVectorsMock).toHaveBeenNthCalledWith(2, 'kb_2', expect.any(Number));
-    expect(releaseLockMock).toHaveBeenCalledTimes(1);
   });
 
   it('should continue processing collections when one purge fails', async () => {
@@ -120,7 +111,7 @@ describe('vector-cleanup.service', () => {
   });
 
   it('should skip when another cleanup run already holds the distributed lock', async () => {
-    acquireLockMock.mockResolvedValue(null);
+    runExclusiveTaskMock.mockImplementation((_task, options) => options.onLocked());
 
     const result = await vectorCleanupService.runCleanup();
 
@@ -130,7 +121,6 @@ describe('vector-cleanup.service', () => {
       errors: 0,
     });
     expect(getQdrantClientMock).not.toHaveBeenCalled();
-    expect(releaseLockMock).not.toHaveBeenCalled();
   });
 
   it('should abort when collection failures exceed the configured threshold', async () => {
@@ -148,6 +138,5 @@ describe('vector-cleanup.service', () => {
       'Vector cleanup aborted after 2/3 collections failed'
     );
     expect(purgeDeletedVectorsMock).toHaveBeenCalledTimes(2);
-    expect(releaseLockMock).toHaveBeenCalledTimes(1);
   });
 });

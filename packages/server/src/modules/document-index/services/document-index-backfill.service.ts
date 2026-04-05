@@ -1,4 +1,5 @@
 import { backfillConfig } from '@config/env';
+import { runExclusiveTask } from '@core/coordination';
 import { dispatchDocumentProcessing } from '@core/document-processing';
 import {
   documentRepository,
@@ -10,6 +11,7 @@ import { createLogger } from '@core/logger';
 import { documentIndexBackfillProgressService } from './document-index-backfill-progress.service';
 
 const logger = createLogger('document-index-backfill.service');
+const SCHEDULED_BACKFILL_LOCK_KEY = 'document-index:scheduled-backfill:lock';
 
 export interface DocumentIndexBackfillOptions {
   knowledgeBaseId?: string;
@@ -225,20 +227,39 @@ export const documentIndexBackfillService = {
   },
 
   async runScheduledBackfill() {
-    const activeRun = await documentIndexBackfillProgressService.getLatestActiveRun('scheduled');
-    if (activeRun) {
-      if (!activeRun.hasMore) {
-        return {
-          runId: activeRun.id,
-          status: activeRun.status,
-          hasMore: activeRun.hasMore,
-          message: 'No more backfill candidates for scheduled run',
-        };
+    return runExclusiveTask(
+      async () => {
+        const activeRun =
+          await documentIndexBackfillProgressService.getLatestActiveRun('scheduled');
+        if (activeRun) {
+          if (!activeRun.hasMore) {
+            return {
+              runId: activeRun.id,
+              status: activeRun.status,
+              hasMore: activeRun.hasMore,
+              message: 'No more backfill candidates for scheduled run',
+            };
+          }
+
+          return this.enqueueBackfill({ runId: activeRun.id, trigger: 'scheduled' });
+        }
+
+        return this.enqueueBackfill({ trigger: 'scheduled' });
+      },
+      {
+        key: SCHEDULED_BACKFILL_LOCK_KEY,
+        logger,
+        lockBusyMessage:
+          'Skipping scheduled document index backfill because another instance already holds the lock',
+        lockLostMessage: 'Failed to extend scheduled document index backfill lock',
+        releaseFailedMessage: 'Failed to release scheduled document index backfill lock',
+        onLocked: () => ({
+          status: 'skipped' as const,
+          hasMore: true,
+          message:
+            'Skipped scheduled backfill because another scheduler instance already holds the coordination lock',
+        }),
       }
-
-      return this.enqueueBackfill({ runId: activeRun.id, trigger: 'scheduled' });
-    }
-
-    return this.enqueueBackfill({ trigger: 'scheduled' });
+    );
   },
 };

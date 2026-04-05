@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
     countBackfillCandidates: vi.fn(),
   },
   dispatchDocumentProcessing: vi.fn(async () => 'job-1'),
+  runExclusiveTask: vi.fn(),
   backfillProgress: {
     ensureRunAvailable: vi.fn(),
     createRun: vi.fn(),
@@ -48,6 +49,10 @@ vi.mock('@core/document-processing', () => ({
   dispatchDocumentProcessing: mocks.dispatchDocumentProcessing,
 }));
 
+vi.mock('@core/coordination', () => ({
+  runExclusiveTask: mocks.runExclusiveTask,
+}));
+
 vi.mock('@modules/document-index/services/document-index-backfill-progress.service', () => ({
   documentIndexBackfillProgressService: mocks.backfillProgress,
 }));
@@ -61,6 +66,7 @@ import { documentIndexBackfillService } from '@modules/document-index/services/d
 describe('documentIndexBackfillService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.runExclusiveTask.mockImplementation((task) => task());
     mocks.documentRepository.countBackfillCandidates.mockResolvedValue(1);
     mocks.documentRepository.listBackfillCandidates.mockResolvedValue({
       documents: [
@@ -330,5 +336,75 @@ describe('documentIndexBackfillService', () => {
       error: 'queue unavailable',
     });
     expect(result.enqueuedCount).toBe(1);
+  });
+
+  it('serializes scheduled backfill execution through the coordination helper', async () => {
+    mocks.backfillProgress.getLatestActiveRun.mockResolvedValue({
+      id: 'run-scheduled-1',
+      status: 'running',
+      trigger: 'scheduled',
+      knowledgeBaseId: null,
+      documentType: null,
+      includeIndexed: false,
+      includeProcessing: false,
+      batchSize: 50,
+      enqueueDelayMs: 0,
+      candidateCount: 1,
+      enqueuedCount: 0,
+      completedCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      cursorOffset: 0,
+      hasMore: true,
+      lastError: null,
+      startedAt: new Date('2026-03-09T10:00:00.000Z'),
+      completedAt: null,
+      createdBy: null,
+      createdAt: new Date('2026-03-09T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+    });
+    mocks.backfillProgress.ensureRunAvailable.mockResolvedValue({
+      id: 'run-scheduled-1',
+      status: 'running',
+      trigger: 'scheduled',
+      knowledgeBaseId: null,
+      documentType: null,
+      includeIndexed: false,
+      includeProcessing: false,
+      batchSize: 50,
+      enqueueDelayMs: 0,
+      candidateCount: 1,
+      enqueuedCount: 0,
+      completedCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      cursorOffset: 0,
+      hasMore: true,
+      lastError: null,
+      startedAt: new Date('2026-03-09T10:00:00.000Z'),
+      completedAt: null,
+      createdBy: null,
+      createdAt: new Date('2026-03-09T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+    });
+
+    await documentIndexBackfillService.runScheduledBackfill();
+
+    expect(mocks.runExclusiveTask).toHaveBeenCalledTimes(1);
+    expect(mocks.backfillProgress.getLatestActiveRun).toHaveBeenCalledWith('scheduled');
+  });
+
+  it('returns a skipped result when another scheduler instance already holds the lock', async () => {
+    mocks.runExclusiveTask.mockImplementation((_task, options) => options.onLocked());
+
+    const result = await documentIndexBackfillService.runScheduledBackfill();
+
+    expect(result).toEqual({
+      status: 'skipped',
+      hasMore: true,
+      message:
+        'Skipped scheduled backfill because another scheduler instance already holds the coordination lock',
+    });
+    expect(mocks.backfillProgress.getLatestActiveRun).not.toHaveBeenCalled();
   });
 });

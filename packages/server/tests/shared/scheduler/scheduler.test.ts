@@ -7,13 +7,18 @@ const loggerErrorMock = vi.fn();
 const schedulerErrorMock = vi.fn();
 
 const logCleanupRunMock = vi.fn();
+const logCleanupRunScheduledMock = vi.fn();
 const conversationCleanupMock = vi.fn();
+const conversationCleanupScheduledMock = vi.fn();
 const tokenCleanupRunMock = vi.fn();
+const tokenCleanupRunScheduledMock = vi.fn();
 const vectorCleanupRunMock = vi.fn();
 const counterSyncAllMock = vi.fn();
 const structuredRagAlertCheckMock = vi.fn();
 const processingRecoveryRecoverMock = vi.fn();
+const processingRecoveryRunScheduledMock = vi.fn();
 const documentIndexArtifactCleanupMock = vi.fn();
+const documentIndexArtifactCleanupScheduledMock = vi.fn();
 
 interface SchedulerImportOptions {
   cleanupEnabled?: boolean;
@@ -88,12 +93,14 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
   vi.doMock('@modules/logs/public/cleanup', () => ({
     logCleanupService: {
       runCleanup: logCleanupRunMock,
+      runScheduledCleanup: logCleanupRunScheduledMock,
     },
   }));
 
   vi.doMock('@modules/chat/public/cleanup', () => ({
     conversationCleanupService: {
       cleanup: conversationCleanupMock,
+      runScheduledCleanup: conversationCleanupScheduledMock,
     },
   }));
 
@@ -106,6 +113,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
   vi.doMock('@modules/auth/public/maintenance', () => ({
     tokenCleanupService: {
       runCleanup: tokenCleanupRunMock,
+      runScheduledCleanup: tokenCleanupRunScheduledMock,
     },
   }));
 
@@ -124,6 +132,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
   vi.doMock('@modules/rag/public/recovery', () => ({
     processingRecoveryService: {
       recoverStaleProcessing: processingRecoveryRecoverMock,
+      runScheduledRecovery: processingRecoveryRunScheduledMock,
     },
   }));
 
@@ -136,6 +145,7 @@ async function importScheduler(options: SchedulerImportOptions = {}) {
   vi.doMock('@modules/document-index/public/cleanup', () => ({
     documentIndexArtifactCleanupService: {
       cleanup: documentIndexArtifactCleanupMock,
+      runScheduledCleanup: documentIndexArtifactCleanupScheduledMock,
     },
   }));
 
@@ -150,13 +160,18 @@ describe('shared/scheduler', () => {
     loggerErrorMock.mockReset();
     schedulerErrorMock.mockReset();
     logCleanupRunMock.mockReset();
+    logCleanupRunScheduledMock.mockReset();
     conversationCleanupMock.mockReset();
+    conversationCleanupScheduledMock.mockReset();
     tokenCleanupRunMock.mockReset();
+    tokenCleanupRunScheduledMock.mockReset();
     vectorCleanupRunMock.mockReset();
     counterSyncAllMock.mockReset();
     structuredRagAlertCheckMock.mockReset();
     processingRecoveryRecoverMock.mockReset();
+    processingRecoveryRunScheduledMock.mockReset();
     documentIndexArtifactCleanupMock.mockReset();
+    documentIndexArtifactCleanupScheduledMock.mockReset();
   });
 
   it('should schedule cleanup and counter-sync tasks with UTC timezone and avoid double init', async () => {
@@ -186,8 +201,12 @@ describe('shared/scheduler', () => {
   it('should continue cleanup pipeline when one scheduled cleanup task fails', async () => {
     const scheduler = await importScheduler();
 
-    logCleanupRunMock.mockResolvedValueOnce({ deleted: 1 });
-    tokenCleanupRunMock.mockRejectedValueOnce(new Error('token cleanup failed'));
+    logCleanupRunScheduledMock.mockResolvedValueOnce({ deleted: 1 });
+    tokenCleanupRunScheduledMock.mockRejectedValueOnce(new Error('token cleanup failed'));
+    conversationCleanupScheduledMock.mockResolvedValueOnce({
+      deletedConversations: 0,
+      durationMs: 0,
+    });
     vectorCleanupRunMock.mockResolvedValueOnce({
       collectionsProcessed: 1,
       totalPurged: 0,
@@ -208,9 +227,9 @@ describe('shared/scheduler', () => {
 
     await cleanupTask!();
 
-    expect(logCleanupRunMock).toHaveBeenCalledTimes(1);
-    expect(conversationCleanupMock).toHaveBeenCalledTimes(1);
-    expect(tokenCleanupRunMock).toHaveBeenCalledTimes(1);
+    expect(logCleanupRunScheduledMock).toHaveBeenCalledTimes(1);
+    expect(conversationCleanupScheduledMock).toHaveBeenCalledTimes(1);
+    expect(tokenCleanupRunScheduledMock).toHaveBeenCalledTimes(1);
     expect(vectorCleanupRunMock).toHaveBeenCalledTimes(1);
     expect(documentIndexArtifactCleanupMock).not.toHaveBeenCalled();
     expect(schedulerErrorMock).toHaveBeenCalledWith('cleanup.failed', expect.any(Error));
@@ -219,7 +238,7 @@ describe('shared/scheduler', () => {
   it('should run immutable build cleanup on its dedicated schedule', async () => {
     const scheduler = await importScheduler();
 
-    documentIndexArtifactCleanupMock.mockResolvedValueOnce({
+    documentIndexArtifactCleanupScheduledMock.mockResolvedValueOnce({
       scannedCount: 2,
       cleanedCount: 1,
       skippedCount: 1,
@@ -234,7 +253,7 @@ describe('shared/scheduler', () => {
 
     await cleanupTask!();
 
-    expect(documentIndexArtifactCleanupMock).toHaveBeenCalledTimes(1);
+    expect(documentIndexArtifactCleanupScheduledMock).toHaveBeenCalledTimes(1);
   });
 
   it('should report scheduler error when weekly counter-sync throws', async () => {
@@ -263,7 +282,7 @@ describe('shared/scheduler', () => {
       buildCleanupEnabled: false,
     });
 
-    processingRecoveryRecoverMock.mockRejectedValueOnce(new Error('recovery failed'));
+    processingRecoveryRunScheduledMock.mockRejectedValueOnce(new Error('recovery failed'));
 
     scheduler.initializeScheduler();
 
@@ -273,7 +292,7 @@ describe('shared/scheduler', () => {
 
     await recoveryTask!();
 
-    expect(processingRecoveryRecoverMock).toHaveBeenCalledTimes(1);
+    expect(processingRecoveryRunScheduledMock).toHaveBeenCalledTimes(1);
     expect(schedulerErrorMock).toHaveBeenCalledWith(
       'document-processing.recovery.failed',
       expect.any(Error)
