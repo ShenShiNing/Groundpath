@@ -329,4 +329,66 @@ describeRealIntegration('document schema migrations integration', () => {
       'ER_ROW_IS_REFERENCED_2'
     );
   });
+
+  it('enforces a single active scheduled backfill run while allowing completed or manual runs', async () => {
+    const runningScheduledRunId = randomUUID();
+    const duplicateScheduledRunId = randomUUID();
+    const completedScheduledRunId = randomUUID();
+    const manualRunId = randomUUID();
+
+    await testConnection.query(
+      `
+        INSERT INTO document_index_backfill_runs (
+          id, status, \`trigger\`, batch_size, enqueue_delay_ms
+        ) VALUES (?, ?, ?, ?, ?)
+      `,
+      [runningScheduledRunId, 'running', 'scheduled', 50, 0]
+    );
+
+    await expect(
+      testConnection.query(
+        `
+          INSERT INTO document_index_backfill_runs (
+            id, status, \`trigger\`, batch_size, enqueue_delay_ms
+          ) VALUES (?, ?, ?, ?, ?)
+        `,
+        [duplicateScheduledRunId, 'draining', 'scheduled', 50, 0]
+      )
+    ).rejects.toMatchObject({ code: 'ER_DUP_ENTRY' });
+
+    await testConnection.query(
+      `
+        INSERT INTO document_index_backfill_runs (
+          id, status, \`trigger\`, batch_size, enqueue_delay_ms
+        ) VALUES (?, ?, ?, ?, ?)
+      `,
+      [completedScheduledRunId, 'completed', 'scheduled', 50, 0]
+    );
+
+    await testConnection.query(
+      `
+        INSERT INTO document_index_backfill_runs (
+          id, status, \`trigger\`, batch_size, enqueue_delay_ms
+        ) VALUES (?, ?, ?, ?, ?)
+      `,
+      [manualRunId, 'running', 'manual', 50, 0]
+    );
+
+    const [rows] = await testConnection.query<RowDataPacket[]>(
+      `
+        SELECT id, active_scheduled_slot AS activeScheduledSlot
+        FROM document_index_backfill_runs
+        WHERE id IN (?, ?, ?)
+        ORDER BY id ASC
+      `,
+      [runningScheduledRunId, completedScheduledRunId, manualRunId]
+    );
+
+    const slotById = new Map(
+      rows.map((row) => [String(row.id), row.activeScheduledSlot as string | null])
+    );
+    expect(slotById.get(runningScheduledRunId)).toBe('scheduled');
+    expect(slotById.get(completedScheduledRunId)).toBeNull();
+    expect(slotById.get(manualRunId)).toBeNull();
+  });
 });

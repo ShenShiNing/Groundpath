@@ -1,4 +1,5 @@
 import { loggingConfig } from '@core/config/env';
+import { runExclusiveTask } from '@core/coordination';
 import { createLogger } from '@core/logger';
 import { systemLogger } from '@core/logger/system-logger';
 import { loginLogRepository } from '@modules/auth/public/login-logs';
@@ -10,6 +11,7 @@ import {
 } from './log-partition.service';
 
 const logger = createLogger('log-cleanup.service');
+const LOG_CLEANUP_LOCK_KEY = 'logs:cleanup:lock';
 
 export interface CleanupResult {
   loginLogsDeleted: number;
@@ -124,5 +126,25 @@ export const logCleanupService = {
     });
 
     return result;
+  },
+
+  async runScheduledCleanup(): Promise<CleanupResult> {
+    return runExclusiveTask(() => this.runCleanup(), {
+      key: LOG_CLEANUP_LOCK_KEY,
+      logger,
+      lockBusyMessage: 'Skipping log cleanup because another instance already holds the lock',
+      lockLostMessage: 'Failed to extend log cleanup lock',
+      releaseFailedMessage: 'Failed to release log cleanup lock',
+      onLocked: () => ({
+        loginLogsDeleted: 0,
+        operationLogsDeleted: 0,
+        systemLogsDeleted: 0,
+        loginLogFuturePartitionsAdded: 0,
+        loginLogExpiredPartitionsDropped: 0,
+        operationLogFuturePartitionsAdded: 0,
+        operationLogExpiredPartitionsDropped: 0,
+        durationMs: 0,
+      }),
+    });
   },
 };

@@ -1,4 +1,5 @@
 import { documentConfig } from '@config/env';
+import { runExclusiveTask } from '@core/coordination';
 import { documentChunkRepository } from '@modules/document/public/repositories';
 import { knowledgeBaseService } from '@modules/knowledge-base/public/management';
 import { vectorRepository } from '@modules/vector/public/repositories';
@@ -6,6 +7,7 @@ import { createLogger } from '@core/logger';
 import { documentIndexVersionRepository } from '../repositories/document-index-version.repository';
 
 const logger = createLogger('document-index-artifact-cleanup.service');
+const DOCUMENT_INDEX_ARTIFACT_CLEANUP_LOCK_KEY = 'document-index:artifact-cleanup:lock';
 
 export interface DocumentIndexArtifactCleanupResult {
   retentionDays: number;
@@ -102,5 +104,27 @@ export const documentIndexArtifactCleanupService = {
       skippedIndexVersionIds,
       failedIndexVersionIds,
     };
+  },
+
+  async runScheduledCleanup(now: Date = new Date()): Promise<DocumentIndexArtifactCleanupResult> {
+    return runExclusiveTask(() => this.cleanup(now), {
+      key: DOCUMENT_INDEX_ARTIFACT_CLEANUP_LOCK_KEY,
+      logger,
+      lockBusyMessage:
+        'Skipping immutable document build cleanup because another instance already holds the lock',
+      lockLostMessage: 'Failed to extend immutable document build cleanup lock',
+      releaseFailedMessage: 'Failed to release immutable document build cleanup lock',
+      onLocked: () => ({
+        retentionDays: documentConfig.buildCleanupRetentionDays,
+        builtBefore: this.buildCutoff(now).toISOString(),
+        scannedCount: 0,
+        cleanedCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        cleanedIndexVersionIds: [],
+        skippedIndexVersionIds: [],
+        failedIndexVersionIds: [],
+      }),
+    });
   },
 };

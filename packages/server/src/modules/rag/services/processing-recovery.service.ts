@@ -1,10 +1,12 @@
 import { documentConfig } from '@config/env';
+import { runExclusiveTask } from '@core/coordination';
 import { dispatchDocumentProcessing } from '@core/document-processing';
 import { createLogger } from '@core/logger';
 import { documentProcessingService } from '@modules/document/public/processing';
 import { processingService } from './processing.service';
 
 const logger = createLogger('processing-recovery.service');
+const PROCESSING_RECOVERY_LOCK_KEY = 'document-processing:recovery:lock';
 
 export interface ProcessingRecoveryResult {
   timeoutMinutes: number;
@@ -138,5 +140,30 @@ export const processingRecoveryService = {
       requeuedDocumentIds,
       requeueFailedDocumentIds,
     };
+  },
+
+  async runScheduledRecovery(now: Date = new Date()): Promise<ProcessingRecoveryResult> {
+    return runExclusiveTask(() => this.recoverStaleProcessing(now), {
+      key: PROCESSING_RECOVERY_LOCK_KEY,
+      logger,
+      lockBusyMessage:
+        'Skipping stale document processing recovery because another instance already holds the lock',
+      lockLostMessage: 'Failed to extend stale document processing recovery lock',
+      releaseFailedMessage: 'Failed to release stale document processing recovery lock',
+      onLocked: () => ({
+        timeoutMinutes: documentConfig.processingTimeoutMinutes,
+        staleBefore: this.buildStaleBefore(now).toISOString(),
+        requeueEnabled: documentConfig.processingRecoveryRequeueEnabled,
+        scannedCount: 0,
+        recoveredCount: 0,
+        skippedCount: 0,
+        requeuedCount: 0,
+        requeueFailedCount: 0,
+        recoveredDocumentIds: [],
+        skippedDocumentIds: [],
+        requeuedDocumentIds: [],
+        requeueFailedDocumentIds: [],
+      }),
+    });
   },
 };

@@ -8,6 +8,9 @@ const describeRealIntegration = getRealIntegrationDescribe(
 
 const runtimeState = vi.hoisted(() => ({
   failChunkDelete: false,
+  restoreDuringPermanentDelete: false,
+  restoreDocumentId: null as string | null,
+  restoreUserId: null as string | null,
 }));
 
 const dispatchDocumentProcessingMock = vi.hoisted(() =>
@@ -15,6 +18,17 @@ const dispatchDocumentProcessingMock = vi.hoisted(() =>
 );
 const logOperationMock = vi.hoisted(() => vi.fn());
 const vectorDeleteMock = vi.hoisted(() => vi.fn(() => Promise.resolve(true)));
+const vectorMarkAsDeletedMock = vi.hoisted(() =>
+  vi.fn(async () => {
+    if (runtimeState.restoreDuringPermanentDelete) {
+      runtimeState.restoreDuringPermanentDelete = false;
+      const { documentService } = await import('@modules/document/public/documents');
+      await documentService.restore(runtimeState.restoreDocumentId!, runtimeState.restoreUserId!);
+    }
+
+    return true;
+  })
+);
 
 type DbModule = typeof import('@core/db');
 type SchemaModule = typeof import('@core/db/schema');
@@ -70,6 +84,7 @@ describeRealIntegration('document lifecycle real db integration', () => {
 
     vi.doMock('@modules/vector/public/repositories', () => ({
       vectorRepository: {
+        markAsDeleted: vectorMarkAsDeletedMock,
         deleteByDocumentId: vectorDeleteMock,
       },
     }));
@@ -109,9 +124,13 @@ describeRealIntegration('document lifecycle real db integration', () => {
 
   beforeEach(() => {
     runtimeState.failChunkDelete = false;
+    runtimeState.restoreDuringPermanentDelete = false;
+    runtimeState.restoreDocumentId = null;
+    runtimeState.restoreUserId = null;
     dispatchDocumentProcessingMock.mockClear();
     logOperationMock.mockClear();
     vectorDeleteMock.mockClear();
+    vectorMarkAsDeletedMock.mockClear();
   });
 
   afterAll(async () => {
@@ -354,6 +373,40 @@ describeRealIntegration('document lifecycle real db integration', () => {
       expect(knowledgeBase?.totalChunks).toBe(2);
     } finally {
       runtimeState.failChunkDelete = false;
+      await cleanupFixture(fixture);
+    }
+  });
+
+  it('does not hard delete a document that is restored between vector soft delete and commit', async () => {
+    const fixture = await createFixture({
+      deletedAt: new Date('2026-03-20T00:00:00.000Z'),
+      deletedBy: 'seed-user',
+      documentCount: 0,
+      totalChunks: 0,
+      chunkCount: 0,
+      currentVersion: 2,
+      processingStatus: 'pending',
+      versions: [{ version: 1 }, { version: 2, source: 'restore' }],
+    });
+
+    runtimeState.restoreDuringPermanentDelete = true;
+    runtimeState.restoreDocumentId = fixture.documentId;
+    runtimeState.restoreUserId = fixture.userId;
+
+    try {
+      await documentService.permanentDelete(fixture.documentId, fixture.userId);
+
+      const document = await getDocument(fixture.documentId);
+      const knowledgeBase = await getKnowledgeBase(fixture.knowledgeBaseId);
+
+      expect(document?.deletedAt).toBeNull();
+      expect(knowledgeBase?.documentCount).toBe(1);
+      expect(vectorMarkAsDeletedMock).toHaveBeenCalledTimes(1);
+      expect(vectorDeleteMock).not.toHaveBeenCalled();
+    } finally {
+      runtimeState.restoreDuringPermanentDelete = false;
+      runtimeState.restoreDocumentId = null;
+      runtimeState.restoreUserId = null;
       await cleanupFixture(fixture);
     }
   });

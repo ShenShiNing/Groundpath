@@ -44,6 +44,16 @@ class MemoryCoordinationDriver implements CoordinationDriver {
 
     return {
       key,
+      extend: async (ttlMs: number) => {
+        const current = this.locks.get(resolvedKey);
+        if (current?.token !== token) {
+          return false;
+        }
+
+        current.expiresAt = this.now() + ttlMs;
+        this.locks.set(resolvedKey, current);
+        return true;
+      },
       release: async () => {
         const current = this.locks.get(resolvedKey);
         if (current?.token === token) {

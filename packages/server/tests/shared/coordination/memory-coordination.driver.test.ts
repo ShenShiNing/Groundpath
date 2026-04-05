@@ -34,4 +34,22 @@ describe('memory-coordination.driver', () => {
 
     await expect(driver.acquireLock('vector:cleanup:lock', 1_000)).resolves.not.toBeNull();
   });
+
+  it('extends the ttl while the current owner still holds the lock', async () => {
+    const driver = createMemoryCoordinationDriver();
+
+    const lock = await driver.acquireLock('vector:cleanup:lock', 1_000);
+    expect(lock).not.toBeNull();
+
+    vi.advanceTimersByTime(900);
+    await expect(lock?.extend?.(1_000)).resolves.toBe(true);
+
+    vi.advanceTimersByTime(500);
+
+    await expect(driver.acquireLock('vector:cleanup:lock', 1_000)).resolves.toBeNull();
+
+    vi.advanceTimersByTime(600);
+
+    await expect(driver.acquireLock('vector:cleanup:lock', 1_000)).resolves.not.toBeNull();
+  });
 });

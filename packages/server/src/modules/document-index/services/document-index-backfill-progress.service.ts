@@ -9,6 +9,15 @@ import type { DocumentIndexBackfillRun } from '@core/db/schema/document/document
 
 const logger = createLogger('document-index-backfill-progress.service');
 
+function isDuplicateEntryError(error: unknown): error is { code: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'ER_DUP_ENTRY'
+  );
+}
+
 export type BackfillRunTrigger = 'manual' | 'scheduled';
 export type BackfillItemOutcome = 'completed' | 'failed' | 'skipped';
 
@@ -25,24 +34,44 @@ export interface BackfillRunCreateOptions {
   createdBy?: string;
 }
 
+export interface BackfillRunCreateResult {
+  run: DocumentIndexBackfillRun;
+  created: boolean;
+}
+
 export const documentIndexBackfillProgressService = {
-  async createRun(options: BackfillRunCreateOptions): Promise<DocumentIndexBackfillRun> {
+  async createRun(options: BackfillRunCreateOptions): Promise<BackfillRunCreateResult> {
     const runId = uuidv4();
-    return documentIndexBackfillRunRepository.create({
-      id: runId,
-      status: 'running',
-      trigger: options.trigger ?? 'manual',
-      knowledgeBaseId: options.knowledgeBaseId,
-      documentType: options.documentType,
-      includeIndexed: options.includeIndexed ?? false,
-      includeProcessing: options.includeProcessing ?? false,
-      batchSize: options.batchSize,
-      enqueueDelayMs: options.enqueueDelayMs,
-      candidateCount: options.candidateCount,
-      cursorOffset: options.cursorOffset ?? 0,
-      hasMore: true,
-      createdBy: options.createdBy,
-    });
+    try {
+      const run = await documentIndexBackfillRunRepository.create({
+        id: runId,
+        status: 'running',
+        trigger: options.trigger ?? 'manual',
+        knowledgeBaseId: options.knowledgeBaseId,
+        documentType: options.documentType,
+        includeIndexed: options.includeIndexed ?? false,
+        includeProcessing: options.includeProcessing ?? false,
+        batchSize: options.batchSize,
+        enqueueDelayMs: options.enqueueDelayMs,
+        candidateCount: options.candidateCount,
+        cursorOffset: options.cursorOffset ?? 0,
+        hasMore: true,
+        createdBy: options.createdBy,
+      });
+
+      return { run, created: true };
+    } catch (error) {
+      if (!isDuplicateEntryError(error) || (options.trigger ?? 'manual') !== 'scheduled') {
+        throw error;
+      }
+
+      const activeRun = await documentIndexBackfillRunRepository.findLatestActiveRun('scheduled');
+      if (activeRun) {
+        return { run: activeRun, created: false };
+      }
+
+      throw error;
+    }
   },
 
   async getRun(runId: string): Promise<DocumentIndexBackfillRun | undefined> {
@@ -66,15 +95,31 @@ export const documentIndexBackfillProgressService = {
     );
     if (existing) return existing;
 
-    return documentIndexBackfillItemRepository.create({
-      id: uuidv4(),
-      runId: params.runId,
-      documentId: params.documentId,
-      userId: params.userId,
-      knowledgeBaseId: params.knowledgeBaseId,
-      documentVersion: params.documentVersion,
-      status: 'pending',
-    });
+    try {
+      return await documentIndexBackfillItemRepository.create({
+        id: uuidv4(),
+        runId: params.runId,
+        documentId: params.documentId,
+        userId: params.userId,
+        knowledgeBaseId: params.knowledgeBaseId,
+        documentVersion: params.documentVersion,
+        status: 'pending',
+      });
+    } catch (error) {
+      if (!isDuplicateEntryError(error)) {
+        throw error;
+      }
+
+      const concurrentItem = await documentIndexBackfillItemRepository.findByRunAndDocument(
+        params.runId,
+        params.documentId
+      );
+      if (concurrentItem) {
+        return concurrentItem;
+      }
+
+      throw error;
+    }
   },
 
   async markEnqueued(params: { runId: string; documentId: string; jobId?: string }): Promise<void> {

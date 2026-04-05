@@ -1,5 +1,5 @@
 import { vectorConfig } from '@config/env';
-import { getCoordinationDriver, type CoordinationLock } from '@core/coordination';
+import { runExclusiveTask } from '@core/coordination';
 import { createLogger } from '@core/logger';
 import { getQdrantClient } from './qdrant.client';
 import { vectorRepository } from './vector.repository';
@@ -26,88 +26,84 @@ export const vectorCleanupService = {
       totalPurged: 0,
       errors: 0,
     };
-    let lock: CoordinationLock | null = null;
 
     try {
-      lock = await getCoordinationDriver().acquireLock(
-        CLEANUP_LOCK_KEY,
-        vectorConfig.cleanupLockTtlMs
-      );
-      if (!lock) {
-        logger.info('Skipping vector cleanup because another cleanup run already holds the lock');
-        return result;
-      }
+      return await runExclusiveTask(
+        async () => {
+          const qdrant = getQdrantClient();
+          const cleanupStartedAt = Date.now();
 
-      const qdrant = getQdrantClient();
-      const cleanupStartedAt = Date.now();
+          // List all collections
+          const collectionsResponse = await qdrant.getCollections();
+          const collections = collectionsResponse.collections;
+          const maxAllowedErrors = collections.length * vectorConfig.cleanupFailureThreshold;
 
-      // List all collections
-      const collectionsResponse = await qdrant.getCollections();
-      const collections = collectionsResponse.collections;
-      const maxAllowedErrors = collections.length * vectorConfig.cleanupFailureThreshold;
+          logger.info({ collectionCount: collections.length }, 'Starting vector cleanup');
 
-      logger.info({ collectionCount: collections.length }, 'Starting vector cleanup');
+          // Process each collection
+          for (const collection of collections) {
+            try {
+              const purged = await vectorRepository.purgeDeletedVectors(
+                collection.name,
+                cleanupStartedAt
+              );
+              result.collectionsProcessed++;
+              result.totalPurged += purged;
 
-      // Process each collection
-      for (const collection of collections) {
-        try {
-          const purged = await vectorRepository.purgeDeletedVectors(
-            collection.name,
-            cleanupStartedAt
-          );
-          result.collectionsProcessed++;
-          result.totalPurged += purged;
+              if (purged > 0) {
+                logger.info({ collection: collection.name, purged }, 'Purged deleted vectors');
+              }
+            } catch (err) {
+              result.errors++;
+              logger.warn(
+                { collection: collection.name, error: err },
+                'Failed to purge deleted vectors from collection'
+              );
 
-          if (purged > 0) {
-            logger.info({ collection: collection.name, purged }, 'Purged deleted vectors');
+              if (result.errors > maxAllowedErrors) {
+                const abortError = new Error(
+                  `Vector cleanup aborted after ${result.errors}/${collections.length} collections failed`
+                );
+                logger.error(
+                  {
+                    errors: result.errors,
+                    totalCollections: collections.length,
+                    failureThreshold: vectorConfig.cleanupFailureThreshold,
+                  },
+                  'Vector cleanup aborted after exceeding failure threshold'
+                );
+                throw abortError;
+              }
+            }
           }
-        } catch (err) {
-          result.errors++;
-          logger.warn(
-            { collection: collection.name, error: err },
-            'Failed to purge deleted vectors from collection'
+
+          const durationMs = Date.now() - startTime;
+          logger.info(
+            {
+              durationMs,
+              collectionsProcessed: result.collectionsProcessed,
+              totalPurged: result.totalPurged,
+              errors: result.errors,
+            },
+            'Vector cleanup completed'
           );
 
-          if (result.errors > maxAllowedErrors) {
-            const abortError = new Error(
-              `Vector cleanup aborted after ${result.errors}/${collections.length} collections failed`
-            );
-            logger.error(
-              {
-                errors: result.errors,
-                totalCollections: collections.length,
-                failureThreshold: vectorConfig.cleanupFailureThreshold,
-              },
-              'Vector cleanup aborted after exceeding failure threshold'
-            );
-            throw abortError;
-          }
-        }
-      }
-
-      const durationMs = Date.now() - startTime;
-      logger.info(
-        {
-          durationMs,
-          collectionsProcessed: result.collectionsProcessed,
-          totalPurged: result.totalPurged,
-          errors: result.errors,
+          return result;
         },
-        'Vector cleanup completed'
+        {
+          key: CLEANUP_LOCK_KEY,
+          ttlMs: vectorConfig.cleanupLockTtlMs,
+          logger,
+          lockBusyMessage:
+            'Skipping vector cleanup because another cleanup run already holds the lock',
+          lockLostMessage: 'Failed to extend vector cleanup lock',
+          releaseFailedMessage: 'Failed to release vector cleanup lock',
+          onLocked: () => result,
+        }
       );
-
-      return result;
     } catch (err) {
       logger.error({ error: err }, 'Vector cleanup failed');
       throw err;
-    } finally {
-      if (lock) {
-        try {
-          await lock.release();
-        } catch (error) {
-          logger.warn({ error }, 'Failed to release vector cleanup lock');
-        }
-      }
     }
   },
 };

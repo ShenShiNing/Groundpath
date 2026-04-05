@@ -23,6 +23,17 @@ function toConversationInfo(conv: Conversation): ConversationInfo {
   };
 }
 
+async function validateOwnedKnowledgeBase(
+  userId: string,
+  knowledgeBaseId?: string | null
+): Promise<void> {
+  if (!knowledgeBaseId) {
+    return;
+  }
+
+  await knowledgeBaseService.getById(knowledgeBaseId, userId);
+}
+
 export const conversationService = {
   /**
    * Create a new conversation
@@ -31,6 +42,8 @@ export const conversationService = {
     userId: string,
     data: { knowledgeBaseId?: string; title?: string }
   ): Promise<ConversationInfo> {
+    await validateOwnedKnowledgeBase(userId, data.knowledgeBaseId);
+
     const conversation = await conversationRepository.create({
       id: uuidv4(),
       userId,
@@ -165,10 +178,7 @@ export const conversationService = {
       throw Errors.auth(CHAT_ERROR_CODES.CONVERSATION_NOT_FOUND, 'Conversation not found', 404);
     }
 
-    // Validate target KB exists and belongs to user
-    if (data.knowledgeBaseId !== undefined && data.knowledgeBaseId !== null) {
-      await knowledgeBaseService.getById(data.knowledgeBaseId, userId);
-    }
+    await validateOwnedKnowledgeBase(userId, data.knowledgeBaseId);
 
     const updateData: Record<string, unknown> = { updatedBy: userId };
     if (data.title !== undefined) updateData.title = data.title;

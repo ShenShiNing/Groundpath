@@ -3,8 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   messageRepository: {
     create: vi.fn(),
+    findById: vi.fn(),
     listByConversation: vi.fn(),
     getRecentMessages: vi.fn(),
+    updateContent: vi.fn(),
+    deleteAfterMessage: vi.fn(),
     updateMetadata: vi.fn(),
     countByConversation: vi.fn(),
   },
@@ -162,5 +165,71 @@ describe('messageService', () => {
     });
     expect(mocks.messageRepository.countByConversation).toHaveBeenCalledWith('conv-1');
     expect(total).toBe(42);
+  });
+
+  it('should edit a user message and trim later messages', async () => {
+    mocks.messageRepository.findById.mockResolvedValue({
+      id: 'msg-user-1',
+      conversationId: 'conv-1',
+      role: 'user',
+      content: 'Old question',
+      metadata: null,
+      sequence: 7,
+      createdAt: new Date('2026-03-03T13:40:00.000Z'),
+    });
+
+    await messageService.editContent('conv-1', 'msg-user-1', 'Updated question');
+
+    expect(mocks.messageRepository.updateContent).toHaveBeenCalledWith(
+      'msg-user-1',
+      'Updated question'
+    );
+    expect(mocks.messageRepository.deleteAfterMessage).toHaveBeenCalledWith('conv-1', 'msg-user-1');
+  });
+
+  it('should reject editing when the message does not belong to the conversation', async () => {
+    mocks.messageRepository.findById.mockResolvedValue({
+      id: 'msg-user-1',
+      conversationId: 'conv-other',
+      role: 'user',
+      content: 'Question',
+      metadata: null,
+      sequence: 9,
+      createdAt: new Date('2026-03-03T13:50:00.000Z'),
+    });
+
+    await expect(
+      messageService.editContent('conv-1', 'msg-user-1', 'Updated question')
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      statusCode: 400,
+      message: 'Message not found',
+    });
+
+    expect(mocks.messageRepository.updateContent).not.toHaveBeenCalled();
+    expect(mocks.messageRepository.deleteAfterMessage).not.toHaveBeenCalled();
+  });
+
+  it('should reject editing non-user messages', async () => {
+    mocks.messageRepository.findById.mockResolvedValue({
+      id: 'msg-assistant-1',
+      conversationId: 'conv-1',
+      role: 'assistant',
+      content: 'Answer',
+      metadata: null,
+      sequence: 10,
+      createdAt: new Date('2026-03-03T14:00:00.000Z'),
+    });
+
+    await expect(
+      messageService.editContent('conv-1', 'msg-assistant-1', 'Updated answer')
+    ).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      statusCode: 400,
+      message: 'Only user messages can be edited',
+    });
+
+    expect(mocks.messageRepository.updateContent).not.toHaveBeenCalled();
+    expect(mocks.messageRepository.deleteAfterMessage).not.toHaveBeenCalled();
   });
 });

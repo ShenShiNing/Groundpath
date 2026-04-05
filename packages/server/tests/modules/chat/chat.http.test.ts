@@ -2,6 +2,8 @@ import type { Server } from 'node:http';
 import express from 'express';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestHandler } from 'express';
+import { KNOWLEDGE_BASE_ERROR_CODES } from '@groundpath/shared/constants';
+import { Errors, handleError } from '@core/errors';
 import type { HttpTestBody } from '@tests/helpers/http';
 
 const {
@@ -116,6 +118,11 @@ describe('chat.routes http behavior', () => {
     const app = express();
     app.use(express.json({ limit: '2mb' }));
     app.use('/chat', chatRoutes);
+    app.use(
+      (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        handleError(err, res, 'chat.routes http behavior test');
+      }
+    );
 
     await new Promise<void>((resolve) => {
       server = app.listen(0, () => resolve());
@@ -182,6 +189,33 @@ describe('chat.routes http behavior', () => {
 
     expect(response.status).toBe(201);
     expect(body.success).toBe(true);
+    expect(conversationServiceMock.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('should return 404 when create conversation references an inaccessible knowledge base', async () => {
+    conversationServiceMock.create.mockRejectedValueOnce(
+      Errors.auth(
+        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND,
+        'Knowledge base not found',
+        404
+      )
+    );
+
+    const response = await fetch(`${baseUrl}/chat/conversations`, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer valid-access',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: 'New Chat',
+        knowledgeBaseId: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+    });
+    const body = (await response.json()) as HttpTestBody;
+
+    expect(response.status).toBe(404);
+    expect(body.error.code).toBe(KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND);
     expect(conversationServiceMock.create).toHaveBeenCalledTimes(1);
   });
 

@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "c567e8a4-b2b5-4fba-b302-d079b5ee09e4",
-  "prevId": "8c4d7a2b-7c3f-4a60-8a69-44328e3b6a3d",
+  "id": "b936a017-d7b2-413f-8a55-43b4756d2413",
+  "prevId": "c567e8a4-b2b5-4fba-b302-d079b5ee09e4",
   "tables": {
     "users": {
       "name": "users",
@@ -2373,6 +2373,17 @@
           "notNull": false,
           "autoincrement": false
         },
+        "active_scheduled_slot": {
+          "name": "active_scheduled_slot",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false,
+          "generated": {
+            "as": "(case when `trigger` = 'scheduled' and `status` in ('running', 'draining') then 'scheduled' else null end)",
+            "type": "stored"
+          }
+        },
         "started_at": {
           "name": "started_at",
           "type": "timestamp",
@@ -2438,6 +2449,11 @@
           "name": "document_index_backfill_created_at_idx",
           "columns": ["created_at"],
           "isUnique": false
+        },
+        "document_index_backfill_active_scheduled_unique_idx": {
+          "name": "document_index_backfill_active_scheduled_unique_idx",
+          "columns": ["active_scheduled_slot"],
+          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -3323,6 +3339,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "sequence": {
+          "name": "sequence",
+          "type": "bigint unsigned",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3342,6 +3365,16 @@
           "name": "conversation_created_idx",
           "columns": ["conversation_id", "created_at"],
           "isUnique": false
+        },
+        "conversation_sequence_idx": {
+          "name": "conversation_sequence_idx",
+          "columns": ["conversation_id", "sequence"],
+          "isUnique": false
+        },
+        "messages_sequence_unique_idx": {
+          "name": "messages_sequence_unique_idx",
+          "columns": ["sequence"],
+          "isUnique": true
         }
       },
       "foreignKeys": {

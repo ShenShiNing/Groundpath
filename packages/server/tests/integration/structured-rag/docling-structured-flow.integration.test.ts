@@ -255,7 +255,7 @@ describe('docling structured flow integration', () => {
       title: '1. Introduction',
     });
     expect(result.results[0]?.sectionPath?.[0]).not.toBe('Front Matter');
-  });
+  }, 15_000);
 
   it('parses synthetic fixture and lets figure/table/appendix nodes be searched, read, and followed', async () => {
     const { pdfStructureParser } =

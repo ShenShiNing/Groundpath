@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CHAT_ERROR_CODES } from '@groundpath/shared/constants';
+import { CHAT_ERROR_CODES, KNOWLEDGE_BASE_ERROR_CODES } from '@groundpath/shared/constants';
+import { Errors } from '@core/errors';
 
 const mocks = vi.hoisted(() => ({
   conversationRepository: {
@@ -14,6 +15,9 @@ const mocks = vi.hoisted(() => ({
     getStatsForConversations: vi.fn(),
     searchByContent: vi.fn(),
   },
+  knowledgeBaseService: {
+    getById: vi.fn(),
+  },
 }));
 
 vi.mock('uuid', () => ({
@@ -26,6 +30,10 @@ vi.mock('@modules/chat/repositories/conversation.repository', () => ({
 
 vi.mock('@modules/chat/repositories/message.repository', () => ({
   messageRepository: mocks.messageRepository,
+}));
+
+vi.mock('@modules/knowledge-base/public/management', () => ({
+  knowledgeBaseService: mocks.knowledgeBaseService,
 }));
 
 import { conversationService } from '@modules/chat/services/conversation.service';
@@ -48,6 +56,7 @@ describe('conversationService', () => {
 
     const result = await conversationService.create('user-1', {});
 
+    expect(mocks.knowledgeBaseService.getById).not.toHaveBeenCalled();
     expect(mocks.conversationRepository.create).toHaveBeenCalledWith({
       id: 'conv-uuid-001',
       userId: 'user-1',
@@ -78,6 +87,7 @@ describe('conversationService', () => {
 
     await conversationService.create('user-1', { title: 'My KB Chat', knowledgeBaseId: 'kb-1' });
 
+    expect(mocks.knowledgeBaseService.getById).toHaveBeenCalledWith('kb-1', 'user-1');
     expect(mocks.conversationRepository.create).toHaveBeenCalledWith({
       id: 'conv-uuid-001',
       userId: 'user-1',
@@ -85,6 +95,28 @@ describe('conversationService', () => {
       title: 'My KB Chat',
       createdBy: 'user-1',
     });
+  });
+
+  it('should reject create when knowledge base does not belong to user', async () => {
+    mocks.knowledgeBaseService.getById.mockRejectedValueOnce(
+      Errors.auth(
+        KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND,
+        'Knowledge base not found',
+        404
+      )
+    );
+
+    await expect(
+      conversationService.create('user-1', {
+        title: 'Forbidden KB Chat',
+        knowledgeBaseId: 'kb-foreign',
+      })
+    ).rejects.toMatchObject({
+      code: KNOWLEDGE_BASE_ERROR_CODES.KNOWLEDGE_BASE_NOT_FOUND,
+      statusCode: 404,
+    });
+
+    expect(mocks.conversationRepository.create).not.toHaveBeenCalled();
   });
 
   it('should throw CONVERSATION_NOT_FOUND when getById misses', async () => {
@@ -214,6 +246,72 @@ describe('conversationService', () => {
     });
     expect(result.title).toBe('New title');
     expect(result.updatedAt).toBe(updatedAt);
+  });
+
+  it('should validate knowledge base ownership when updating conversation scope', async () => {
+    const createdAt = new Date('2026-03-03T12:00:00.000Z');
+    const updatedAt = new Date('2026-03-03T12:50:00.000Z');
+
+    mocks.conversationRepository.findByIdAndUser.mockResolvedValue({
+      id: 'conv-1',
+      userId: 'user-1',
+      title: 'Scoped chat',
+      knowledgeBaseId: null,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    mocks.conversationRepository.update.mockResolvedValue({
+      id: 'conv-1',
+      userId: 'user-1',
+      title: 'Scoped chat',
+      knowledgeBaseId: 'kb-2',
+      createdAt,
+      updatedAt,
+    });
+
+    const result = await conversationService.update('user-1', 'conv-1', {
+      knowledgeBaseId: 'kb-2',
+    });
+
+    expect(mocks.knowledgeBaseService.getById).toHaveBeenCalledWith('kb-2', 'user-1');
+    expect(mocks.conversationRepository.update).toHaveBeenCalledWith('conv-1', {
+      knowledgeBaseId: 'kb-2',
+      updatedBy: 'user-1',
+    });
+    expect(result.knowledgeBaseId).toBe('kb-2');
+  });
+
+  it('should allow clearing knowledge base without ownership lookup', async () => {
+    const createdAt = new Date('2026-03-03T12:00:00.000Z');
+    const updatedAt = new Date('2026-03-03T12:55:00.000Z');
+
+    mocks.conversationRepository.findByIdAndUser.mockResolvedValue({
+      id: 'conv-1',
+      userId: 'user-1',
+      title: 'Scoped chat',
+      knowledgeBaseId: 'kb-1',
+      createdAt,
+      updatedAt: createdAt,
+    });
+    mocks.conversationRepository.update.mockResolvedValue({
+      id: 'conv-1',
+      userId: 'user-1',
+      title: 'Scoped chat',
+      knowledgeBaseId: null,
+      createdAt,
+      updatedAt,
+    });
+
+    const result = await conversationService.update('user-1', 'conv-1', {
+      knowledgeBaseId: null,
+    });
+
+    expect(mocks.knowledgeBaseService.getById).not.toHaveBeenCalled();
+    expect(mocks.conversationRepository.update).toHaveBeenCalledWith('conv-1', {
+      knowledgeBaseId: null,
+      updatedBy: 'user-1',
+    });
+    expect(result.knowledgeBaseId).toBeNull();
   });
 
   it('should throw when update target conversation does not exist', async () => {
