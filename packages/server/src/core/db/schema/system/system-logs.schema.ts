@@ -7,7 +7,6 @@ import {
   mysqlEnum,
   int,
   json,
-  boolean,
 } from 'drizzle-orm/mysql-core';
 import { sql } from 'drizzle-orm';
 
@@ -61,46 +60,6 @@ export const systemLogs = mysqlTable(
     }).generatedAlwaysAs(sql`json_unquote(json_extract(metadata, '$.knowledgeBaseId'))`, {
       mode: 'stored',
     }),
-    metadataStopReason: varchar('metadata_stop_reason', { length: 64 }).generatedAlwaysAs(
-      sql`json_unquote(json_extract(metadata, '$.stopReason'))`,
-      { mode: 'stored' }
-    ),
-    metadataUsedFallback: boolean('metadata_used_fallback').generatedAlwaysAs(
-      sql`coalesce(json_unquote(json_extract(metadata, '$.usedFallback')) = 'true', false)`,
-      { mode: 'stored' }
-    ),
-    metadataSuccess: boolean('metadata_success').generatedAlwaysAs(
-      sql`coalesce(json_unquote(json_extract(metadata, '$.success')) = 'true', false)`,
-      { mode: 'stored' }
-    ),
-    metadataStructuredRequested: boolean('metadata_structured_requested').generatedAlwaysAs(
-      sql`coalesce(json_unquote(json_extract(metadata, '$.structuredRequested')) = 'true', false)`,
-      { mode: 'stored' }
-    ),
-    metadataStructuredParsed: boolean('metadata_structured_parsed').generatedAlwaysAs(
-      sql`coalesce(json_unquote(json_extract(metadata, '$.structuredParsed')) = 'true', false)`,
-      { mode: 'stored' }
-    ),
-    metadataFinalCitationCount: int('metadata_final_citation_count').generatedAlwaysAs(
-      sql`cast(json_unquote(json_extract(metadata, '$.finalCitationCount')) as unsigned)`,
-      { mode: 'stored' }
-    ),
-    metadataRetrievedCitationCount: int('metadata_retrieved_citation_count').generatedAlwaysAs(
-      sql`cast(json_unquote(json_extract(metadata, '$.retrievedCitationCount')) as unsigned)`,
-      { mode: 'stored' }
-    ),
-    metadataIndexFreshnessLagMs: int('metadata_index_freshness_lag_ms').generatedAlwaysAs(
-      sql`cast(json_unquote(json_extract(metadata, '$.indexFreshnessLagMs')) as unsigned)`,
-      { mode: 'stored' }
-    ),
-    metadataNodeCount: int('metadata_node_count').generatedAlwaysAs(
-      sql`cast(json_unquote(json_extract(metadata, '$.nodeCount')) as unsigned)`,
-      { mode: 'stored' }
-    ),
-    metadataEdgeCount: int('metadata_edge_count').generatedAlwaysAs(
-      sql`cast(json_unquote(json_extract(metadata, '$.edgeCount')) as unsigned)`,
-      { mode: 'stored' }
-    ),
 
     // Environment context
     hostname: varchar('hostname', { length: 100 }),

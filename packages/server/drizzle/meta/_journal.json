@@ -127,6 +127,13 @@
       "when": 1775097600000,
       "tag": "0017_log_table_partitioning",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1775391708011,
+      "tag": "0018_system_logs_generated_columns_trim",
+      "breakpoints": true
     }
   ]
 }

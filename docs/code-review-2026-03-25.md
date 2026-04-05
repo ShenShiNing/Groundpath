@@ -186,7 +186,7 @@
 | 高     | ~~审查 documents→users RESTRICT 约束~~ ✅      | 已移除冗余外键并改为 ownership 一致性校验                               |
 | 中     | ~~messages 表创建 FULLTEXT 索引~~ ✅           | `searchByContent` 依赖                                                  |
 | 中     | ~~日志表按时间分区~~ ✅                        | `login_logs` / `operation_logs` 已按月分区；`messages` 改为生命周期清理 |
-| 低     | 评估 system_logs 生成列数量                    | 10+ 生成列可能影响写入性能                                              |
+| 低     | ~~评估 system_logs 生成列数量~~ ✅             | 已收缩为仅保留 `metadata_user_id` / `metadata_knowledge_base_id` 两列   |
 
 ---
 
