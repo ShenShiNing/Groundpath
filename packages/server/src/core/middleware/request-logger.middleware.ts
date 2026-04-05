@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { createRequestLogger } from '@core/logger';
+import { sanitizeRequestPath } from '@core/logger/redaction';
 
 /**
  * Middleware to attach request-scoped logger with requestId
@@ -12,21 +13,21 @@ export function requestLoggerMiddleware(req: Request, res: Response, next: NextF
   // Log request completion with duration when response finishes
   res.on('finish', () => {
     const durationMs = Date.now() - startTime;
-    const url = req.originalUrl || req.url;
+    const path = sanitizeRequestPath(req.originalUrl || req.url);
 
-    if (url === '/api/hello' || url === '/health' || url.startsWith('/health/')) {
+    if (path === '/api/hello' || path === '/health' || path.startsWith('/health/')) {
       return;
     }
 
     const logData = {
       method: req.method,
-      url,
+      path,
       statusCode: res.statusCode,
       durationMs,
     };
 
     // Skip non-API 404s — browser extensions, frontend routes hitting the backend
-    if (res.statusCode === 404 && !url.startsWith('/api/')) {
+    if (res.statusCode === 404 && !path.startsWith('/api/')) {
       req.log.debug(logData, 'Non-API path not found (ignored)');
       return;
     }

@@ -15,6 +15,7 @@ import type { OAuthExchangeCodeContext } from '../repositories/oauth-exchange-co
 import type { OAuthProviderType, OAuthUserData } from './oauth.types';
 import { detectDevice, getGeoLocationAsync } from '@modules/logs/public/auth-enrichment';
 import { createLogger } from '@core/logger';
+import { fingerprintIpAddress } from '@core/logger/redaction';
 
 const logger = createLogger('oauth.service');
 
@@ -198,7 +199,16 @@ async function getEnhancedLoginInfo(ipAddress: string | null, userAgent: string 
   const [geoInfo] = await Promise.all([getGeoLocationAsync(ipAddress)]);
   const deviceInfo = detectDevice(userAgent);
 
-  logger.info({ ipAddress, userAgent, deviceInfo, geoInfo }, 'OAuth enhanced login info');
+  logger.info(
+    {
+      ipFingerprint: fingerprintIpAddress(ipAddress),
+      deviceType: deviceInfo?.deviceType ?? null,
+      browser: deviceInfo?.browser ?? null,
+      os: deviceInfo?.os ?? null,
+      country: geoInfo?.country ?? null,
+    },
+    'OAuth enhanced login info resolved'
+  );
 
   return {
     deviceInfo,

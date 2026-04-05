@@ -2,6 +2,7 @@ import type { AgentTool, ToolContext, ToolExecutionResult, ToolDefinition } from
 import { agentConfig, externalServiceConfig } from '@core/config/env';
 import { Errors } from '@core/errors';
 import { createLogger } from '@core/logger';
+import { describeTextForLog } from '@core/logger/redaction';
 import { executeExternalCall } from '@core/utils/external-call';
 
 const logger = createLogger('web-search.tool');
@@ -65,7 +66,8 @@ export class WebSearchTool implements AgentTool {
       return { content: 'Web search is not configured.' };
     }
 
-    logger.debug({ query: query.substring(0, 80) }, 'Web search tool executing');
+    const querySummary = describeTextForLog(query);
+    logger.debug({ querySummary }, 'Web search tool executing');
 
     let data: TavilyResponse;
     try {
@@ -100,7 +102,7 @@ export class WebSearchTool implements AgentTool {
       });
     } catch (error) {
       const errText = error instanceof Error ? error.message : String(error);
-      logger.warn({ query, errText }, 'Tavily API error');
+      logger.warn({ querySummary, errText }, 'Tavily API error');
       return { content: `Web search failed: ${errText}` };
     }
 

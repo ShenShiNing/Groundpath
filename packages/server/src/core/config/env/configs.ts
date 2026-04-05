@@ -220,6 +220,10 @@ export const loggingConfig = {
     enabled: validatedEnv.LOG_CLEANUP_ENABLED,
   },
   partitioning: loggingDefaults.partitioning,
+  redaction: {
+    ...loggingDefaults.redaction,
+    fingerprintSalt: validatedEnv.LOG_REDACTION_SALT || validatedEnv.ENCRYPTION_KEY,
+  },
 } as const;
 
 export const structuredRagObservabilityConfig = {

@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '@core/errors/app-error';
 import { sendErrorResponse } from '@core/errors/response';
 import { logger } from '@core/logger';
+import { sanitizeRequestPath } from '@core/logger/redaction';
 import { serverConfig } from '@config/env';
 
 /**
@@ -16,13 +17,14 @@ export function errorMiddleware(
   _next: NextFunction
 ): void {
   const requestId = req.requestId;
+  const path = sanitizeRequestPath(req.originalUrl || req.url);
 
   // Handle AppError (including Errors factory)
   if (err instanceof AppError) {
     if (err.statusCode >= 500) {
-      logger.error({ err, requestId, method: req.method, url: req.url }, err.message);
+      logger.error({ err, requestId, method: req.method, path }, err.message);
     } else {
-      logger.warn({ err, requestId, method: req.method, url: req.url }, err.message);
+      logger.warn({ err, requestId, method: req.method, path }, err.message);
     }
 
     sendErrorResponse(res, err.statusCode, err.code, err.message, {
@@ -36,12 +38,12 @@ export function errorMiddleware(
   if (serverConfig.nodeEnv === 'production') {
     // Production: log only essential info without full stack trace
     logger.error(
-      { requestId, method: req.method, url: req.url, errorMessage: err.message },
+      { requestId, method: req.method, path, errorMessage: err.message },
       'Unhandled error'
     );
   } else {
     // Development/test: log full error with stack trace
-    logger.error({ err, requestId, method: req.method, url: req.url }, 'Unhandled error');
+    logger.error({ err, requestId, method: req.method, path }, 'Unhandled error');
   }
 
   sendErrorResponse(res, 500, 'INTERNAL_ERROR', 'An unexpected error occurred', {

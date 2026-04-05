@@ -38,7 +38,15 @@ export const loginLogRepository = {
     userAgent: string | null,
     enhanced?: EnhancedLoginInfo
   ): Promise<void> {
-    logger.info({ enhanced }, 'Recording login success with enhanced info');
+    logger.debug(
+      {
+        authType,
+        hasEnhancedInfo: Boolean(enhanced),
+        deviceType: enhanced?.deviceInfo?.deviceType ?? null,
+        country: enhanced?.geoInfo?.country ?? null,
+      },
+      'Recording login success with enhanced info'
+    );
 
     await db.insert(loginLogs).values({
       id: uuidv4(),

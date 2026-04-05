@@ -1,5 +1,6 @@
 import pinoHttp from 'pino-http';
 import { logger } from './index';
+import { sanitizeRequestPath } from './redaction';
 
 // Slow request threshold in milliseconds
 const SLOW_REQUEST_THRESHOLD_MS = 1000;
@@ -23,24 +24,24 @@ export const requestLogger = pinoHttp({
   // Add response time to log
   customSuccessMessage: (req, res, responseTime) => {
     const method = req.method;
-    const url = req.url;
+    const path = sanitizeRequestPath(req.url);
     const status = res.statusCode;
 
     if (responseTime >= SLOW_REQUEST_THRESHOLD_MS) {
-      return `[SLOW] ${method} ${url} ${status} - ${responseTime.toFixed(0)}ms`;
+      return `[SLOW] ${method} ${path} ${status} - ${responseTime.toFixed(0)}ms`;
     }
 
-    return `${method} ${url} ${status} - ${responseTime.toFixed(0)}ms`;
+    return `${method} ${path} ${status} - ${responseTime.toFixed(0)}ms`;
   },
   customErrorMessage: (req, res, err) => {
-    return `${req.method} ${req.url} ${res.statusCode} - ${err.message}`;
+    const path = sanitizeRequestPath(req.url);
+    return `${req.method} ${path} ${res.statusCode} - ${err.message}`;
   },
   // Serialize additional fields
   serializers: {
     req: (req) => ({
       method: req.method,
-      url: req.url,
-      // Don't log headers by default to avoid sensitive data
+      path: sanitizeRequestPath(req.url),
     }),
     res: (res) => ({
       statusCode: res.statusCode,

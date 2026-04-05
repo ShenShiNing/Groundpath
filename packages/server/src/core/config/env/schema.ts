@@ -132,6 +132,7 @@ const agentSchema = z.object({
 
 const loggingSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  LOG_REDACTION_SALT: z.string().default(''),
 });
 
 const structuredRagObservabilitySchema = z.object({

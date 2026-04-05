@@ -21,6 +21,7 @@ import { emailVerificationService } from '../verification/email-verification.ser
 import { checkAccountRateLimit, resetAccountRateLimit } from '@core/middleware';
 import { detectDevice, getGeoLocationAsync } from '@modules/logs/public/auth-enrichment';
 import { createLogger } from '@core/logger';
+import { fingerprintIpAddress } from '@core/logger/redaction';
 
 const logger = createLogger('auth.service');
 
@@ -61,7 +62,16 @@ async function getEnhancedLoginInfo(ipAddress: string | null, userAgent: string 
   const [geoInfo] = await Promise.all([getGeoLocationAsync(ipAddress)]);
   const deviceInfo = detectDevice(userAgent);
 
-  logger.info({ ipAddress, userAgent, deviceInfo, geoInfo }, 'Enhanced login info');
+  logger.info(
+    {
+      ipFingerprint: fingerprintIpAddress(ipAddress),
+      deviceType: deviceInfo?.deviceType ?? null,
+      browser: deviceInfo?.browser ?? null,
+      os: deviceInfo?.os ?? null,
+      country: geoInfo?.country ?? null,
+    },
+    'Enhanced login info resolved'
+  );
 
   return { deviceInfo, geoInfo };
 }
