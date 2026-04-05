@@ -24,6 +24,8 @@
   <p>
     <a href="./README.en.md">English README</a>
     ·
+    <a href="./docs/api-changelog/README.md">API Changelog</a>
+    ·
     <a href="./docs/env-variables.md">环境变量</a>
     ·
     <a href="./docs/architecture-guardrails.md">架构门禁</a>
@@ -305,6 +307,9 @@ pnpm dev
 ├─ docker/
 │  └─ nginx/    # Nginx 模板等基础设施运行时配置
 ├─ docs/
+│  ├─ api-changelog/
+│  │  ├─ README.md
+│  │  └─ v1.md
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md
 │  └─ user-hard-delete-design-2026-04-02.md
@@ -314,6 +319,8 @@ pnpm dev
 
 ## 相关文档
 
+- [docs/api-changelog/README.md](./docs/api-changelog/README.md)：API 变更追踪规则与版本文件入口
+- [docs/api-changelog/v1.md](./docs/api-changelog/v1.md)：`/api/v1` 时代 API 合同变更记录
 - [docs/env-variables.md](./docs/env-variables.md)：环境变量总览
 - [docs/architecture-guardrails.md](./docs/architecture-guardrails.md)：架构边界与门禁
 - [docs/user-hard-delete-design-2026-04-02.md](./docs/user-hard-delete-design-2026-04-02.md)：用户完整硬删的未完成设计边界
