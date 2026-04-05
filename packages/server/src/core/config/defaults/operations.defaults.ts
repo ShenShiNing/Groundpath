@@ -13,6 +13,7 @@ export const queueDefaults = {
 export const backfillDefaults = {
   batchSize: 100,
   enqueueDelayMs: 0,
+  scheduleLockTtlMs: 300_000,
 } as const;
 
 /** Log retention periods and cleanup batch size */

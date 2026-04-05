@@ -1,4 +1,5 @@
 import { backfillConfig } from '@config/env';
+import { getCoordinationDriver, type CoordinationLock } from '@core/coordination';
 import { dispatchDocumentProcessing } from '@core/document-processing';
 import {
   documentRepository,
@@ -10,6 +11,7 @@ import { createLogger } from '@core/logger';
 import { documentIndexBackfillProgressService } from './document-index-backfill-progress.service';
 
 const logger = createLogger('document-index-backfill.service');
+const SCHEDULED_BACKFILL_LOCK_KEY = 'document-index:backfill:scheduled:lock';
 
 export interface DocumentIndexBackfillOptions {
   knowledgeBaseId?: string;
@@ -47,6 +49,12 @@ export interface DocumentIndexBackfillResult {
 function sleep(ms: number): Promise<void> {
   if (ms <= 0) return Promise.resolve();
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getScheduledBackfillLockTtlMs(): number {
+  const enqueueWindowMs =
+    Math.max(backfillConfig.batchSize - 1, 0) * Math.max(backfillConfig.enqueueDelayMs, 0);
+  return Math.max(backfillConfig.scheduleLockTtlMs, enqueueWindowMs + 60_000);
 }
 
 export const documentIndexBackfillService = {
@@ -225,20 +233,45 @@ export const documentIndexBackfillService = {
   },
 
   async runScheduledBackfill() {
-    const activeRun = await documentIndexBackfillProgressService.getLatestActiveRun('scheduled');
-    if (activeRun) {
-      if (!activeRun.hasMore) {
+    let lock: CoordinationLock | null = null;
+
+    try {
+      lock = await getCoordinationDriver().acquireLock(
+        SCHEDULED_BACKFILL_LOCK_KEY,
+        getScheduledBackfillLockTtlMs()
+      );
+      if (!lock) {
+        logger.info('Skipping scheduled backfill because another instance already holds the lock');
         return {
-          runId: activeRun.id,
-          status: activeRun.status,
-          hasMore: activeRun.hasMore,
-          message: 'No more backfill candidates for scheduled run',
+          status: 'skipped',
+          reason: 'lock_not_acquired',
+          message: 'Another instance is already running scheduled backfill',
         };
       }
 
-      return this.enqueueBackfill({ runId: activeRun.id, trigger: 'scheduled' });
-    }
+      const activeRun = await documentIndexBackfillProgressService.getLatestActiveRun('scheduled');
+      if (activeRun) {
+        if (!activeRun.hasMore) {
+          return {
+            runId: activeRun.id,
+            status: activeRun.status,
+            hasMore: activeRun.hasMore,
+            message: 'No more backfill candidates for scheduled run',
+          };
+        }
 
-    return this.enqueueBackfill({ trigger: 'scheduled' });
+        return this.enqueueBackfill({ runId: activeRun.id, trigger: 'scheduled' });
+      }
+
+      return this.enqueueBackfill({ trigger: 'scheduled' });
+    } finally {
+      if (lock) {
+        try {
+          await lock.release();
+        } catch (error) {
+          logger.warn({ error }, 'Failed to release scheduled backfill lock');
+        }
+      }
+    }
   },
 };

@@ -5,11 +5,16 @@ const mocks = vi.hoisted(() => ({
     backfillConfig: {
       batchSize: 50,
       enqueueDelayMs: 0,
+      scheduleLockTtlMs: 300_000,
     },
   },
   documentRepository: {
     listBackfillCandidates: vi.fn(),
     countBackfillCandidates: vi.fn(),
+  },
+  coordination: {
+    acquireLock: vi.fn(),
+    releaseLock: vi.fn(),
   },
   dispatchDocumentProcessing: vi.fn(async () => 'job-1'),
   backfillProgress: {
@@ -48,6 +53,12 @@ vi.mock('@core/document-processing', () => ({
   dispatchDocumentProcessing: mocks.dispatchDocumentProcessing,
 }));
 
+vi.mock('@core/coordination', () => ({
+  getCoordinationDriver: vi.fn(() => ({
+    acquireLock: mocks.coordination.acquireLock,
+  })),
+}));
+
 vi.mock('@modules/document-index/services/document-index-backfill-progress.service', () => ({
   documentIndexBackfillProgressService: mocks.backfillProgress,
 }));
@@ -61,6 +72,11 @@ import { documentIndexBackfillService } from '@modules/document-index/services/d
 describe('documentIndexBackfillService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.coordination.releaseLock.mockResolvedValue(undefined);
+    mocks.coordination.acquireLock.mockResolvedValue({
+      key: 'document-index:backfill:scheduled:lock',
+      release: mocks.coordination.releaseLock,
+    });
     mocks.documentRepository.countBackfillCandidates.mockResolvedValue(1);
     mocks.documentRepository.listBackfillCandidates.mockResolvedValue({
       documents: [
@@ -330,5 +346,88 @@ describe('documentIndexBackfillService', () => {
       error: 'queue unavailable',
     });
     expect(result.enqueuedCount).toBe(1);
+  });
+
+  it('skips scheduled backfill when another instance already holds the coordination lock', async () => {
+    mocks.coordination.acquireLock.mockResolvedValue(null);
+
+    const result = await documentIndexBackfillService.runScheduledBackfill();
+
+    expect(mocks.coordination.acquireLock).toHaveBeenCalledWith(
+      'document-index:backfill:scheduled:lock',
+      300_000
+    );
+    expect(mocks.backfillProgress.getLatestActiveRun).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      status: 'skipped',
+      reason: 'lock_not_acquired',
+      message: 'Another instance is already running scheduled backfill',
+    });
+    expect(mocks.coordination.releaseLock).not.toHaveBeenCalled();
+  });
+
+  it('resumes the active scheduled run only after acquiring the coordination lock', async () => {
+    mocks.backfillProgress.getLatestActiveRun.mockResolvedValue({
+      id: 'run-1',
+      status: 'running',
+      trigger: 'scheduled',
+      knowledgeBaseId: 'kb-1',
+      documentType: null,
+      includeIndexed: false,
+      includeProcessing: false,
+      batchSize: 50,
+      enqueueDelayMs: 0,
+      candidateCount: 10,
+      enqueuedCount: 3,
+      completedCount: 3,
+      failedCount: 0,
+      skippedCount: 0,
+      cursorOffset: 3,
+      hasMore: true,
+      lastError: null,
+      startedAt: new Date('2026-03-09T10:00:00.000Z'),
+      completedAt: null,
+      createdBy: null,
+      createdAt: new Date('2026-03-09T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+    });
+    mocks.backfillProgress.ensureRunAvailable.mockResolvedValue({
+      id: 'run-1',
+      status: 'running',
+      trigger: 'scheduled',
+      knowledgeBaseId: 'kb-1',
+      documentType: null,
+      includeIndexed: false,
+      includeProcessing: false,
+      batchSize: 50,
+      enqueueDelayMs: 0,
+      candidateCount: 10,
+      enqueuedCount: 3,
+      completedCount: 3,
+      failedCount: 0,
+      skippedCount: 0,
+      cursorOffset: 3,
+      hasMore: true,
+      lastError: null,
+      startedAt: new Date('2026-03-09T10:00:00.000Z'),
+      completedAt: null,
+      createdBy: null,
+      createdAt: new Date('2026-03-09T10:00:00.000Z'),
+      updatedAt: new Date('2026-03-09T10:00:00.000Z'),
+    });
+
+    const result = await documentIndexBackfillService.runScheduledBackfill();
+
+    expect(mocks.coordination.acquireLock).toHaveBeenCalledWith(
+      'document-index:backfill:scheduled:lock',
+      300_000
+    );
+    expect(mocks.backfillProgress.getLatestActiveRun).toHaveBeenCalledWith('scheduled');
+    expect(mocks.backfillProgress.ensureRunAvailable).toHaveBeenCalledWith('run-1');
+    expect(result).toMatchObject({
+      runId: 'run-1',
+      dryRun: false,
+    });
+    expect(mocks.coordination.releaseLock).toHaveBeenCalledTimes(1);
   });
 });
