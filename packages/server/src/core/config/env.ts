@@ -1,5 +1,6 @@
 export { env } from './env/validated-env';
 export type { Env } from './env/schema';
+export { isRateLimitDisabledForRuntime } from './env/infra-drivers';
 export {
   cacheConfig,
   chatConfig,

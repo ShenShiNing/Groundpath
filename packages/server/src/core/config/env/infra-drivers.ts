@@ -1,9 +1,11 @@
+export type NodeEnvName = 'development' | 'production' | 'test';
 export type CacheDriverName = 'redis' | 'memory';
 export type RateLimitDriverName = 'redis' | 'memory' | 'noop';
 export type LockDriverName = 'redis' | 'memory';
 export type QueueDriverName = 'bullmq' | 'inline';
 
 export interface InfraDriverSelection {
+  NODE_ENV: NodeEnvName;
   CACHE_DRIVER: CacheDriverName;
   QUEUE_DRIVER: QueueDriverName;
   RATE_LIMIT_DRIVER: RateLimitDriverName;
@@ -19,14 +21,28 @@ export function isQueueRedisBacked(input: Pick<InfraDriverSelection, 'QUEUE_DRIV
   return input.QUEUE_DRIVER === 'bullmq';
 }
 
-export function isRateLimitEnabled(
-  input: Pick<InfraDriverSelection, 'RATE_LIMIT_DRIVER' | 'DISABLE_RATE_LIMIT'>
+export function isRateLimitDisabledForRuntime(
+  input: Pick<InfraDriverSelection, 'NODE_ENV' | 'RATE_LIMIT_DRIVER' | 'DISABLE_RATE_LIMIT'>
 ): boolean {
-  return !input.DISABLE_RATE_LIMIT && input.RATE_LIMIT_DRIVER !== 'noop';
+  if (input.NODE_ENV === 'test') {
+    return true;
+  }
+
+  if (input.NODE_ENV === 'production') {
+    return false;
+  }
+
+  return input.DISABLE_RATE_LIMIT || input.RATE_LIMIT_DRIVER === 'noop';
+}
+
+export function isRateLimitEnabled(
+  input: Pick<InfraDriverSelection, 'NODE_ENV' | 'RATE_LIMIT_DRIVER' | 'DISABLE_RATE_LIMIT'>
+): boolean {
+  return !isRateLimitDisabledForRuntime(input);
 }
 
 export function isRateLimitRedisBacked(
-  input: Pick<InfraDriverSelection, 'RATE_LIMIT_DRIVER' | 'DISABLE_RATE_LIMIT'>
+  input: Pick<InfraDriverSelection, 'NODE_ENV' | 'RATE_LIMIT_DRIVER' | 'DISABLE_RATE_LIMIT'>
 ): boolean {
   return isRateLimitEnabled(input) && input.RATE_LIMIT_DRIVER === 'redis';
 }

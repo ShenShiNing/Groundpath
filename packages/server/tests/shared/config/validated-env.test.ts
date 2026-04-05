@@ -163,6 +163,81 @@ describe('shared/config/env/validated-env', () => {
     });
   });
 
+  it('should throw when production tries to disable rate limiting via feature flag', async () => {
+    const loadModule = () =>
+      importValidatedEnvModule({
+        envDir: '/workspace/config',
+        nodeEnv: 'production',
+        safeParseResult: {
+          success: true,
+          data: {
+            NODE_ENV: 'production',
+            STORAGE_TYPE: 'local',
+            CACHE_DRIVER: 'memory',
+            QUEUE_DRIVER: 'inline',
+            RATE_LIMIT_DRIVER: 'redis',
+            LOCK_DRIVER: 'memory',
+            REDIS_URL: 'redis://prod',
+            EMBEDDING_PROVIDER: 'ollama',
+            IMAGE_DESCRIPTION_ENABLED: false,
+            DISABLE_RATE_LIMIT: true,
+            JWT_SECRET: 'x'.repeat(32),
+            ENCRYPTION_KEY: 'y'.repeat(32),
+            EMAIL_VERIFICATION_SECRET: 'prod-email-verification-secret',
+          },
+        },
+      });
+
+    const actual = await loadModule().catch((error) => error);
+
+    expect(actual).toMatchObject({
+      name: 'AppError',
+      code: 'VALIDATION_ERROR',
+      details: {
+        fieldErrors: {
+          DISABLE_RATE_LIMIT: ['DISABLE_RATE_LIMIT cannot be true in production.'],
+        },
+      },
+    });
+  });
+
+  it('should throw when production configures the noop rate limit driver', async () => {
+    const loadModule = () =>
+      importValidatedEnvModule({
+        envDir: '/workspace/config',
+        nodeEnv: 'production',
+        safeParseResult: {
+          success: true,
+          data: {
+            NODE_ENV: 'production',
+            STORAGE_TYPE: 'local',
+            CACHE_DRIVER: 'memory',
+            QUEUE_DRIVER: 'inline',
+            RATE_LIMIT_DRIVER: 'noop',
+            LOCK_DRIVER: 'memory',
+            EMBEDDING_PROVIDER: 'ollama',
+            IMAGE_DESCRIPTION_ENABLED: false,
+            DISABLE_RATE_LIMIT: false,
+            JWT_SECRET: 'x'.repeat(32),
+            ENCRYPTION_KEY: 'y'.repeat(32),
+            EMAIL_VERIFICATION_SECRET: 'prod-email-verification-secret',
+          },
+        },
+      });
+
+    const actual = await loadModule().catch((error) => error);
+
+    expect(actual).toMatchObject({
+      name: 'AppError',
+      code: 'VALIDATION_ERROR',
+      details: {
+        fieldErrors: {
+          RATE_LIMIT_DRIVER: ['RATE_LIMIT_DRIVER=noop is not allowed in production.'],
+        },
+      },
+    });
+  });
+
   it('should throw when an OAuth provider is configured with only half of its credentials', async () => {
     const loadModule = () =>
       importValidatedEnvModule({

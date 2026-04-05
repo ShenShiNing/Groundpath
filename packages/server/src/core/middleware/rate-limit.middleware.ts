@@ -1,6 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import { HTTP_STATUS, AUTH_ERROR_CODES } from '@groundpath/shared';
-import { documentConfig, featureFlags, rateLimitConfig, serverConfig } from '@config/env';
+import {
+  documentConfig,
+  featureFlags,
+  isRateLimitDisabledForRuntime,
+  rateLimitConfig,
+  serverConfig,
+} from '@config/env';
 import { Errors } from '@core/errors';
 import { sendErrorResponse } from '@core/errors/response';
 import { createLogger } from '@core/logger';
@@ -42,11 +48,11 @@ function setRateLimitHeaders(
 }
 
 function isRateLimitDisabled(): boolean {
-  return (
-    serverConfig.nodeEnv === 'test' ||
-    featureFlags.disableRateLimit ||
-    rateLimitConfig.driver === 'noop'
-  );
+  return isRateLimitDisabledForRuntime({
+    NODE_ENV: serverConfig.nodeEnv,
+    RATE_LIMIT_DRIVER: rateLimitConfig.driver,
+    DISABLE_RATE_LIMIT: featureFlags.disableRateLimit,
+  });
 }
 
 function getScopedRateLimitKey(scope: string, req: Request): string {
