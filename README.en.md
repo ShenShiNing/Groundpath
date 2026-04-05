@@ -24,6 +24,8 @@
   <p>
     <a href="./README.md">Chinese README</a>
     ·
+    <a href="./docs/api-changelog/README.md">API Changelog</a>
+    ·
     <a href="./docs/env-variables.md">Environment Variables</a>
     ·
     <a href="./docs/architecture-guardrails.md">Architecture Guardrails</a>
@@ -257,6 +259,9 @@ See [AGENTS.md](./AGENTS.md) and [docs/architecture-guardrails.md](./docs/archit
 ├─ docker/
 │  └─ nginx/    # Runtime infrastructure config such as the Nginx template
 ├─ docs/
+│  ├─ api-changelog/
+│  │  ├─ README.md
+│  │  └─ v1.md
 │  ├─ env-variables.md
 │  ├─ architecture-guardrails.md
 │  └─ user-hard-delete-design-2026-04-02.md
@@ -266,6 +271,8 @@ See [AGENTS.md](./AGENTS.md) and [docs/architecture-guardrails.md](./docs/archit
 
 ## Related Docs
 
+- [docs/api-changelog/README.md](./docs/api-changelog/README.md): API change tracking rules and version-file index
+- [docs/api-changelog/v1.md](./docs/api-changelog/v1.md): API contract history for the `/api/v1` era
 - [docs/env-variables.md](./docs/env-variables.md): Environment variable reference
 - [docs/architecture-guardrails.md](./docs/architecture-guardrails.md): Architecture boundaries and guardrails
 - [docs/user-hard-delete-design-2026-04-02.md](./docs/user-hard-delete-design-2026-04-02.md): Active design note for full user hard deletion
