@@ -21,22 +21,22 @@ export const userService = {
   /**
    * Find user by ID
    */
-  async findById(id: string): Promise<User | undefined> {
-    return userRepository.findById(id);
+  async findById(id: string, tx?: Transaction): Promise<User | undefined> {
+    return tx ? userRepository.findById(id, tx) : userRepository.findById(id);
   },
 
   /**
    * Find user by email
    */
-  async findByEmail(email: string): Promise<User | undefined> {
-    return userRepository.findByEmail(email);
+  async findByEmail(email: string, tx?: Transaction): Promise<User | undefined> {
+    return tx ? userRepository.findByEmail(email, tx) : userRepository.findByEmail(email);
   },
 
   /**
    * Create a new user
    */
-  async create(data: NewUser): Promise<User> {
-    return userRepository.create(data);
+  async create(data: NewUser, tx?: Transaction): Promise<User> {
+    return tx ? userRepository.create(data, tx) : userRepository.create(data);
   },
 
   /**
@@ -49,8 +49,10 @@ export const userService = {
   /**
    * Check if user exists by username
    */
-  async existsByUsername(username: string): Promise<boolean> {
-    return userRepository.existsByUsername(username);
+  async existsByUsername(username: string, tx?: Transaction): Promise<boolean> {
+    return tx
+      ? userRepository.existsByUsername(username, tx)
+      : userRepository.existsByUsername(username);
   },
 
   /**

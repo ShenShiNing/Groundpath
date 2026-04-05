@@ -1,5 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { db } from '@core/db';
+import { getDbContext, type Transaction } from '@core/db/db.utils';
 import { userAuths, type UserAuth, type NewUserAuth } from '@core/db/schema/auth/user-auths.schema';
 
 type AuthType = 'email' | 'github' | 'wechat' | 'google' | 'password';
@@ -11,8 +12,13 @@ export const userAuthRepository = {
   /**
    * Find auth record by auth type and external ID
    */
-  async findByAuthTypeAndId(authType: AuthType, authId: string): Promise<UserAuth | undefined> {
-    const result = await db
+  async findByAuthTypeAndId(
+    authType: AuthType,
+    authId: string,
+    tx?: Transaction
+  ): Promise<UserAuth | undefined> {
+    const ctx = getDbContext(tx);
+    const result = await ctx
       .select()
       .from(userAuths)
       .where(and(eq(userAuths.authType, authType), eq(userAuths.authId, authId)))
@@ -24,9 +30,10 @@ export const userAuthRepository = {
   /**
    * Create a new auth record
    */
-  async create(data: NewUserAuth): Promise<UserAuth> {
-    await db.insert(userAuths).values(data);
-    const result = await db.select().from(userAuths).where(eq(userAuths.id, data.id)).limit(1);
+  async create(data: NewUserAuth, tx?: Transaction): Promise<UserAuth> {
+    const ctx = getDbContext(tx);
+    await ctx.insert(userAuths).values(data);
+    const result = await ctx.select().from(userAuths).where(eq(userAuths.id, data.id)).limit(1);
 
     return result[0]!;
   },
@@ -41,9 +48,11 @@ export const userAuthRepository = {
       refreshToken?: string;
       expiresAt?: number;
       profile?: Record<string, unknown>;
-    }
+    },
+    tx?: Transaction
   ): Promise<void> {
-    await db.update(userAuths).set({ authData }).where(eq(userAuths.id, id));
+    const ctx = getDbContext(tx);
+    await ctx.update(userAuths).set({ authData }).where(eq(userAuths.id, id));
   },
 
   /**
