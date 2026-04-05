@@ -118,9 +118,11 @@ describe('chat.routes http behavior', () => {
     const app = express();
     app.use(express.json({ limit: '2mb' }));
     app.use('/chat', chatRoutes);
-    app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      handleError(err, res, 'chat.routes http behavior test');
-    });
+    app.use(
+      (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+        handleError(err, res, 'chat.routes http behavior test');
+      }
+    );
 
     await new Promise<void>((resolve) => {
       server = app.listen(0, () => resolve());

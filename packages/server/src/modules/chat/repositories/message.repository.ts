@@ -182,10 +182,7 @@ export const messageRepository = {
     await db
       .delete(messages)
       .where(
-        and(
-          eq(messages.conversationId, conversationId),
-          gt(messages.sequence, target[0].sequence)
-        )
+        and(eq(messages.conversationId, conversationId), gt(messages.sequence, target[0].sequence))
       );
   },
 

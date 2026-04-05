@@ -184,10 +184,7 @@ describe('messageService', () => {
       'msg-user-1',
       'Updated question'
     );
-    expect(mocks.messageRepository.deleteAfterMessage).toHaveBeenCalledWith(
-      'conv-1',
-      'msg-user-1'
-    );
+    expect(mocks.messageRepository.deleteAfterMessage).toHaveBeenCalledWith('conv-1', 'msg-user-1');
   });
 
   it('should reject editing when the message does not belong to the conversation', async () => {
